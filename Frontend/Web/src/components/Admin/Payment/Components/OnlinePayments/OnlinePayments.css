@@ -1,0 +1,396 @@
+.online-payments {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.search-container {
+  margin-bottom: 24px;
+  padding: 0 2px;
+}
+
+.search-field {
+  max-width: 500px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.title-icon {
+  color: #002181;
+  font-size: 28px;
+}
+
+.header-info {
+  display: flex;
+  gap: 8px;
+}
+
+.payment-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.tab-item {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-item:hover {
+  border-color: #002181;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.1);
+}
+
+.tab-item.active {
+  border-color: #002181;
+  background: #f0f4ff;
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.15);
+}
+
+.tab-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.method-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tab-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.tab-count {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.payments-table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.payments-card {
+  border: 2px solid #e5e7eb;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: visible;
+}
+
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.payments-table thead {
+  background: #002181;
+}
+
+.payments-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.payments-table th:last-child {
+  text-align: center;
+}
+
+.payments-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: #f0f4ff;
+  transform: scale(1.01);
+}
+
+.clickable-row td:not(.actions-cell) {
+  cursor: pointer;
+}
+
+.payments-table td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.id-cell {
+  font-weight: 600;
+  color: #002181;
+}
+
+.name-cell .stallholder-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #002181;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.name-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.stall-no {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.amount-cell {
+  font-weight: 700;
+  color: #10b981;
+}
+
+.receipt-cell {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.actions-cell {
+  padding: 12px !important;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-action-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table-action-btn.accept-btn {
+  background: #002181;
+  color: white;
+}
+
+.table-action-btn.accept-btn:hover {
+  background: #001557;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.3);
+}
+
+.table-action-btn.decline-btn {
+  background: white;
+  color: #002181;
+  border: 2px solid #002181;
+}
+
+.table-action-btn.decline-btn:hover {
+  background: #002181;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.3);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px !important;
+}
+
+.empty-state p {
+  margin-top: 12px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #002181;
+  color: white;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.payment-details {
+  width: 100%;
+}
+
+.info-section {
+  height: 100%;
+}
+
+.section-subtitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #002181;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #002181;
+}
+
+.info-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: right;
+}
+
+.amount-highlight {
+  color: #10b981;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.screenshot-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.screenshot-image {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  background: #f9fafb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.screenshot-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 500px;
+  object-fit: contain;
+}
+
+.modal-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+@media (max-width: 960px) {
+  .table-wrapper {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-tabs {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .table-action-btn {
+    padding: 6px 16px;
+    font-size: 11px;
+  }
+  
+  .screenshot-image img {
+    max-height: 300px;
+  }
+}
