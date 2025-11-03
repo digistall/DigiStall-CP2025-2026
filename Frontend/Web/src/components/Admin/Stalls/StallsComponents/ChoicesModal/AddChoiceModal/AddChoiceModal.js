@@ -95,18 +95,20 @@ export default {
         // If no stalls or error checking stalls, fall back to checking floors and sections
         console.log('🔍 No existing stalls found, checking floors and sections separately...')
 
-        // Check for floors
-        console.log('🔍 Fetching floors from:', `${apiBaseUrl}/branches/floors`)
-        const floorsResponse = await fetch(`${apiBaseUrl}/branches/floors`, {
+        // Check for floors (with cache busting)
+        const floorsUrl = `${apiBaseUrl}/branches/floors?t=${Date.now()}`
+        console.log('🔍 Fetching floors from:', floorsUrl)
+        const floorsResponse = await fetch(floorsUrl, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         })
 
-        // Check for sections
-        console.log('🔍 Fetching sections from:', `${apiBaseUrl}/branches/sections`)
-        const sectionsResponse = await fetch(`${apiBaseUrl}/branches/sections`, {
+        // Check for sections (with cache busting)
+        const sectionsUrl = `${apiBaseUrl}/branches/sections?t=${Date.now()}`
+        console.log('🔍 Fetching sections from:', sectionsUrl)
+        const sectionsResponse = await fetch(sectionsUrl, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -218,12 +220,28 @@ export default {
 
     // Handle floor added event
     handleFloorAdded(floorData) {
+      console.log('🏢 Floor added in AddChoiceModal:', floorData)
       this.$emit('floor-added', floorData)
+      
+      // Add a small delay to ensure database has been updated, then re-check availability
+      setTimeout(async () => {
+        console.log('🔄 Re-checking floors/sections availability after floor addition...')
+        // Force a fresh check by clearing any potential caches
+        await this.checkFloorsAndSections()
+      }, 500)
     },
 
     // Handle section added event
     handleSectionAdded(sectionData) {
+      console.log('🏗️ Section added in AddChoiceModal:', sectionData)
       this.$emit('section-added', sectionData)
+      
+      // Add a small delay to ensure database has been updated, then re-check availability
+      setTimeout(async () => {
+        console.log('🔄 Re-checking floors/sections availability after section addition...')
+        // Force a fresh check by clearing any potential caches
+        await this.checkFloorsAndSections()
+      }, 500)
     },
 
     // Handle show message event
