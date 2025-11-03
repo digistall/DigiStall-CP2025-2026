@@ -13,6 +13,7 @@ dotenv.config();
 import webAuthRoutes from './Backend-Web/routes/authRoutes.js';
 import webApplicantRoutes from './Backend-Web/routes/applicantRoutes.js';
 import webApplicationRoutes from './Backend-Web/routes/applicationRoutes.js';
+import webLandingApplicantRoutes from './Backend-Web/routes/landingApplicantRoutes.js';
 import webStallRoutes from './Backend-Web/routes/stallRoutes.js';
 import webBranchRoutes from './Backend-Web/routes/branchRoutes.js';
 import webEmployeeRoutes from './Backend-Web/routes/employeeRoutes.js';
@@ -23,7 +24,7 @@ import mobileStallRoutes from './Backend-Mobile/routes/stallRoutes.js';
 import mobileApplicationRoutes from './Backend-Mobile/routes/applicationRoutes.js';
 
 const app = express();
-const WEB_PORT = process.env.WEB_PORT || 5000;
+const WEB_PORT = process.env.WEB_PORT || 3001;
 const MOBILE_PORT = process.env.MOBILE_PORT || 5001;
 
 // ===== MIDDLEWARE =====
@@ -36,6 +37,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/stalls', webStallRoutes);           // Stalls routes (public for landing page + protected for admin)
 app.use('/api/applications', webApplicationRoutes); // Applications (public for submissions)
+app.use('/api/landing-applicants', webLandingApplicantRoutes); // Landing page applicant submissions (public)
 app.use('/api/employees', webEmployeeRoutes);     // Employee routes (login is public, others protected internally)
 
 // Management web routes (authentication required)
@@ -47,6 +49,12 @@ app.use('/api/branches', authMiddleware.authenticateToken, webBranchRoutes);
 app.use('/mobile/api/auth', mobileAuthRoutes);
 app.use('/mobile/api/stalls', mobileStallRoutes);
 app.use('/mobile/api/applications', mobileApplicationRoutes);
+
+// Mobile areas endpoint (separate from stalls)
+app.get('/mobile/api/areas', async (req, res) => {
+  const { getAvailableAreas } = await import('./Backend-Mobile/controllers/stall/stallController.js');
+  getAvailableAreas(req, res);
+});
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {

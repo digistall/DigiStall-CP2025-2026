@@ -3,10 +3,10 @@ import { mobileLogin, submitApplication } from '../controllers/login/loginContro
 
 const router = express.Router()
 
-// Mobile login route - POST /mobile-login
-router.post('/mobile-login', mobileLogin)
+// Mobile login route - POST /login (matches mobile app expectation)
+router.post('/login', mobileLogin)
 
-// Mobile application submission route - POST /submit-application
+// Mobile application submission route - POST /submit-application (legacy endpoint)
 router.post('/submit-application', submitApplication)
 
 export default router

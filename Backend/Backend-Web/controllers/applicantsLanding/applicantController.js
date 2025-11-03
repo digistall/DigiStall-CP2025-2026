@@ -1,4 +1,4 @@
-import { createConnection } from "../config/database.js";
+import { createConnection } from "../../config/database.js";
 
 export const applicantController = {
   // Create a new applicant with all related information

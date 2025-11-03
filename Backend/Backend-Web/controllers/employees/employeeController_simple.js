@@ -5,8 +5,19 @@ import jwt from 'jsonwebtoken';
 export async function createEmployee(req, res) {
     let connection;
     try {
-        const { firstName, lastName, email, phoneNumber } = req.body;
+        const { firstName, lastName, email, phoneNumber, permissions } = req.body;
         const userBranchId = req.user?.branchId;
+        const createdByManagerId = req.user?.userId || req.user?.branchManagerId;
+        
+        console.log('📋 Creating employee with data:', { 
+            firstName, 
+            lastName, 
+            email, 
+            phoneNumber, 
+            permissions: permissions || [],
+            userBranchId,
+            createdByManagerId 
+        });
         
         if (!firstName || !lastName || !email) {
             return res.status(400).json({
@@ -24,27 +35,72 @@ export async function createEmployee(req, res) {
 
         connection = await createConnection();
         
+        // Check if email already exists
+        const [existingEmployee] = await connection.execute(
+            'SELECT employee_id FROM employee WHERE email = ? AND status = "Active"',
+            [email]
+        );
+        
+        if (existingEmployee.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'An employee with this email address already exists'
+            });
+        }
+        
         const randomDigits = Math.floor(1000 + Math.random() * 9000);
         const username = `EMP${randomDigits}`;
         const password = Math.random().toString(36).substring(2, 10);
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Use the current user's branch ID instead of allowing any branchId
+        // Convert permissions array to JSON string
+        const permissionsJson = permissions && Array.isArray(permissions) 
+            ? JSON.stringify(permissions) 
+            : null;
+
+        console.log('💾 Saving employee with permissions JSON:', permissionsJson);
+
+        // Insert employee with all fields including created_by_manager and permissions
         const [result] = await connection.execute(
-            `INSERT INTO employee (first_name, last_name, email, phone_number, employee_username, employee_password_hash, branch_id, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')`,
-            [firstName, lastName, email, phoneNumber, username, hashedPassword, userBranchId]
+            `INSERT INTO employee (
+                first_name, 
+                last_name, 
+                email, 
+                phone_number, 
+                employee_username, 
+                employee_password_hash, 
+                branch_id, 
+                created_by_manager,
+                permissions,
+                status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+            [
+                firstName, 
+                lastName, 
+                email, 
+                phoneNumber, 
+                username, 
+                hashedPassword, 
+                userBranchId,
+                createdByManagerId,
+                permissionsJson
+            ]
         );
 
-        console.log(`👥 Created new employee ID: ${result.insertId} in branch: ${userBranchId}`);
+        console.log(`👥 Created new employee ID: ${result.insertId} in branch: ${userBranchId} by manager: ${createdByManagerId}`);
+        
+        // Note: Email will be sent by frontend using EmailJS (same method as applicants)
+        console.log(`📧 Email will be sent by frontend via EmailJS to ${email}`);
 
         res.status(201).json({
             success: true,
             message: 'Employee created successfully',
             data: {
                 employeeId: result.insertId,
-                username,
-                temporaryPassword: password,
+                credentials: {
+                    username,
+                    password
+                },
                 branchId: userBranchId
             }
         });
@@ -80,7 +136,13 @@ export async function getAllEmployees(req, res) {
         
         console.log(`🏢 Fetching employees for branch ID: ${userBranchId}, Found: ${employees.length} employees`);
         
-        res.json({ success: true, data: employees });
+        // Parse permissions JSON string to array for each employee
+        const employeesWithParsedPermissions = employees.map(emp => ({
+            ...emp,
+            permissions: emp.permissions ? JSON.parse(emp.permissions) : []
+        }));
+        
+        res.json({ success: true, data: employeesWithParsedPermissions });
     } catch (error) {
         console.error('Error getting employees:', error);
         res.status(500).json({ success: false, message: 'Failed to get employees' });
@@ -119,7 +181,13 @@ export async function getEmployeeById(req, res) {
         
         console.log(`🔍 Fetching employee ID: ${id} from branch: ${userBranchId}`);
         
-        res.json({ success: true, data: employee[0] });
+        // Parse permissions JSON string to array
+        const employeeData = {
+            ...employee[0],
+            permissions: employee[0].permissions ? JSON.parse(employee[0].permissions) : []
+        };
+        
+        res.json({ success: true, data: employeeData });
     } catch (error) {
         console.error('Error getting employee:', error);
         res.status(500).json({ success: false, message: 'Failed to get employee' });

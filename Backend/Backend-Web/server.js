@@ -12,6 +12,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
 import applicantRoutes from './routes/applicantRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
+import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import stallRoutes from './routes/stallRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
@@ -39,6 +40,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/stalls', stallRoutes);           // Stalls routes (public for landing page + protected for admin)
 app.use('/api/applications', applicationRoutes); // Applications (public for submissions)
+app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page applicant submissions (public)
 app.use('/api/employees', employeeRoutes);     // Employee routes (login is public, others protected internally)
 
 // Management routes (authentication required)

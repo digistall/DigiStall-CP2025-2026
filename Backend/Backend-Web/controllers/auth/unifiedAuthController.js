@@ -79,7 +79,7 @@ export const login = async (req, res) => {
     let additionalUserInfo = {};
     
     if (userType.toLowerCase() === 'branch_manager' || userType.toLowerCase() === 'employee') {
-      // Get branch information
+      // Get branch information with branch name
       const [branchRows] = await connection.execute(
         'SELECT branch_id, branch_name FROM branch WHERE branch_id = ?',
         [user.branch_id]
@@ -87,17 +87,39 @@ export const login = async (req, res) => {
       
       if (branchRows.length > 0) {
         additionalUserInfo.branch = branchRows[0];
+        additionalUserInfo.branchName = branchRows[0].branch_name; // Add branch name directly
       }
       
       // Get employee permissions if user is employee
       if (userType.toLowerCase() === 'employee') {
-        additionalUserInfo.permissions = {
-          read_stalls: user.read_stalls === 1,
-          write_stalls: user.write_stalls === 1,
-          manage_applicants: user.manage_applicants === 1,
-          manage_payments: user.manage_payments === 1,
-          view_reports: user.view_reports === 1
-        };
+        // Parse permissions from JSON if stored as JSON string
+        let permissions = {};
+        if (user.permissions) {
+          try {
+            permissions = typeof user.permissions === 'string' 
+              ? JSON.parse(user.permissions) 
+              : user.permissions;
+          } catch (e) {
+            console.error('Error parsing employee permissions:', e);
+            permissions = {
+              read_stalls: user.read_stalls === 1,
+              write_stalls: user.write_stalls === 1,
+              manage_applicants: user.manage_applicants === 1,
+              manage_payments: user.manage_payments === 1,
+              view_reports: user.view_reports === 1
+            };
+          }
+        } else {
+          // Fallback to individual permission columns
+          permissions = {
+            read_stalls: user.read_stalls === 1,
+            write_stalls: user.write_stalls === 1,
+            manage_applicants: user.manage_applicants === 1,
+            manage_payments: user.manage_payments === 1,
+            view_reports: user.view_reports === 1
+          };
+        }
+        additionalUserInfo.permissions = permissions;
       }
     }
     
@@ -119,10 +141,12 @@ export const login = async (req, res) => {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
+      branchId: user.branch_id || null,
       ...additionalUserInfo
     };
     
     console.log(`✅ ${userType} login successful:`, email);
+    console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     
     res.status(200).json({
       success: true,
@@ -233,10 +257,21 @@ export const getCurrentUser = async (req, res) => {
         });
     }
     
-    const [userRows] = await connection.execute(
-      `SELECT * FROM ${tableName} WHERE ${userIdField} = ?`,
-      [userId]
-    );
+    // Build query with JOIN to get branch information for employees and branch managers
+    let query = `SELECT * FROM ${tableName} WHERE ${userIdField} = ?`;
+    let queryParams = [userId];
+    
+    // For employees and branch managers, join with branch table to get branch name
+    if (userType === 'employee' || userType === 'branch_manager') {
+      query = `
+        SELECT u.*, b.branch_name 
+        FROM ${tableName} u
+        LEFT JOIN branch b ON u.branch_id = b.branch_id
+        WHERE u.${userIdField} = ?
+      `;
+    }
+    
+    const [userRows] = await connection.execute(query, queryParams);
     
     if (userRows.length === 0) {
       return res.status(404).json({
@@ -249,6 +284,8 @@ export const getCurrentUser = async (req, res) => {
     
     // Remove password from response
     delete user.password;
+    
+    console.log('📤 getCurrentUser - Sending data for', userType, ':', JSON.stringify(user, null, 2));
     
     // Return data in the format expected by frontend based on user type
     const responseData = {

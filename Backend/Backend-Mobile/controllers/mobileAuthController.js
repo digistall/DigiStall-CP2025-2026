@@ -1,5 +1,5 @@
 import { createConnection } from '../../config/database.js'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 // ===== MOBILE LOGIN =====
@@ -10,13 +10,35 @@ export const mobileLogin = async (req, res) => {
     connection = await createConnection();
     const { username, password } = req.body;
     
-    // Query mobile users (assuming applicants table for mobile users)
+    console.log('🔐 Mobile login attempt for:', username);
+    
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
+      });
+    }
+    
+    // Query mobile users from credential table
     const [users] = await connection.execute(
-      'SELECT * FROM applicants WHERE username = ? OR email = ?',
-      [username, username]
+      `SELECT 
+        c.registrationid,
+        c.applicant_id, 
+        c.user_name, 
+        c.password_hash,
+        c.is_active,
+        a.applicant_full_name,
+        a.applicant_email,
+        a.applicant_contact_number
+      FROM credential c
+      LEFT JOIN applicant a ON c.applicant_id = a.applicant_id
+      WHERE c.user_name = ? AND c.is_active = 1`,
+      [username]
     );
     
     if (users.length === 0) {
+      console.log('❌ User not found:', username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -25,27 +47,34 @@ export const mobileLogin = async (req, res) => {
     
     const user = users[0];
     
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    // Verify password using credential table password_hash
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
+      console.log('❌ Invalid password for:', username);
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
     
+    console.log('✅ Password verified for:', username);
+    
     // Generate JWT token
     const token = jwt.sign(
       {
         userId: user.applicant_id,
-        username: user.username,
-        email: user.email,
-        userType: 'mobile_user'
+        username: user.user_name,
+        email: user.applicant_email,
+        userType: 'mobile_user',
+        registrationId: user.registrationid
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
+    
+    console.log('✅ Login successful for:', username);
     
     res.status(200).json({
       success: true,
@@ -53,8 +82,11 @@ export const mobileLogin = async (req, res) => {
       token,
       user: {
         id: user.applicant_id,
-        username: user.username,
-        email: user.email,
+        username: user.user_name,
+        email: user.applicant_email,
+        fullName: user.applicant_full_name,
+        contactNumber: user.applicant_contact_number,
+        registrationId: user.registrationid,
         userType: 'mobile_user'
       }
     });
@@ -79,15 +111,26 @@ export const mobileRegister = async (req, res) => {
   
   try {
     connection = await createConnection();
-    const { username, email, password, firstName, lastName, phoneNumber } = req.body;
+    const { username, email, password, fullName, contactNumber, address } = req.body;
+    
+    console.log('📝 Mobile registration attempt for:', username);
+    
+    // Validate input
+    if (!username || !email || !password || !fullName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, email, password, and full name are required'
+      });
+    }
     
     // Check if user already exists
     const [existingUsers] = await connection.execute(
-      'SELECT * FROM applicants WHERE username = ? OR email = ?',
+      'SELECT * FROM applicant WHERE applicant_username = ? OR applicant_email = ?',
       [username, email]
     );
     
     if (existingUsers.length > 0) {
+      console.log('❌ User already exists:', username);
       return res.status(400).json({
         success: false,
         message: 'Username or email already exists'
@@ -99,9 +142,20 @@ export const mobileRegister = async (req, res) => {
     
     // Insert new mobile user
     const [result] = await connection.execute(
-      'INSERT INTO applicants (username, email, password, first_name, last_name, phone_number, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-      [username, email, hashedPassword, firstName, lastName, phoneNumber]
+      `INSERT INTO applicant (
+        applicant_full_name, 
+        applicant_contact_number, 
+        applicant_address,
+        applicant_username, 
+        applicant_email, 
+        applicant_password_hash,
+        email_verified,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, FALSE, NOW())`,
+      [fullName, contactNumber || null, address || null, username, email, hashedPassword]
     );
+    
+    console.log('✅ Registration successful for:', username);
     
     res.status(201).json({
       success: true,
@@ -109,7 +163,8 @@ export const mobileRegister = async (req, res) => {
       user: {
         id: result.insertId,
         username,
-        email
+        email,
+        fullName
       }
     });
     

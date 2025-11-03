@@ -7,8 +7,10 @@ export const mobileLogin = async (req, res) => {
   
   try {
     const { username, password } = req.body
+    console.log('📱 Mobile Login Request:', { username, passwordLength: password?.length })
 
     if (!username || !password) {
+      console.log('❌ Missing credentials')
       return res.status(400).json({
         success: false,
         message: 'Username and password are required'
@@ -16,6 +18,7 @@ export const mobileLogin = async (req, res) => {
     }
 
     // Step 1: Get applicant credentials and basic info
+    console.log('🔍 Looking up user:', username)
     const [credentialRows] = await connection.execute(
       `SELECT 
          c.registrationid, c.applicant_id, c.user_name, c.password_hash, 
@@ -28,7 +31,10 @@ export const mobileLogin = async (req, res) => {
       [username]
     )
 
+    console.log('📋 Credential rows found:', credentialRows.length)
+
     if (credentialRows.length === 0) {
+      console.log('❌ User not found or inactive')
       return res.status(401).json({
         success: false,
         message: 'Invalid username or password'
@@ -36,16 +42,22 @@ export const mobileLogin = async (req, res) => {
     }
 
     const userCredentials = credentialRows[0]
+    console.log('👤 Found user:', userCredentials.applicant_full_name)
 
     // Verify password
+    console.log('🔐 Verifying password...')
     const isPasswordValid = await bcrypt.compare(password, userCredentials.password_hash)
+    console.log('🔑 Password valid:', isPasswordValid)
     
     if (!isPasswordValid) {
+      console.log('❌ Invalid password')
       return res.status(401).json({
         success: false,
         message: 'Invalid username or password'
       })
     }
+
+    console.log('✅ Login successful, fetching user data...')
 
     // Step 2: Get areas where this applicant has applied (to fetch relevant stalls)
     const [appliedAreas] = await connection.execute(

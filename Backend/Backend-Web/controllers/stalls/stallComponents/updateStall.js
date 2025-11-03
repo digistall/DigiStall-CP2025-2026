@@ -171,14 +171,32 @@ export const updateStall = async (req, res) => {
 
     await connection.execute(updateQuery, updateValues);
 
-    // Get updated stall data
+    // Get updated stall data with explicit field selection to avoid ID confusion
     const [updatedStall] = await connection.execute(
       `SELECT 
-        s.*,
+        s.stall_id,
         s.stall_id as id,
+        s.stall_no,
+        s.stall_location,
+        s.size,
+        s.rental_price,
+        s.price_type,
+        s.status,
+        s.description,
+        s.stall_image,
+        s.is_available,
+        s.created_at,
+        s.updated_at,
+        s.stamp,
+        sec.section_id,
         sec.section_name,
+        f.floor_id,
         f.floor_name,
-        b.branch_name
+        f.floor_number,
+        b.branch_id,
+        b.branch_name,
+        b.area,
+        b.location as branch_location
       FROM stall s
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON sec.floor_id = f.floor_id

@@ -9,6 +9,7 @@ import { createConnection } from './config/database.js';
 import loginRoutes from './routes/loginRouter.js';
 import stallRoutes from './routes/stallRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import applicationRoutes from './routes/applicationRoutes.js';
 
 const app = express();
 const PORT = process.env.MOBILE_PORT || 5001;
@@ -40,6 +41,7 @@ app.use((req, res, next) => {
 app.use('/api/mobile/auth', loginRoutes);
 app.use('/api/mobile/stalls', stallRoutes);
 app.use('/api/mobile/users', userRoutes);
+app.use('/api/mobile/applications', applicationRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/mobile/health', async (req, res) => {
@@ -90,6 +92,7 @@ app.get('/', (req, res) => {
       auth: '/api/mobile/auth',
       stalls: '/api/mobile/stalls',
       users: '/api/mobile/users',
+      applications: '/api/mobile/applications',
       health: '/api/mobile/health'
     }
   });
@@ -115,6 +118,7 @@ app.use('*', (req, res) => {
       '/api/mobile/auth',
       '/api/mobile/stalls',
       '/api/mobile/users',
+      '/api/mobile/applications',
       '/api/mobile/health'
     ]
   });

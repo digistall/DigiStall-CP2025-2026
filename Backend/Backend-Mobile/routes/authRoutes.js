@@ -1,9 +1,11 @@
 import express from 'express'
 import authMiddleware from '../../middleware/auth.js'
 
-// Import mobile-specific auth controllers
+// Import mobile login controller with full data fetching
+import { mobileLogin } from '../controllers/login/loginController.js'
+
+// Import other mobile-specific auth controllers
 import { 
-  mobileLogin,
   mobileRegister,
   mobileVerifyToken,
   mobileLogout 
@@ -12,7 +14,7 @@ import {
 const router = express.Router()
 
 // ===== MOBILE AUTHENTICATION ROUTES =====
-router.post('/login', mobileLogin)                       // POST /mobile/auth/login - Mobile user login
+router.post('/login', mobileLogin)                       // POST /mobile/auth/login - Mobile user login with full data
 router.post('/register', mobileRegister)                 // POST /mobile/auth/register - Mobile user registration
 router.get('/verify-token', mobileVerifyToken)           // GET /mobile/auth/verify-token - Verify mobile token
 
