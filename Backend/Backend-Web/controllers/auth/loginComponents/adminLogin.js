@@ -30,7 +30,7 @@ export const adminLogin = async (req, res) => {
     const [admins] = await connection.execute(
       'SELECT admin_id, admin_username, admin_password_hash, email, status FROM admin WHERE admin_username = ? AND status = ?',
       [username, 'Active']
-    );
+    );  
 
     console.log('🔍 Found admins:', admins.length);
 
