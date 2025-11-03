@@ -23,13 +23,23 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
   user-select: none;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
+  padding: 12px 20px;
+  border: 2px solid rgb(0, 33, 129);
+  border-radius: 8px;
+  background-color: white;
+  color: rgb(0, 33, 129);
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  min-width: 280px;
 }
 
 .title-with-arrow:hover {
-  color: rgb(0, 33, 129);
+  background-color: rgb(0, 33, 129);
+  color: white;
 }
 
 .dropdown-arrow {

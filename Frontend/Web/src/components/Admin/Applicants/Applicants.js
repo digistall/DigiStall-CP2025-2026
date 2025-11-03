@@ -21,11 +21,11 @@ export default {
       searchQuery: '',
       filterCriteria: null,
       // Dropdown functionality
-      currentApplicantType: 'Vendor Applicants',
+      currentApplicantType: 'Stall Applicants',
       showDropdown: false,
       applicantTypes: [
-        { value: 'vendor', label: 'Vendor Applicants' },
         { value: 'stall', label: 'Stall Applicants' },
+        { value: 'vendor', label: 'Vendor Applicants' },
       ],
       // Modal states for approve/decline
       showApproveModal: false,
