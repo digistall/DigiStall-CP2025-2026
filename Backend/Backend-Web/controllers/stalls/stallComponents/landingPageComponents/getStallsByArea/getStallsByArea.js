@@ -84,6 +84,8 @@ export const getStallsByArea = async (req, res) => {
     });
 
     // Sort stalls: Fixed Price first, then Auction and Raffle
+    console.log(`📊 Sorting ${formattedStalls.length} stalls by price type...`);
+
     formattedStalls.sort((a, b) => {
       const getPriority = (priceType) => {
         if (!priceType || priceType === "Fixed Price") return 1;
@@ -95,6 +97,14 @@ export const getStallsByArea = async (req, res) => {
       return getPriority(a.price_type) - getPriority(b.price_type);
     });
 
+    // Log the distribution of stall types
+    const priceTypeCount = formattedStalls.reduce((acc, stall) => {
+      const type = stall.price_type || "Fixed Price";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    console.log(`📋 Stall distribution:`, priceTypeCount);
     console.log(
       `✅ Found ${formattedStalls.length} stalls in ${filterType} '${filterParam}'`
     );

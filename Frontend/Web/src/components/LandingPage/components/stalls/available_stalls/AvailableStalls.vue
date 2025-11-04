@@ -153,6 +153,12 @@ export default {
     },
 
     openApplyForm(stall) {
+      console.log('📝 Opening application form for stall:', {
+        stallNumber: stall.stallNumber,
+        branch: stall.branch,
+        price: stall.price,
+        price_type: stall.price_type
+      })
       this.selectedStall = stall
       this.showApplyForm = true
     },
@@ -224,11 +230,6 @@ export default {
       // Get price type and normalize it - default to 'Fixed Price' if empty/null
       const priceType = (stall.price_type || 'Fixed Price').toString().toLowerCase().trim()
 
-      // Temporary debug logging
-      console.log(
-        `🔍 Stall ${stall.stallNumber}: priceType="${priceType}", raw price_type="${stall.price_type}"`,
-      )
-
       // Check if it's a fixed price stall (handle various formats)
       const isFixedPrice =
         priceType === 'fixed price' ||
@@ -236,10 +237,6 @@ export default {
         priceType === '' ||
         priceType === 'null' ||
         priceType === 'undefined'
-
-      console.log(
-        `🔍 Stall ${stall.stallNumber}: isFixedPrice=${isFixedPrice}, showing button=${isFixedPrice}`,
-      )
 
       return isFixedPrice
     },
