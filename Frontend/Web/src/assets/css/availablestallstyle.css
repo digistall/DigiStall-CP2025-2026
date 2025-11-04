@@ -89,6 +89,16 @@
   color: white;
 }
 
+.stall-status-badge.auction {
+  background: #002181;
+  color: white;
+}
+
+.stall-status-badge.raffle {
+  background: #002181;
+  color: white;
+}
+
 /* Stall Info - Original Design */
 .stall-info {
   padding: 16px;
