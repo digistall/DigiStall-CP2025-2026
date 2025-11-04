@@ -134,6 +134,16 @@
   font-size: 11px !important;
 }
 
+.permission-more-chip {
+  cursor: help !important;
+  transition: all 0.2s ease !important;
+}
+
+.permission-more-chip:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  transform: scale(1.05);
+}
+
 .action-buttons {
   display: flex;
   gap: 2px;
