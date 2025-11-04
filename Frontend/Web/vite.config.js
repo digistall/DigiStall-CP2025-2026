@@ -43,6 +43,8 @@ export default defineConfig({
   },
   server: {
     // CSP-friendly development server settings
+    host: '0.0.0.0', // Allow external connections (for Docker)
+    port: 5173,
     hmr: {
       protocol: 'ws',
       host: 'localhost'
