@@ -7,6 +7,7 @@ import {
   approveApplicant,
   updateApplicantStatus,
   declineApplicant,
+  deleteApplicant,
   searchApplicants,
   // New participant functions
   getAllParticipants,
@@ -44,5 +45,8 @@ router.put('/:id/approve', approveApplicant)
 
 // Decline applicant
 router.put('/:id/decline', declineApplicant)
+
+// Delete applicant (for auto-cleanup of expired rejected applicants)
+router.delete('/:id', deleteApplicant)
 
 export default router

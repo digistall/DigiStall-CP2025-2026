@@ -20,6 +20,7 @@ export default {
       errorMessage: '',
       loadingText: 'Authenticating',
       loadingSubtext: 'Verifying your credentials',
+      redirectTimeout: null,
       // Universal popup for errors
       errorPopup: {
         show: false,
@@ -60,6 +61,16 @@ export default {
     // Check if already authenticated
     if (this.authStore.isAuthenticated) {
       this.$router.push('/app/dashboard')
+    }
+
+    // Listen for storage changes (login/logout in other tabs)
+    window.addEventListener('storage', this.handleStorageChange)
+  },
+  beforeUnmount() {
+    // Clean up event listeners
+    window.removeEventListener('storage', this.handleStorageChange)
+    if (this.redirectTimeout) {
+      clearTimeout(this.redirectTimeout)
     }
   },
   methods: {
@@ -112,89 +123,77 @@ export default {
           this.userType
         )
 
-        this.loading = false
-
         if (result.success) {
-          // Login successful
+          // Login successful - keep loading state and redirect immediately
           this.loadingText = 'Success'
           this.loadingSubtext = 'Redirecting to dashboard'
 
-          this.successMessage = 'Login successful! Redirecting...'
-          this.showSuccessMessage = true
-          this.showSuccessPopup = true
-
           console.log('✅ Login successful, redirecting to dashboard')
 
-          // Redirect to dashboard after a short delay
+          // Redirect to dashboard immediately (no popup, just loading state)
           setTimeout(() => {
+            this.loading = false
             this.$router.push('/app/dashboard')
-          }, 1500)
+          }, 800)
         } else {
-          // Login failed - show error message
-          this.showErrorMessage(result.message || 'Login failed. Please try again.')
+          this.loading = false
+          // Login failed
+          const errorMessage = result.message || 'Login failed. Please check your credentials and try again.'
+          this.showErrorMessage(errorMessage)
+          console.error('❌ Login failed:', errorMessage)
         }
       } catch (error) {
         this.loading = false
-        this.handleLoginError(error)
-      }
-    },
+        console.error('❌ Login error:', error)
 
-    handleLoginError(error) {
-      // FIXED: Ensure loading is always turned off
-      this.loading = false
+        // Handle different error scenarios
+        let errorMessage = 'An unexpected error occurred. Please try again.'
 
-      let errorMessage = 'An unexpected error occurred. Please try again.'
+        if (error.response) {
+          const { status, data } = error.response
+          console.error('❌ Server Error:', status, data)
 
-      if (error.response) {
-        const { status, data } = error.response
-        console.error('❌ Server Error:', status, data)
-
-        switch (status) {
-          case 400:
-            errorMessage = data.message || 'Invalid request. Please check your input and try again.'
-            break
-          case 401:
-            if (data.message && data.message.toLowerCase().includes('credentials')) {
-              errorMessage =
-                'Invalid username or password. Please check your credentials and try again.'
-            } else {
-              errorMessage =
-                data.message || 'Authentication failed. Please verify your username and password.'
-            }
-            break
-          case 403:
-            errorMessage =
-              'Access denied. Your account may be inactive or you may not have the required permissions.'
-            break
-          case 404:
-            errorMessage =
-              'User account not found. Please verify your username or contact your administrator.'
-            break
-          case 429:
-            errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.'
-            break
-          case 500:
-          case 502:
-          case 503:
-          case 504:
-            errorMessage = 'Server is temporarily unavailable. Please try again in a few moments.'
-            break
-          default:
-            errorMessage =
-              data.message || `Server error (${status}). Please contact support if this continues.`
+          switch (status) {
+            case 400:
+              errorMessage = data.message || 'Invalid request. Please check your input and try again.'
+              break
+            case 401:
+              if (data.message && data.message.toLowerCase().includes('credentials')) {
+                errorMessage = 'Invalid username or password. Please check your credentials and try again.'
+              } else {
+                errorMessage = data.message || 'Authentication failed. Please verify your username and password.'
+              }
+              break
+            case 403:
+              errorMessage = 'Access denied. Your account may be inactive or you may not have the required permissions.'
+              break
+            case 404:
+              errorMessage = 'User account not found. Please verify your username or contact your administrator.'
+              break
+            case 429:
+              errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.'
+              break
+            case 500:
+            case 502:
+            case 503:
+            case 504:
+              errorMessage = 'Server is temporarily unavailable. Please try again in a few moments.'
+              break
+            default:
+              errorMessage = data.message || `Server error (${status}). Please contact support if this continues.`
+          }
+        } else if (error.request) {
+          console.error('❌ Network Error:', error.request)
+          errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.'
+        } else if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Login request timed out. Please check your connection and try again.'
+        } else {
+          console.error('❌ Unexpected Error:', error.message)
+          errorMessage = error.message || 'An unexpected error occurred. Please try again.'
         }
-      } else if (error.request) {
-        console.error('❌ Network Error:', error.request)
-        errorMessage =
-          'Unable to connect to the server. Please check your internet connection and try again.'
-      } else if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Login request timed out. Please check your connection and try again.'
-      } else {
-        console.error('❌ Unexpected Error:', error.message)
-        errorMessage = error.message || 'An unexpected error occurred. Please try again.'
-      }
 
-      this.showErrorMessage(errorMessage)
+        this.showErrorMessage(errorMessage)
+      }
     },
 
     async handleForgotPassword() {
@@ -233,19 +232,12 @@ export default {
       this.clearError()
     },
 
-    onAdminRegistered(adminData) {
-      this.showSuccessNotification(`Admin ${adminData.username} registered successfully!`)
-    },
-
-    // FIXED: Add retry mechanism for failed requests
     async retryLogin() {
       if (this.loading) return
-
       console.log('🔄 Retrying login...')
       await this.handleLogin()
     },
 
-    // Navigate to landing page
     goToLandingPage() {
       this.$router.push('/')
     },
@@ -261,12 +253,14 @@ export default {
       if (this.errorMessage) this.clearError()
       if (this.showSuccessMessage) this.clearSuccess()
     },
-  },
 
-  beforeUnmount() {
-    // Clear any pending timeouts
-    if (this.redirectTimeout) {
-      clearTimeout(this.redirectTimeout)
-    }
+    handleStorageChange(event) {
+      // Listen for login in other tabs
+      if (event.key === 'authToken' && event.newValue) {
+        // User logged in on another tab, redirect to dashboard
+        console.log('🔄 Login detected in another tab, redirecting...')
+        this.$router.push('/app/dashboard')
+      }
+    },
   },
 }

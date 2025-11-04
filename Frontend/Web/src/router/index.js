@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
 import LoginPage from '../components/Admin/Login/LoginPage.vue'
 import LandingPage from '../components/LandingPage/LandingPage.vue'
 import Dashboard from '../components/Admin/Dashboard/Dashboard.vue'
@@ -14,55 +15,153 @@ import Stalls from '../components/Admin/Stalls/Stalls.vue'
 import BranchManagement from '../components/Admin/Branch/Branch.vue'
 import Employees from '../components/Admin/Employees/Employees.vue'
 
-// Helper function to check if user has required permission
-const hasPermission = (requiredPermission) => {
-  const userType = sessionStorage.getItem('userType')
-  console.log('🔍 Permission check:', { userType, requiredPermission })
+// ===== ROUTE GUARDS WITH SIMPLE AUTH =====
 
-  // Admin and branch managers have access to everything (check both formats)
-  if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
-    console.log('✅ Admin/Branch Manager - Access granted')
-    return true
-  }
-
-  // For employees, check specific permissions
-  if (userType === 'employee') {
-    const employeePermissions = JSON.parse(sessionStorage.getItem('employeePermissions') || '[]')
-    const hasAccess = employeePermissions.includes(requiredPermission)
-    console.log('👤 Employee permission check:', {
-      employeePermissions,
-      requiredPermission,
-      hasAccess,
-    })
-    return hasAccess
-  }
-
-  console.log('❌ No valid user type or permission denied')
-  return false
+/**
+ * Check if user is authenticated (checks sessionStorage)
+ */
+const isAuthenticated = () => {
+  const token = sessionStorage.getItem('authToken');
+  const user = sessionStorage.getItem('currentUser');
+  return !!(token && user);
 }
 
-// Route guard to check permissions
-const requiresPermission = (permission) => {
-  return (to, from, next) => {
-    const userType = sessionStorage.getItem('userType')
-    console.log('🛡️ Route guard check:', { to: to.path, permission, userType })
+/**
+ * Check if user has required role(s)
+ */
+const hasRole = (...roles) => {
+  const userData = sessionStorage.getItem('currentUser');
+  if (!userData) return false;
+  
+  try {
+    const user = JSON.parse(userData);
+    return roles.some(role => role.toLowerCase() === user.userType?.toLowerCase());
+  } catch {
+    return false;
+  }
+}
 
-    if (!userType) {
-      console.log('❌ No user type - redirecting to login')
-      // Not logged in
-      next('/')
+/**
+ * Check if user has required permission(s)
+ */
+const hasPermission = (...permissions) => {
+  const userData = sessionStorage.getItem('currentUser');
+  if (!userData) return false;
+  
+  try {
+    const user = JSON.parse(userData);
+    
+    // Admins and managers have all permissions
+    if (user.userType === 'admin' || user.userType === 'branch_manager') {
+      return true;
+    }
+    
+    // Check employee permissions
+    if (user.userType === 'employee' && user.permissions) {
+      // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
+      if (Array.isArray(user.permissions)) {
+        // Array format: check if permission exists in array
+        return permissions.some(permission => user.permissions.includes(permission));
+      } else {
+        // Object format: check if permission value is true
+        return permissions.some(permission => {
+          const permValue = user.permissions[permission];
+          return permValue === true || permValue === 1;
+        });
+      }
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Route guard: Require authentication
+ * Usage: beforeEnter: requireAuth
+ */
+// eslint-disable-next-line no-unused-vars
+const requireAuth = (to, from, next) => {
+  if (!isAuthenticated()) {
+    console.log('❌ Not authenticated - redirecting to login')
+    next('/login')
+  } else {
+    next()
+  }
+}
+
+/**
+ * Route guard: Require specific role(s)
+ */
+const requireRole = (...roles) => {
+  return (to, from, next) => {
+    if (!isAuthenticated()) {
+      console.log('❌ Not authenticated - redirecting to login')
+      next('/login')
       return
     }
 
-    if (hasPermission(permission)) {
-      console.log('✅ Permission granted - proceeding to route')
+    if (hasRole(...roles)) {
+      console.log(`✅ Role check passed for: ${roles.join(', ')}`)
       next()
     } else {
-      console.log('❌ Permission denied - redirecting to dashboard')
-      // No permission - redirect to dashboard or show error
+      console.log(`❌ Role check failed. Required: ${roles.join(', ')}`)
       next('/app/dashboard')
     }
   }
+}
+
+/**
+ * Route guard: Require specific permission(s)
+ */
+const requirePermission = (...permissions) => {
+  return (to, from, next) => {
+    if (!isAuthenticated()) {
+      console.log('❌ Not authenticated - redirecting to login')
+      next('/login')
+      return
+    }
+
+    if (hasPermission(...permissions)) {
+      console.log(`✅ Permission check passed for: ${permissions.join(', ')}`)
+      next()
+    } else {
+      console.log(`❌ Permission check failed. Required: ${permissions.join(', ')}`)
+      next('/app/dashboard')
+    }
+  }
+}
+
+/**
+ * Route guard: Require role OR permission
+ * Usage: beforeEnter: requireRoleOrPermission(['admin'], ['manage_stalls'])
+ */
+// eslint-disable-next-line no-unused-vars
+const requireRoleOrPermission = (roles = [], permissions = []) => {
+  return (to, from, next) => {
+    if (!isAuthenticated()) {
+      console.log('❌ Not authenticated - redirecting to login')
+      next('/login')
+      return
+    }
+
+    const hasRequiredRole = roles.length > 0 ? hasRole(...roles) : false
+    const hasRequiredPermission = permissions.length > 0 ? hasPermission(...permissions) : false
+
+    if (hasRequiredRole || hasRequiredPermission) {
+      console.log('✅ Access granted')
+      next()
+    } else {
+      console.log(`❌ Access denied. Required roles: ${roles.join(', ')} OR permissions: ${permissions.join(', ')}`)
+      next('/app/dashboard')
+    }
+  }
+}
+
+// Legacy helper function (for backward compatibility)
+const requiresPermission = (permission) => {
+  return requirePermission(permission)
 }
 
 const router = createRouter({
@@ -98,8 +197,10 @@ const router = createRouter({
           component: BranchManagement,
           meta: {
             title: 'Branch Management',
-            requiresAdmin: true,
+            requiresAuth: true,
+            requiresRole: ['admin']
           },
+          beforeEnter: requireRole('admin'),
         },
         {
           path: 'employees',
@@ -107,8 +208,10 @@ const router = createRouter({
           component: Employees,
           meta: {
             title: 'Employee Management',
-            requiresBranchManager: true,
+            requiresAuth: true,
+            requiresRole: ['admin', 'branch_manager']
           },
+          beforeEnter: requireRole('admin', 'branch_manager'),
         },
         {
           path: 'payment',
@@ -164,6 +267,7 @@ const router = createRouter({
           name: 'Raffles',
           component: () => import('../components/Admin/Stalls/RaffleComponents/RafflesPage.vue'),
           meta: { title: 'Active Raffles' },
+          beforeEnter: requiresPermission('stalls'),
         },
         {
           path: 'stalls/auctions',
@@ -171,44 +275,84 @@ const router = createRouter({
           component: () =>
             import('../components/Admin/Stalls/AuctionComponents/AuctionsPage/AuctionsPage.vue'),
           meta: { title: 'Active Auctions' },
+          beforeEnter: requiresPermission('stalls'),
         },
       ],
     },
   ],
 })
 
-// Navigation guard to protect admin and branch manager routes
-router.beforeEach((to, from, next) => {
-  const userType = sessionStorage.getItem('userType')
-  const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+// ===== GLOBAL NAVIGATION GUARD =====
+// Handles authentication and authorization for all routes
+router.beforeEach(async (to, from, next) => {
+  console.log(`🛡️ Router guard: ${from.path} → ${to.path}`)
 
-  // Check if route requires admin access
-  if (to.meta?.requiresAdmin) {
-    if (userType === 'admin' || currentUser.userType === 'admin') {
-      next()
-    } else {
-      // Redirect non-admin users to dashboard
-      next('/app/dashboard')
-    }
+  // Public routes that don't require authentication
+  const publicRoutes = ['/', '/login', 'landingPage', 'login']
+  const isPublicRoute = publicRoutes.includes(to.path) || publicRoutes.includes(to.name)
+
+  // Initialize auth store on first navigation
+  const authStore = useAuthStore()
+  if (!authStore.isInitialized) {
+    await authStore.initialize()
   }
-  // Check if route requires branch manager access
-  else if (to.meta?.requiresBranchManager) {
-    if (
-      userType === 'admin' ||
-      currentUser.userType === 'admin' ||
-      userType === 'branch_manager' ||
-      currentUser.userType === 'branch_manager' ||
-      userType === 'branch-manager' ||
-      currentUser.userType === 'branch-manager'
-    ) {
-      next()
-    } else {
-      // Redirect non-branch manager users to dashboard
-      next('/app/dashboard')
-    }
-  } else {
+
+  // If trying to access login while authenticated, redirect to dashboard
+  if (to.path === '/login' && isAuthenticated()) {
+    console.log('✅ Already authenticated, redirecting to dashboard')
+    next('/app/dashboard')
+    return
+  }
+
+  // If accessing public route, allow
+  if (isPublicRoute) {
     next()
+    return
   }
+
+  // Check authentication for protected routes
+  if (!isAuthenticated()) {
+    console.log('❌ Not authenticated, redirecting to login')
+    next('/login')
+    return
+  }
+
+  // Check role-based access
+  if (to.meta?.requiresRole && to.meta.requiresRole.length > 0) {
+    const roles = Array.isArray(to.meta.requiresRole) ? to.meta.requiresRole : [to.meta.requiresRole]
+    if (!hasRole(...roles)) {
+      console.log(`❌ Role check failed. Required: ${roles.join(', ')}`)
+      next('/app/dashboard')
+      return
+    }
+  }
+
+  // Check permission-based access
+  if (to.meta?.requiresPermission && to.meta.requiresPermission.length > 0) {
+    const permissions = Array.isArray(to.meta.requiresPermission) ? to.meta.requiresPermission : [to.meta.requiresPermission]
+    if (!hasPermission(...permissions)) {
+      console.log(`❌ Permission check failed. Required: ${permissions.join(', ')}`)
+      next('/app/dashboard')
+      return
+    }
+  }
+
+  // Check legacy requiresAdmin and requiresBranchManager
+  if (to.meta?.requiresAdmin && !hasRole('admin')) {
+    console.log('❌ Admin access required')
+    next('/app/dashboard')
+    return
+  }
+
+  if (to.meta?.requiresBranchManager && !hasRole('admin', 'branch_manager')) {
+    console.log('❌ Branch manager or admin access required')
+    next('/app/dashboard')
+    return
+  }
+
+  // All checks passed, allow navigation
+  console.log('✅ All checks passed, proceeding to route')
+  next()
 })
 
 export default router

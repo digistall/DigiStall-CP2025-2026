@@ -42,16 +42,18 @@
 
             <v-form ref="loginForm" v-model="valid" @submit.prevent="handleLogin">
               <!-- Username Field -->
-              <!-- Username field with hint about employee login -->
               <v-text-field
                 v-model="username"
                 :rules="usernameRules"
                 label="Username"
+                type="text"
                 required
                 variant="outlined"
                 prepend-inner-icon="mdi-account"
                 class="login-field"
+                placeholder="Enter your username"
                 persistent-hint
+                hint="Use your registered username"
               ></v-text-field>
 
               <!-- Password Field -->
@@ -187,5 +189,5 @@
   </v-container>
 </template>
 
-<script src="./LoginPage.js"></script>
+<script src="./LoginPage_Enhanced.js"></script>
 <style scoped src="./LoginPage.css"></style>

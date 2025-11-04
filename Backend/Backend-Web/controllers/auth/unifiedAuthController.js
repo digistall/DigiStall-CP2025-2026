@@ -12,35 +12,43 @@ export const login = async (req, res) => {
   try {
     connection = await createConnection();
     
-    const { email, password, userType } = req.body;
+    const { username, password, userType } = req.body;
     
-    console.log('🔐 Unified Login Attempt:', { email, userType, timestamp: new Date().toISOString() });
+    console.log('🔐 Unified Login Attempt:', { username, userType, timestamp: new Date().toISOString() });
     
     // Validate required fields
-    if (!email || !password || !userType) {
+    if (!username || !password || !userType) {
       return res.status(400).json({
         success: false,
-        message: 'Email, password, and user type are required'
+        message: 'Username, password, and user type are required'
       });
     }
     
     let user = null;
     let tableName = '';
     let userIdField = '';
+    let usernameField = '';
+    let passwordField = '';
     
     // Determine which table to query based on user type
     switch (userType.toLowerCase()) {
       case 'admin':
         tableName = 'admin';
         userIdField = 'admin_id';
+        usernameField = 'admin_username';
+        passwordField = 'admin_password_hash';
         break;
       case 'branch_manager':
         tableName = 'branch_manager';
-        userIdField = 'manager_id';
+        userIdField = 'branch_manager_id';
+        usernameField = 'manager_username';
+        passwordField = 'manager_password_hash';
         break;
       case 'employee':
         tableName = 'employee';
         userIdField = 'employee_id';
+        usernameField = 'employee_username';
+        passwordField = 'employee_password_hash';
         break;
       default:
         return res.status(400).json({
@@ -49,14 +57,14 @@ export const login = async (req, res) => {
         });
     }
     
-    // Query the appropriate table
+    // Query the appropriate table using USERNAME field
     const [userRows] = await connection.execute(
-      `SELECT * FROM ${tableName} WHERE email = ? AND status = 'Active'`,
-      [email]
+      `SELECT * FROM ${tableName} WHERE ${usernameField} = ? AND status = 'Active'`,
+      [username]
     );
     
     if (userRows.length === 0) {
-      console.log(`❌ ${userType} not found:`, email);
+      console.log(`❌ ${userType} not found:`, username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or inactive account'
@@ -65,10 +73,12 @@ export const login = async (req, res) => {
     
     user = userRows[0];
     
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Verify password using the correct password field
+    const passwordHash = user[passwordField];
+    const isPasswordValid = await bcrypt.compare(password, passwordHash);
+    
     if (!isPasswordValid) {
-      console.log(`❌ Invalid password for ${userType}:`, email);
+      console.log(`❌ Invalid password for ${userType}:`, username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -96,9 +106,21 @@ export const login = async (req, res) => {
         let permissions = {};
         if (user.permissions) {
           try {
-            permissions = typeof user.permissions === 'string' 
+            let parsedPerms = typeof user.permissions === 'string' 
               ? JSON.parse(user.permissions) 
               : user.permissions;
+            
+            // If permissions is an array like ['dashboard', 'applicants'], convert to object
+            if (Array.isArray(parsedPerms)) {
+              permissions = {};
+              parsedPerms.forEach(perm => {
+                permissions[perm] = true;
+              });
+              console.log('✅ Converted array permissions to object:', permissions);
+            } else {
+              // Already an object
+              permissions = parsedPerms;
+            }
           } catch (e) {
             console.error('Error parsing employee permissions:', e);
             permissions = {
@@ -123,11 +145,15 @@ export const login = async (req, res) => {
       }
     }
     
+    // Get the username from the correct field
+    const userUsername = user[usernameField];
+    
     // Create JWT token
     const tokenPayload = {
       userId: user[userIdField],
       userType: userType.toLowerCase(),
-      email: user.email,
+      username: userUsername,
+      email: user.email || null,
       branchId: user.branch_id || null,
       permissions: additionalUserInfo.permissions || null
     };
@@ -138,14 +164,15 @@ export const login = async (req, res) => {
     const userData = {
       id: user[userIdField],
       userType: userType.toLowerCase(),
-      email: user.email,
+      username: userUsername,
+      email: user.email || null,
       firstName: user.first_name,
       lastName: user.last_name,
       branchId: user.branch_id || null,
       ...additionalUserInfo
     };
     
-    console.log(`✅ ${userType} login successful:`, email);
+    console.log(`✅ ${userType} login successful:`, userUsername);
     console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     
     res.status(200).json({

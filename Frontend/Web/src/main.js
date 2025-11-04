@@ -1,6 +1,14 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import vuetify from './plugins/vuetify'
 
-createApp(App).use(router).use(vuetify).mount('#app')
+const app = createApp(App)
+const pinia = createPinia()
+
+// IMPORTANT: Install Pinia BEFORE router to avoid store initialization errors
+app.use(pinia)
+app.use(router)
+app.use(vuetify)
+app.mount('#app')
