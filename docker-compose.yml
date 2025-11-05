@@ -1,0 +1,65 @@
+# ===== DOCKER COMPOSE - DIGISTALL SIMPLIFIED =====
+# Setup: Web Frontend and Backend only
+# Database runs manually (external)
+
+services:
+  # Backend API Server
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: digistall-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Connect to external database
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-naga_stall}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+    ports:
+      - "3001:3001"
+    networks:
+      - digistall-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Web Application
+  frontend-web:
+    build:
+      context: ./Frontend/Web
+      dockerfile: Dockerfile
+    container_name: digistall-frontend-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: /api
+    ports:
+      - "80:80"
+    networks:
+      - digistall-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Networks
+networks:
+  digistall-network:
+    driver: bridge
+
+# No volumes needed since database is external

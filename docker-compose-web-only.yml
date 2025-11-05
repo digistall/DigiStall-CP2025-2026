@@ -1,0 +1,93 @@
+version: '3.8'
+
+# ===== DOCKER COMPOSE - WEB ONLY SETUP =====
+# Complete setup: Web Frontend, Backend, and MySQL Database
+
+services:
+  # MySQL Database Container
+  database:
+    image: mysql:8.0
+    container_name: digistall-database
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
+      MYSQL_DATABASE: ${DB_NAME:-naga_stall}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./Backend/database/docker-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - digistall-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: digistall-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Connect to database container
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-naga_stall}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+    ports:
+      - "3001:3001"
+    networks:
+      - digistall-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Web Application
+  frontend-web:
+    build:
+      context: ./Frontend/Web
+      dockerfile: Dockerfile
+    container_name: digistall-frontend-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: /api
+    ports:
+      - "80:80"
+    networks:
+      - digistall-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Networks
+networks:
+  digistall-network:
+    driver: bridge
+
+# Volumes
+volumes:
+  mysql_data:
+    driver: local

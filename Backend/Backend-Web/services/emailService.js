@@ -24,9 +24,7 @@ class EmailService {
             return {
                 sendMail: async (mailOptions) => {
                     console.log('\n=== EMAIL SIMULATION ===');
-                    console.log('To:', mailOptions.to);
-                    console.log('Subject:', mailOptions.subject);
-                    console.log('Text Content:', mailOptions.text);
+                    console.log('Email notification sent successfully');
                     console.log('========================\n');
                     return { messageId: 'simulated-' + Date.now() };
                 }
@@ -123,7 +121,7 @@ class EmailService {
             // Send email
             const result = await this.transporter.sendMail(mailOptions);
 
-            console.log(`Welcome email sent to ${email} for employee ${firstName} ${lastName}`);
+            console.log('Welcome email sent successfully');
             return {
                 success: true,
                 messageId: result.messageId,
@@ -174,7 +172,7 @@ class EmailService {
             // Send email
             const result = await this.transporter.sendMail(mailOptions);
 
-            console.log(`Password reset email sent to ${email} for employee ${firstName} ${lastName}`);
+            console.log('Password reset email sent successfully');
             return {
                 success: true,
                 messageId: result.messageId,
@@ -217,7 +215,7 @@ class EmailService {
 
             const result = await this.transporter.sendMail(mailOptions);
 
-            console.log(`Notification email sent to ${email}: ${subject}`);
+            console.log('Notification email sent successfully');
             return {
                 success: true,
                 messageId: result.messageId,
@@ -344,7 +342,7 @@ class EmailService {
 
             const result = await this.transporter.sendMail(mailOptions);
 
-            console.log(`Application status email sent to ${applicant_email} for application ${application_id}`);
+            console.log('Application status email sent successfully');
             return {
                 success: true,
                 messageId: result.messageId,
@@ -408,7 +406,7 @@ class EmailService {
 
             const result = await this.transporter.sendMail(mailOptions);
 
-            console.log(`Application confirmation email sent to ${applicant_email} for application ${application_id}`);
+            console.log('Application confirmation email sent successfully');
             return {
                 success: true,
                 messageId: result.messageId,

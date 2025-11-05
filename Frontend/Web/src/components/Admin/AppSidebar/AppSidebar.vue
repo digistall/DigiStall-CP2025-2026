@@ -74,12 +74,13 @@
 
         <!-- Employee-specific items - Show stalls for employees with stalls permission -->
         <v-list-item
-          v-if="isEmployee && userPermissions.includes('stalls')"
+          v-if="isEmployee && hasStallsPermission"
           class="sidebar-item"
           :class="{ 
             active: isActiveRoute('/app/stalls'),
             'has-submenu': true,
             'submenu-expanded': showStallsSubMenu,
+            collapsed: !isExpanded,
           }"
           @click="setActiveItem(9, '/app/stalls', true)"
         >
@@ -87,7 +88,7 @@
             <template v-slot:activator="{ props }">
               <div class="item-container" v-bind="props">
                 <v-icon 
-                  class="sidebar-icon mr-3"
+                  class="sidebar-icon"
                   :color="isActiveRoute('/app/stalls') ? 'white' : 'dark'"
                 >
                   mdi-store
@@ -115,7 +116,7 @@
 
         <!-- Submenu items for Stalls (Employee version) -->
         <div
-          v-if="isEmployee && userPermissions.includes('stalls') && showStallsSubMenu && isExpanded"
+          v-if="isEmployee && hasStallsPermission && showStallsSubMenu && isExpanded"
           class="stalls-submenu"
         >
           <v-list-item

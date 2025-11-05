@@ -1,50 +1,170 @@
 import { createConnection } from '../../../../config/database.js'
 
-// Get all active raffles for a branch manager
+// Get all active raffles for a branch manager or employee
 export const getActiveRaffles = async (req, res) => {
   let connection;
   try {
-    const branchManagerId = req.user?.branchManagerId || req.user?.userId;
+    const userType = req.user?.userType || req.user?.role;
+    const userId = req.user?.userId;
 
-    if (!branchManagerId) {
+    console.log("🔍 getActiveRaffles - User details:", {
+      userType,
+      userId,
+      branchId: req.user?.branchId,
+      permissions: req.user?.permissions,
+    });
+
+    if (!userId) {
       return res.status(400).json({
         success: false,
-        message: 'Branch manager ID not found in authentication token'
+        message: 'User ID not found in authentication token'
       });
     }
 
     connection = await createConnection();
 
-    // Get all stalls with price_type = 'Raffle' for this branch manager
-    const [raffles] = await connection.execute(
-      `SELECT 
-        s.stall_id,
-        s.stall_no,
-        s.stall_location,
-        s.rental_price,
-        s.price_type,
-        s.is_available,
-        s.created_at,
-        s.raffle_auction_deadline,
-        s.raffle_auction_status,
-        s.raffle_auction_start_time,
-        s.raffle_auction_end_time,
-        b.branch_name,
-        f.floor_name,
-        f.floor_id,
-        sec.section_name,
-        sec.section_id
-      FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-      WHERE bm.branch_manager_id = ? AND s.price_type = 'Raffle'
-      ORDER BY s.created_at DESC`,
-      [branchManagerId]
-    );
+    let raffles = [];
 
-    console.log(`📋 Found ${raffles.length} raffle stalls for branch manager ${branchManagerId}`);
+    // Handle different user types
+    if (userType === "branch_manager" || userType === "branch-manager") {
+      // Branch manager: Get all raffles in their branch
+      const branchManagerId = req.user?.branchManagerId || userId;
+
+      console.log(`Fetching raffles for branch manager ID: ${branchManagerId}`);
+
+      const [result] = await connection.execute(
+        `SELECT 
+          s.stall_id,
+          s.stall_no,
+          s.stall_location,
+          s.rental_price,
+          s.price_type,
+          s.is_available,
+          s.created_at,
+          s.raffle_auction_deadline,
+          s.raffle_auction_status,
+          s.raffle_auction_start_time,
+          s.raffle_auction_end_time,
+          b.branch_name,
+          f.floor_name,
+          f.floor_id,
+          sec.section_name,
+          sec.section_id
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON sec.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
+        WHERE bm.branch_manager_id = ? AND s.price_type = 'Raffle'
+        ORDER BY s.created_at DESC`,
+        [branchManagerId]
+      );
+
+      raffles = result;
+    } else if (userType === "employee") {
+      // Employee: Check permissions first
+      const permissions = req.user?.permissions || [];
+
+      let hasStallsPermission = false;
+      if (Array.isArray(permissions)) {
+        hasStallsPermission = permissions.includes("stalls");
+      } else {
+        hasStallsPermission = permissions.stalls || false;
+      }
+
+      console.log("🔍 Employee permission check:", {
+        permissions,
+        isArray: Array.isArray(permissions),
+        hasStallsPermission,
+      });
+
+      if (!hasStallsPermission) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Employee does not have stalls permission.",
+        });
+      }
+
+      // Get employee's branch ID
+      const branchId = req.user?.branchId;
+
+      if (!branchId) {
+        return res.status(400).json({
+          success: false,
+          message: "Branch ID not found for employee",
+        });
+      }
+
+      console.log(`Fetching raffles for employee in branch ID: ${branchId}`);
+
+      // Get all raffles in the employee's branch
+      const [result] = await connection.execute(
+        `SELECT 
+          s.stall_id,
+          s.stall_no,
+          s.stall_location,
+          s.rental_price,
+          s.price_type,
+          s.is_available,
+          s.created_at,
+          s.raffle_auction_deadline,
+          s.raffle_auction_status,
+          s.raffle_auction_start_time,
+          s.raffle_auction_end_time,
+          b.branch_name,
+          f.floor_name,
+          f.floor_id,
+          sec.section_name,
+          sec.section_id
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON sec.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        WHERE b.branch_id = ? AND s.price_type = 'Raffle'
+        ORDER BY s.created_at DESC`,
+        [branchId]
+      );
+
+      raffles = result;
+    } else if (userType === "admin") {
+      // Admin: Get all raffles
+      console.log("Fetching all raffles for admin");
+
+      const [result] = await connection.execute(
+        `SELECT 
+          s.stall_id,
+          s.stall_no,
+          s.stall_location,
+          s.rental_price,
+          s.price_type,
+          s.is_available,
+          s.created_at,
+          s.raffle_auction_deadline,
+          s.raffle_auction_status,
+          s.raffle_auction_start_time,
+          s.raffle_auction_end_time,
+          b.branch_name,
+          f.floor_name,
+          f.floor_id,
+          sec.section_name,
+          sec.section_id
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON sec.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        WHERE s.price_type = 'Raffle'
+        ORDER BY s.created_at DESC`
+      );
+
+      raffles = result;
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Invalid user type.",
+      });
+    }
+
+    console.log(`📋 Found ${raffles.length} raffle stalls for ${userType} ${userId}`);
 
     res.json({
       success: true,

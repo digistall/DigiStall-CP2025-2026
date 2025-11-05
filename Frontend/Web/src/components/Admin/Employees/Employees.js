@@ -7,6 +7,7 @@ import {
   generateEmployeePassword,
   sendEmployeeCredentialsEmail,
 } from "./Components/emailService.js";
+import dataCacheService from '../../../services/dataCacheService.js';
 
 export default {
   name: "EmployeeManagement",
@@ -24,7 +25,7 @@ export default {
       permissionFilter: null,
 
       // API Configuration
-      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:3001/api",
 
       // Dialog states
       employeeDialog: false,
@@ -178,32 +179,35 @@ export default {
           throw new Error("Authentication required. Please login again.");
         }
 
-        console.log("🔑 Fetching employees with authentication...");
-        const response = await fetch(`${this.apiBaseUrl}/employees`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        // Use cached data with 5-minute expiration
+        const data = await dataCacheService.cachedFetch('employees', async () => {
+          console.log("🔑 Fetching employees with authentication...");
+          const response = await fetch(`${this.apiBaseUrl}/employees`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
 
-        console.log("📡 Employees API response status:", response.status);
+          console.log("📡 Employees API response status:", response.status);
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Clear session and redirect to login
-            sessionStorage.clear();
-            this.$router.push("/login");
-            throw new Error("Session expired. Please login again.");
-          } else if (response.status === 403) {
-            throw new Error(
-              "Access denied. You do not have permission to view employees."
-            );
+          if (!response.ok) {
+            if (response.status === 401) {
+              // Clear session and redirect to login
+              sessionStorage.clear();
+              this.$router.push("/login");
+              throw new Error("Session expired. Please login again.");
+            } else if (response.status === 403) {
+              throw new Error(
+                "Access denied. You do not have permission to view employees."
+              );
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
 
-        const data = await response.json();
+          return await response.json();
+        }, 5); // 5 minutes cache
 
         if (data.success) {
           this.employees = data.data || data.employees || [];
@@ -321,15 +325,15 @@ export default {
           throw new Error("Invalid authentication token. Please login again.");
         }
 
-        console.log("🔍 Debug - Decoded token:", decodedToken);
+        console.log("🔍 Debug - Token decoded successfully");
 
         // Extract user information from token
         const branchManagerId = decodedToken.userId || decodedToken.branchManagerId;
         const branchId = decodedToken.branchId;
 
-        console.log("🔍 Debug - Extracted from token:");
-        console.log("  - branchManagerId:", branchManagerId);
-        console.log("  - branchId:", branchId);
+        console.log("🔍 Debug - Token data extracted:");
+        console.log("  - Manager ID present:", !!branchManagerId);
+        console.log("  - Branch ID present:", !!branchId);
 
         // Validation
         if (!branchManagerId) {
@@ -391,13 +395,13 @@ export default {
         }
 
         const data = await response.json();
-        console.log("📡 Response data:", data);
+        console.log("📡 Response received:", { success: data.success, hasData: !!data.data });
 
         if (data.success) {
           if (!this.isEditMode) {
             // Backend generated credentials
             const backendCredentials = data.data.credentials;
-            console.log("✅ Employee created with backend credentials:", backendCredentials);
+            console.log("✅ Employee created with credentials generated");
             
             // Send email using EmailJS (same method as applicants)
             try {
@@ -444,6 +448,9 @@ export default {
           }
 
           this.closeEmployeeDialog();
+          
+          // Clear cache and refresh data
+          dataCacheService.clearCache('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
@@ -522,6 +529,9 @@ export default {
         if (data.success) {
           this.$emit("show-snackbar", "Permissions updated successfully!", "success");
           this.closePermissionsDialog();
+          
+          // Clear cache and refresh data
+          dataCacheService.clearCache('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
@@ -581,6 +591,9 @@ export default {
         if (data.success) {
           const action = newStatus === "active" ? "activated" : "deactivated";
           this.$emit("show-snackbar", `Employee ${action} successfully!`, "success");
+          
+          // Clear cache and refresh data
+          dataCacheService.clearCache('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
@@ -678,19 +691,13 @@ export default {
 
     // Utility Methods
     debugSessionStorage() {
-      console.log("🔍 === SESSION STORAGE DEBUG ===");
-      console.log("All session storage keys:", Object.keys(sessionStorage));
-      console.log(
-        "authToken:",
-        sessionStorage.getItem("authToken") ? "exists" : "missing"
-      );
-      console.log("user:", sessionStorage.getItem("user"));
-      console.log("currentUser:", sessionStorage.getItem("currentUser"));
-      console.log("userType:", sessionStorage.getItem("userType"));
-      console.log("branchManagerId:", sessionStorage.getItem("branchManagerId"));
-      console.log("branchId:", sessionStorage.getItem("branchId"));
-      console.log("branchName:", sessionStorage.getItem("branchName"));
-      console.log("branchManagerData:", sessionStorage.getItem("branchManagerData"));
+      // Security Note: Session storage debugging removed for production safety
+      // Use browser dev tools to inspect session storage if needed
+      console.log("=== SESSION DEBUG ===");
+      console.log("Session keys available:", Object.keys(sessionStorage).length);
+      console.log("Auth token:", sessionStorage.getItem("authToken") ? "present" : "missing");
+      console.log("User type:", sessionStorage.getItem("userType"));
+      console.log("Branch ID present:", !!sessionStorage.getItem("branchId"));
       console.log("=== END DEBUG ===");
     },
 

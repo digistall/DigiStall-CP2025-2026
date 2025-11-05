@@ -92,48 +92,59 @@ export default {
       return userType === 'employee' || currentUser.userType === 'employee'
     },
 
-    // Get current user permissions - Handle both object and array formats
+    // Get current user permissions - Return as object { permission: true/false }
     userPermissions() {
       const userType = sessionStorage.getItem('userType')
 
       if (userType === 'employee') {
-        // For employees, check both new and old permission formats
+        // Try to get permissions from currentUser first (most reliable)
+        const currentUser = sessionStorage.getItem('currentUser')
+        if (currentUser) {
+          try {
+            const user = JSON.parse(currentUser)
+            if (user.permissions) {
+              console.log('🆕 Using permissions from currentUser:', user.permissions)
+              return user.permissions
+            }
+          } catch (error) {
+            console.error('Error parsing currentUser:', error)
+          }
+        }
 
-        // Try new format first (object)
+        // Fallback: Try permissions key
         const permissions = sessionStorage.getItem('permissions')
         if (permissions) {
           try {
             const permObj = JSON.parse(permissions)
-            // Convert object to array for compatibility
-            const permArray = Object.keys(permObj).filter((key) => permObj[key] === true)
-            console.log('🆕 Using NEW permissions format (object):', permObj, '→', permArray)
-            return permArray
+            console.log('🔄 Using permissions from storage:', permObj)
+            return permObj
           } catch (error) {
-            console.error('Error parsing new permissions format:', error)
+            console.error('Error parsing permissions:', error)
           }
         }
 
-        // Fallback to old format (array)
+        // Fallback: Try employeePermissions key
         const employeePermissions = sessionStorage.getItem('employeePermissions')
-        try {
-          const empPerms = employeePermissions ? JSON.parse(employeePermissions) : []
-          console.log('🔄 Using OLD permissions format (array):', empPerms)
-          return Array.isArray(empPerms)
-            ? empPerms
-            : Object.keys(empPerms).filter((key) => empPerms[key] === true)
-        } catch (error) {
-          console.error('Error parsing employee permissions:', error)
-          return []
+        if (employeePermissions) {
+          try {
+            const empPerms = JSON.parse(employeePermissions)
+            console.log('🔄 Using employeePermissions:', empPerms)
+            return empPerms
+          } catch (error) {
+            console.error('Error parsing employeePermissions:', error)
+          }
         }
+
+        return {}
       } else {
         // For other users, get from currentUser
         const currentUser = sessionStorage.getItem('currentUser')
         try {
           const user = currentUser ? JSON.parse(currentUser) : {}
-          return user.permissions || []
+          return user.permissions || {}
         } catch (error) {
           console.error('Error parsing current user:', error)
-          return []
+          return {}
         }
       }
     },
@@ -149,6 +160,21 @@ export default {
         currentUser.userType === 'branch-manager' ||
         this.isAdmin
       )
+    },
+
+    // Check if user has any stalls-related permission
+    hasStallsPermission() {
+      if (this.isBranchManager || this.isAdmin) return true
+      
+      const perms = this.userPermissions
+      
+      // Handle both array and object formats
+      if (Array.isArray(perms)) {
+        return perms.includes('read_stalls') || perms.includes('write_stalls') || perms.includes('stalls')
+      } else {
+        // Object format
+        return perms.read_stalls === true || perms.write_stalls === true || perms.stalls === true
+      }
     },
 
     // Filter sidebar items based on user permissions
@@ -171,7 +197,7 @@ export default {
           6: 'employees', // Employees (only branch managers should see this)
           7: 'vendors', // Vendors
           8: 'stallholders', // Stallholders
-          9: 'stalls', // Stalls
+          9: 'stalls', // Stalls (check read_stalls or write_stalls)
           10: 'collectors', // Collectors
         }
 
@@ -183,13 +209,19 @@ export default {
         // Hide employees section from non-managers (employees section is only for branch managers)
         if (item.id === 6) return this.isBranchManager
 
-        // Check if user has the required permission
-        const hasPermission = this.userPermissions.includes(requiredPermission)
-        
-        // TEMPORARY: Always show stalls for debugging
+        // Special handling for stalls - check for read_stalls or write_stalls
         if (item.id === 9) {
-          console.log(`🔓 TEMPORARY: Always showing stalls for debugging`)
-          return true
+          const hasStalls = this.hasStallsPermission
+          console.log(`🏪 Stalls permission check: ${hasStalls}`)
+          return hasStalls
+        }
+
+        // Check if user has the required permission (handle both array and object formats)
+        let hasPermission = false
+        if (Array.isArray(this.userPermissions)) {
+          hasPermission = this.userPermissions.includes(requiredPermission)
+        } else {
+          hasPermission = this.userPermissions[requiredPermission] === true
         }
         
         console.log(
@@ -235,7 +267,7 @@ export default {
         // Refresh stall types when navigating to/from stalls pages
         if (this.$route.path.includes('/stalls')) {
           // Only check if user has permission
-          if (this.isBranchManager || this.userPermissions.includes('stalls')) {
+          if (this.hasStallsPermission) {
             this.checkAvailableStallTypes()
           }
         }
@@ -271,6 +303,9 @@ export default {
     eventBus.on(EVENTS.STALL_ADDED, this.handleStallEvent)
     eventBus.on(EVENTS.STALL_DELETED, this.handleStallEvent)
     eventBus.on(EVENTS.STALL_UPDATED, this.handleStallEvent)
+    
+    // Listen for storage changes (cross-tab logout sync)
+    window.addEventListener('storage', this.handleStorageChange)
   },
 
   // Cleanup event listeners when component is destroyed
@@ -278,6 +313,7 @@ export default {
     eventBus.off(EVENTS.STALL_ADDED, this.handleStallEvent)
     eventBus.off(EVENTS.STALL_DELETED, this.handleStallEvent)
     eventBus.off(EVENTS.STALL_UPDATED, this.handleStallEvent)
+    window.removeEventListener('storage', this.handleStorageChange)
   },
 
   methods: {
@@ -319,7 +355,7 @@ export default {
 
         console.log('User permissions:', this.userPermissions)
         console.log('Is branch manager:', this.isBranchManager)
-        console.log('Has stalls permission:', this.userPermissions.includes('stalls'))
+        console.log('Has stalls permission:', this.hasStallsPermission)
 
         // EXTRA DEFENSIVE CHECK: If this is an employee, double-check permissions
         if (userType === 'employee') {
@@ -358,7 +394,7 @@ export default {
         }
 
         // Only check stall types if user has stalls permission or is a manager
-        if (!this.isBranchManager && !this.userPermissions.includes('stalls')) {
+        if (!this.isBranchManager && !this.hasStallsPermission) {
           console.log('❌ User does not have stalls permission, skipping stall type check')
           // Make sure we don't proceed with any API calls
           this.availableStallTypes.hasRaffles = false
@@ -490,11 +526,36 @@ export default {
       await this.checkAvailableStallTypes()
     },
 
-    // Handle stall events from event bus for real-time updates
+        // Handle stall events from event bus for real-time updates
     async handleStallEvent(eventData) {
       console.log('Sidebar received stall event:', eventData)
       // Refresh stall types when any stall is added, deleted, or updated
       await this.checkAvailableStallTypes()
+    },
+
+    // Handle storage changes from other tabs (cross-tab sync)
+    handleStorageChange(event) {
+      console.log('🔄 Storage change detected:', event.key)
+      
+      // Check if authToken was removed (logout in another tab)
+      if (event.key === 'authToken' && !event.newValue) {
+        console.log('🚪 Logout detected from another tab - redirecting to login...')
+        
+        // Clear all session data
+        sessionStorage.clear()
+        localStorage.clear()
+        
+        // Redirect to login
+        window.location.href = '/login'
+      }
+      
+      // Check if new login detected in another tab
+      if (event.key === 'authToken' && event.newValue) {
+        console.log('🔐 Login detected from another tab - reloading page...')
+        
+        // Reload the page to update the UI with new session
+        window.location.reload()
+      }
     },
 
     // Debug helper to log current authentication state
