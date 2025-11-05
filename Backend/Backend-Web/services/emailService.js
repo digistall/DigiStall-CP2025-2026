@@ -50,16 +50,16 @@ class EmailService {
         let connection;
         try {
             connection = await createConnection();
-            const [templates] = await connection.execute(
-                'SELECT * FROM employee_email_template WHERE template_name = ? AND is_active = true',
+            const [[template]] = await connection.execute(
+                'CALL getEmailTemplate(?)',
                 [templateName]
             );
 
-            if (templates.length === 0) {
+            if (!template) {
                 throw new Error(`Email template '${templateName}' not found`);
             }
 
-            return templates[0];
+            return template;
         } catch (error) {
             console.error('Error getting email template:', error);
             throw error;

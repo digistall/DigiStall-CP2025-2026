@@ -11,12 +11,12 @@ export const getUserProfile = async (req, res) => {
     connection = await createConnection();
     const userId = req.user.userId; // From authentication middleware
     
-    const [users] = await connection.execute(
-      'SELECT applicant_id, first_name, last_name, email, phone_number FROM applicant WHERE applicant_id = ?',
+    const [[user]] = await connection.execute(
+      'CALL getApplicantById(?)',
       [userId]
     );
     
-    if (users.length === 0) {
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
@@ -25,7 +25,7 @@ export const getUserProfile = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: users[0]
+      data: user
     });
     
   } catch (error) {
@@ -49,12 +49,28 @@ export const updateUserProfile = async (req, res) => {
   try {
     connection = await createConnection();
     const userId = req.user.userId; // From authentication middleware
-    const { first_name, last_name, phone_number } = req.body;
+    const { first_name, last_name, phone_number, email, address } = req.body;
     
-    // Update user profile
+    // Get existing user data
+    const [[existingUser]] = await connection.execute('CALL getApplicantById(?)', [userId]);
+    
+    // Update user profile using stored procedure
     await connection.execute(
-      'UPDATE applicant SET first_name = ?, last_name = ?, phone_number = ? WHERE applicant_id = ?',
-      [first_name, last_name, phone_number, userId]
+      'CALL updateApplicant(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        userId,
+        first_name || existingUser.first_name,
+        last_name || existingUser.last_name,
+        email || existingUser.email,
+        phone_number || existingUser.contact_number,
+        address || existingUser.address,
+        existingUser.business_type,
+        existingUser.business_name,
+        existingUser.business_description,
+        existingUser.preferred_area,
+        existingUser.preferred_location,
+        existingUser.application_status
+      ]
     );
     
     res.status(200).json({

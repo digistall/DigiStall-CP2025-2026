@@ -34,8 +34,8 @@ export const deleteBranch = async (req, res) => {
       });
     }
     
-    // Delete the branch
-    await connection.execute('DELETE FROM branch WHERE branch_id = ?', [id]);
+    // Delete the branch using stored procedure
+    await connection.execute('CALL deleteBranch(?)', [id]);
     
     console.log('✅ Branch deleted successfully:', existingBranch[0].branch_name);
     

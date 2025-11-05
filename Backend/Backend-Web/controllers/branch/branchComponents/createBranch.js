@@ -51,27 +51,20 @@ export const createBranch = async (req, res) => {
     
     const admin_id = adminResult[0].admin_id;
     
-    // Insert new branch
-    const [result] = await connection.execute(
-      `INSERT INTO branch (branch_name, area, location, address, contact_number, email, status, admin_id, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    // Insert new branch using stored procedure
+    const [[createdBranch]] = await connection.execute(
+      'CALL createBranch(?, ?, ?, ?, ?, ?, ?, ?)',
       [branch_name, area, location, address, contact_number, email, status, admin_id]
     );
     
-    const branchId = result.insertId;
-    
-    // Get the created branch details
-    const [createdBranch] = await connection.execute(
-      'SELECT * FROM branch WHERE branch_id = ?',
-      [branchId]
-    );
+    const branchId = createdBranch.branch_id;
     
     console.log('✅ Branch created successfully:', branch_name);
     
     res.status(201).json({
       success: true,
       message: 'Branch created successfully',
-      data: createdBranch[0]
+      data: createdBranch
     });
     
   } catch (error) {

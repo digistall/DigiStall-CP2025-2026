@@ -33,7 +33,7 @@ export const submitMobileApplication = async (req, res) => {
 
     // Check if stall exists and is available
     const [stallCheck] = await connection.execute(
-      'SELECT stall_id, stall_name, area, branch_id, is_available FROM stalls WHERE stall_id = ?',
+      'CALL checkStallAvailability(?)',
       [stallId]
     );
 
@@ -54,7 +54,7 @@ export const submitMobileApplication = async (req, res) => {
 
     // Check if user already applied for this specific stall
     const [existingApplication] = await connection.execute(
-      'SELECT application_id FROM applications WHERE applicant_id = ? AND stall_id = ?',
+      'CALL checkExistingApplicationByStall(?, ?)',
       [applicantId, stallId]
     );
 
@@ -67,10 +67,7 @@ export const submitMobileApplication = async (req, res) => {
 
     // BUSINESS RULE: Check 2-stall-per-branch limit
     const [branchApplicationCount] = await connection.execute(
-      `SELECT COUNT(*) as count 
-       FROM applications a 
-       JOIN stalls s ON a.stall_id = s.stall_id 
-       WHERE a.applicant_id = ? AND s.branch_id = ? AND a.status != 'rejected'`,
+      'CALL countBranchApplications(?, ?)',
       [applicantId, stall.branch_id]
     );
 
@@ -81,17 +78,14 @@ export const submitMobileApplication = async (req, res) => {
       });
     }
     
-    // Insert application
-    const [result] = await connection.execute(
-      `INSERT INTO applications 
-       (applicant_id, stall_id, business_name, business_type, preferred_area, 
-        document_urls, status, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+    // Insert application using stored procedure
+    const [[result]] = await connection.execute(
+      'CALL createMobileApplication(?, ?, ?, ?, ?, ?)',
       [applicantId, stallId, businessName, businessType, preferredArea, documentUrls ? JSON.stringify(documentUrls) : null]
     );
 
     console.log('✅ Mobile application submitted successfully:', {
-      applicationId: result.insertId,
+      applicationId: result.application_id,
       stallName: stall.stall_name,
       area: stall.area
     });
@@ -100,7 +94,7 @@ export const submitMobileApplication = async (req, res) => {
       success: true,
       message: 'Application submitted successfully',
       data: {
-        applicationId: result.insertId,
+        applicationId: result.application_id,
         stallName: stall.stall_name,
         area: stall.area,
         status: 'pending'
@@ -130,11 +124,7 @@ export const getMobileUserApplications = async (req, res) => {
     const userId = req.user.userId;
     
     const [applications] = await connection.execute(
-      `SELECT a.*, s.stall_name, s.area, s.location 
-       FROM applications a 
-       LEFT JOIN stalls s ON a.stall_id = s.stall_id 
-       WHERE a.applicant_id = ? 
-       ORDER BY a.created_at DESC`,
+      'CALL getMobileUserApplications(?)',
       [userId]
     );
     
@@ -167,10 +157,7 @@ export const getMobileApplicationStatus = async (req, res) => {
     const userId = req.user.userId;
     
     const [applications] = await connection.execute(
-      `SELECT a.*, s.stall_name, s.area, s.location 
-       FROM applications a 
-       LEFT JOIN stalls s ON a.stall_id = s.stall_id 
-       WHERE a.application_id = ? AND a.applicant_id = ?`,
+      'CALL getMobileApplicationStatus(?, ?)',
       [id, userId]
     );
     
@@ -217,7 +204,7 @@ export const updateMobileApplication = async (req, res) => {
     
     // Check if application belongs to user and is still pending
     const [existing] = await connection.execute(
-      'SELECT * FROM applications WHERE application_id = ? AND applicant_id = ? AND status = "pending"',
+      'CALL checkPendingApplication(?, ?)',
       [id, userId]
     );
     
@@ -228,13 +215,10 @@ export const updateMobileApplication = async (req, res) => {
       });
     }
     
-    // Update application
+    // Update application using stored procedure
     await connection.execute(
-      `UPDATE applications 
-       SET business_name = ?, business_type = ?, preferred_area = ?, 
-           document_urls = ?, updated_at = NOW() 
-       WHERE application_id = ? AND applicant_id = ?`,
-      [businessName, businessType, preferredArea, JSON.stringify(documentUrls), id, userId]
+      'CALL updateMobileApplication(?, ?, ?, ?, ?, ?)',
+      [id, userId, businessName, businessType, preferredArea, JSON.stringify(documentUrls)]
     );
     
     res.status(200).json({

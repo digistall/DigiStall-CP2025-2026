@@ -7,7 +7,6 @@ export const applicantController = {
 
     try {
       connection = await createConnection();
-      await connection.beginTransaction();
 
       const {
         // Personal Information
@@ -48,198 +47,61 @@ export const applicantController = {
         });
       }
 
-      // Check if email already exists - but allow resubmission in certain cases
-      if (email_address) {
-        const [existingEmail] = await connection.execute(
-          `
-          SELECT 
-            oi.applicant_id, 
-            a.applicant_full_name,
-            app.application_status,
-            a.created_at
-          FROM other_information oi
-          JOIN applicant a ON oi.applicant_id = a.applicant_id
-          LEFT JOIN application app ON a.applicant_id = app.applicant_id
-          WHERE oi.email_address = ?
-          ORDER BY a.created_at DESC
-          LIMIT 1
-        `,
-          [email_address]
-        );
-
-        if (existingEmail.length > 0) {
-          const existing = existingEmail[0];
-          const applicationStatus = existing.application_status;
-
-          // Allow resubmission if:
-          // 1. Previous application was declined/rejected
-          // 2. No application exists (just applicant data)
-          // 3. Application is older than 30 days and still pending
-          const daysSinceCreation = Math.floor(
-            (Date.now() - new Date(existing.created_at)) / (1000 * 60 * 60 * 24)
-          );
-
-          if (
-            applicationStatus === "Approved" ||
-            applicationStatus === "approved"
-          ) {
-            return res.status(400).json({
-              success: false,
-              message:
-                "This email address is already associated with an approved application. Please contact support if you need assistance.",
-            });
-          } else if (
-            applicationStatus === "Pending" ||
-            applicationStatus === "pending"
-          ) {
-            if (daysSinceCreation < 7) {
-              // Block resubmission within 7 days if pending
-              return res.status(400).json({
-                success: false,
-                message: `A recent application with this email address is still pending review (submitted ${daysSinceCreation} day(s) ago). Please wait for the review to complete or contact support.`,
-              });
-            }
-            // Allow resubmission if pending for more than 7 days
-            console.log(
-              `Allowing resubmission for email ${email_address} - pending for ${daysSinceCreation} days`
-            );
-          }
-          // Allow resubmission for declined/rejected applications or null status
-          console.log(
-            `Allowing resubmission for email ${email_address} - status: ${applicationStatus || "no application"}`
-          );
-        }
-      }
-
-      // 1. Create applicant record
-      const [applicantResult] = await connection.execute(
-        `INSERT INTO applicant (
-          applicant_full_name, applicant_contact_number, applicant_address, 
-          applicant_birthdate, applicant_civil_status, applicant_educational_attainment
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      // Call createApplicantComplete stored procedure
+      const [[result]] = await connection.execute(
+        `CALL createApplicantComplete(
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?
+        )`,
         [
+          // Personal Information
           applicant_full_name,
           applicant_contact_number,
           applicant_address,
           applicant_birthdate,
           applicant_civil_status,
           applicant_educational_attainment,
+          // Business Information
+          nature_of_business || null,
+          capitalization || null,
+          source_of_capital || null,
+          previous_business_experience || null,
+          relative_stall_owner || 'No',
+          // Spouse Information
+          spouse_full_name || null,
+          spouse_birthdate || null,
+          spouse_educational_attainment || null,
+          spouse_contact_number || null,
+          spouse_occupation || null,
+          // Other Information
+          signature_of_applicant || null,
+          house_sketch_location || null,
+          valid_id || null,
+          email_address
         ]
       );
 
-      const applicantId = applicantResult.insertId;
-
-      // 2. Create business information if provided
-      if (nature_of_business) {
-        await connection.execute(
-          `INSERT INTO business_information (
-            applicant_id, nature_of_business, capitalization, 
-            source_of_capital, previous_business_experience, relative_stall_owner
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            applicantId,
-            nature_of_business,
-            capitalization || null,
-            source_of_capital,
-            previous_business_experience,
-            relative_stall_owner || "No",
-          ]
-        );
-      }
-
-      // 3. Create spouse information if married and spouse details provided
-      if (applicant_civil_status === "Married" && spouse_full_name) {
-        await connection.execute(
-          `INSERT INTO spouse (
-            applicant_id, spouse_full_name, spouse_birthdate, 
-            spouse_educational_attainment, spouse_contact_number, spouse_occupation
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            applicantId,
-            spouse_full_name,
-            spouse_birthdate,
-            spouse_educational_attainment,
-            spouse_contact_number,
-            spouse_occupation,
-          ]
-        );
-      }
-
-      // 4. Create other information
-      await connection.execute(
-        `INSERT INTO other_information (
-          applicant_id, signature_of_applicant, house_sketch_location, 
-          valid_id, email_address
-        ) VALUES (?, ?, ?, ?, ?)`,
-        [
-          applicantId,
-          signature_of_applicant,
-          house_sketch_location,
-          valid_id,
-          email_address,
-        ]
-      );
-
-      // 5. If stall_id is provided, create the application as well (atomic operation)
-      let applicationId = null;
-      if (req.body.stall_id) {
-        console.log(
-          `🎯 Creating application for applicant ${applicantId} and stall ${req.body.stall_id}`
-        );
-
-        // Check if stall exists and is available
-        const [stallRows] = await connection.execute(
-          'SELECT * FROM stall WHERE stall_id = ? AND is_available = 1 AND status = "Active"',
-          [req.body.stall_id]
-        );
-
-        if (stallRows.length === 0) {
-          throw new Error("Stall is not available or does not exist");
-        }
-
-        // Create the application within the same transaction
-        try {
-          const [applicationResult] = await connection.execute(
-            `INSERT INTO application (stall_id, applicant_id, application_date, application_status)
-             VALUES (?, ?, ?, 'Pending')`,
-            [
-              req.body.stall_id,
-              applicantId,
-              req.body.application_date ||
-                new Date().toISOString().split("T")[0],
-            ]
-          );
-          applicationId = applicationResult.insertId;
-          console.log(
-            `✅ Application created successfully with ID: ${applicationId}`
-          );
-        } catch (appError) {
-          console.error("❌ Error creating application:", appError.message);
-          throw new Error(`Failed to create application: ${appError.message}`);
-        }
-      }
-
-      await connection.commit();
-      console.log(`✅ Transaction committed successfully`);
+      const applicantId = result.new_applicant_id;
 
       res.status(201).json({
         success: true,
-        message: applicationId
-          ? "Applicant and application created successfully"
-          : "Applicant created successfully",
+        message: "Applicant created successfully",
         data: {
           applicant_id: applicantId,
-          application_id: applicationId,
           applicant_full_name,
           applicant_contact_number,
-          stall_id: req.body.stall_id || null,
         },
       });
     } catch (error) {
-      if (connection) {
-        await connection.rollback();
+      if (error.sqlState === '45000') {
+        return res.status(400).json({
+          success: false,
+          message: error.sqlMessage || error.message,
+        });
       }
-      console.error("Error creating applicant:", error);
+
       res.status(500).json({
         success: false,
         message: "Failed to create applicant",
@@ -259,27 +121,14 @@ export const applicantController = {
     try {
       connection = await createConnection();
 
-      const [applicants] = await connection.execute(`
-        SELECT 
-          a.*,
-          bi.nature_of_business,
-          bi.capitalization,
-          s.spouse_full_name,
-          oi.email_address
-        FROM applicant a
-        LEFT JOIN business_information bi ON a.applicant_id = bi.applicant_id
-        LEFT JOIN spouse s ON a.applicant_id = s.applicant_id
-        LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
-        ORDER BY a.created_at DESC
-      `);
+      const [[applicants]] = await connection.execute('CALL getApplicantComplete(NULL)');
 
       res.json({
         success: true,
-        data: applicants,
-        count: applicants.length,
+        data: applicants || [],
+        count: applicants ? applicants.length : 0,
       });
     } catch (error) {
-      console.error("Error fetching applicants:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch applicants",
@@ -300,50 +149,44 @@ export const applicantController = {
       const { id } = req.params;
       connection = await createConnection();
 
-      // Get applicant basic info
-      const [applicantRows] = await connection.execute(
-        "SELECT * FROM applicant WHERE applicant_id = ?",
-        [id]
-      );
+      const [[applicants]] = await connection.execute('CALL getApplicantComplete(?)', [id]);
 
-      if (applicantRows.length === 0) {
+      if (!applicants || applicants.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Applicant not found",
         });
       }
 
-      const applicant = applicantRows[0];
-
-      // Get business information
-      const [businessRows] = await connection.execute(
-        "SELECT * FROM business_information WHERE applicant_id = ?",
-        [id]
-      );
-
-      // Get spouse information
-      const [spouseRows] = await connection.execute(
-        "SELECT * FROM spouse WHERE applicant_id = ?",
-        [id]
-      );
-
-      // Get other information
-      const [otherRows] = await connection.execute(
-        "SELECT * FROM other_information WHERE applicant_id = ?",
-        [id]
-      );
+      const applicant = applicants[0];
 
       res.json({
         success: true,
         data: {
           applicant,
-          business_information: businessRows[0] || null,
-          spouse: spouseRows[0] || null,
-          other_information: otherRows[0] || null,
+          business_information: applicant.nature_of_business ? {
+            nature_of_business: applicant.nature_of_business,
+            capitalization: applicant.capitalization,
+            source_of_capital: applicant.source_of_capital,
+            previous_business_experience: applicant.previous_business_experience,
+            relative_stall_owner: applicant.relative_stall_owner
+          } : null,
+          spouse: applicant.spouse_full_name ? {
+            spouse_full_name: applicant.spouse_full_name,
+            spouse_birthdate: applicant.spouse_birthdate,
+            spouse_educational_attainment: applicant.spouse_educational_attainment,
+            spouse_contact_number: applicant.spouse_contact_number,
+            spouse_occupation: applicant.spouse_occupation
+          } : null,
+          other_information: {
+            email_address: applicant.email_address,
+            signature_of_applicant: applicant.signature_of_applicant,
+            house_sketch_location: applicant.house_sketch_location,
+            valid_id: applicant.valid_id
+          }
         },
       });
     } catch (error) {
-      console.error("Error fetching applicant:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch applicant",
@@ -364,19 +207,6 @@ export const applicantController = {
       const { id } = req.params;
       connection = await createConnection();
 
-      // Check if applicant exists
-      const [existingApplicant] = await connection.execute(
-        "SELECT * FROM applicant WHERE applicant_id = ?",
-        [id]
-      );
-
-      if (existingApplicant.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Applicant not found",
-        });
-      }
-
       const {
         applicant_full_name,
         applicant_contact_number,
@@ -384,22 +214,54 @@ export const applicantController = {
         applicant_birthdate,
         applicant_civil_status,
         applicant_educational_attainment,
+        // Business Information
+        nature_of_business,
+        capitalization,
+        source_of_capital,
+        previous_business_experience,
+        relative_stall_owner,
+        // Spouse Information
+        spouse_full_name,
+        spouse_birthdate,
+        spouse_educational_attainment,
+        spouse_contact_number,
+        spouse_occupation,
+        // Other Information
+        signature_of_applicant,
+        house_sketch_location,
+        valid_id,
+        email_address,
       } = req.body;
 
       await connection.execute(
-        `UPDATE applicant SET 
-          applicant_full_name = ?, applicant_contact_number = ?, 
-          applicant_address = ?, applicant_birthdate = ?, 
-          applicant_civil_status = ?, applicant_educational_attainment = ?
-        WHERE applicant_id = ?`,
+        `CALL updateApplicantComplete(
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?
+        )`,
         [
+          id,
           applicant_full_name,
           applicant_contact_number,
           applicant_address,
           applicant_birthdate,
           applicant_civil_status,
           applicant_educational_attainment,
-          id,
+          nature_of_business || null,
+          capitalization || null,
+          source_of_capital || null,
+          previous_business_experience || null,
+          relative_stall_owner || null,
+          spouse_full_name || null,
+          spouse_birthdate || null,
+          spouse_educational_attainment || null,
+          spouse_contact_number || null,
+          spouse_occupation || null,
+          signature_of_applicant || null,
+          house_sketch_location || null,
+          valid_id || null,
+          email_address || null
         ]
       );
 
@@ -408,7 +270,13 @@ export const applicantController = {
         message: "Applicant updated successfully",
       });
     } catch (error) {
-      console.error("Error updating applicant:", error);
+      if (error.sqlState === '45000') {
+        return res.status(404).json({
+          success: false,
+          message: error.sqlMessage || "Applicant not found",
+        });
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to update applicant",
@@ -426,11 +294,7 @@ export const applicantController = {
     let connection;
 
     try {
-      console.log("📨 Received stall application request from landing page");
-      console.log("📋 Request body keys:", Object.keys(req.body));
-
       connection = await createConnection();
-      await connection.beginTransaction();
 
       const {
         // Personal Information
@@ -466,14 +330,7 @@ export const applicantController = {
         application_date,
       } = req.body;
 
-      console.log("👤 Applicant:", applicant_full_name);
-      console.log("📧 Email:", email_address);
-      console.log(
-        "🏢 Stall ID:",
-        stall_id || "GENERAL APPLICATION (no specific stall)"
-      );
-
-      // Validate required fields (stall_id is optional for general applications)
+      // Validate required fields
       if (!applicant_full_name || !applicant_contact_number || !email_address) {
         return res.status(400).json({
           success: false,
@@ -482,192 +339,53 @@ export const applicantController = {
         });
       }
 
-      // Enhanced email check with better logic
-      const [existingEmail] = await connection.execute(
-        `
-        SELECT 
-          oi.applicant_id, 
-          a.applicant_full_name,
-          app.application_status,
-          a.created_at
-        FROM other_information oi
-        JOIN applicant a ON oi.applicant_id = a.applicant_id
-        LEFT JOIN application app ON a.applicant_id = app.applicant_id
-        WHERE oi.email_address = ?
-        ORDER BY a.created_at DESC
-        LIMIT 1
-      `,
-        [email_address]
-      );
-
-      if (existingEmail.length > 0) {
-        const existing = existingEmail[0];
-        const applicationStatus = existing.application_status;
-        const daysSinceCreation = Math.floor(
-          (Date.now() - new Date(existing.created_at)) / (1000 * 60 * 60 * 24)
-        );
-
-        // If this is a general application (no stall_id) or existing application is null, allow it
-        if (!stall_id || !applicationStatus) {
-          console.log(
-            `Allowing ${stall_id ? "specific" : "general"} application for email ${email_address} - existing status: ${applicationStatus || "no application"}`
-          );
-        } else if (
-          applicationStatus === "Approved" ||
-          applicationStatus === "approved"
-        ) {
-          await connection.rollback();
-          return res.status(400).json({
-            success: false,
-            message:
-              "This email address is already associated with an approved application. Please use a different email or contact support.",
-          });
-        } else if (
-          (applicationStatus === "Pending" ||
-            applicationStatus === "pending") &&
-          daysSinceCreation < 1
-        ) {
-          await connection.rollback();
-          return res.status(400).json({
-            success: false,
-            message: `A recent application with this email address is still pending review (submitted ${daysSinceCreation} day(s) ago). Please wait for the review to complete or contact support.`,
-          });
-        } else {
-          console.log(
-            `Allowing resubmission for email ${email_address} - status: ${applicationStatus}, days: ${daysSinceCreation}`
-          );
-        }
-      }
-
-      // Check if stall exists and is available (only if stall_id is provided)
-      if (stall_id) {
-        console.log("🔍 Checking stall availability...");
-        const [stallRows] = await connection.execute(
-          'SELECT * FROM stall WHERE stall_id = ? AND is_available = 1 AND status = "Active"',
-          [stall_id]
-        );
-
-        if (stallRows.length === 0) {
-          console.log("❌ Stall not available or does not exist");
-          await connection.rollback();
-          return res.status(400).json({
-            success: false,
-            message: "Selected stall is not available or does not exist",
-          });
-        }
-
-        console.log("Stall is available:", stallRows[0].stall_code);
-      } else {
-        console.log("General application (no specific stall selected)");
-      }
-
-      // 1. Create applicant record
-      const [applicantResult] = await connection.execute(
-        `INSERT INTO applicant (
-          applicant_full_name, applicant_contact_number, applicant_address, 
-          applicant_birthdate, applicant_civil_status, applicant_educational_attainment
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      // Step 1: Create applicant using stored procedure
+      const [[applicantResult]] = await connection.execute(
+        `CALL createApplicantComplete(
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?
+        )`,
         [
+          // Personal Information
           applicant_full_name,
           applicant_contact_number,
           applicant_address,
           applicant_birthdate,
           applicant_civil_status,
           applicant_educational_attainment,
+          // Business Information
+          nature_of_business || null,
+          capitalization || null,
+          source_of_capital || null,
+          previous_business_experience || null,
+          relative_stall_owner || 'No',
+          // Spouse Information
+          spouse_full_name || null,
+          spouse_birthdate || null,
+          spouse_educational_attainment || null,
+          spouse_contact_number || null,
+          spouse_occupation || null,
+          // Other Information
+          signature_of_applicant || null,
+          house_sketch_location || null,
+          valid_id || null,
+          email_address
         ]
       );
 
-      const applicantId = applicantResult.insertId;
-      console.log(`Applicant created with ID: ${applicantId}`);
+      const applicantId = applicantResult.new_applicant_id;
 
-      // 2. Create business information if provided
-      if (nature_of_business) {
-        await connection.execute(
-          `INSERT INTO business_information (
-            applicant_id, nature_of_business, capitalization, 
-            source_of_capital, previous_business_experience, relative_stall_owner
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            applicantId,
-            nature_of_business,
-            capitalization || null,
-            source_of_capital,
-            previous_business_experience,
-            relative_stall_owner || "No",
-          ]
-        );
-      }
-
-      // 3. Create spouse information if married and spouse details provided
-      if (applicant_civil_status === "Married" && spouse_full_name) {
-        await connection.execute(
-          `INSERT INTO spouse (
-            applicant_id, spouse_full_name, spouse_birthdate, 
-            spouse_educational_attainment, spouse_contact_number, spouse_occupation
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            applicantId,
-            spouse_full_name,
-            spouse_birthdate,
-            spouse_educational_attainment,
-            spouse_contact_number,
-            spouse_occupation,
-          ]
-        );
-      }
-
-      // 4. Create other information
-      await connection.execute(
-        `INSERT INTO other_information (
-          applicant_id, signature_of_applicant, house_sketch_location, 
-          valid_id, email_address
-        ) VALUES (?, ?, ?, ?, ?)`,
-        [
-          applicantId,
-          signature_of_applicant,
-          house_sketch_location,
-          valid_id,
-          email_address,
-        ]
-      );
-
-      // 5. Create the application (always - stall_id can be NULL for general applications)
+      // Step 2: Create application if stall_id provided
       let applicationId = null;
-      try {
-        const [applicationResult] = await connection.execute(
-          `INSERT INTO application (stall_id, applicant_id, application_date, application_status)
-           VALUES (?, ?, ?, 'Pending')`,
-          [
-            stall_id || null,
-            applicantId,
-            application_date || new Date().toISOString().split("T")[0],
-          ]
+      if (stall_id) {
+        const [[appResult]] = await connection.execute(
+          'CALL createApplication(?, ?, ?)',
+          [stall_id, applicantId, application_date || new Date().toISOString().split('T')[0]]
         );
-        applicationId = applicationResult.insertId;
-        console.log(`✅ Application created with ID: ${applicationId}`);
-        if (!stall_id) {
-          console.log(
-            "📝 General application - stall will be assigned by admin"
-          );
-        }
-      } catch (appError) {
-        console.error("❌ Application creation failed:", appError.message);
-        await connection.rollback();
-        return res.status(500).json({
-          success: false,
-          message:
-            "Failed to submit application due to database constraints. Please try again or contact support.",
-          error: appError.message,
-        });
+        applicationId = appResult.new_application_id;
       }
-
-      await connection.commit();
-      console.log(
-        `🎉 Complete stall application transaction committed successfully!`
-      );
-      console.log(
-        `📊 Summary: Applicant ID ${applicantId}, Application ID ${applicationId}, Stall ID ${stall_id || "NULL (General Application)"}`
-      );
 
       res.status(201).json({
         success: true,
@@ -684,14 +402,13 @@ export const applicantController = {
         },
       });
     } catch (error) {
-      if (connection) {
-        await connection.rollback();
-        console.error(
-          "❌ Transaction rolled back due to error:",
-          error.message
-        );
+      if (error.sqlState === '45000') {
+        return res.status(400).json({
+          success: false,
+          message: error.sqlMessage || error.message,
+        });
       }
-      console.error("Error creating stall application:", error);
+
       res.status(500).json({
         success: false,
         message: "Failed to submit stall application",
@@ -712,24 +429,20 @@ export const applicantController = {
       const { id } = req.params;
       connection = await createConnection();
 
-      const [result] = await connection.execute(
-        "DELETE FROM applicant WHERE applicant_id = ?",
-        [id]
-      );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Applicant not found",
-        });
-      }
+      await connection.execute('CALL deleteApplicant(?)', [id]);
 
       res.json({
         success: true,
         message: "Applicant deleted successfully",
       });
     } catch (error) {
-      console.error("Error deleting applicant:", error);
+      if (error.sqlState === '45000') {
+        return res.status(404).json({
+          success: false,
+          message: error.sqlMessage || "Applicant not found",
+        });
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to delete applicant",

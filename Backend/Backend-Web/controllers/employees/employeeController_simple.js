@@ -60,34 +60,24 @@ export async function createEmployee(req, res) {
 
         console.log('💾 Saving employee with permissions JSON:', permissionsJson);
 
-        // Insert employee with all fields including created_by_manager and permissions
-        const [result] = await connection.execute(
-            `INSERT INTO employee (
-                first_name, 
-                last_name, 
-                email, 
-                phone_number, 
-                employee_username, 
-                employee_password_hash, 
-                branch_id, 
-                created_by_manager,
-                permissions,
-                status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+        // Call stored procedure to create employee
+        const [[result]] = await connection.execute(
+            'CALL createEmployee(?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
-                firstName, 
-                lastName, 
-                email, 
-                phoneNumber, 
-                username, 
-                hashedPassword, 
+                username,
+                hashedPassword,
+                firstName,
+                lastName,
+                email,
+                phoneNumber,
                 userBranchId,
                 createdByManagerId,
                 permissionsJson
             ]
         );
 
-        console.log(`👥 Created new employee ID: ${result.insertId} in branch: ${userBranchId} by manager: ${createdByManagerId}`);
+        const employeeId = result.employee_id;
+        console.log(`👥 Created new employee ID: ${employeeId} in branch: ${userBranchId} by manager: ${createdByManagerId}`);
         
         // Note: Email will be sent by frontend using EmailJS (same method as applicants)
         console.log(`📧 Email will be sent by frontend via EmailJS to ${email}`);
@@ -96,7 +86,7 @@ export async function createEmployee(req, res) {
             success: true,
             message: 'Employee created successfully',
             data: {
-                employeeId: result.insertId,
+                employeeId: employeeId,
                 credentials: {
                     username,
                     password
@@ -128,10 +118,10 @@ export async function getAllEmployees(req, res) {
 
         connection = await createConnection();
         
-        // Filter employees by the current user's branch ID
-        const [employees] = await connection.execute(
-            'SELECT * FROM employee WHERE status = "Active" AND branch_id = ?', 
-            [userBranchId]
+        // Call stored procedure to get all employees
+        const [[employees]] = await connection.execute(
+            'CALL getAllEmployees(?, ?, NULL, NULL)', 
+            ['Active', userBranchId]
         );
         
         console.log(`🏢 Fetching employees for branch ID: ${userBranchId}, Found: ${employees.length} employees`);
@@ -166,13 +156,14 @@ export async function getEmployeeById(req, res) {
         
         connection = await createConnection();
         
-        // Security check: Only allow access to employees from the same branch
-        const [employee] = await connection.execute(
-            'SELECT * FROM employee WHERE employee_id = ? AND branch_id = ?', 
-            [id, userBranchId]
+        // Call stored procedure to get employee by ID
+        const [[employee]] = await connection.execute(
+            'CALL getEmployeeById(?)', 
+            [id]
         );
         
-        if (employee.length === 0) {
+        // Security check: Only allow access to employees from the same branch
+        if (employee.length === 0 || employee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to access this employee' 
@@ -212,16 +203,29 @@ export async function updateEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Security check: Only allow updating employees from the same branch
-        const [result] = await connection.execute(
-            'UPDATE employee SET first_name = ?, last_name = ?, email = ?, phone_number = ?, status = ? WHERE employee_id = ? AND branch_id = ?',
-            [firstName, lastName, email, phoneNumber, status, id, userBranchId]
+        // Security check: Verify employee belongs to the same branch before updating
+        const [[checkEmployee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
-
-        if (result.affectedRows === 0) {
+        
+        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to update this employee' 
+            });
+        }
+        
+        // Call stored procedure to update employee
+        const [[result]] = await connection.execute(
+            'CALL updateEmployee(?, ?, ?, ?, ?, NULL, ?)',
+            [id, firstName, lastName, email, phoneNumber, status]
+        );
+
+        if (result.affected_rows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Failed to update employee' 
             });
         }
 
@@ -251,16 +255,29 @@ export async function deleteEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Security check: Only allow deleting employees from the same branch
-        const [result] = await connection.execute(
-            'UPDATE employee SET status = "Inactive" WHERE employee_id = ? AND branch_id = ?', 
-            [id, userBranchId]
+        // Security check: Verify employee belongs to the same branch before deleting
+        const [[checkEmployee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
-
-        if (result.affectedRows === 0) {
+        
+        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to delete this employee' 
+            });
+        }
+        
+        // Call stored procedure to delete (deactivate) employee
+        const [[result]] = await connection.execute(
+            'CALL deleteEmployee(?)', 
+            [id]
+        );
+
+        if (result.affected_rows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Failed to deactivate employee' 
             });
         }
 
@@ -292,27 +309,11 @@ export async function loginEmployee(req, res) {
 
         connection = await createConnection();
         
-        // Query employee table with JOIN to branch table for branch details
+        // Call stored procedure to get employee by username
         console.log('🔍 Searching for employee with username:', username);
-        const [employees] = await connection.execute(`
-            SELECT 
-                e.employee_id, 
-                e.employee_username, 
-                e.employee_password_hash, 
-                e.first_name, 
-                e.last_name, 
-                e.email, 
-                e.phone_number,
-                e.branch_id,
-                e.status,
-                e.permissions,
-                b.branch_name,
-                b.area,
-                b.location
-            FROM employee e
-            LEFT JOIN branch b ON e.branch_id = b.branch_id
-            WHERE e.employee_username = ? AND e.status = ?`,
-            [username, 'Active']
+        const [[employees]] = await connection.execute(
+            'CALL getEmployeeByUsername(?)',
+            [username]
         );
 
         if (employees.length === 0) {
@@ -341,7 +342,23 @@ export async function loginEmployee(req, res) {
             });
         }
 
-        // Generate JWT token
+        // Generate session token for the stored procedure
+        const sessionToken = jwt.sign(
+            { employeeId: employee.employee_id, timestamp: Date.now() },
+            process.env.JWT_SECRET || 'fallback_secret',
+            { expiresIn: '24h' }
+        );
+        
+        // Call stored procedure to create session and update last_login
+        const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
+        
+        await connection.execute(
+            'CALL loginEmployee(?, ?, ?, ?)',
+            [username, sessionToken, ipAddress, userAgent]
+        );
+
+        // Generate JWT token for the response
         const token = jwt.sign(
             {
                 userId: employee.employee_id,
@@ -410,17 +427,20 @@ export async function resetEmployeePassword(req, res) {
     let connection;
     try {
         const { id } = req.params;
+        const resetBy = req.user?.userId || req.user?.branchManagerId;
+        
         connection = await createConnection();
         
         const newPassword = Math.random().toString(36).substring(2, 10);
         const hashedPassword = await bcrypt.hash(newPassword, 12);
         
-        const [result] = await connection.execute(
-            'UPDATE employee SET employee_password_hash = ?, password_reset_required = TRUE WHERE employee_id = ?',
-            [hashedPassword, id]
+        // Call stored procedure to reset employee password
+        const [[result]] = await connection.execute(
+            'CALL resetEmployeePassword(?, ?, ?)',
+            [id, hashedPassword, resetBy]
         );
 
-        if (result.affectedRows === 0) {
+        if (result.affected_rows === 0) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
 
@@ -459,7 +479,12 @@ export async function getEmployeesByBranch(req, res) {
         }
         
         connection = await createConnection();
-        const [employees] = await connection.execute('SELECT * FROM employee WHERE branch_id = ? AND status = "Active"', [branchId]);
+        
+        // Call stored procedure to get employees by branch
+        const [[employees]] = await connection.execute(
+            'CALL getEmployeesByBranch(?, ?)', 
+            [branchId, 'Active']
+        );
         
         console.log(`🏢 Fetching employees for specific branch ID: ${branchId}, Found: ${employees.length} employees`);
         

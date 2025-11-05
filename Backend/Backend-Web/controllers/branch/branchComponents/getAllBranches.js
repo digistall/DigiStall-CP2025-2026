@@ -6,30 +6,7 @@ export const getAllBranches = async (req, res) => {
   try {
     connection = await createConnection();
     
-    const query = `
-      SELECT 
-        b.branch_id,
-        b.branch_name,
-        b.area,
-        b.location,
-        b.address,
-        b.contact_number,
-        b.email,
-        b.status,
-        b.created_at,
-        b.updated_at,
-        CONCAT(bm.first_name, ' ', bm.last_name) as manager_name,
-        bm.branch_manager_id,
-        bm.manager_username,
-        bm.email as manager_email,
-        bm.contact_number as manager_contact,
-        bm.status as manager_status
-      FROM branch b
-      LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
-      ORDER BY b.branch_name ASC
-    `;
-    
-    const [branches] = await connection.execute(query);
+    const [branches] = await connection.execute('CALL getAllBranchesDetailed()');
     
     res.json({
       success: true,

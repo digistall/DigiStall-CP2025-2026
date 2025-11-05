@@ -26,23 +26,21 @@ export const adminLogin = async (req, res) => {
 
     connection = await createConnection();
 
-    // Query admin table
-    const [admins] = await connection.execute(
-      'SELECT admin_id, admin_username, admin_password_hash, email, status FROM admin WHERE admin_username = ? AND status = ?',
-      [username, 'Active']
+    // Query admin table using stored procedure
+    const [[admin]] = await connection.execute(
+      'CALL getAdminByUsernameLogin(?)',
+      [username]
     );  
 
-    console.log('🔍 Found admins:', admins.length);
+    console.log('🔍 Found admins:', admin ? 1 : 0);
 
-    if (admins.length === 0) {
+    if (!admin) {
       console.log('❌ No admin found with username:', username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
-
-    const admin = admins[0];
 
     // Verify password
     const isPasswordValid = await compare(password, admin.admin_password_hash);
