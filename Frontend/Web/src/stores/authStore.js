@@ -9,6 +9,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import axios from 'axios';
+import SecureLogger from '../utils/secureLogger.js';
 
 // API Base URL - Backend runs on port 3001
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -116,7 +117,6 @@ export const useAuthStore = defineStore('auth', () => {
           sessionStorage.setItem('userType', parsedUser.userType);
           
           console.log('✅ Auth store initialized with existing session');
-          console.log('🔑 Restored permissions:', parsedUser.permissions);
         } catch (parseError) {
           console.error('❌ Error parsing session data:', parseError);
           // Clear invalid session data
@@ -190,14 +190,20 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true;
       error.value = null;
 
-      console.log('🔐 Attempting login:', { username, userType });
+      SecureLogger.auth('Attempting authentication');
 
-      // Call unified login API
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const loginUrl = `${API_BASE_URL}/auth/login`;
+      const loginData = {
         username: username, // Backend expects 'username' field
         password,
         userType
-      });
+      };
+
+      SecureLogger.network('Login request', { url: loginUrl, method: 'POST' });
+      SecureLogger.auth('Login data prepared', { username, userType, passwordLength: password?.length });
+
+      // Call unified login API
+      const response = await axios.post(loginUrl, loginData);
 
       if (response.data.success) {
         const { user: userData, token } = response.data.data;
@@ -231,15 +237,14 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = userData;
         isAuthenticated.value = true;
 
-        console.log('✅ Login successful:', userData.username);
-        console.log('🔑 User permissions:', userData.permissions);
+        SecureLogger.auth('Login successful', { userType: userData.userType, hasToken: !!token });
         return { success: true, user: userData };
       } else {
         error.value = response.data.message;
         return { success: false, message: response.data.message };
       }
     } catch (err) {
-      console.error('❌ Login error:', err);
+      SecureLogger.error('Login error', err);
       const errorMessage = err.response?.data?.message || err.message || 'Login failed';
       error.value = errorMessage;
       return { success: false, message: errorMessage };
@@ -278,10 +283,10 @@ export const useAuthStore = defineStore('auth', () => {
       isAuthenticated.value = false;
       error.value = null;
       
-      console.log('✅ User logged out');
+      SecureLogger.auth('User logged out');
       return { success: true };
     } catch (err) {
-      console.error('❌ Logout error:', err);
+      SecureLogger.error('Logout error', err);
       
       // Clear state anyway
       user.value = null;

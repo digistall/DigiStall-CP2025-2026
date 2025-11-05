@@ -103,10 +103,10 @@ const requireRole = (...roles) => {
     }
 
     if (hasRole(...roles)) {
-      console.log(`✅ Role check passed for: ${roles.join(', ')}`)
+      console.log('✅ Role check passed')
       next()
     } else {
-      console.log(`❌ Role check failed. Required: ${roles.join(', ')}`)
+      console.log('❌ Role check failed')
       next('/app/dashboard')
     }
   }
@@ -124,10 +124,10 @@ const requirePermission = (...permissions) => {
     }
 
     if (hasPermission(...permissions)) {
-      console.log(`✅ Permission check passed for: ${permissions.join(', ')}`)
+      console.log('✅ Permission check passed')
       next()
     } else {
-      console.log(`❌ Permission check failed. Required: ${permissions.join(', ')}`)
+      console.log('❌ Permission check failed')
       next('/app/dashboard')
     }
   }
@@ -153,7 +153,7 @@ const requireRoleOrPermission = (roles = [], permissions = []) => {
       console.log('✅ Access granted')
       next()
     } else {
-      console.log(`❌ Access denied. Required roles: ${roles.join(', ')} OR permissions: ${permissions.join(', ')}`)
+      console.log('❌ Access denied');
       next('/app/dashboard')
     }
   }

@@ -14,10 +14,18 @@ export const login = async (req, res) => {
     
     const { username, password, userType } = req.body;
     
-    console.log('🔐 Unified Login Attempt:', { username, userType, timestamp: new Date().toISOString() });
+    console.log('🔐 Unified Login Attempt:', { 
+      hasUsername: !!username,
+      hasPassword: !!password,
+      hasUserType: !!userType,
+      userType,
+      passwordLength: password?.length,
+      timestamp: new Date().toISOString() 
+    });
     
     // Validate required fields
     if (!username || !password || !userType) {
+      console.log('❌ Missing required fields:', { username: !!username, password: !!password, userType: !!userType });
       return res.status(400).json({
         success: false,
         message: 'Username, password, and user type are required'
@@ -58,13 +66,21 @@ export const login = async (req, res) => {
     }
     
     // Query the appropriate table using USERNAME field
-    const [userRows] = await connection.execute(
-      `SELECT * FROM ${tableName} WHERE ${usernameField} = ? AND status = 'Active'`,
-      [username]
-    );
+    const query = `SELECT * FROM ${tableName} WHERE ${usernameField} = ? AND status = 'Active'`;
+    console.log('🔍 Database Query:', { 
+      table: tableName, 
+      usernameField, 
+      hasUsername: !!username 
+    });
+    
+    const [userRows] = await connection.execute(query, [username]);
+    
+    console.log('📊 Query Results:', { 
+      foundUsers: userRows.length
+    });
     
     if (userRows.length === 0) {
-      console.log(`❌ ${userType} not found:`, username);
+      console.log(`❌ ${userType} not found or inactive`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or inactive account'
@@ -75,10 +91,17 @@ export const login = async (req, res) => {
     
     // Verify password using the correct password field
     const passwordHash = user[passwordField];
+    console.log('🔐 Password Verification:', { 
+      userFound: !!user,
+      hasPasswordHash: !!passwordHash,
+      passwordFieldUsed: passwordField
+    });
+    
     const isPasswordValid = await bcrypt.compare(password, passwordHash);
+    console.log('🔓 Password Check Result:', { isPasswordValid });
     
     if (!isPasswordValid) {
-      console.log(`❌ Invalid password for ${userType}:`, username);
+      console.log(`❌ Invalid password for ${userType}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'

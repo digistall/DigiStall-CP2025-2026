@@ -254,8 +254,8 @@ export default {
       this.fetchStallApplicants()
     }
 
-    // Start auto-cleanup for declined applicants older than 30 days
-    this.startAutoCleanupTimer()
+    // Remove frontend auto-cleanup - now handled by backend
+    // this.startAutoCleanupTimer()
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleOutsideClick)
@@ -925,89 +925,44 @@ export default {
       await this.fetchStallApplicants()
     },
 
-    // Start auto-cleanup timer for 30-day rejected applicants removal
-    startAutoCleanupTimer() {
-      // Run cleanup every 24 hours (86400000 ms)
-      this.autoCleanupTimer = setInterval(() => {
-        this.autoCleanupDeclinedApplicants()
-      }, 86400000) // 24 hours
-
-      // Also run cleanup immediately on component mount
-      this.autoCleanupDeclinedApplicants()
-    },
-
-    // Auto-cleanup function to remove rejected applicants older than 30 days
-    async autoCleanupDeclinedApplicants() {
-      console.log('🧹 Starting auto-cleanup for declined applicants older than 30 days...')
-
-      try {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-        // Find rejected applicants older than 30 days
-        const expiredApplicants = [...this.vendorApplicants, ...this.stallApplicants].filter(
-          (applicant) => {
-            if (applicant.application_status !== 'Rejected' || !applicant.declined_at) {
-              return false
-            }
-
-            const declinedDate = new Date(applicant.declined_at)
-            return declinedDate < thirtyDaysAgo
-          },
-        )
-
-        console.log(`🔍 Found ${expiredApplicants.length} rejected applicants older than 30 days`)
-
-        // Remove each expired applicant
-        for (const applicant of expiredApplicants) {
-          try {
-            await this.deleteExpiredApplicant(applicant.applicant_id || applicant.id)
-            this.removeApplicantFromList(applicant.applicant_id || applicant.id)
-            console.log(`🗑️ Removed expired applicant: ${applicant.fullName}`)
-          } catch (error) {
-            console.error(`❌ Failed to remove expired applicant ${applicant.fullName}:`, error)
-          }
-        }
-
-        if (expiredApplicants.length > 0) {
-          console.log(
-            `✅ Auto-cleanup completed: ${expiredApplicants.length} expired applicants removed`,
-          )
-        }
-      } catch (error) {
-        console.error('❌ Error during auto-cleanup:', error)
+    // Auto-cleanup now handled by backend scheduler
+    // Manual trigger for admin use
+    async triggerManualCleanup() {
+      if (!confirm('Are you sure you want to manually trigger cleanup of rejected applicants older than 30 days?')) {
+        return;
       }
-    },
 
-    // Delete expired applicant from database
-    async deleteExpiredApplicant(applicantId) {
       try {
-        const token =
-          sessionStorage.getItem('authToken') ||
-          localStorage.getItem('token') ||
-          localStorage.getItem('authToken')
-
+        const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+        
         if (!token) {
-          throw new Error('Authentication token not found')
+          throw new Error('Authentication token not found');
         }
 
-        const response = await fetch(`${API_BASE_URL}/applicants/${applicantId}`, {
-          method: 'DELETE',
+        const response = await fetch(`${API_BASE_URL}/applicants/cleanup/trigger`, {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`Failed to delete applicant: ${response.status}`)
+          throw new Error(`Cleanup failed: ${response.status}`);
         }
 
-        const result = await response.json()
-        return result
+        const result = await response.json();
+        
+        if (result.success) {
+          alert(`Cleanup completed: ${result.data.deletedCount} expired applicants removed`);
+          // Refresh the applicants list
+          await this.fetchStallApplicants();
+        } else {
+          throw new Error(result.message);
+        }
       } catch (error) {
-        console.error('❌ Error deleting expired applicant:', error)
-        throw error
+        console.error('❌ Manual cleanup error:', error);
+        alert(`Failed to trigger cleanup: ${error.message}`);
       }
     },
   },

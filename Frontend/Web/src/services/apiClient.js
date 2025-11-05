@@ -11,7 +11,7 @@ import authService from './authService';
 
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
   timeout: 30000,
   withCredentials: true // Important for cookies
 });
@@ -44,11 +44,7 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Log request (optional, can be removed in production)
-    console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, {
-      hasToken: !!token,
-      withCredentials: config.withCredentials
-    });
+    // Request logging disabled for security
 
     return config;
   },
@@ -62,8 +58,7 @@ apiClient.interceptors.request.use(
 // Automatically refresh token on 401 errors
 apiClient.interceptors.response.use(
   (response) => {
-    // Log successful response (optional, can be removed in production)
-    console.log(`📥 ${response.status} ${response.config.url}`);
+    // Response logging disabled for security
     return response;
   },
   async (error) => {

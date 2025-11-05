@@ -68,13 +68,7 @@ const authenticateToken = (req, res, next) => {
       jti: decoded.jti // JWT ID
     };
 
-    console.log('🔍 Authenticated user:', {
-      userId: req.user.userId,
-      userType: req.user.userType,
-      role: req.user.role,
-      email: req.user.email,
-      branchId: req.user.branchId
-    });
+    console.log('🔍 User authenticated successfully');
 
     next();
   });
@@ -103,7 +97,7 @@ const authorizeRole = (...allowedRoles) => {
     );
 
     if (!hasRole) {
-      console.log(`❌ Access denied for ${userRole}. Required roles: ${allowedRoles.join(', ')}`);
+      console.log('❌ Access denied - insufficient role');
       return res.status(403).json({
         success: false,
         message: `Access denied. Required role: ${allowedRoles.join(' or ')}`,
@@ -113,7 +107,7 @@ const authorizeRole = (...allowedRoles) => {
       });
     }
 
-    console.log(`✅ Role authorization passed for ${userRole}`);
+    console.log('✅ Role authorization passed');
     next();
   };
 };

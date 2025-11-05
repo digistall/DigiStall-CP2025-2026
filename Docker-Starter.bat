@@ -1,18 +1,20 @@
 @echo off
 echo ========================================
-echo   COMPLETE DATABASE FIX
+echo   DIGISTALL SIMPLIFIED STARTUP
 echo ========================================
+echo.
+echo Note: Make sure your database is running externally!
 echo.
 
 REM Step 1: Stop everything
-echo [1/8] Stopping all containers...
-docker-compose down -v
+echo [1/5] Stopping all containers...
+docker-compose down
 timeout /t 3 /nobreak >nul
-echo    ✅ All containers stopped and volumes removed
+echo    ✅ All containers stopped
 
 REM Step 2: Check Docker is running
 echo.
-echo [2/8] Verifying Docker Desktop...
+echo [2/5] Verifying Docker Desktop...
 docker version >nul 2>&1
 if %errorlevel% neq 0 (
     echo    ❌ Docker Desktop is not running!
@@ -24,18 +26,17 @@ echo    ✅ Docker Desktop is running
 
 REM Step 3: Check if ports are free
 echo.
-echo [3/8] Checking if ports are free...
-netstat -ano | findstr :3306 | findstr LISTENING >nul 2>&1
+echo [3/5] Checking if ports are free...
+netstat -ano | findstr :80 | findstr LISTENING >nul 2>&1
 if %errorlevel% equ 0 (
-    echo    ⚠️  Port 3306 is occupied (probably XAMPP)
-    echo    Killing process on port 3306...
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3306 ^| findstr LISTENING') do (
+    echo    ⚠️  Port 80 is occupied
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :80 ^| findstr LISTENING') do (
         taskkill /F /PID %%a >nul 2>&1
         echo    ✅ Killed process %%a
     )
     timeout /t 2 /nobreak >nul
 )
-echo    ✅ Port 3306 is free
+echo    ✅ Port 80 is free
 
 netstat -ano | findstr :3001 | findstr LISTENING >nul 2>&1
 if %errorlevel% equ 0 (
@@ -48,9 +49,9 @@ if %errorlevel% equ 0 (
 )
 echo    ✅ Port 3001 is free
 
-REM Step 4: Fix Backend .env
+REM Step 4: Fix Backend .env for external database
 echo.
-echo [4/8] Fixing Backend .env file...
+echo [4/5] Fixing Backend .env file...
 if not exist Backend\.env (
     echo    Creating new .env file...
 )
@@ -61,13 +62,13 @@ if exist Backend\.env (
     echo    ✅ Backup created: Backend\.env.backup
 )
 
-REM Create correct .env for Docker
+REM Create correct .env for external database
 (
-    echo # Database Configuration - DOCKER
-    echo DB_HOST=database
+    echo # Database Configuration - EXTERNAL DATABASE
+    echo DB_HOST=host.docker.internal
     echo DB_PORT=3306
-    echo DB_USER=digistall_user
-    echo DB_PASSWORD=digistall_password
+    echo DB_USER=root
+    echo DB_PASSWORD=
     echo DB_NAME=naga_stall
     echo.
     echo # JWT Configuration
@@ -88,27 +89,16 @@ REM Create correct .env for Docker
     echo SMTP_PASS=your-app-password-here
     echo FROM_EMAIL=noreply@nagastallmanagement.com
     echo FROM_NAME=Naga Stall Management System
-    echo APP_BASE_URL=http://localhost:5174
+    echo APP_BASE_URL=http://localhost
     echo.
     echo # CORS Configuration
-    echo ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost
+    echo ALLOWED_ORIGINS=http://localhost,http://localhost:5173,http://localhost:5174,http://localhost:3000
 ) > Backend\.env
-echo    ✅ Backend .env fixed
+echo    ✅ Backend .env fixed for external database
 
-REM Step 5: Check SQL file exists
+REM Step 5: Start containers
 echo.
-echo [5/8] Checking SQL file...
-if not exist "Backend\database\naga_stall_complete.sql" (
-    echo    ❌ SQL file not found: Backend\database\naga_stall_complete.sql
-    echo    Please make sure the SQL file exists!
-    pause
-    exit /b 1
-)
-echo    ✅ SQL file found
-
-REM Step 6: Start containers
-echo.
-echo [6/8] Starting Docker containers (this may take a minute)...
+echo [5/5] Starting Docker containers...
 docker-compose up -d --build
 
 if %errorlevel% neq 0 (
@@ -118,75 +108,46 @@ if %errorlevel% neq 0 (
     echo    1. Docker Desktop is running
     echo    2. docker-compose.yml exists
     echo    3. No syntax errors in docker-compose.yml
+    echo    4. Your external database is running
     pause
     exit /b 1
 )
 echo    ✅ Containers started
 
-REM Step 7: Wait for database to be ready
 echo.
-echo [7/8] Waiting for database to initialize (60 seconds)...
-echo    This is important - please wait!
-timeout /t 60 /nobreak
-
-REM Step 8: Verify everything is running
-echo.
-echo [8/8] Checking container status...
+echo ========================================
+echo   FINAL STATUS
 echo ========================================
 docker-compose ps
 echo ========================================
 
 echo.
-echo Checking database connection...
-docker exec digistall-backend sh -c "nc -zv database 3306" 2>&1
-if %errorlevel% neq 0 (
-    echo    ⚠️  Backend cannot reach database yet
-    echo    Waiting 10 more seconds...
-    timeout /t 10 /nobreak
-)
-
-echo.
-echo Checking if tables exist...
-docker exec digistall-database mysql -udigistall_user -pdigistall_password -e "USE naga_stall; SHOW TABLES;" 2>&1
-if %errorlevel% neq 0 (
-    echo    ⚠️  Tables might not be created yet
-    echo    The SQL file will be imported automatically
-    echo    Wait 30 more seconds...
-    timeout /t 30 /nobreak
-)
-
-echo.
 echo Testing API health endpoint...
-curl -s http://localhost:3001/api/health
-if %errorlevel% neq 0 (
-    echo    ⚠️  API not responding yet, still starting...
+timeout /t 5 /nobreak >nul
+Invoke-WebRequest -Uri "http://localhost:3001/api/health" -UseBasicParsing -ErrorAction SilentlyContinue >nul 2>&1
+if %errorlevel% equ 0 (
+    echo    ✅ Backend API is responding
+) else (
+    echo    ⚠️  Backend API not responding yet
 )
 
 echo.
-echo ========================================
-echo   FINAL STATUS
-echo ========================================
-docker-compose logs --tail=10 database
-echo.
-docker-compose logs --tail=10 backend
-echo.
-
 echo ========================================
 echo   ✅ SETUP COMPLETE!
 echo ========================================
 echo.
-echo 🌐 Your application should be available at:
-echo    Frontend: http://localhost
-echo    Backend:  http://localhost:3001
+echo 🌐 Your applications are available at:
+echo    Web Frontend: http://localhost
+echo    Backend API:  http://localhost:3001
 echo.
-echo 📋 Next Steps:
-echo    1. Wait 10 more seconds
-echo    2. Refresh your browser (Ctrl + F5)
-echo    3. If still not working, check logs: docker-compose logs -f
+echo 📋 Important Notes:
+echo    ⚠️  Make sure your external database is running!
+echo    ⚠️  Database should be accessible at localhost:3306
+echo    ⚠️  Database name: naga_stall
 echo.
 echo 🔍 If you see errors:
 echo    - Check logs: docker-compose logs backend
-echo    - Check database: docker-compose logs database
+echo    - Check logs: docker-compose logs frontend-web
 echo    - Restart: docker-compose restart
 echo.
 pause

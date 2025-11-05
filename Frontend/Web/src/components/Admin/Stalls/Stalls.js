@@ -4,6 +4,7 @@ import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddCh
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
 import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
+import dataCacheService from '../../../services/dataCacheService.js'
 
 export default {
   name: 'Stalls',
@@ -107,6 +108,9 @@ export default {
         console.log('🆕 EventBus: Stall added received:', data)
         
         if (data.stallData) {
+          // Invalidate cache since stall was added
+          dataCacheService.invalidatePattern('stalls');
+          
           // Transform the new stall data and add to local array
           const transformedStall = this.transformStallData(data.stallData)
           console.log('🆕 EventBus: Transformed new stall:', transformedStall)
@@ -195,7 +199,7 @@ export default {
         }
 
         this.currentUser = JSON.parse(user)
-        console.log('Current user:', this.currentUser)
+        console.log('Current user type available:', !!this.currentUser?.userType)
 
         // Load stalls first - always allow viewing existing stalls
         await this.fetchStalls()
@@ -214,8 +218,8 @@ export default {
       }
     },
 
-    // Fetch stalls from backend API with proper authentication
-    async fetchStalls() {
+    // Fetch stalls from backend API with proper authentication and caching
+    async fetchStalls(forceRefresh = false) {
       this.loading = true
       this.error = null
 
@@ -231,80 +235,31 @@ export default {
 
         // Validate token format before making API call
         if (!this.isValidJWTFormat(token)) {
-          console.warn(
-            '⚠️ Invalid JWT token format detected in fetchStalls - but continuing for debugging',
-          )
-          console.warn('   - Token:', token)
-          console.warn('   - Token length:', token?.length)
-          // Temporarily allow non-JWT tokens for debugging
-          // this.clearAuthAndRedirect()
-          // throw new Error('Invalid session token. Please login again.')
+          console.warn('⚠️ Invalid JWT token format detected in fetchStalls - but continuing for debugging')
         }
 
-        console.log(
-          '🔑 Making stalls API call with token:',
-          token ? `${token.substring(0, 30)}...` : 'null',
-        )
-        console.log('🔑 Token length:', token?.length)
-        console.log('🔑 Full token for debugging:', token)
-        console.log('🔑 Is JWT format?', token?.includes('.') && token?.split('.').length === 3)
-
-        const response = await fetch(`${this.apiBaseUrl}/stalls`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        console.log('📡 Stalls API response status:', response.status)
-        console.log('📡 Stalls API response headers:', [...response.headers.entries()])
-
-        if (!response.ok) {
-          console.error('❌ Stalls API failed with status:', response.status)
-          if (response.status === 401) {
-            console.error('❌ 401 Unauthorized - Backend rejected the token')
-            console.error('❌ This means either:')
-            console.error('   1. Backend is still expecting old session token format')
-            console.error('   2. Backend JWT verification is failing')
-            console.error('   3. Backend auth middleware has issues')
-            // Token expired or invalid - redirect to login
-            this.clearAuthAndRedirect()
-            throw new Error('Session expired. Please login again.')
-          } else if (response.status === 403) {
-            // Enhanced 403 error handling for employee permissions
-            const errorData = await response.json().catch(() => ({}))
-            const errorMessage = errorData.message || 'Access denied'
-
-            console.error('❌ 403 Forbidden - Permission denied')
-            console.error('❌ Error details:', errorMessage)
-            console.error('❌ This means:')
-            console.error('   1. Employee lacks required "stalls" permission')
-            console.error('   2. Backend middleware is incorrectly configured')
-            console.error('   3. Role-based access needs to be updated to permission-based')
-
-            // Check if user has stalls permission
-            const userPermissions = JSON.parse(
-              sessionStorage.getItem('employeePermissions') || '[]',
-            )
-            console.error('👤 Current user permissions:', userPermissions)
-
-            if (userPermissions.includes('stalls')) {
-              console.error('⚠️  User HAS stalls permission - backend middleware issue!')
-              throw new Error(
-                'Permission error: You have stalls permission but backend is rejecting access. Contact administrator.',
-              )
-            } else {
-              console.error('❌ User lacks stalls permission')
-              throw new Error('Access denied: You do not have permission to view stalls.')
-            }
-          } else if (response.status === 400) {
-            throw new Error('Invalid request. Please check your authentication.')
+        // Use cache if available and not forcing refresh
+        const cacheKey = 'stalls_data';
+        if (!forceRefresh && dataCacheService.has(cacheKey)) {
+          const cachedData = dataCacheService.get(cacheKey);
+          if (cachedData && cachedData.success) {
+            this.stallsData = cachedData.data || [];
+            this.displayStalls = [...this.stallsData];
+            this.loading = false;
+            console.log('📦 Using cached stalls data');
+            return;
           }
-          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const result = await response.json()
+        console.log('🔑 Making stalls API call with authentication')
+
+        // Use cached fetch for API call
+        const result = await dataCacheService.cachedFetch(`${this.apiBaseUrl}/stalls`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        }, 5 * 60 * 1000); // Cache for 5 minutes
+
         console.log('API Response:', result)
 
         if (result.success) {
@@ -324,9 +279,15 @@ export default {
         // Show error message
         this.showMessage(`Failed to load stalls: ${error.message}`, 'error')
 
-        // If it's an auth error, clear session and redirect
-        if (error.message.includes('login') || error.message.includes('Session expired')) {
+        // Handle authentication errors
+        if (error.message.includes('401') || error.message.includes('Session expired')) {
           this.clearAuthAndRedirect()
+        } else if (error.message.includes('403')) {
+          // Check permissions
+          const userPermissions = JSON.parse(sessionStorage.getItem('employeePermissions') || '[]')
+          if (!userPermissions.includes('stalls')) {
+            this.showMessage('Access denied: You do not have permission to view stalls.', 'error')
+          }
         }
       } finally {
         this.loading = false
@@ -582,6 +543,9 @@ export default {
           // Show all stalls after clearing filters
           this.displayStalls = [...this.stallsData]
           
+          // Invalidate cache since stall was updated
+          dataCacheService.invalidatePattern('stalls');
+          
           console.log('✅ Stall updated successfully - using real-time updates')
         } else {
           console.warn('⚠️ Stall not found for update')
@@ -602,6 +566,9 @@ export default {
     async handleStallDeleted(stallId) {
       try {
         console.log('Processing stall deletion for ID:', stallId)
+
+        // Invalidate cache since stall was deleted
+        dataCacheService.invalidatePattern('stalls');
 
         // Remove from local data
         const index = this.stallsData.findIndex((s) => s.id === stallId)
@@ -822,13 +789,13 @@ export default {
       this.showModal = true
     },
 
-        // Debug helper - log current stall data
+    // Debug helper - log current stall data
     debugStallData() {
       console.log('=== STALL DATA DEBUG ===')
       console.log('Total stalls:', this.stallsData.length)
       console.log('Display stalls:', this.displayStalls.length)
-      console.log('Sample stall:', this.stallsData[0])
-      console.log('Current user:', this.currentUser)
+      console.log('Has sample stall:', this.stallsData.length > 0)
+      console.log('Current user type:', this.currentUser?.userType)
       console.log('========================')
     },
 

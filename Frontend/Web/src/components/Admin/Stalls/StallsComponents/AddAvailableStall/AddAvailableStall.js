@@ -77,7 +77,7 @@ export default {
       refreshTimeout: null, // Added for auto-refresh timing
       lastAddedStall: null, // Store the last added stall data for real-time updates
       // API base URL
-      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:3001/api",
     };
   },
 
@@ -137,7 +137,7 @@ export default {
 
         const sectionsResult = await sectionsResponse.json();
         console.log("🔍 Backend sections response:", sectionsResult);
-        console.log("🔍 JWT Token being sent:", token);
+        console.log("🔍 Sending authenticated request");
         console.log(
           "🔍 Decoded token payload:",
           token ? JSON.parse(atob(token.split(".")[1])) : "No token"
@@ -381,7 +381,7 @@ export default {
 
         // ✅ DEBUGGING: Log session storage data
         console.log("🔍 FRONTEND DEBUG - Session Storage:");
-        console.log("- authToken exists:", !!token);
+        console.log("- authToken available:", !!token);
         console.log("- currentUser:", JSON.parse(sessionStorage.getItem("currentUser") || "{}"));
         console.log("- userType:", sessionStorage.getItem("userType"));
         console.log("- branchId:", sessionStorage.getItem("branchId"));

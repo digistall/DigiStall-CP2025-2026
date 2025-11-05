@@ -8,13 +8,13 @@
 
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const AUTH_ENDPOINTS = {
-  LOGIN: `${API_URL}/auth/v2/login`,
-  LOGOUT: `${API_URL}/auth/v2/logout`,
-  REFRESH: `${API_URL}/auth/v2/refresh`,
-  VERIFY: `${API_URL}/auth/v2/verify-token`,
-  ME: `${API_URL}/auth/v2/me`
+  LOGIN: `${API_URL}/auth/login`,
+  LOGOUT: `${API_URL}/auth/logout`,
+  REFRESH: `${API_URL}/auth/refresh`,
+  VERIFY: `${API_URL}/auth/verify-token`,
+  ME: `${API_URL}/auth/me`
 };
 
 // Token storage keys
@@ -78,7 +78,7 @@ class AuthService {
         // Schedule automatic token refresh
         this.scheduleTokenRefresh();
         
-        console.log('✅ Login successful:', user.email);
+        console.log('✅ Login successful');
         return { success: true, user };
       }
 
@@ -129,7 +129,7 @@ class AuthService {
     this.isRefreshing = true;
 
     try {
-      console.log('🔄 Refreshing access token...');
+      console.log('🔄 Refreshing token...');
       
       const response = await axios.post(AUTH_ENDPOINTS.REFRESH, {}, {
         withCredentials: true // Important for cookies
@@ -149,7 +149,7 @@ class AuthService {
         // Schedule next refresh
         this.scheduleTokenRefresh();
         
-        console.log('✅ Token refreshed successfully');
+        console.log('✅ Token refreshed');
         
         // Resolve all waiting subscribers
         this.refreshSubscribers.forEach(subscriber => subscriber.resolve(accessToken));
@@ -190,7 +190,7 @@ class AuthService {
     const timeUntilRefresh = expiryTime - now;
 
     if (timeUntilRefresh > 0) {
-      console.log(`⏰ Token refresh scheduled in ${Math.round(timeUntilRefresh / 1000)}s`);
+      console.log('⏰ Token refresh scheduled');
       
       this.refreshTimer = setTimeout(() => {
         this.refreshAccessToken();
