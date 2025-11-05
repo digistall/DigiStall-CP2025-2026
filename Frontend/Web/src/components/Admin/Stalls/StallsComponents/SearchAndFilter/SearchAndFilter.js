@@ -114,7 +114,7 @@ export default {
         const matchesPriceType =
           !this.selectedPriceType ||
           (this.selectedPriceType === 'Auction' &&
-            (stall.price.includes('Auction') ||
+            ((stall.price_type && stall.price_type.toLowerCase().includes('auction')) ||
               (stall.priceType && stall.priceType.toLowerCase().includes('auction')))) ||
           (this.selectedPriceType === 'Raffle' &&
             (stall.price.includes('Raffle') ||

@@ -8,8 +8,8 @@ export const getStallsByArea = async (req, res) => {
 
     // Support both branch (new) and area (legacy) parameters
     const filterParam = branch || area;
-    const filterType = branch ? 'branch' : 'area';
-    const filterColumn = branch ? 'branch_name' : 'area';
+    const filterType = branch ? "branch" : "area";
+    const filterColumn = branch ? "branch_name" : "area";
 
     if (!filterParam) {
       return res.status(400).json({
@@ -53,31 +53,58 @@ export const getStallsByArea = async (req, res) => {
     );
 
     // Format stalls to match the expected frontend response structure
-    const formattedStalls = stalls.map(stall => {
+    const formattedStalls = stalls.map((stall) => {
       // Safely format the price
       let formattedPrice = "Contact for pricing";
-      if (stall.rental_price !== null && stall.rental_price !== undefined && !isNaN(stall.rental_price)) {
+      if (
+        stall.rental_price !== null &&
+        stall.rental_price !== undefined &&
+        !isNaN(stall.rental_price)
+      ) {
         const price = parseFloat(stall.rental_price);
         if (price > 0) {
-          formattedPrice = `₱${price.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/month`;
+          formattedPrice = `₱${price.toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/month`;
         }
       }
 
       return {
         id: stall.id,
         stallNumber: stall.stallNumber,
-        branch: stall.branch, 
+        branch: stall.branch,
         branchLocation: stall.branchLocation,
         price: formattedPrice,
+        price_type: stall.price_type,
         dimensions: stall.dimensions || "Contact for details",
         floor: stall.floor,
         section: stall.section,
         isAvailable: Boolean(stall.isAvailable),
         description: stall.description || "Perfect for business",
-        imageUrl: stall.imageUrl || "stall-image.jpg"
+        imageUrl: stall.imageUrl || "stall-image.jpg",
       };
     });
 
+    // Sort stalls: Fixed Price first, then Auction and Raffle
+    console.log(`📊 Sorting ${formattedStalls.length} stalls by price type...`);
+
+    formattedStalls.sort((a, b) => {
+      const getPriority = (priceType) => {
+        if (!priceType || priceType === "Fixed Price") return 1;
+        if (priceType === "Auction") return 2;
+        if (priceType === "Raffle") return 3;
+        return 4;
+      };
+
+      return getPriority(a.price_type) - getPriority(b.price_type);
+    });
+
+    // Log the distribution of stall types
+    const priceTypeCount = formattedStalls.reduce((acc, stall) => {
+      const type = stall.price_type || "Fixed Price";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    console.log(`📋 Stall distribution:`, priceTypeCount);
     console.log(
       `✅ Found ${formattedStalls.length} stalls in ${filterType} '${filterParam}'`
     );

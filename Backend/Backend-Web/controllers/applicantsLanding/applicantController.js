@@ -43,13 +43,15 @@ export const applicantController = {
       if (!applicant_full_name || !applicant_contact_number || !email_address) {
         return res.status(400).json({
           success: false,
-          message: "Applicant name, contact number, and email address are required",
+          message:
+            "Applicant name, contact number, and email address are required",
         });
       }
 
       // Check if email already exists - but allow resubmission in certain cases
       if (email_address) {
-        const [existingEmail] = await connection.execute(`
+        const [existingEmail] = await connection.execute(
+          `
           SELECT 
             oi.applicant_id, 
             a.applicant_full_name,
@@ -61,35 +63,51 @@ export const applicantController = {
           WHERE oi.email_address = ?
           ORDER BY a.created_at DESC
           LIMIT 1
-        `, [email_address]);
+        `,
+          [email_address]
+        );
 
         if (existingEmail.length > 0) {
           const existing = existingEmail[0];
           const applicationStatus = existing.application_status;
-          
+
           // Allow resubmission if:
           // 1. Previous application was declined/rejected
           // 2. No application exists (just applicant data)
           // 3. Application is older than 30 days and still pending
-          const daysSinceCreation = Math.floor((Date.now() - new Date(existing.created_at)) / (1000 * 60 * 60 * 24));
-          
-          if (applicationStatus === 'Approved' || applicationStatus === 'approved') {
+          const daysSinceCreation = Math.floor(
+            (Date.now() - new Date(existing.created_at)) / (1000 * 60 * 60 * 24)
+          );
+
+          if (
+            applicationStatus === "Approved" ||
+            applicationStatus === "approved"
+          ) {
             return res.status(400).json({
               success: false,
-              message: 'This email address is already associated with an approved application. Please contact support if you need assistance.'
+              message:
+                "This email address is already associated with an approved application. Please contact support if you need assistance.",
             });
-          } else if (applicationStatus === 'Pending' || applicationStatus === 'pending') {
-            if (daysSinceCreation < 7) { // Block resubmission within 7 days if pending
+          } else if (
+            applicationStatus === "Pending" ||
+            applicationStatus === "pending"
+          ) {
+            if (daysSinceCreation < 7) {
+              // Block resubmission within 7 days if pending
               return res.status(400).json({
                 success: false,
-                message: `A recent application with this email address is still pending review (submitted ${daysSinceCreation} day(s) ago). Please wait for the review to complete or contact support.`
+                message: `A recent application with this email address is still pending review (submitted ${daysSinceCreation} day(s) ago). Please wait for the review to complete or contact support.`,
               });
             }
             // Allow resubmission if pending for more than 7 days
-            console.log(`⚠️ Allowing resubmission for email ${email_address} - pending for ${daysSinceCreation} days`);
+            console.log(
+              `Allowing resubmission for email ${email_address} - pending for ${daysSinceCreation} days`
+            );
           }
           // Allow resubmission for declined/rejected applications or null status
-          console.log(`✅ Allowing resubmission for email ${email_address} - status: ${applicationStatus || 'no application'}`);
+          console.log(
+            `Allowing resubmission for email ${email_address} - status: ${applicationStatus || "no application"}`
+          );
         }
       }
 
@@ -165,8 +183,10 @@ export const applicantController = {
       // 5. If stall_id is provided, create the application as well (atomic operation)
       let applicationId = null;
       if (req.body.stall_id) {
-        console.log(`🎯 Creating application for applicant ${applicantId} and stall ${req.body.stall_id}`);
-        
+        console.log(
+          `🎯 Creating application for applicant ${applicantId} and stall ${req.body.stall_id}`
+        );
+
         // Check if stall exists and is available
         const [stallRows] = await connection.execute(
           'SELECT * FROM stall WHERE stall_id = ? AND is_available = 1 AND status = "Active"',
@@ -185,11 +205,14 @@ export const applicantController = {
             [
               req.body.stall_id,
               applicantId,
-              req.body.application_date || new Date().toISOString().split("T")[0],
+              req.body.application_date ||
+                new Date().toISOString().split("T")[0],
             ]
           );
           applicationId = applicationResult.insertId;
-          console.log(`✅ Application created successfully with ID: ${applicationId}`);
+          console.log(
+            `✅ Application created successfully with ID: ${applicationId}`
+          );
         } catch (appError) {
           console.error("❌ Error creating application:", appError.message);
           throw new Error(`Failed to create application: ${appError.message}`);
@@ -201,7 +224,9 @@ export const applicantController = {
 
       res.status(201).json({
         success: true,
-        message: applicationId ? "Applicant and application created successfully" : "Applicant created successfully",
+        message: applicationId
+          ? "Applicant and application created successfully"
+          : "Applicant created successfully",
         data: {
           applicant_id: applicantId,
           application_id: applicationId,
@@ -401,6 +426,9 @@ export const applicantController = {
     let connection;
 
     try {
+      console.log("📨 Received stall application request from landing page");
+      console.log("📋 Request body keys:", Object.keys(req.body));
+
       connection = await createConnection();
       await connection.beginTransaction();
 
@@ -438,16 +466,25 @@ export const applicantController = {
         application_date,
       } = req.body;
 
-      // Validate required fields
-      if (!applicant_full_name || !applicant_contact_number || !email_address || !stall_id) {
+      console.log("👤 Applicant:", applicant_full_name);
+      console.log("📧 Email:", email_address);
+      console.log(
+        "🏢 Stall ID:",
+        stall_id || "GENERAL APPLICATION (no specific stall)"
+      );
+
+      // Validate required fields (stall_id is optional for general applications)
+      if (!applicant_full_name || !applicant_contact_number || !email_address) {
         return res.status(400).json({
           success: false,
-          message: "Applicant name, contact number, email address, and stall ID are required",
+          message:
+            "Applicant name, contact number, and email address are required",
         });
       }
 
       // Enhanced email check with better logic
-      const [existingEmail] = await connection.execute(`
+      const [existingEmail] = await connection.execute(
+        `
         SELECT 
           oi.applicant_id, 
           a.applicant_full_name,
@@ -459,42 +496,69 @@ export const applicantController = {
         WHERE oi.email_address = ?
         ORDER BY a.created_at DESC
         LIMIT 1
-      `, [email_address]);
+      `,
+        [email_address]
+      );
 
       if (existingEmail.length > 0) {
         const existing = existingEmail[0];
         const applicationStatus = existing.application_status;
-        const daysSinceCreation = Math.floor((Date.now() - new Date(existing.created_at)) / (1000 * 60 * 60 * 24));
-        
-        if (applicationStatus === 'Approved' || applicationStatus === 'approved') {
+        const daysSinceCreation = Math.floor(
+          (Date.now() - new Date(existing.created_at)) / (1000 * 60 * 60 * 24)
+        );
+
+        // If this is a general application (no stall_id) or existing application is null, allow it
+        if (!stall_id || !applicationStatus) {
+          console.log(
+            `Allowing ${stall_id ? "specific" : "general"} application for email ${email_address} - existing status: ${applicationStatus || "no application"}`
+          );
+        } else if (
+          applicationStatus === "Approved" ||
+          applicationStatus === "approved"
+        ) {
           await connection.rollback();
           return res.status(400).json({
             success: false,
-            message: 'This email address is already associated with an approved application.'
+            message:
+              "This email address is already associated with an approved application. Please use a different email or contact support.",
           });
-        } else if ((applicationStatus === 'Pending' || applicationStatus === 'pending') && daysSinceCreation < 1) {
+        } else if (
+          (applicationStatus === "Pending" ||
+            applicationStatus === "pending") &&
+          daysSinceCreation < 1
+        ) {
           await connection.rollback();
           return res.status(400).json({
             success: false,
-            message: `A recent application with this email address is still pending review. Please wait or contact support.`
+            message: `A recent application with this email address is still pending review (submitted ${daysSinceCreation} day(s) ago). Please wait for the review to complete or contact support.`,
           });
+        } else {
+          console.log(
+            `Allowing resubmission for email ${email_address} - status: ${applicationStatus}, days: ${daysSinceCreation}`
+          );
         }
-        
-        console.log(`⚠️ Allowing resubmission for email ${email_address} - status: ${applicationStatus || 'no application'}, days: ${daysSinceCreation}`);
       }
 
-      // Check if stall exists and is available
-      const [stallRows] = await connection.execute(
-        'SELECT * FROM stall WHERE stall_id = ? AND is_available = 1 AND status = "Active"',
-        [stall_id]
-      );
+      // Check if stall exists and is available (only if stall_id is provided)
+      if (stall_id) {
+        console.log("🔍 Checking stall availability...");
+        const [stallRows] = await connection.execute(
+          'SELECT * FROM stall WHERE stall_id = ? AND is_available = 1 AND status = "Active"',
+          [stall_id]
+        );
 
-      if (stallRows.length === 0) {
-        await connection.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Selected stall is not available or does not exist",
-        });
+        if (stallRows.length === 0) {
+          console.log("❌ Stall not available or does not exist");
+          await connection.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Selected stall is not available or does not exist",
+          });
+        }
+
+        console.log("Stall is available:", stallRows[0].stall_code);
+      } else {
+        console.log("General application (no specific stall selected)");
       }
 
       // 1. Create applicant record
@@ -514,7 +578,7 @@ export const applicantController = {
       );
 
       const applicantId = applicantResult.insertId;
-      console.log(`✅ Applicant created with ID: ${applicantId}`);
+      console.log(`Applicant created with ID: ${applicantId}`);
 
       // 2. Create business information if provided
       if (nature_of_business) {
@@ -567,50 +631,65 @@ export const applicantController = {
         ]
       );
 
-      // 5. Create the application
+      // 5. Create the application (always - stall_id can be NULL for general applications)
       let applicationId = null;
       try {
         const [applicationResult] = await connection.execute(
           `INSERT INTO application (stall_id, applicant_id, application_date, application_status)
            VALUES (?, ?, ?, 'Pending')`,
           [
-            stall_id,
+            stall_id || null,
             applicantId,
             application_date || new Date().toISOString().split("T")[0],
           ]
         );
         applicationId = applicationResult.insertId;
         console.log(`✅ Application created with ID: ${applicationId}`);
+        if (!stall_id) {
+          console.log(
+            "📝 General application - stall will be assigned by admin"
+          );
+        }
       } catch (appError) {
         console.error("❌ Application creation failed:", appError.message);
         await connection.rollback();
         return res.status(500).json({
           success: false,
-          message: "Failed to submit application due to database constraints. Please try again or contact support.",
+          message:
+            "Failed to submit application due to database constraints. Please try again or contact support.",
           error: appError.message,
         });
       }
 
       await connection.commit();
-      console.log(`✅ Complete stall application transaction committed`);
+      console.log(
+        `🎉 Complete stall application transaction committed successfully!`
+      );
+      console.log(
+        `📊 Summary: Applicant ID ${applicantId}, Application ID ${applicationId}, Stall ID ${stall_id || "NULL (General Application)"}`
+      );
 
       res.status(201).json({
         success: true,
-        message: "Stall application submitted successfully",
+        message: stall_id
+          ? "Stall application submitted successfully"
+          : "General application submitted successfully. A stall will be assigned upon approval.",
         data: {
           applicant_id: applicantId,
           application_id: applicationId,
           applicant_full_name,
           applicant_contact_number,
-          stall_id,
+          stall_id: stall_id || null,
           application_status: "Pending",
         },
       });
-
     } catch (error) {
       if (connection) {
         await connection.rollback();
-        console.error("❌ Transaction rolled back due to error:", error.message);
+        console.error(
+          "❌ Transaction rolled back due to error:",
+          error.message
+        );
       }
       console.error("Error creating stall application:", error);
       res.status(500).json({

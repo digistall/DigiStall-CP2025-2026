@@ -46,12 +46,14 @@
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .stall-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid #002181;
 }
 
 /* Stall Image - Original Design */
@@ -89,6 +91,16 @@
   color: white;
 }
 
+.stall-status-badge.auction {
+  background: #002181;
+  color: white;
+}
+
+.stall-status-badge.raffle {
+  background: #002181;
+  color: white;
+}
+
 /* Stall Info - Original Design */
 .stall-info {
   padding: 16px;
@@ -121,7 +133,7 @@
 
 /* Stall Details - Original Design */
 .stall-details {
-  font-size: 18px;
+  font-size: 16px;
   color: #555;
   margin-bottom: 12px;
 }
@@ -367,5 +379,341 @@
   .pagination-btn {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
+  }
+}
+
+/* Modal Styles */
+.modal-fade-enter-active, .modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from, .modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 12px;
+  max-width: 1400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #002181;
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.30rem;
+  font-weight: 400;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  color: white;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-content {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.modal-image-section {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  min-height: 450px;
+  max-height: 600px;
+}
+
+.modal-image-section img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  object-position: center;
+}
+
+.stall-status-badge-large {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 1rem;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row.full-width {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.95rem;
+  min-width: 120px;
+}
+
+.info-value {
+  color: #333;
+  font-size: 1rem;
+  text-align: right;
+  flex: 1;
+}
+
+.stall-number-highlight {
+  color: #002181;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.price-highlight {
+  color: #28a745;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.info-description {
+  margin: 0.5rem 0 0 0;
+  color: #666;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.modal-apply-btn, .modal-close-btn {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-apply-btn {
+  background: #002181;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 43, 91, 0.3);
+}
+
+.modal-apply-btn:hover {
+  background: #002181;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 43, 91, 0.4);
+}
+
+.modal-apply-btn.occupied {
+  background: #6c757d;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.modal-apply-btn.occupied:hover {
+  transform: none;
+}
+
+.modal-close-btn {
+  background: #f8f9fa;
+  color: #495057;
+  border: 2px solid #dee2e6;
+}
+
+.modal-close-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+/* Make stall cards have hover effect to indicate clickability */
+.stall-card {
+  cursor: pointer;
+  position: relative;
+}
+
+.stall-card::after {
+  content: 'Click to view stall details';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #002181;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  z-index: 10;
+}
+
+.stall-card:hover::after {
+  opacity: 1;
+}
+
+/* Responsive Modal Styles */
+@media (max-width: 1024px) {
+  .modal-image-section {
+    min-height: 350px;
+    max-height: 450px;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+  }
+
+  .modal-image-section {
+    min-height: 300px;
+    max-height: 400px;
+  }
+
+  .modal-image-section img {
+    height: 100%;
+  }
+
+  .modal-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .info-value {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-container {
+    max-height: 95vh;
+    margin: 10px;
+  }
+
+  .modal-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .modal-content {
+    padding: 1rem;
+  }
+
+  .modal-image-section {
+    min-height: 250px;
+    max-height: 300px;
+  }
+
+  .modal-image-section img {
+    height: 100%;
+  }
+
+  .stall-card::after {
+    font-size: 0.75rem;
+    padding: 8px 16px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 360px) {
+  .modal-image-section {
+    min-height: 200px;
+    max-height: 250px;
   }
 }
