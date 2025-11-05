@@ -15,7 +15,7 @@
     <div v-else>
       <transition name="fade-pagination" mode="out-in">
         <div class="stall-grid" :key="currentPage">
-          <div class="stall-card" v-for="stall in paginatedStalls" :key="stall.id">
+          <div class="stall-card" v-for="stall in paginatedStalls" :key="stall.id" @click="openStallDetails(stall)">
             <div class="stall-image">
               <img :src="stall.imageUrl" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
               <div class="stall-status-badge" :class="getStallBadgeClass(stall)">
@@ -33,7 +33,7 @@
                 </p>
                 <div class="size-btn-row">
                   <p>{{ stall.dimensions }}</p>
-                  <button v-if="shouldShowApplyButton(stall)" class="apply-btn" @click="openApplyForm(stall)">
+                  <button v-if="shouldShowApplyButton(stall)" class="apply-btn" @click.stop="openApplyForm(stall)">
                     APPLY NOW!
                   </button>
                   <button v-else-if="!stall.isAvailable" class="apply-btn occupied" disabled>
@@ -92,6 +92,93 @@
     <!-- StallApplicationContainer.vue -->
     <StallApplicationContainer v-if="showApplyForm" :stall="selectedStall" :showForm="showApplyForm"
       @close="closeApplyForm" />
+
+    <!-- Stall Details Modal -->
+    <transition name="modal-fade">
+      <div v-if="showStallDetails" class="modal-overlay" @click.self="closeStallDetails">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h2>Stall Details</h2>
+            <button class="close-btn" @click="closeStallDetails">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-content" v-if="selectedStallDetails">
+            <div class="modal-image-section">
+              <img :src="selectedStallDetails.imageUrl" :alt="`Stall ${selectedStallDetails.stallNumber}`"
+                @error="handleImageError" />
+            </div>
+
+            <div class="modal-info-section">
+              <div class="info-row">
+                <span class="info-label">Stall Number:</span>
+                <span class="info-value stall-number-highlight">{{ selectedStallDetails.stallNumber }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Price:</span>
+                <span class="info-value price-highlight">{{ selectedStallDetails.price }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Price Type:</span>
+                <span class="info-value">{{ selectedStallDetails.price_type || 'Fixed Price' }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Floor:</span>
+                <span class="info-value">{{ selectedStallDetails.floor }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Section:</span>
+                <span class="info-value">{{ selectedStallDetails.section }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Dimensions:</span>
+                <span class="info-value">{{ selectedStallDetails.dimensions }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Branch:</span>
+                <span class="info-value">{{ selectedStallDetails.branch }}</span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Location:</span>
+                <span class="info-value">{{ selectedStallDetails.branchLocation }}</span>
+              </div>
+
+              <div class="info-row" v-if="selectedStallDetails.managerName">
+                <span class="info-label">Manager:</span>
+                <span class="info-value">{{ selectedStallDetails.managerName }}</span>
+              </div>
+
+              <div class="info-row full-width" v-if="selectedStallDetails.description">
+                <span class="info-label">Description:</span>
+                <p class="info-description">{{ selectedStallDetails.description }}</p>
+              </div>
+
+              <div class="modal-actions">
+                <button v-if="shouldShowApplyButton(selectedStallDetails)" class="modal-apply-btn"
+                  @click="applyFromModal">
+                  APPLY NOW!
+                </button>
+                <button v-else-if="!selectedStallDetails.isAvailable" class="modal-apply-btn occupied" disabled>
+                  OCCUPIED
+                </button>
+                <button class="modal-close-btn" @click="closeStallDetails">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -122,6 +209,8 @@ export default {
     return {
       showApplyForm: false,
       selectedStall: null,
+      showStallDetails: false,
+      selectedStallDetails: null,
       currentPage: 1,
       stallsPerPage: 6,
     }
@@ -150,6 +239,23 @@ export default {
   methods: {
     handleImageError(event) {
       event.target.src = stallBackgroundImg
+    },
+
+    openStallDetails(stall) {
+      this.selectedStallDetails = stall
+      this.showStallDetails = true
+    },
+
+    closeStallDetails() {
+      this.showStallDetails = false
+      this.selectedStallDetails = null
+    },
+
+    applyFromModal() {
+      // Close the details modal and open the application form
+      this.selectedStall = this.selectedStallDetails
+      this.showStallDetails = false
+      this.showApplyForm = true
     },
 
     openApplyForm(stall) {
@@ -222,23 +328,24 @@ export default {
       // Check if stall is available
       const isAvailable =
         stall.isAvailable === true || stall.isAvailable === 1 || stall.isAvailable === '1'
-
       if (!isAvailable) {
         return false
       }
 
       // Get price type and normalize it - default to 'Fixed Price' if empty/null
-      const priceType = (stall.price_type || 'Fixed Price').toString().toLowerCase().trim()
+      const priceType = stall.price_type ? stall.price_type.toString().toLowerCase().trim() : 'fixed price'
 
-      // Check if it's a fixed price stall (handle various formats)
+      // Only show apply button for Fixed Price stalls
+      // Explicitly exclude Auction and Raffle
       const isFixedPrice =
         priceType === 'fixed price' ||
         priceType === 'fixed' ||
-        priceType === '' ||
-        priceType === 'null' ||
-        priceType === 'undefined'
+        priceType === ''
 
-      return isFixedPrice
+      // Make sure it's NOT auction or raffle
+      const isAuctionOrRaffle = priceType === 'auction' || priceType === 'raffle'
+
+      return isFixedPrice && !isAuctionOrRaffle
     },
   },
 }

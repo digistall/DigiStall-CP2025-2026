@@ -26,7 +26,16 @@
 
                 <label>
                     Date of Birth:
-                    <input type="date" v-model="birthdate" required :class="{ 'input-error': errors.birthdate }" />
+                    <v-menu v-model="datePickerMenu" :close-on-content-click="false" transition="scale-transition">
+                        <template v-slot:activator="{ props }">
+                            <input type="text" v-model="formattedBirthdate" v-bind="props" required readonly
+                                placeholder="Click to select date" :class="{ 'input-error': errors.birthdate }"
+                                style="cursor: pointer;" />
+                        </template>
+
+                        <v-date-picker v-model="birthdateDate" @update:model-value="updateBirthdate" :max="maxDate"
+                            show-adjacent-months header="Select Birth Date" class="large-date-picker"></v-date-picker>
+                    </v-menu>
                     <span v-if="calculatedAge !== null" class="age-display"
                         :class="{ 'age-error': calculatedAge < 18 }">
                         Age: {{ calculatedAge }} years old
@@ -74,6 +83,8 @@ export default {
             fullName: '',
             education: '',
             birthdate: '',
+            birthdateDate: null,
+            datePickerMenu: false,
             civilStatus: '',
             contactNumber: '',
             mailingAddress: '',
@@ -118,9 +129,30 @@ export default {
             }
 
             return age;
+        },
+        formattedBirthdate() {
+            if (!this.birthdate) return '';
+            const date = new Date(this.birthdate);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        maxDate() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
         }
     },
     methods: {
+        updateBirthdate(date) {
+            if (date) {
+                this.birthdateDate = date;
+                // Fix timezone issue by creating date in local timezone
+                const selectedDate = new Date(date);
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                this.birthdate = `${year}-${month}-${day}`;
+                this.datePickerMenu = false;
+            }
+        },
         clearErrors() {
             this.errorMessage = '';
             this.errors = {
