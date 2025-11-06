@@ -139,6 +139,33 @@
   box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
 }
 
+/* Logged-in state styles */
+.login-btn.logged-in {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+  min-width: 140px;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.login-btn.logged-in:hover {
+  background: linear-gradient(135deg, #1e7e34, #155724);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.username-display {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.login-btn .mdi-account-circle {
+  font-size: 16px;
+  color: #fff;
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .header-container {
