@@ -1,8 +1,6 @@
 -- ========================================
--- MIGRATION: 001_initial_database_setup.sql
--- Description: Initial database and tables creation
--- Version: 1.0.0
--- Created: 2025-10-22
+-- DIGISTALL DATABASE INITIALIZATION
+-- Combined migration script for Docker
 -- ========================================
 
 -- Create database if it doesn't exist
@@ -18,16 +16,6 @@ CREATE TABLE IF NOT EXISTS `migrations` (
     `migration_name` VARCHAR(255) NOT NULL UNIQUE,
     `executed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `version` VARCHAR(50) NOT NULL
-);
-
--- Check if this migration has already been run
-SET @migration_name = '001_initial_database_setup';
-SET @migration_exists = (SELECT COUNT(*) FROM `migrations` WHERE `migration_name` = @migration_name);
-
--- Only execute if migration hasn't been run
-SET @sql = IF(@migration_exists = 0, 
-    'INSERT INTO migrations (migration_name, version) VALUES (''001_initial_database_setup'', ''1.0.0'')', 
-    'SELECT ''Migration already executed'' AS message'
 );
 
 -- Admin table
@@ -172,7 +160,9 @@ CREATE TABLE IF NOT EXISTS `application` (
   CONSTRAINT `application_ibfk_2` FOREIGN KEY (`applicant_id`) REFERENCES `applicant` (`applicant_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- Insert sample data for testing
+INSERT IGNORE INTO `admin` (`admin_username`, `admin_password_hash`, `first_name`, `last_name`, `email`) 
+VALUES ('admin', '$2b$10$rGWJJ6V7yU4hKLJLYnGsXOAQZcrzYOhQM8waqM6H9M6M9M6M9M6M9M', 'System', 'Administrator', 'admin@nagastall.com');
+
 -- Record migration execution
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+INSERT IGNORE INTO `migrations` (`migration_name`, `version`) VALUES ('docker_init', '1.0.0');

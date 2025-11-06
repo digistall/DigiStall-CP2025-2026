@@ -89,44 +89,53 @@ export default {
         this.allMenuRoutes[3] = '/app/branch'
       } else if (userType === 'employee') {
         // Employee: Show only features based on permissions
-        const employeePermissions = JSON.parse(
-          sessionStorage.getItem('employeePermissions') || '[]',
+        let employeePermissions = JSON.parse(
+          sessionStorage.getItem('employeePermissions') || '{}',
         )
         console.log('🔧 Employee permissions:', employeePermissions)
+
+        // Helper function to check permission (handles both array and object formats)
+        const hasPermission = (perm) => {
+          if (Array.isArray(employeePermissions)) {
+            return employeePermissions.includes(perm)
+          } else {
+            return employeePermissions[perm] === true
+          }
+        }
 
         this.menuItems = []
         let menuId = 1
 
         // Always show dashboard for employees
-        if (employeePermissions.includes('dashboard')) {
+        if (hasPermission('dashboard')) {
           this.menuItems.push({ ...this.employeeMenuItems.dashboard, id: menuId++ })
         }
 
         // Add menu items based on permissions
-        if (employeePermissions.includes('payments')) {
+        if (hasPermission('payments')) {
           this.menuItems.push({ ...this.employeeMenuItems.payments, id: menuId++ })
         }
-        if (employeePermissions.includes('applicants')) {
+        if (hasPermission('applicants')) {
           this.menuItems.push({ ...this.employeeMenuItems.applicants, id: menuId++ })
         }
-        if (employeePermissions.includes('complaints')) {
+        if (hasPermission('complaints')) {
           this.menuItems.push({ ...this.employeeMenuItems.complaints, id: menuId++ })
         }
-        if (employeePermissions.includes('compliances')) {
+        if (hasPermission('compliances')) {
           this.menuItems.push({ ...this.employeeMenuItems.compliances, id: menuId++ })
         }
-        if (employeePermissions.includes('vendors')) {
+        if (hasPermission('vendors')) {
           this.menuItems.push({ ...this.employeeMenuItems.vendors, id: menuId++ })
         }
-        if (employeePermissions.includes('stallholders')) {
+        if (hasPermission('stallholders')) {
           this.menuItems.push({ ...this.employeeMenuItems.stallholders, id: menuId++ })
         }
-        if (employeePermissions.includes('collectors')) {
+        if (hasPermission('collectors')) {
           this.menuItems.push({ ...this.employeeMenuItems.collectors, id: menuId++ })
         }
-        if (employeePermissions.includes('stalls')) {
-          this.menuItems.push({ ...this.employeeMenuItems.stalls, id: menuId++ })
-        }
+        // NOTE: Stalls menu is handled separately in AppSidebar.vue for employees
+        // because it needs special submenu handling (Raffles/Auctions)
+        // Do NOT add stalls to menuItems here for employees
 
         // If no permissions, show only dashboard
         if (this.menuItems.length === 0) {

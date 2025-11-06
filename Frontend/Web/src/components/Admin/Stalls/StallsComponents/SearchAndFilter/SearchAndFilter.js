@@ -114,7 +114,7 @@ export default {
         const matchesPriceType =
           !this.selectedPriceType ||
           (this.selectedPriceType === 'Auction' &&
-            (stall.price.includes('Auction') ||
+            ((stall.price_type && stall.price_type.toLowerCase().includes('auction')) ||
               (stall.priceType && stall.priceType.toLowerCase().includes('auction')))) ||
           (this.selectedPriceType === 'Raffle' &&
             (stall.price.includes('Raffle') ||
@@ -310,8 +310,7 @@ export default {
           '🔑 Token being used for API calls:',
           token ? `${token.substring(0, 30)}...` : 'null',
         )
-        console.log('🔑 Token length:', token?.length)
-        console.log('🔑 Is JWT format?', token?.includes('.') && token?.split('.').length === 3)
+        console.log('🔑 Authentication token available')
 
         // Load floors
         try {

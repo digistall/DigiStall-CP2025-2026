@@ -7,11 +7,14 @@ import {
   approveApplicant,
   updateApplicantStatus,
   declineApplicant,
+  deleteApplicant,
   searchApplicants,
   // New participant functions
   getAllParticipants,
   getParticipantsByBranch,
-  getParticipantsByStall
+  getParticipantsByStall,
+  autoCleanupApplicants,
+  triggerCleanup
 } from '../controllers/applicants/applicantsController.js'
 
 const router = express.Router()
@@ -44,5 +47,12 @@ router.put('/:id/approve', approveApplicant)
 
 // Decline applicant
 router.put('/:id/decline', declineApplicant)
+
+// Delete applicant (for auto-cleanup of expired rejected applicants)
+router.delete('/:id', deleteApplicant)
+
+// Auto-cleanup routes
+router.post('/cleanup/auto', autoCleanupApplicants)    // Automatic cleanup of rejected applicants older than 30 days
+router.post('/cleanup/trigger', triggerCleanup)       // Manual trigger for admin use
 
 export default router

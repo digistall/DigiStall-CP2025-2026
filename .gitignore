@@ -131,3 +131,14 @@ temp/
 # Build outputs
 build/
 dist/
+
+# Docker
+.env
+.env.local
+docker-compose.override.yml
+*.log
+mysql_data/
+
+# Docker volumes (if accidentally created in project root)
+volumes/
+data/

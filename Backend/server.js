@@ -5,6 +5,7 @@ import { createConnection } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authMiddleware from './middleware/auth.js';
+import './Backend-Web/services/cleanupScheduler.js'; // Initialize cleanup scheduler
 
 // Load environment variables
 dotenv.config();

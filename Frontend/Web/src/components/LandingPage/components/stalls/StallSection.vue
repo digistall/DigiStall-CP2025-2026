@@ -27,8 +27,12 @@
         </div>
       </div>
 
-      <button class="apply-btn">Apply Now</button>
+      <button class="apply-btn" @click="openGeneralApplicationForm">Apply Now</button>
     </div>
+
+    <!-- StallApplicationContainer for General Application -->
+    <StallApplicationContainer v-if="showApplyForm" :stall="generalStallInfo" :showForm="showApplyForm"
+      @close="closeApplyForm" />
   </section>
 </template>
 

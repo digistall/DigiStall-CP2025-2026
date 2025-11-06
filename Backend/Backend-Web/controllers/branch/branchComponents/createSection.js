@@ -98,12 +98,12 @@ export const createSection = async (req, res) => {
       });
     }
     
-    const [result] = await connection.execute(
-      "INSERT INTO section (floor_id, section_name, status, created_at) VALUES (?, ?, ?, NOW())",
+    const [[result]] = await connection.execute(
+      "CALL createSection(?, ?, ?)",
       [floor_id, section_name, status || 'Active']
     );
     
-    const section_id = result.insertId;
+    const section_id = result.section_id;
     
     console.log(`✅ Section created successfully by ${userType}:`, {
       section_id,

@@ -64,6 +64,8 @@ export const getAllStalls = async (req, res) => {
         branch: stall.branch, 
         branchLocation: stall.branchLocation,
         price: formattedPrice,
+        priceType: stall.price_type, 
+        price_type: stall.price_type,
         dimensions: stall.dimensions || "Contact for details",
         floor: stall.floor,
         section: stall.section,

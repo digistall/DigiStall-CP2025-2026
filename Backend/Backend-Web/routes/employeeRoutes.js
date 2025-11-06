@@ -5,12 +5,13 @@ import {
   getAllEmployees,
   getEmployeeById,
   updateEmployee,
+  updateEmployeePermissions,
   deleteEmployee,
   loginEmployee,
   logoutEmployee,
   resetEmployeePassword,
   getEmployeesByBranch
-} from '../controllers/employees/employeeController_simple.js';
+} from '../controllers/employees/employeeController.js';
 
 const router = express.Router();
 
@@ -74,6 +75,15 @@ router.get('/:id', getEmployeeById);
  * @body    { firstName, lastName, email, phoneNumber, permissions, status, updatedBy }
  */
 router.put('/:id', updateEmployee);
+
+/**
+ * @route   PUT /api/employees/:id/permissions
+ * @desc    Update employee permissions
+ * @access  Manager
+ * @params  id - Employee ID
+ * @body    { permissions }
+ */
+router.put('/:id/permissions', updateEmployeePermissions);
 
 /**
  * @route   DELETE /api/employees/:id

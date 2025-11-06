@@ -77,15 +77,25 @@
                 >
                   {{ getPermissionText(permission) }}
                 </v-chip>
-                <v-chip
+                <v-tooltip 
                   v-if="(employee.permissions || []).length > 2"
                   size="x-small"
                   color="grey"
                   variant="outlined"
                   class="permission-chip more-chip"
                 >
-                  +{{ (employee.permissions || []).length - 2 }} more
-                </v-chip>
+                  <template v-slot:activator="{ props }">
+                    <v-chip
+                      v-bind="props"
+                      size="x-small"
+                      color="grey"
+                      variant="outlined"
+                      class="permission-chip permission-more-chip"
+                    >
+                      +{{ (employee.permissions || []).length - 2 }} more
+                    </v-chip>
+                  </template>
+                </v-tooltip>
               </div>
             </div>
 

@@ -28,41 +28,23 @@ export const branchManagerLogin = async (req, res) => {
 
     connection = await createConnection();
 
-    // Query branch_manager table with JOIN to branch table for area/location
+    // Query branch_manager table using stored procedure
     console.log('🔍 Searching for branch manager with username:', username);
 
-    const [branchManagers] = await connection.execute(
-      `SELECT 
-        bm.branch_manager_id,
-        bm.branch_id,
-        bm.manager_username,
-        bm.manager_password_hash,
-        bm.first_name,
-        bm.last_name,
-        bm.email,
-        bm.contact_number,
-        bm.status,
-        bm.created_at,
-        bm.updated_at,
-        b.branch_name,
-        b.area
-      FROM branch_manager bm
-      JOIN branch b ON bm.branch_id = b.branch_id
-      WHERE bm.manager_username = ? AND bm.status = ?`,
-      [username, 'Active']
+    const [[branchManager]] = await connection.execute(
+      'CALL getBranchManagerByUsername(?)',
+      [username]
     );
 
-    console.log('🔍 Found branch managers:', branchManagers.length);
+    console.log('🔍 Found branch managers:', branchManager ? 1 : 0);
 
-    if (branchManagers.length === 0) {
+    if (!branchManager) {
       console.log('❌ No branch manager found with username:', username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or inactive account',
       });
     }
-
-    const branchManager = branchManagers[0];
     console.log('📍 Branch Manager found:', {
       id: branchManager.branch_manager_id,
       name: `${branchManager.first_name} ${branchManager.last_name}`,

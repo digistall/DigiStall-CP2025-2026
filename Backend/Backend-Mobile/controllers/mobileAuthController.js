@@ -20,20 +20,9 @@ export const mobileLogin = async (req, res) => {
       });
     }
     
-    // Query mobile users from credential table
+    // Query mobile users from credential table using stored procedure
     const [users] = await connection.execute(
-      `SELECT 
-        c.registrationid,
-        c.applicant_id, 
-        c.user_name, 
-        c.password_hash,
-        c.is_active,
-        a.applicant_full_name,
-        a.applicant_email,
-        a.applicant_contact_number
-      FROM credential c
-      LEFT JOIN applicant a ON c.applicant_id = a.applicant_id
-      WHERE c.user_name = ? AND c.is_active = 1`,
+      'CALL getMobileUserByUsername(?)',
       [username]
     );
     
@@ -123,9 +112,9 @@ export const mobileRegister = async (req, res) => {
       });
     }
     
-    // Check if user already exists
+    // Check if user already exists using stored procedure
     const [existingUsers] = await connection.execute(
-      'SELECT * FROM applicant WHERE applicant_username = ? OR applicant_email = ?',
+      'CALL checkExistingMobileUser(?, ?)',
       [username, email]
     );
     
@@ -140,18 +129,9 @@ export const mobileRegister = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Insert new mobile user
-    const [result] = await connection.execute(
-      `INSERT INTO applicant (
-        applicant_full_name, 
-        applicant_contact_number, 
-        applicant_address,
-        applicant_username, 
-        applicant_email, 
-        applicant_password_hash,
-        email_verified,
-        created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, FALSE, NOW())`,
+    // Insert new mobile user using stored procedure
+    const [[result]] = await connection.execute(
+      'CALL registerMobileUser(?, ?, ?, ?, ?, ?)',
       [fullName, contactNumber || null, address || null, username, email, hashedPassword]
     );
     
@@ -161,7 +141,7 @@ export const mobileRegister = async (req, res) => {
       success: true,
       message: 'Registration successful',
       user: {
-        id: result.insertId,
+        id: result.applicant_id,
         username,
         email,
         fullName

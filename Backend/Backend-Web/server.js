@@ -3,13 +3,16 @@
 
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { createConnection } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import authMiddleware from './middleware/auth.js';
+import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 // Import route files
 import authRoutes from './routes/authRoutes.js';
+import enhancedAuthRoutes from './routes/enhancedAuthRoutes.js';
 import applicantRoutes from './routes/applicantRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
@@ -23,6 +26,7 @@ const PORT = process.env.PORT || 5000;
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
 
 // Add request logging
@@ -37,15 +41,17 @@ app.use((req, res, next) => {
 // ===== ROUTES =====
 
 // Public routes (no authentication required)
-app.use('/api/auth', authRoutes);
-app.use('/api/stalls', stallRoutes);           // Stalls routes (public for landing page + protected for admin)
+app.use('/api/auth/v2', enhancedAuthRoutes);    // Enhanced JWT auth with refresh tokens (NEW)
+app.use('/api/auth', authRoutes);               // Legacy auth routes (backward compatibility)
+app.use('/api/stalls', stallRoutes);            // Stalls routes (public for landing page + protected for admin)
 app.use('/api/applications', applicationRoutes); // Applications (public for submissions)
 app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page applicant submissions (public)
-app.use('/api/employees', employeeRoutes);     // Employee routes (login is public, others protected internally)
+app.use('/api/employees', employeeRoutes);      // Employee routes (login is public, others protected internally)
 
 // Management routes (authentication required)
-app.use('/api/applicants', authMiddleware.authenticateToken, applicantRoutes);
-app.use('/api/branches', authMiddleware.authenticateToken, branchRoutes);
+// Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility
+app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);
+app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {

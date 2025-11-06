@@ -41,7 +41,7 @@ export const generateEmployeeUsername = () => {
   // Generate 4 random digits
   const randomDigits = Math.floor(1000 + Math.random() * 9000).toString() // Ensures 4 digits
   const username = `EMP${randomDigits}`
-  console.log('🔑 Generated employee username:', username)
+  console.log('🔑 Generated employee username: EMP****')
   return username
 }
 
@@ -52,7 +52,7 @@ export const generateEmployeePassword = () => {
   for (let i = 0; i < 8; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  console.log('🔒 Generated employee password:', password)
+  console.log('🔒 Generated employee password successfully')
   return password
 }
 
@@ -64,7 +64,7 @@ const sendEmployeeCredentialsEmailFetch = async (
   password,
 ) => {
   try {
-    console.log(`📧 Sending employee credentials via Fetch to:`, recipientEmail)
+    console.log('📧 Sending employee credentials via Fetch')
 
     initializeEmailJS()
 

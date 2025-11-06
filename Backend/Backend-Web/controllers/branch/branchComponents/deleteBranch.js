@@ -21,23 +21,31 @@ export const deleteBranch = async (req, res) => {
       });
     }
     
-    // Check if branch has associated managers or stalls (optional validation)
-    const [managers] = await connection.execute(
-      'SELECT COUNT(*) as manager_count FROM branch_manager WHERE branch_id = ?',
-      [id]
-    );
+    // Note: deleteBranch is now a HARD DELETE (permanently removes from database)
+    // It will also delete all related records: managers, floors, sections, stalls
     
-    if (managers[0].manager_count > 0) {
+    // Delete the branch using stored procedure (hard delete)
+    const [results] = await connection.execute('CALL deleteBranch(?)', [id]);
+    
+    // Check if stored procedure returned an error
+    const firstResult = results[0]?.[0];
+    if (firstResult?.error_message) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete branch with assigned managers. Please reassign or remove managers first.'
+        message: firstResult.error_message
       });
     }
     
-    // Delete the branch
-    await connection.execute('DELETE FROM branch WHERE branch_id = ?', [id]);
+    // Check affected rows (branch was deleted)
+    const affected_rows = firstResult?.affected_rows || 0;
+    if (affected_rows === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to delete branch - no rows affected'
+      });
+    }
     
-    console.log('✅ Branch deleted successfully:', existingBranch[0].branch_name);
+    console.log('✅ Branch permanently deleted:', existingBranch[0].branch_name);
     
     res.json({
       success: true,
