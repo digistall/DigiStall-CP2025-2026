@@ -29,7 +29,7 @@ export default {
       businessInfo: null,
       otherInfo: null,
       isSubmitting: false,
-      loadingState: 'preparing', // 'preparing', 'submitting', 'success', 'error'
+      loadingState: 'preparing',
       loadingErrorMessage: '',
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
     }
@@ -139,7 +139,6 @@ export default {
           errorMessage =
             'This email address is already registered. Please use a different email address or contact support if this is your email.'
         } else if (error.message.includes('HTTP 400')) {
-          // Try to extract the actual error message from the response
           try {
             const errorData = JSON.parse(error.message.replace('HTTP 400: ', ''))
             errorMessage = errorData.message || 'Invalid application data. Please check all fields.'
@@ -163,41 +162,87 @@ export default {
     },
 
     async prepareApplicationData() {
-      const personal = this.personalInfo
-      const spouse = this.spouseInfo
-      const business = this.businessInfo
-      const other = this.otherInfo
+      const personal = this.personalInfo || {}
+      const spouse = this.spouseInfo || {}
+      const business = this.businessInfo || {}
+      const other = this.otherInfo || {}
 
-      const applicationData = {
-        // Personal Information - match backend field names
-        applicant_full_name: personal.fullName,
-        applicant_contact_number: personal.contactNumber,
-        applicant_address: personal.mailingAddress,
-        applicant_birthdate: personal.birthdate,
-        applicant_civil_status: personal.civilStatus,
-        applicant_educational_attainment: personal.education,
-
-        // Spouse Information
-        spouse_full_name: spouse?.spouseName || null,
-        spouse_birthdate: spouse?.spouseBirthdate || null,
-        spouse_educational_attainment: spouse?.spouseEducation || null,
-        spouse_contact_number: spouse?.spouseContact || null,
-        spouse_occupation: spouse?.occupation || null,
-
-        // Business Information
-        nature_of_business: business?.natureOfBusiness || '',
-        capitalization: business?.businessCapitalization || null,
-        source_of_capital: business?.sourceOfCapital || '',
-        previous_business_experience: business?.previousBusiness || '',
-        relative_stall_owner: business?.applicantRelative || 'No',
-
-        // Other Information
-        signature_of_applicant: other?.applicantSignature?.name || null,
-        house_sketch_location: other?.applicantLocation?.name || null,
-        valid_id: other?.applicantValidID?.name || null,
-        email_address: other?.emailAddress || '',
+      // FIXED: Better helper function that ALWAYS returns a valid value (never undefined)
+      const toNull = (value) => {
+        // Check for undefined, null, empty string, or just whitespace
+        if (value === undefined || value === null || value === '' || 
+            (typeof value === 'string' && value.trim() === '')) {
+          return null
+        }
+        return value
       }
 
+      // FIXED: Safe getter for nested properties
+      const safeGet = (obj, path, defaultValue = null) => {
+        try {
+          const keys = path.split('.')
+          let current = obj
+          
+          for (const key of keys) {
+            if (current === null || current === undefined) {
+              return defaultValue
+            }
+            current = current[key]
+          }
+          
+          return toNull(current) || defaultValue
+        } catch {
+          return defaultValue
+        }
+      }
+
+      const applicationData = {
+        // Personal Information - REQUIRED fields should not be null
+        applicant_full_name: toNull(personal.fullName) || '',
+        applicant_contact_number: toNull(personal.contactNumber) || '',
+        applicant_address: toNull(personal.mailingAddress),
+        applicant_birthdate: toNull(personal.birthdate),
+        applicant_civil_status: toNull(personal.civilStatus) || 'Single',
+        applicant_educational_attainment: toNull(personal.education),
+
+        // Spouse Information - all optional
+        spouse_full_name: toNull(spouse.spouseName),
+        spouse_birthdate: toNull(spouse.spouseBirthdate),
+        spouse_educational_attainment: toNull(spouse.spouseEducation),
+        spouse_contact_number: toNull(spouse.spouseContact),
+        spouse_occupation: toNull(spouse.occupation),
+
+        // Business Information
+        nature_of_business: toNull(business.natureOfBusiness),
+        capitalization: toNull(business.businessCapitalization),
+        source_of_capital: toNull(business.sourceOfCapital),
+        previous_business_experience: toNull(business.previousBusiness),
+        relative_stall_owner: toNull(business.applicantRelative) || 'No',
+
+        // Other Information
+        signature_of_applicant: safeGet(other, 'applicantSignature.name'),
+        house_sketch_location: safeGet(other, 'applicantLocation.name'),
+        valid_id: safeGet(other, 'applicantValidID.name'),
+        email_address: toNull(other.emailAddress) || '',
+      }
+
+      // CRITICAL: Final safety check - convert ANY remaining undefined to null
+      Object.keys(applicationData).forEach(key => {
+        if (applicationData[key] === undefined) {
+          console.warn(`⚠️ Found undefined value for ${key}, converting to null`)
+          applicationData[key] = null
+        }
+      })
+
+      // Validate that we have no undefined values
+      const hasUndefined = Object.values(applicationData).some(v => v === undefined)
+      if (hasUndefined) {
+        console.error('❌ CRITICAL: Application data still contains undefined values!')
+        console.error('Application Data:', applicationData)
+        throw new Error('Invalid data preparation: undefined values detected')
+      }
+
+      console.log('✅ Prepared Application Data (validated - no undefined):', applicationData)
       return applicationData
     },
 
@@ -207,24 +252,36 @@ export default {
 
       const stallId = this.stall.stall_id || this.stall.id || this.stall.ID
 
-      // For general applications from hero section, stall_id might be null
       if (!stallId) {
         console.log('No stall ID provided - submitting general application')
       }
 
-      // NEW APPROACH - Use the atomic endpoint that handles both applicant and application creation
+      // Prepare complete application data
       const completeApplicationData = {
         ...applicationData,
-        // Add application-specific fields (stall_id can be null for general applications)
         stall_id: stallId || null,
         application_date: new Date().toISOString().split('T')[0],
       }
 
-      console.log('Complete Application Data:', completeApplicationData)
+      // CRITICAL: One more safety check before sending
+      Object.keys(completeApplicationData).forEach(key => {
+        if (completeApplicationData[key] === undefined) {
+          console.warn(`⚠️ Converting undefined ${key} to null before sending`)
+          completeApplicationData[key] = null
+        }
+      })
 
-      // Single atomic call instead of two separate calls
+      console.log('Complete Application Data (final):', completeApplicationData)
+
+      // Validate required fields
+      if (!completeApplicationData.applicant_full_name || 
+          !completeApplicationData.applicant_contact_number || 
+          !completeApplicationData.email_address) {
+        throw new Error('Missing required fields: applicant name, contact number, and email address are required')
+      }
+
       const response = await fetch(
-        `${this.apiBaseUrl}/landing-applicants/stall-application`, // Use the new atomic endpoint
+        `${this.apiBaseUrl}/landing-applicants/stall-application`,
         {
           method: 'POST',
           headers: {
@@ -241,7 +298,6 @@ export default {
         const errorText = await response.text()
         console.error('API Error:', errorText)
 
-        // Try to parse the error response to get more details
         let errorData
         try {
           errorData = JSON.parse(errorText)

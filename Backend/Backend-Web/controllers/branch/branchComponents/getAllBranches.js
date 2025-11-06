@@ -6,7 +6,9 @@ export const getAllBranches = async (req, res) => {
   try {
     connection = await createConnection();
     
-    const [branches] = await connection.execute('CALL getAllBranchesDetailed()');
+    // CALL returns [resultSet, metadata], so we need to get the first element
+    const [results] = await connection.execute('CALL getAllBranchesDetailed()');
+    const branches = results[0]; // Extract the actual data from the result set
     
     res.json({
       success: true,
