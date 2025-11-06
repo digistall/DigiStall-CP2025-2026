@@ -179,35 +179,23 @@ export default {
           throw new Error("Authentication required. Please login again.");
         }
 
-        // Use cached data with 5-minute expiration
-        const data = await dataCacheService.cachedFetch('employees', async () => {
-          console.log("🔑 Fetching employees with authentication...");
-          const response = await fetch(`${this.apiBaseUrl}/employees`, {
+        console.log("🔑 Fetching employees with authentication...");
+        
+        // Use cached fetch with proper parameters
+        const url = `${this.apiBaseUrl}/employees`;
+        const data = await dataCacheService.cachedFetch(
+          url,
+          {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          });
+          },
+          5 * 60 * 1000 // 5 minutes cache in milliseconds
+        );
 
-          console.log("📡 Employees API response status:", response.status);
-
-          if (!response.ok) {
-            if (response.status === 401) {
-              // Clear session and redirect to login
-              sessionStorage.clear();
-              this.$router.push("/login");
-              throw new Error("Session expired. Please login again.");
-            } else if (response.status === 403) {
-              throw new Error(
-                "Access denied. You do not have permission to view employees."
-              );
-            }
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          return await response.json();
-        }, 5); // 5 minutes cache
+        console.log("📡 Employees API response:", data);
 
         if (data.success) {
           this.employees = data.data || data.employees || [];
@@ -450,7 +438,7 @@ export default {
           this.closeEmployeeDialog();
           
           // Clear cache and refresh data
-          dataCacheService.clearCache('employees');
+          dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
@@ -531,7 +519,7 @@ export default {
           this.closePermissionsDialog();
           
           // Clear cache and refresh data
-          dataCacheService.clearCache('employees');
+          dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
@@ -593,7 +581,7 @@ export default {
           this.$emit("show-snackbar", `Employee ${action} successfully!`, "success");
           
           // Clear cache and refresh data
-          dataCacheService.clearCache('employees');
+          dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);

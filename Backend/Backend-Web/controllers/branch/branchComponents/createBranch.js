@@ -51,27 +51,33 @@ export const createBranch = async (req, res) => {
     
     const admin_id = adminResult[0].admin_id;
     
-    // Insert new branch
-    const [result] = await connection.execute(
-      `INSERT INTO branch (branch_name, area, location, address, contact_number, email, status, admin_id, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [branch_name, area, location, address, contact_number, email, status, admin_id]
+    // Insert new branch using stored procedure
+    // Note: createBranch SP signature: (admin_id, branch_name, area, location, address, contact_number, email, status)
+    const [results] = await connection.execute(
+      'CALL createBranch(?, ?, ?, ?, ?, ?, ?, ?)',
+      [admin_id, branch_name, area, location, address, contact_number, email, status]
     );
     
-    const branchId = result.insertId;
+    const createdBranch = results[0][0];
+    const branchId = createdBranch.branch_id;
     
-    // Get the created branch details
-    const [createdBranch] = await connection.execute(
-      'SELECT * FROM branch WHERE branch_id = ?',
-      [branchId]
-    );
+    // Get complete branch data using the same stored procedure as getAllBranches
+    const [allBranchesResults] = await connection.execute('CALL getAllBranchesDetailed()');
+    const allBranches = allBranchesResults[0];
+    
+    // Find the newly created branch in the results
+    const completeBranchData = allBranches.find(branch => branch.branch_id === branchId);
+    
+    if (!completeBranchData) {
+      throw new Error('Failed to retrieve created branch data');
+    }
     
     console.log('✅ Branch created successfully:', branch_name);
     
     res.status(201).json({
       success: true,
       message: 'Branch created successfully',
-      data: createdBranch[0]
+      data: completeBranchData
     });
     
   } catch (error) {

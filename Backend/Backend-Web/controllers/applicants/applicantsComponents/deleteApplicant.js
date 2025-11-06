@@ -7,61 +7,22 @@ export const deleteApplicant = async (req, res) => {
     const { id } = req.params;
 
     connection = await createConnection();
-    
-    // Start transaction for data integrity
-    await connection.beginTransaction();
 
-    // Check if applicant exists
-    const [existingApplicant] = await connection.execute(
-      'SELECT applicant_id, first_name, last_name, email FROM applicant WHERE applicant_id = ?',
+    // Get applicant info before deletion
+    const [[existingApplicant]] = await connection.execute(
+      'CALL getApplicantById(?)',
       [id]
     );
 
-    if (existingApplicant.length === 0) {
-      await connection.rollback();
+    if (!existingApplicant) {
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
       });
     }
 
-    // Delete related records in proper order (foreign key constraints)
-    
-    // 1. Delete from application table first
-    await connection.execute(
-      'DELETE FROM application WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 2. Delete from other_information
-    await connection.execute(
-      'DELETE FROM other_information WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 3. Delete from business_information
-    await connection.execute(
-      'DELETE FROM business_information WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 4. Delete from spouse
-    await connection.execute(
-      'DELETE FROM spouse WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 5. Delete from credential
-    await connection.execute(
-      'DELETE FROM credential WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 6. Finally delete from applicant table
-    await connection.execute('DELETE FROM applicant WHERE applicant_id = ?', [id]);
-
-    // Commit the transaction
-    await connection.commit();
+    // Delete applicant using stored procedure (handles cascading deletes)
+    await connection.execute('CALL deleteApplicant(?)', [id]);
 
     console.log('✅ Applicant deleted successfully');
 
@@ -70,21 +31,12 @@ export const deleteApplicant = async (req, res) => {
       message: 'Applicant deleted successfully',
       data: {
         id: id,
-        name: `${existingApplicant[0].first_name} ${existingApplicant[0].last_name}`,
-        email: existingApplicant[0].email
+        name: `${existingApplicant.first_name} ${existingApplicant.last_name}`,
+        email: existingApplicant.email
       }
     });
 
   } catch (error) {
-    // Rollback transaction on error
-    if (connection) {
-      try {
-        await connection.rollback();
-      } catch (rollbackError) {
-        console.error('❌ Rollback error:', rollbackError);
-      }
-    }
-    
     console.error('❌ Delete applicant error:', error);
     res.status(500).json({
       success: false,

@@ -107,6 +107,44 @@
       @manager-assigned="onManagerAssigned"
     />
 
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="text-h5 d-flex align-center">
+          <v-icon color="warning" class="mr-2">mdi-alert-circle</v-icon>
+          Confirm Deletion
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <p class="text-body-1">
+            Are you sure you want to permanently delete 
+            <strong class="error--text">{{ branchToDelete?.branch_name }}</strong>?
+          </p>
+          <v-alert type="warning" variant="tonal" class="mt-4">
+            <strong>Warning:</strong> This action cannot be undone. All associated data including 
+            floors, sections, stalls, and stallholders will be permanently removed.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="px-6 pb-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="cancelDelete"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="elevated"
+            @click="confirmDelete"
+          >
+            <v-icon left>mdi-delete</v-icon>
+            Delete Branch
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Custom notification popup -->
     <UniversalPopup
       :show="popup.show"

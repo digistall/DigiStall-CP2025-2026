@@ -114,12 +114,12 @@ export const createFloor = async (req, res) => {
       });
     }
 
-    const [result] = await connection.execute(
-      "INSERT INTO floor (branch_id, floor_number, floor_name, status, created_at) VALUES (?, ?, ?, ?, NOW())",
+    const [[result]] = await connection.execute(
+      "CALL createFloor(?, ?, ?, ?)",
       [branch_id, floor_number, floor_name, status || 'Active']
     );
     
-    const floor_id = result.insertId;
+    const floor_id = result.floor_id;
     
     console.log(`✅ Floor created successfully by ${userType}:`, {
       floor_id,

@@ -9,8 +9,6 @@ export async function createEmployee(req, res) {
         const userBranchId = req.user?.branchId;
         const userId = req.user?.userId || req.user?.branchManagerId;
         
-        console.log('Creating employee with data:', { firstName, lastName, email, permissions, userBranchId, userId });
-        
         if (!firstName || !lastName || !email) {
             return res.status(400).json({
                 success: false,
@@ -33,26 +31,23 @@ export async function createEmployee(req, res) {
         const password = Math.random().toString(36).substring(2, 10);
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Use the current user's branch ID instead of allowing any branchId
         const finalBranchId = branchId || userBranchId;
         const finalCreatedBy = createdByManager || userId;
         
         // Convert permissions array to JSON string
         const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
 
-        const [result] = await connection.execute(
-            `INSERT INTO employee (first_name, last_name, email, phone_number, employee_username, employee_password_hash, branch_id, created_by_manager, permissions, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
-            [firstName, lastName, email, phoneNumber, username, hashedPassword, finalBranchId, finalCreatedBy, permissionsJson]
+        // Call stored procedure
+        const [[result]] = await connection.execute(
+            'CALL createEmployee(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [username, hashedPassword, firstName, lastName, email, phoneNumber, finalBranchId, finalCreatedBy, permissionsJson]
         );
-
-        console.log(`👥 Created new employee ID: ${result.insertId} in branch: ${finalBranchId} with permissions:`, permissions);
 
         res.status(201).json({
             success: true,
             message: 'Employee created successfully',
             data: {
-                employeeId: result.insertId,
+                employeeId: result.employee_id,
                 credentials: {
                     username,
                     password
@@ -83,25 +78,10 @@ export async function getAllEmployees(req, res) {
 
         connection = await createConnection();
         
-        // Get all employees with their permissions, filtered by branch
-        const [employees] = await connection.execute(
-            `SELECT 
-                employee_id,
-                employee_username,
-                first_name,
-                last_name,
-                email,
-                phone_number,
-                branch_id,
-                permissions,
-                status,
-                last_login,
-                created_at,
-                updated_at
-            FROM employee 
-            WHERE branch_id = ? 
-            ORDER BY created_at DESC`, 
-            [userBranchId]
+        // Call stored procedure to get all employees
+        const [[employees]] = await connection.execute(
+            'CALL getAllEmployees(?, ?, NULL, NULL)',
+            ['Active', userBranchId]
         );
         
         // Parse permissions for each employee
@@ -109,8 +89,6 @@ export async function getAllEmployees(req, res) {
             ...emp,
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
-        
-        console.log(`🏢 Fetching employees for branch ID: ${userBranchId}, Found: ${employees.length} employees`);
         
         res.json({ success: true, data: employeesWithPermissions });
     } catch (error) {
@@ -136,26 +114,13 @@ export async function getEmployeeById(req, res) {
         
         connection = await createConnection();
         
-        const [employee] = await connection.execute(
-            `SELECT 
-                employee_id,
-                employee_username,
-                first_name,
-                last_name,
-                email,
-                phone_number,
-                branch_id,
-                permissions,
-                status,
-                last_login,
-                created_at,
-                updated_at
-            FROM employee 
-            WHERE employee_id = ? AND branch_id = ?`, 
-            [id, userBranchId]
+        // Call stored procedure
+        const [[employee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
         
-        if (employee.length === 0) {
+        if (employee.length === 0 || employee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to access this employee' 
@@ -167,8 +132,6 @@ export async function getEmployeeById(req, res) {
             ...employee[0],
             permissions: employee[0].permissions ? JSON.parse(employee[0].permissions) : []
         };
-        
-        console.log(`🔍 Fetching employee ID: ${id} from branch: ${userBranchId}`);
         
         res.json({ success: true, data: employeeData });
     } catch (error) {
@@ -195,22 +158,34 @@ export async function updateEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Convert permissions array to JSON string
-        const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
-        
-        const [result] = await connection.execute(
-            'UPDATE employee SET first_name = ?, last_name = ?, email = ?, phone_number = ?, status = ?, permissions = ?, updated_at = CURRENT_TIMESTAMP WHERE employee_id = ? AND branch_id = ?',
-            [firstName, lastName, email, phoneNumber, status, permissionsJson, id, userBranchId]
+        // Verify employee belongs to the same branch
+        const [[checkEmployee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
-
-        if (result.affectedRows === 0) {
+        
+        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to update this employee' 
             });
         }
+        
+        // Convert permissions array to JSON string
+        const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
+        
+        // Call stored procedure
+        const [[result]] = await connection.execute(
+            'CALL updateEmployee(?, ?, ?, ?, ?, ?, ?)',
+            [id, firstName, lastName, email, phoneNumber, permissionsJson, status]
+        );
 
-        console.log(`✏️ Updated employee ID: ${id} in branch: ${userBranchId} with permissions:`, permissions);
+        if (result.affected_rows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Failed to update employee' 
+            });
+        }
         
         res.json({ success: true, message: 'Employee updated successfully' });
     } catch (error) {
@@ -244,21 +219,33 @@ export async function updateEmployeePermissions(req, res) {
         
         connection = await createConnection();
         
-        const permissionsJson = JSON.stringify(permissions);
-        
-        const [result] = await connection.execute(
-            'UPDATE employee SET permissions = ?, updated_at = CURRENT_TIMESTAMP WHERE employee_id = ? AND branch_id = ?',
-            [permissionsJson, id, userBranchId]
+        // Verify employee belongs to the same branch
+        const [[checkEmployee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
-
-        if (result.affectedRows === 0) {
+        
+        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to update this employee' 
             });
         }
+        
+        const permissionsJson = JSON.stringify(permissions);
+        
+        // Call stored procedure (passing null for fields we don't want to update)
+        const [[result]] = await connection.execute(
+            'CALL updateEmployee(?, NULL, NULL, NULL, NULL, ?, NULL)',
+            [id, permissionsJson]
+        );
 
-        console.log(`🔐 Updated permissions for employee ID: ${id} in branch: ${userBranchId}`, permissions);
+        if (result.affected_rows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Failed to update employee permissions' 
+            });
+        }
         
         res.json({ 
             success: true, 
@@ -288,19 +275,31 @@ export async function deleteEmployee(req, res) {
         
         connection = await createConnection();
         
-        const [result] = await connection.execute(
-            'UPDATE employee SET status = "Inactive", updated_at = CURRENT_TIMESTAMP WHERE employee_id = ? AND branch_id = ?', 
-            [id, userBranchId]
+        // Verify employee belongs to the same branch
+        const [[checkEmployee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
-
-        if (result.affectedRows === 0) {
+        
+        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to delete this employee' 
             });
         }
+        
+        // Call stored procedure
+        const [[result]] = await connection.execute(
+            'CALL deleteEmployee(?)',
+            [id]
+        );
 
-        console.log(`🗑️ Deactivated employee ID: ${id} in branch: ${userBranchId}`);
+        if (result.affected_rows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Failed to deactivate employee' 
+            });
+        }
         
         res.json({ success: true, message: 'Employee deactivated successfully' });
     } catch (error) {
@@ -316,10 +315,7 @@ export async function loginEmployee(req, res) {
     try {
         const { username, password } = req.body;
         
-        console.log('🔐 Employee login attempt:', { username });
-        
         if (!username || !password) {
-            console.log('❌ Missing required fields');
             return res.status(400).json({ 
                 success: false, 
                 message: 'Username and password are required' 
@@ -328,30 +324,13 @@ export async function loginEmployee(req, res) {
 
         connection = await createConnection();
         
-        console.log('🔍 Searching for employee with username:', username);
-        const [employees] = await connection.execute(`
-            SELECT 
-                e.employee_id, 
-                e.employee_username, 
-                e.employee_password_hash, 
-                e.first_name, 
-                e.last_name, 
-                e.email, 
-                e.phone_number,
-                e.branch_id,
-                e.status,
-                e.permissions,
-                b.branch_name,
-                b.area,
-                b.location
-            FROM employee e
-            LEFT JOIN branch b ON e.branch_id = b.branch_id
-            WHERE e.employee_username = ? AND e.status = ?`,
-            [username, 'Active']
+        // Call stored procedure to get employee by username
+        const [[employees]] = await connection.execute(
+            'CALL getEmployeeByUsername(?)',
+            [username]
         );
 
-        if (employees.length === 0) {
-            console.log('❌ No employee found with username:', username);
+        if (employees.length === 0 || employees[0].status !== 'Active') {
             return res.status(401).json({ 
                 success: false, 
                 message: 'Invalid credentials or inactive account' 
@@ -359,25 +338,29 @@ export async function loginEmployee(req, res) {
         }
 
         const employee = employees[0];
-        console.log('📍 Employee found:', {
-            id: employee.employee_id,
-            name: `${employee.first_name} ${employee.last_name}`,
-            branch: employee.branch_name
-        });
 
         const isValid = await bcrypt.compare(password, employee.employee_password_hash);
         if (!isValid) {
-            console.log('❌ Invalid password for employee:', username);
             return res.status(401).json({ 
                 success: false, 
                 message: 'Invalid credentials' 
             });
         }
 
-        // Update last login
+        // Generate session token for the stored procedure
+        const sessionToken = jwt.sign(
+            { employeeId: employee.employee_id, timestamp: Date.now() },
+            process.env.JWT_SECRET || 'fallback_secret',
+            { expiresIn: '24h' }
+        );
+        
+        // Call stored procedure to create session and update last_login
+        const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
+        
         await connection.execute(
-            'UPDATE employee SET last_login = CURRENT_TIMESTAMP WHERE employee_id = ?',
-            [employee.employee_id]
+            'CALL loginEmployee(?, ?, ?, ?)',
+            [username, sessionToken, ipAddress, userAgent]
         );
 
         // Parse permissions
@@ -402,8 +385,6 @@ export async function loginEmployee(req, res) {
             process.env.JWT_SECRET || 'fallback_secret',
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
-
-        console.log('✅ Employee login successful for:', username);
 
         res.json({
             success: true,
@@ -452,6 +433,7 @@ export async function resetEmployeePassword(req, res) {
     try {
         const { id } = req.params;
         const userBranchId = req.user?.branchId;
+        const userId = req.user?.userId || req.user?.branchManagerId;
         
         if (!userBranchId) {
             return res.status(400).json({ 
@@ -462,23 +444,35 @@ export async function resetEmployeePassword(req, res) {
         
         connection = await createConnection();
         
-        // Generate new password
-        const newPassword = Math.random().toString(36).substring(2, 10);
-        const hashedPassword = await bcrypt.hash(newPassword, 12);
-        
-        const [result] = await connection.execute(
-            'UPDATE employee SET employee_password_hash = ?, password_reset_required = TRUE, updated_at = CURRENT_TIMESTAMP WHERE employee_id = ? AND branch_id = ?',
-            [hashedPassword, id, userBranchId]
+        // Verify employee belongs to the same branch
+        const [[checkEmployee]] = await connection.execute(
+            'CALL getEmployeeById(?)',
+            [id]
         );
-
-        if (result.affectedRows === 0) {
+        
+        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Employee not found or you do not have permission to reset password' 
             });
         }
+        
+        // Generate new password
+        const newPassword = Math.random().toString(36).substring(2, 10);
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        
+        // Call stored procedure
+        const [[result]] = await connection.execute(
+            'CALL resetEmployeePassword(?, ?, ?)',
+            [id, hashedPassword, userId]
+        );
 
-        console.log(`🔑 Reset password for employee ID: ${id} in branch: ${userBranchId}`);
+        if (result.affected_rows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Failed to reset password' 
+            });
+        }
 
         res.json({ 
             success: true, 
@@ -515,24 +509,10 @@ export async function getEmployeesByBranch(req, res) {
         
         connection = await createConnection();
         
-        const [employees] = await connection.execute(
-            `SELECT 
-                employee_id,
-                employee_username,
-                first_name,
-                last_name,
-                email,
-                phone_number,
-                branch_id,
-                permissions,
-                status,
-                last_login,
-                created_at,
-                updated_at
-            FROM employee 
-            WHERE branch_id = ? 
-            ORDER BY created_at DESC`, 
-            [branchId]
+        // Call stored procedure
+        const [[employees]] = await connection.execute(
+            'CALL getEmployeesByBranch(?, ?)',
+            [branchId, 'Active']
         );
         
         // Parse permissions for each employee
@@ -540,8 +520,6 @@ export async function getEmployeesByBranch(req, res) {
             ...emp,
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
-        
-        console.log(`🏢 Fetching employees for specific branch ID: ${branchId}, Found: ${employees.length} employees`);
         
         res.json({ success: true, data: employeesWithPermissions });
     } catch (error) {

@@ -152,6 +152,14 @@ class DataCacheService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error(`❌ Expected JSON but got: ${contentType}`, text.substring(0, 100));
+        throw new Error(`Server returned ${contentType} instead of JSON. This usually indicates a routing or CORS issue.`);
+      }
+
       const data = await response.json();
       
       // Cache successful responses only

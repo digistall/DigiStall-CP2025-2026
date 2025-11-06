@@ -149,14 +149,6 @@ export default {
           // Get branch name from various possible sources
           const branchName = currentUser.branchName || currentUser.branch_name || currentUser.branch?.branch_name || currentUser.branch?.name || null
           
-          console.log('👤 Employee Data Debug:', {
-            branchName: branchName,
-            currentUser_branchName: currentUser.branchName,
-            currentUser_branch_name: currentUser.branch_name,
-            currentUser_branch: currentUser.branch,
-            fullUser: currentUser
-          })
-          
           this.employeeData = {
             username: currentUser.username || currentUser.employee_username || 'employee',
             fullName: currentUser.fullName || `${currentUser.firstName || currentUser.first_name || ''} ${currentUser.lastName || currentUser.last_name || ''}`.trim() || 'Employee User',
@@ -174,16 +166,6 @@ export default {
           // Get branch name from various possible sources
           const branchName = currentUser.branchName || currentUser.branch_name || currentUser.branch?.branch_name || currentUser.branch?.name || null
           
-          console.log('🏢 Branch Manager Data Debug:', {
-            branchName: branchName,
-            currentUser_branchName: currentUser.branchName,
-            currentUser_branch_name: currentUser.branch_name,
-            currentUser_branch: currentUser.branch,
-            currentUser_branch_name_from_nested: currentUser.branch?.name,
-            currentUser_area: currentUser.area,
-            currentUser_location: currentUser.location
-          })
-          
           this.branchManagerData = {
             username: currentUser.username || currentUser.manager_username || 'manager',
             fullName: currentUser.fullName || `${currentUser.firstName || currentUser.first_name || ''} ${currentUser.lastName || currentUser.last_name || ''}`.trim() || 'Branch Manager',
@@ -194,11 +176,8 @@ export default {
             branchId: currentUser.branchId || currentUser.branch_id || currentUser.branch?.id,
             branchName: branchName
           }
-          
-          console.log('✅ Final Branch Manager Data:', this.branchManagerData)
         }
         
-        console.log('✅ User data loaded from session storage')
         return
       }
       
@@ -586,25 +565,8 @@ export default {
     // Setup authentication
     this.setupAuthInterceptor()
 
-    // Debug session storage contents
-    console.log('🔍 AppHeader mounted - Debug session storage:')
-    console.log('  - authToken:', sessionStorage.getItem('authToken') ? 'Present' : 'Missing')
-    console.log('  - userType:', sessionStorage.getItem('userType'))
-    console.log('  - currentUser:', sessionStorage.getItem('currentUser'))
-    console.log('  - branchManagerData:', sessionStorage.getItem('branchManagerData'))
-    console.log('  - adminData:', sessionStorage.getItem('adminData'))
-    console.log('  - employeeData:', sessionStorage.getItem('employeeData'))
-
     // Fetch user data based on user type when component mounts
     await this.fetchUserData()
-    
-    // Log final state
-    console.log('🔍 AppHeader final user data state:')
-    console.log('  - userType:', this.userType)
-    console.log('  - currentUserData:', this.currentUserData)
-    console.log('  - displayUsername:', this.displayUsername)
-    console.log('  - displayLocationText:', this.displayLocationText)
-    console.log('  - defaultEmail:', this.defaultEmail)
   },
 
   beforeUnmount() {
