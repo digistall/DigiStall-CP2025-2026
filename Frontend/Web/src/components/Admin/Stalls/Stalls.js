@@ -667,10 +667,10 @@ export default {
           
           if (this.hasFloorsSections) {
             console.log('✅ Floors and sections are now available!')
-            this.showMessage('Floor added successfully! You can now add stalls.', 'success', 'add', 'floor')
+            // Success message is already shown by AddFloorSection component
           } else {
             console.log('⚠️ Still missing floors or sections')
-            this.showMessage('Floor added successfully!', 'success', 'add', 'floor')
+            // Success message is already shown by AddFloorSection component
           }
         }
       } catch (error) {
@@ -691,10 +691,10 @@ export default {
           
           if (this.hasFloorsSections) {
             console.log('✅ Floors and sections are now available!')
-            this.showMessage('Section added successfully! You can now add stalls.', 'success', 'add', 'section')
+            // Success message is already shown by AddFloorSection component
           } else {
             console.log('⚠️ Still missing floors or sections')
-            this.showMessage('Section added successfully!', 'success', 'add', 'section')
+            // Success message is already shown by AddFloorSection component
           }
         }
       } catch (error) {
