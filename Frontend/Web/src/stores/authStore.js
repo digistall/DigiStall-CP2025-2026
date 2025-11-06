@@ -190,6 +190,37 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true;
       error.value = null;
 
+      // Clear all existing authentication data first to prevent data mixing
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('employeePermissions');
+      
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('currentUser');
+      sessionStorage.removeItem('userType');
+      sessionStorage.removeItem('permissions');
+      sessionStorage.removeItem('employeePermissions');
+      sessionStorage.removeItem('branchManagerData');
+      sessionStorage.removeItem('employeeData');
+      sessionStorage.removeItem('adminData');
+      sessionStorage.removeItem('branchManagerId');
+      sessionStorage.removeItem('employeeId');
+      sessionStorage.removeItem('adminId');
+      sessionStorage.removeItem('branchId');
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('fullName');
+      sessionStorage.clear();
+      
+      // Clear data cache service if available
+      if (window.dataCacheService) {
+        window.dataCacheService.clearAll();
+      }
+      
+      // Clear axios auth header
+      delete axios.defaults.headers.common['Authorization'];
+
       SecureLogger.auth('Attempting authentication');
 
       const loginUrl = `${API_BASE_URL}/auth/login`;
@@ -273,7 +304,25 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('userType');
       sessionStorage.removeItem('permissions');
       sessionStorage.removeItem('employeePermissions');
+      
+      // Clear all branch manager and employee specific data
+      sessionStorage.removeItem('branchManagerData');
+      sessionStorage.removeItem('employeeData');
+      sessionStorage.removeItem('adminData');
+      sessionStorage.removeItem('branchManagerId');
+      sessionStorage.removeItem('employeeId');
+      sessionStorage.removeItem('adminId');
+      sessionStorage.removeItem('branchId');
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('fullName');
+      
+      // Clear ALL session storage completely
       sessionStorage.clear();
+      
+      // Clear data cache service if available
+      if (window.dataCacheService) {
+        window.dataCacheService.clearAll();
+      }
       
       // Clear axios auth header
       delete axios.defaults.headers.common['Authorization'];

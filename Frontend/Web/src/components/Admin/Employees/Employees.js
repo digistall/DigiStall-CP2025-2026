@@ -179,7 +179,12 @@ export default {
           throw new Error("Authentication required. Please login again.");
         }
 
+        // Get current user info for branch verification
+        const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+        const userBranchId = currentUser.branchId || currentUser.branch_id || currentUser.branch?.id;
+
         console.log("🔑 Fetching employees with authentication...");
+        console.log("🏢 Current user branch ID:", userBranchId);
         
         // Use cached fetch with proper parameters
         const url = `${this.apiBaseUrl}/employees`;
@@ -198,13 +203,27 @@ export default {
         console.log("📡 Employees API response:", data);
 
         if (data.success) {
-          this.employees = data.data || data.employees || [];
-          console.log(`✅ Loaded ${this.employees.length} employees`);
+          let employees = data.data || data.employees || [];
+          
+          // Client-side verification: Filter employees to ensure they belong to current user's branch
+          if (userBranchId) {
+            const originalCount = employees.length;
+            employees = employees.filter(emp => {
+              const empBranchId = emp.branch_id || emp.branchId;
+              return empBranchId && parseInt(empBranchId) === parseInt(userBranchId);
+            });
+            
+            if (originalCount !== employees.length) {
+              console.warn(`⚠️ Filtered out ${originalCount - employees.length} employees from different branches`);
+            }
+          }
+          
+          this.employees = employees;
+          console.log(`✅ Loaded ${this.employees.length} employees for branch ${userBranchId}`);
 
           // Provide user feedback based on role
-          const currentUser = JSON.parse(sessionStorage.getItem("user") || "{}");
           if (this.employees.length === 0) {
-            if (currentUser.userType === "branch-manager") {
+            if (currentUser.userType === "branch_manager") {
               console.log(
                 "ℹ️  No employees found - Branch manager has not created any employees yet"
               );
@@ -212,9 +231,9 @@ export default {
               console.log("ℹ️  No employees found");
             }
           } else {
-            if (currentUser.userType === "branch-manager") {
+            if (currentUser.userType === "branch_manager") {
               console.log(
-                `ℹ️  Showing ${this.employees.length} employees created by this branch manager`
+                `ℹ️  Showing ${this.employees.length} employees for branch ${userBranchId}`
               );
             }
           }
@@ -223,11 +242,25 @@ export default {
         }
       } catch (error) {
         console.error("Error fetching employees:", error);
-        this.$emit(
-          "show-snackbar",
-          `Failed to load employees: ${error.message}`,
-          "error"
-        );
+        
+        // Clear cache and retry once on auth errors
+        if (error.message.includes("Authentication") || error.message.includes("401")) {
+          console.log("🔄 Authentication error - clearing cache and retrying...");
+          dataCacheService.invalidatePattern("employees");
+          
+          // Don't retry to avoid infinite loops
+          this.$emit(
+            "show-snackbar",
+            "Authentication expired. Please login again.",
+            "error"
+          );
+        } else {
+          this.$emit(
+            "show-snackbar",
+            `Failed to load employees: ${error.message}`,
+            "error"
+          );
+        }
       }
     },
 

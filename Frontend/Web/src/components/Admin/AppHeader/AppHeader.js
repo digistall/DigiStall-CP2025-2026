@@ -469,10 +469,29 @@ export default {
       sessionStorage.removeItem('userType')
       sessionStorage.removeItem('branchManagerData')
       sessionStorage.removeItem('adminData')
+      sessionStorage.removeItem('employeeData')
       sessionStorage.removeItem('branchManagerId')
+      sessionStorage.removeItem('employeeId')
       sessionStorage.removeItem('adminId')
+      sessionStorage.removeItem('branchId')
+      sessionStorage.removeItem('userRole')
+      sessionStorage.removeItem('fullName')
+      sessionStorage.removeItem('permissions')
+      sessionStorage.removeItem('employeePermissions')
+      
       localStorage.removeItem('currentUser')
       localStorage.removeItem('authToken')
+      localStorage.removeItem('userType')
+      localStorage.removeItem('permissions')
+      localStorage.removeItem('employeePermissions')
+      
+      // Clear all session storage completely
+      sessionStorage.clear()
+      
+      // Clear data cache if available
+      if (window.dataCacheService) {
+        window.dataCacheService.clearAll()
+      }
 
       // Clear axios header
       delete axios.defaults.headers.common['Authorization']
@@ -480,6 +499,7 @@ export default {
       // Clear component data
       this.branchManagerData = null
       this.adminData = null
+      this.employeeData = null
 
       // Clear Vuex store if you're using it
       if (this.$store && this.$store.dispatch) {

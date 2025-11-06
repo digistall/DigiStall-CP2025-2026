@@ -68,8 +68,18 @@ export async function getAllEmployees(req, res) {
     let connection;
     try {
         const userBranchId = req.user?.branchId;
+        const userId = req.user?.userId;
+        const userType = req.user?.userType;
+        
+        console.log('🔍 getAllEmployees - Request from user:', {
+            userId,
+            userType,
+            branchId: userBranchId,
+            username: req.user?.username
+        });
         
         if (!userBranchId) {
+            console.log('❌ getAllEmployees - No branch ID found in user session');
             return res.status(400).json({ 
                 success: false, 
                 message: 'Branch ID not found in user session' 
@@ -78,11 +88,15 @@ export async function getAllEmployees(req, res) {
 
         connection = await createConnection();
         
+        console.log(`🔍 getAllEmployees - Fetching employees for branch: ${userBranchId}`);
+        
         // Call stored procedure to get all employees
         const [[employees]] = await connection.execute(
             'CALL getAllEmployees(?, ?, NULL, NULL)',
             ['Active', userBranchId]
         );
+        
+        console.log(`✅ getAllEmployees - Found ${employees.length} employees for branch ${userBranchId}`);
         
         // Parse permissions for each employee
         const employeesWithPermissions = employees.map(emp => ({
@@ -90,9 +104,21 @@ export async function getAllEmployees(req, res) {
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
         
-        res.json({ success: true, data: employeesWithPermissions });
+        res.json({ 
+            success: true, 
+            data: employeesWithPermissions,
+            metadata: {
+                branchId: userBranchId,
+                count: employeesWithPermissions.length,
+                requestedBy: {
+                    userId,
+                    userType,
+                    username: req.user?.username
+                }
+            }
+        });
     } catch (error) {
-        console.error('Error getting employees:', error);
+        console.error('❌ getAllEmployees - Error getting employees:', error);
         res.status(500).json({ success: false, message: 'Failed to get employees' });
     } finally {
         if (connection) await connection.end();
