@@ -1,6 +1,7 @@
 // API Service for mobile app backend integration
 // Updated for unified backend structure
 import { API_CONFIG, NetworkUtils } from '../config/networkConfig';
+import UserStorageService from './UserStorageService';
 
 class ApiService {
   // ===== CONNECTIVITY TESTING =====
@@ -126,6 +127,23 @@ class ApiService {
         success: false,
         message: error.message || 'Token verification failed'
       };
+    }
+  }
+
+  // Build headers including Authorization when token is available
+  static async authHeaders() {
+    try {
+      const token = await UserStorageService.getAuthToken();
+      if (token) {
+        return {
+          ...API_CONFIG.HEADERS,
+          Authorization: `Bearer ${token}`
+        };
+      }
+      return API_CONFIG.HEADERS;
+    } catch (error) {
+      console.error('❌ Error building auth headers:', error);
+      return API_CONFIG.HEADERS;
     }
   }
 

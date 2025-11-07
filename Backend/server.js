@@ -123,11 +123,12 @@ const startServer = async () => {
     await connection.end();
     console.log('✅ Database connection successful');
     
-    // Start the server
-    const server = app.listen(WEB_PORT, () => {
+    // Start the server on all interfaces
+    const server = app.listen(WEB_PORT, '0.0.0.0', () => {
       console.log(`
 🚀 Naga Stall Management System - Unified Backend
 📍 Server running on port ${WEB_PORT}
+📡 Listening on all interfaces (0.0.0.0)
 🌐 Environment: ${process.env.NODE_ENV || 'development'}
 ⏰ Started at: ${new Date().toISOString()}
 

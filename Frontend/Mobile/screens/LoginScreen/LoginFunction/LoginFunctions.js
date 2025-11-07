@@ -62,6 +62,11 @@ export const handleLogin = async (username, password, setIsLoading, navigation, 
       console.log('🏪 Stalls:', JSON.stringify(userData.stalls, null, 2));
       
       await UserStorageService.saveUserData(userData);
+      // Save JWT token if provided so the user remains logged in across app reloads
+      if (response.token) {
+        await UserStorageService.saveAuthToken(response.token);
+        console.log('🔐 Auth token saved for persistent login');
+      }
 
       // Show success message
       const userName = userData.user?.full_name || userData.user?.username || 'User';

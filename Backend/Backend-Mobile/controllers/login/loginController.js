@@ -19,12 +19,35 @@ export const mobileLogin = async (req, res) => {
 
     // Step 1: Get applicant credentials and basic info
     console.log('🔍 Looking up user:', username)
-    const [credentialRows] = await connection.execute(
-      'CALL getApplicantLoginCredentials(?)',
-      [username]
-    )
+    
+    // TEMPORARY FIX: Use direct SQL query instead of stored procedure
+    console.log('🛠️ Using direct SQL query as workaround...')
+    const [credentialRows] = await connection.execute(`
+      SELECT 
+        c.registrationid,
+        c.applicant_id,
+        c.user_name,
+        c.password_hash,
+        c.created_date,
+        c.last_login,
+        c.is_active,
+        a.applicant_full_name,
+        a.applicant_contact_number,
+        a.applicant_address,
+        a.applicant_birthdate,
+        a.applicant_civil_status,
+        a.applicant_educational_attainment,
+        COALESCE(a.applicant_email, oi.email_address) as applicant_email
+      FROM credential c
+      INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+      LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
+      WHERE c.user_name = ? 
+        AND c.is_active = 1
+      LIMIT 1
+    `, [username])
 
     console.log('📋 Credential rows found:', credentialRows.length)
+    console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
 
     if (credentialRows.length === 0) {
       console.log('❌ User not found or inactive')
@@ -36,11 +59,38 @@ export const mobileLogin = async (req, res) => {
 
     const userCredentials = credentialRows[0]
     console.log('👤 Found user:', userCredentials.applicant_full_name)
+    console.log('🔍 User credentials structure:', {
+      registrationid: userCredentials.registrationid,
+      applicant_id: userCredentials.applicant_id,
+      user_name: userCredentials.user_name,
+      has_password_hash: !!userCredentials.password_hash,
+      password_hash_preview: userCredentials.password_hash?.substring(0, 15) + '...',
+      applicant_full_name: userCredentials.applicant_full_name,
+      applicant_email: userCredentials.applicant_email,
+      is_active: userCredentials.is_active
+    })
 
     // Verify password
     console.log('🔐 Verifying password...')
-    const isPasswordValid = await bcrypt.compare(password, userCredentials.password_hash)
-    console.log('🔑 Password valid:', isPasswordValid)
+    console.log('🔍 Password hash format:', userCredentials.password_hash?.substring(0, 10) + '...')
+    
+    let isPasswordValid = false
+    
+    try {
+      // First try bcrypt comparison (for properly hashed passwords)
+      if (userCredentials.password_hash?.startsWith('$2b$') || userCredentials.password_hash?.startsWith('$2a$')) {
+        isPasswordValid = await bcrypt.compare(password, userCredentials.password_hash)
+        console.log('🔑 BCrypt comparison result:', isPasswordValid)
+      } else {
+        // Fallback for legacy plain text passwords (temporary fix)
+        isPasswordValid = password === userCredentials.password_hash
+        console.log('⚠️ Using plain text password comparison for user:', username)
+        console.log('🔑 Plain text comparison result:', isPasswordValid)
+      }
+    } catch (error) {
+      console.error('❌ Password verification error:', error)
+      isPasswordValid = false
+    }
     
     if (!isPasswordValid) {
       console.log('❌ Invalid password')
@@ -189,7 +239,14 @@ export const mobileLogin = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Mobile login error:', error)
+    console.error('🚨 DETAILED Mobile login error:', {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      stack: error.stack,
+      username: req.body.username
+    })
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
@@ -250,10 +307,16 @@ export const submitApplication = async (req, res) => {
     }
 
     // Check 2-application limit per branch
-    const [branchApplications] = await connection.execute(
-      'CALL countApplicationsByBranch(?, ?)',
-      [applicant_id, stall.branch_id]
-    )
+    // TEMPORARY FIX: Use direct SQL query instead of stored procedure
+    const [branchApplications] = await connection.execute(`
+      SELECT COUNT(*) as count 
+      FROM application app
+      JOIN stall s ON app.stall_id = s.stall_id
+      JOIN section sec ON s.section_id = sec.section_id
+      JOIN floor f ON sec.floor_id = f.floor_id
+      JOIN branch b ON f.branch_id = b.branch_id
+      WHERE app.applicant_id = ? AND b.branch_id = ?
+    `, [applicant_id, stall.branch_id])
 
     if (branchApplications[0].count >= 2) {
       return res.status(400).json({
