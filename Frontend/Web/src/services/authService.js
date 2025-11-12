@@ -19,7 +19,7 @@ const AUTH_ENDPOINTS = {
 
 // Token storage keys
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'accessToken',
+  ACCESS_TOKEN: 'authToken',  // Changed from 'accessToken' to 'authToken' for consistency
   USER_DATA: 'userData',
   TOKEN_EXPIRY: 'tokenExpiry'
 };

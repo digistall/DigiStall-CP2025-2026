@@ -36,8 +36,10 @@ const processQueue = (error, token = null) => {
 // Automatically add Authorization header with access token
 apiClient.interceptors.request.use(
   (config) => {
-    // Get access token
-    const token = authService.getAccessToken();
+    // Get access token - try multiple possible keys for compatibility
+    const token = authService.getAccessToken() || 
+                  sessionStorage.getItem('authToken') || 
+                  sessionStorage.getItem('accessToken');
     
     // Add token to headers if available
     if (token) {

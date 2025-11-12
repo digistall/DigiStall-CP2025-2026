@@ -1,0 +1,213 @@
+/* Document Customization Styles */
+.toolbar-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.config-section {
+  width: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.section-title {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-doc-btn {
+  text-transform: none;
+  font-weight: 500;
+}
+
+.requirements-list {
+  width: 100%;
+}
+
+.requirement-panel {
+  margin-bottom: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-right: 8px;
+}
+
+.doc-type-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+}
+
+.doc-name {
+  font-weight: 500;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.requirement-panel:hover .doc-actions {
+  opacity: 1;
+}
+
+.panel-content {
+  padding: 16px 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #7f8c8d;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+}
+
+.empty-state h3 {
+  margin: 16px 0 8px 0;
+  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin: 0 0 24px 0;
+  color: #7f8c8d;
+  font-size: 16px;
+  max-width: 400px;
+}
+
+.no-branch-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px;
+  text-align: center;
+  color: #7f8c8d;
+}
+
+.no-branch-state h3 {
+  margin: 16px 0 8px 0;
+  color: #2c3e50;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.no-branch-state p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 16px;
+  max-width: 500px;
+}
+
+/* Form Styling */
+.v-expansion-panel-header {
+  min-height: 48px;
+  padding: 12px 16px;
+}
+
+.v-expansion-panel-content >>> .v-expansion-panel-content__wrap {
+  padding: 0 16px 16px 16px;
+}
+
+/* Dialog Responsiveness */
+@media (max-width: 960px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .doc-type-info {
+    width: 100%;
+  }
+
+  .doc-actions {
+    align-self: flex-end;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .add-doc-btn {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .empty-state {
+    padding: 40px 16px;
+  }
+
+  .empty-state h3 {
+    font-size: 20px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+
+  .no-branch-state {
+    padding: 60px 16px;
+  }
+
+  .no-branch-state h3 {
+    font-size: 24px;
+  }
+
+  .no-branch-state p {
+    font-size: 14px;
+  }
+}
+
+/* Loading and feedback states */
+.v-progress-linear {
+  margin: 16px 0;
+}
+
+.v-snackbar {
+  z-index: 9999;
+}
+
+/* Custom switch styling */
+.v-input--switch .v-label {
+  font-weight: 500;
+}
+
+/* Custom select styling */
+.v-select .v-select__selection--comma {
+  max-width: 100%;
+}

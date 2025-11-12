@@ -4,7 +4,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { createConnection } from './config/database.js';
+import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
@@ -19,6 +19,7 @@ import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import stallRoutes from './routes/stallRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import stallholderRoutes from './routes/stallholderRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -52,6 +53,7 @@ app.use('/api/employees', employeeRoutes);      // Employee routes (login is pub
 // Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility
 app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
+app.use('/api/stallholders', enhancedAuthMiddleware.authenticateToken, stallholderRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {
@@ -102,6 +104,7 @@ app.get('/', (req, res) => {
       applicants: '/api/applicants',
       branches: '/api/branches',
       employees: '/api/employees',
+      stallholders: '/api/stallholders',
       health: '/api/health'
     }
   });
@@ -123,6 +126,7 @@ app.use('*', (req, res) => {
       '/api/applicants',
       '/api/branches',
       '/api/employees',
+      '/api/stallholders',
       '/api/health'
     ]
   });
@@ -145,13 +149,17 @@ app.listen(PORT, async () => {
 📚 API Documentation: http://localhost:${PORT}/
   `);
 
-  // Test database connection
+//  Test database connection and initialize tables
   try {
     const connection = await createConnection();
     await connection.execute('SELECT 1');
     await connection.end();
     console.log('✅ Database connection successful');
+    
+    // Initialize database tables
+    await initializeDatabase();
+    console.log('✅ Database tables initialized');
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Database initialization failed:', error.message);
   }
 });
