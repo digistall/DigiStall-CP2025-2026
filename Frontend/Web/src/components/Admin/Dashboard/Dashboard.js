@@ -23,7 +23,7 @@ export default {
         },
         {
           id: 2,
-          stallholder: 'Juan Dela Cruz',
+          stallholder: 'Carlos Mendoza',
           amount: 4200,
           date: '2025-10-11',
           status: 'Paid',
@@ -104,7 +104,7 @@ export default {
         {
           id: 2,
           stallId: 'S002',
-          stallholder: 'Juan Dela Cruz',
+          stallholder: 'Roberto Cruz',
           location: 'Section A - Row 1',
           monthlyFee: 4200,
           lastPayment: '2025-10-11',

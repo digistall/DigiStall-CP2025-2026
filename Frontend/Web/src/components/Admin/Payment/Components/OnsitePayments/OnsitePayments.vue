@@ -78,15 +78,12 @@
         <v-card-text class="pa-6">
           <v-form ref="addForm" v-model="formValid">
             <v-row>
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="form.stallholderName"
-                  label="Stallholder Name"
-                  variant="outlined"
-                  density="comfortable"
-                  :rules="[v => !!v || 'Required']"
-                  prepend-inner-icon="mdi-account"
-                ></v-text-field>
+              <v-col cols="12">
+                <StallholderDropdown
+                  v-model="form.stallholderId"
+                  :rules="[v => !!v || 'Please select a stallholder']"
+                  @stallholder-selected="onStallholderSelected"
+                />
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
@@ -94,8 +91,9 @@
                   label="Stall Number"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[v => !!v || 'Required']"
+                  readonly
                   prepend-inner-icon="mdi-store"
+                  placeholder="Auto-filled when stallholder is selected"
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">

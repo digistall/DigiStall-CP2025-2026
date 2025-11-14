@@ -8,8 +8,7 @@ export default {
       selectedPayment: null,
       loading: false,
       paymentMethods: [
-        { id: 'gcash', name: 'GCash', color: '#007DFE', icon: 'mdi-cellphone' },
-        { id: 'maya', name: 'Maya', color: '#00D4FF', icon: 'mdi-credit-card' },
+        { id: 'online', name: 'Online Payment', color: '#007DFE', icon: 'mdi-credit-card' },
         { id: 'bank_transfer', name: 'Bank Transfer', color: '#FF6B35', icon: 'mdi-bank' }
       ],
       onlinePayments: [],
@@ -23,27 +22,19 @@ export default {
       
       // Filter by payment method
       if (this.selectedMethod !== 'all') {
-        payments = payments.filter(payment => {
-          const methodLower = payment.method.toLowerCase();
-          const selectedLower = this.selectedMethod.toLowerCase();
-          
-          // Handle different method variations
-          if (selectedLower === 'gcash') return methodLower === 'gcash';
-          if (selectedLower === 'maya') return methodLower === 'maya';
-          if (selectedLower === 'bank_transfer') return methodLower === 'bank transfer';
-          
-          return methodLower === selectedLower;
-        });
+        payments = payments.filter(payment => 
+          payment.payment_method === this.selectedMethod
+        );
       }
       
       // Filter by search query
       if (this.searchQuery && this.searchQuery.trim() !== '') {
         const query = this.searchQuery.toLowerCase();
         payments = payments.filter(payment => 
-          payment.id?.toString().toLowerCase().includes(query) ||
-          payment.stallholderName?.toLowerCase().includes(query) ||
-          payment.referenceNo?.toLowerCase().includes(query) ||
-          payment.stallNo?.toLowerCase().includes(query)
+          payment.payment_id?.toString().toLowerCase().includes(query) ||
+          payment.stallholder_name?.toLowerCase().includes(query) ||
+          payment.reference_number?.toLowerCase().includes(query) ||
+          payment.stall_no?.toLowerCase().includes(query)
         );
       }
       
@@ -65,6 +56,7 @@ export default {
         // Fetch payments for current month by default
         const currentMonth = new Date().toISOString().slice(0, 7);
         const params = new URLSearchParams({
+          paymentMethod: 'online',
           startDate: `${currentMonth}-01`,
           endDate: `${currentMonth}-31`,
           limit: 100
@@ -79,33 +71,10 @@ export default {
         
         if (response.ok) {
           const result = await response.json();
-          
-          if (result.success && result.data) {
-            // Transform and filter for online payment methods only
-            this.onlinePayments = result.data
-              .filter(payment => 
-                ['online', 'bank_transfer'].includes(payment.payment_method)
-              )
-              .map(payment => ({
-                id: payment.payment_id,
-                stallholderName: payment.stallholder_name || 'Unknown Stallholder',
-                stallNo: payment.stall_no || 'N/A',
-                method: payment.specific_payment_method || payment.payment_method,
-                amount: parseFloat(payment.amount) || 0,
-                referenceNo: payment.reference_number || 'N/A',
-                date: payment.payment_date,
-                time: payment.payment_time,
-                notes: payment.notes || '',
-                status: payment.payment_status || 'completed',
-                paymentType: payment.payment_type || 'rental',
-                paymentForMonth: payment.payment_for_month || ''
-              }));
-            
-            console.log('✅ Online payments loaded:', this.onlinePayments.length, 'records');
-          } else {
-            console.warn('API returned no data, using fallback');
-            this.loadSampleData();
-          }
+          // Filter for online payment methods only
+          this.onlinePayments = (result.data || []).filter(payment => 
+            ['online', 'bank_transfer'].includes(payment.payment_method)
+          );
         } else {
           console.error('Failed to fetch online payments');
           // Use sample data as fallback
@@ -173,19 +142,9 @@ export default {
       if (methodId === 'all') {
         return this.onlinePayments.length;
       }
-      
-      return this.onlinePayments.filter(payment => {
-        const methodLower = payment.method.toLowerCase();
-        const selectedLower = methodId.toLowerCase();
-        
-        // Handle different method variations
-        if (selectedLower === 'gcash') return methodLower === 'gcash';
-        if (selectedLower === 'maya') return methodLower === 'maya';
-        if (selectedLower === 'paymaya') return methodLower === 'paymaya';
-        if (selectedLower === 'bank_transfer') return methodLower === 'bank transfer';
-        
-        return methodLower === selectedLower;
-      }).length;
+      return this.onlinePayments.filter(payment => 
+        payment.payment_method === methodId
+      ).length;
     },
     
     formatCurrency(amount) {
