@@ -24,8 +24,11 @@ export default {
       // Filter by payment method
       if (this.selectedMethod !== 'all') {
         payments = payments.filter(payment => {
-          const methodLower = payment.method.toLowerCase();
-          const selectedLower = this.selectedMethod.toLowerCase();
+          // Defensive checks for undefined/null values
+          if (!payment || !payment.method || !this.selectedMethod) return false;
+          
+          const methodLower = payment.method.toString().toLowerCase().trim();
+          const selectedLower = this.selectedMethod.toString().toLowerCase().trim();
           
           // Handle different method variations
           if (selectedLower === 'gcash') return methodLower === 'gcash';
@@ -37,14 +40,18 @@ export default {
       }
       
       // Filter by search query
-      if (this.searchQuery && this.searchQuery.trim() !== '') {
-        const query = this.searchQuery.toLowerCase();
-        payments = payments.filter(payment => 
-          payment.id?.toString().toLowerCase().includes(query) ||
-          payment.stallholderName?.toLowerCase().includes(query) ||
-          payment.referenceNo?.toLowerCase().includes(query) ||
-          payment.stallNo?.toLowerCase().includes(query)
-        );
+      if (this.searchQuery && this.searchQuery.toString().trim() !== '') {
+        const query = this.searchQuery.toString().toLowerCase().trim();
+        payments = payments.filter(payment => {
+          if (!payment) return false;
+          
+          return (
+            (payment.id && payment.id.toString().toLowerCase().includes(query)) ||
+            (payment.stallholderName && payment.stallholderName.toString().toLowerCase().includes(query)) ||
+            (payment.referenceNo && payment.referenceNo.toString().toLowerCase().includes(query)) ||
+            (payment.stallNo && payment.stallNo.toString().toLowerCase().includes(query))
+          );
+        });
       }
       
       return payments;
@@ -62,15 +69,24 @@ export default {
         this.loading = true;
         const token = sessionStorage.getItem('authToken');
         
-        // Fetch payments for current month by default
-        const currentMonth = new Date().toISOString().slice(0, 7);
+        if (!token) {
+          console.log('🔐 No auth token found');
+          this.loadSampleData();
+          return;
+        }
+
         const params = new URLSearchParams({
-          startDate: `${currentMonth}-01`,
-          endDate: `${currentMonth}-31`,
-          limit: 100
+          limit: 100,
+          offset: 0
         });
-        
-        const response = await fetch(`/api/payments/branch?${params}`, {
+
+        if (this.searchQuery && this.searchQuery.toString().trim() !== '') {
+          params.append('search', this.searchQuery.toString().trim());
+        }
+
+        console.log('📡 Fetching online payments with params:', params.toString());
+
+        const response = await fetch(`/api/payments/online?${params}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -81,25 +97,24 @@ export default {
           const result = await response.json();
           
           if (result.success && result.data) {
-            // Transform and filter for online payment methods only
-            this.onlinePayments = result.data
-              .filter(payment => 
-                ['online', 'bank_transfer'].includes(payment.payment_method)
-              )
-              .map(payment => ({
-                id: payment.payment_id,
-                stallholderName: payment.stallholder_name || 'Unknown Stallholder',
-                stallNo: payment.stall_no || 'N/A',
-                method: payment.specific_payment_method || payment.payment_method,
-                amount: parseFloat(payment.amount) || 0,
-                referenceNo: payment.reference_number || 'N/A',
-                date: payment.payment_date,
-                time: payment.payment_time,
-                notes: payment.notes || '',
-                status: payment.payment_status || 'completed',
-                paymentType: payment.payment_type || 'rental',
-                paymentForMonth: payment.payment_for_month || ''
-              }));
+            // Transform and ensure all properties exist
+            this.onlinePayments = (result.data || []).map(payment => ({
+              id: payment.id || payment.payment_id || '',
+              stallholderId: payment.stallholderId || payment.stallholder_id || '',
+              stallholderName: payment.stallholderName || payment.stallholder_name || 'Unknown',
+              stallNo: payment.stallNo || payment.stall_no || 'N/A',
+              amount: parseFloat(payment.amountPaid || payment.amount) || 0,
+              paymentDate: payment.paymentDate || payment.payment_date || '',
+              paymentTime: payment.paymentTime || payment.payment_time || '',
+              paymentForMonth: payment.paymentForMonth || payment.payment_for_month || '',
+              paymentType: payment.paymentType || payment.payment_type || 'rental',
+              method: payment.method || payment.payment_method || payment.specific_payment_method || 'online',
+              referenceNo: payment.referenceNo || payment.reference_number || '',
+              notes: payment.notes || '',
+              status: payment.status || payment.payment_status || 'pending',
+              createdAt: payment.createdAt || payment.created_at || '',
+              branchName: payment.branchName || payment.branch_name || ''
+            }));
             
             console.log('✅ Online payments loaded:', this.onlinePayments.length, 'records');
           } else {
@@ -143,7 +158,8 @@ export default {
     
     // Fallback sample data for demonstration
     loadSampleData() {
-      this.onlinePayments = [
+      // Use the same data transformation as API response
+      const sampleData = [
         {
           payment_id: 42,
           stallholder_name: 'Maria Santos',
@@ -167,6 +183,27 @@ export default {
           notes: 'Monthly stall rental payment'
         }
       ];
+      
+      // Transform sample data using same logic as API response
+      this.onlinePayments = sampleData.map(payment => ({
+        id: payment.payment_id || '',
+        stallholderId: payment.stallholder_id || '',
+        stallholderName: payment.stallholder_name || 'Unknown',
+        stallNo: payment.stall_no || 'N/A',
+        amount: parseFloat(payment.amount) || 0,
+        paymentDate: payment.payment_date || '',
+        paymentTime: payment.payment_time || '',
+        paymentForMonth: payment.payment_for_month || '',
+        paymentType: payment.payment_type || 'rental',
+        method: payment.payment_method || 'online',
+        referenceNo: payment.reference_number || '',
+        notes: payment.notes || '',
+        status: payment.payment_status || 'pending',
+        createdAt: payment.created_at || '',
+        branchName: payment.branch_name || ''
+      }));
+      
+      console.log('🧪 Loaded sample online payments:', this.onlinePayments.length, 'records');
     },
     
     getMethodCount(methodId) {
@@ -175,8 +212,11 @@ export default {
       }
       
       return this.onlinePayments.filter(payment => {
-        const methodLower = payment.method.toLowerCase();
-        const selectedLower = methodId.toLowerCase();
+        // Defensive checks for undefined/null values
+        if (!payment || !payment.method || !methodId) return false;
+        
+        const methodLower = payment.method.toString().toLowerCase().trim();
+        const selectedLower = methodId.toString().toLowerCase().trim();
         
         // Handle different method variations
         if (selectedLower === 'gcash') return methodLower === 'gcash';

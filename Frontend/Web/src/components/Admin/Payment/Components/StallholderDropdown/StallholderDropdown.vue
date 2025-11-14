@@ -194,76 +194,80 @@ export default {
           throw new Error('No authentication token found. Please log in.')
         }
 
-        const params = new URLSearchParams()
-        if (searchTerm) {
-          params.append('search', searchTerm)
-        }
-
-        const url = `/api/payments/stallholders?${params}`
-        console.log('📡 Making request to:', url)
-
-        // Add timeout to prevent infinite loading
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => {
-          console.log('⏱️ Request timeout reached, aborting...')
-          controller.abort()
-        }, 8000) // 8 second timeout
-
-        const response = await fetch(url, {
+        // Use the new stored procedure endpoint (no search parameter needed)
+        const response = await fetch('/api/payments/stallholders', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          },
-          signal: controller.signal
+          }
         })
 
-        clearTimeout(timeoutId) // Clear timeout if request succeeds
-        console.log('📨 Response received:', response.status, response.statusText)
-
+        console.log('📡 API Response Status:', response.status)
+        
         if (!response.ok) {
           if (response.status === 401) {
             throw new Error('Authentication failed. Please log in again.')
-          } else if (response.status === 500) {
-            throw new Error('Server error. Please try again later.')
-          } else {
-            throw new Error(`HTTP error! status: ${response.status}`)
+          } else if (response.status === 403) {
+            throw new Error('You do not have permission to view stallholders.')
           }
+          throw new Error(`Failed to fetch stallholders: ${response.status}`)
         }
 
         const result = await response.json()
-        console.log('📄 Response data:', result)
-        
-        if (result.success) {
-          console.log('✅ Successfully loaded', result.data?.length || 0, 'stallholders')
-          this.stallholders = result.data
+        console.log('📊 API Response Result:', result)
+
+        if (result.success && Array.isArray(result.data)) {
+          // Transform the new API response format to dropdown format
+          this.stallholders = result.data.map(stallholder => ({
+            title: `${stallholder.name || 'Unknown'} - ${stallholder.stallNo || 'No Stall'}`,
+            value: stallholder.id,
+            stallholderData: {
+              id: stallholder.id,
+              name: stallholder.name,
+              businessName: stallholder.businessName || stallholder.business_name,
+              contact: stallholder.contact || stallholder.contact_number,
+              stallNo: stallholder.stallNo || stallholder.stall_no,
+              stallLocation: stallholder.stallLocation || stallholder.stall_location,
+              monthlyRental: stallholder.monthlyRental || stallholder.rental_price || stallholder.monthly_rental,
+              branchName: stallholder.branchName || stallholder.branch_name,
+              contractStatus: stallholder.contractStatus || stallholder.contract_status,
+              paymentStatus: stallholder.totalPayments > 0 ? 'paid' : 'pending',
+              totalPayments: stallholder.totalPayments || 0,
+              lastPaymentDate: stallholder.lastPaymentDate
+            }
+          }))
+
+          // Filter by search term if provided (client-side filtering)
+          if (searchTerm && searchTerm.trim()) {
+            const query = searchTerm.toLowerCase().trim()
+            this.stallholders = this.stallholders.filter(item => {
+              const data = item.stallholderData
+              return (
+                (data.name && data.name.toLowerCase().includes(query)) ||
+                (data.stallNo && data.stallNo.toLowerCase().includes(query)) ||
+                (data.businessName && data.businessName.toLowerCase().includes(query))
+              )
+            })
+          }
+
+          console.log('✅ Stallholders loaded successfully:', this.stallholders.length)
         } else {
-          console.error('❌ API returned error:', result.message)
-          this.stallholders = []
+          console.warn('⚠️ Invalid API response format:', result)
+          throw new Error('Invalid response format from server')
         }
       } catch (error) {
-        console.error('❌ Error in fetchStallholders:', error)
-        this.stallholders = []
+        console.error('❌ Error fetching stallholders:', error)
         
-        // Show user-friendly error message and provide fallback data
-        if (error.name === 'AbortError') {
-          console.log('⏱️ Request timeout detected - loading fallback data')
-          this.loadFallbackStallholders()
-        } else if (error.message.includes('Authentication failed') || error.message.includes('No authentication token')) {
-          console.log('🔐 Authentication error detected')
-          this.$emit('error', 'Please log in to access stallholder information')
-        } else if (error.message.includes('Server error')) {
-          console.log('🔥 Server error detected')
-          this.$emit('error', 'Unable to connect to server. Please try again later.')
-        } else if (error.message.includes('fetch')) {
-          console.log('🌐 Network error detected - loading fallback data')
-          this.loadFallbackStallholders()
-        } else {
-          console.log('❓ Unknown error detected')
-          this.$emit('error', 'Failed to load stallholders. Please refresh the page.')
+        // Show user-friendly error
+        if (error.message.includes('Authentication') || error.message.includes('log in')) {
+          // Could emit an event for parent to handle login redirect
+          this.$emit('auth-error', error.message)
         }
+        
+        // Load fallback data for development
+        this.loadFallbackStallholders()
       } finally {
-        console.log('🏁 Setting loading to false')
         this.loading = false
       }
     },

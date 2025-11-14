@@ -16,9 +16,9 @@ const router = express.Router();
 
 /**
  * @route GET /api/payments
- * @description Get all payments with filtering options
+ * @description Get all onsite payments (redirects to /onsite)
  */
-router.get('/', PaymentController.getAllPayments);
+router.get('/', PaymentController.getOnsitePayments);
 
 /**
  * @route GET /api/payments/stats
@@ -52,6 +52,15 @@ router.get('/online', PaymentController.getOnlinePayments);
  * @description Get onsite payments with filtering
  */
 router.get('/onsite', PaymentController.getOnsitePayments);
+
+/**
+ * @route GET /api/payments/generate-receipt-number
+ * @description Generate new receipt number for onsite payment
+ */
+router.get('/generate-receipt-number', 
+  authorizePermission('payment'), 
+  PaymentController.generateReceiptNumber
+);
 
 // ============================================================================
 // POST ROUTES

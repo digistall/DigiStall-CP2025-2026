@@ -81,10 +81,10 @@
                 <td class="id-cell" @click="viewPaymentDetails(payment)">{{ payment.id }}</td>
                 <td class="name-cell" @click="viewPaymentDetails(payment)">
                   <div class="stallholder-info">
-                    <div class="avatar">{{ payment.stallholderName.charAt(0) }}</div>
+                    <div class="avatar">{{ (payment.stallholderName || 'N/A').charAt(0) }}</div>
                     <div class="name-details">
-                      <span class="name">{{ payment.stallholderName }}</span>
-                      <span class="stall-no">Stall #{{ payment.stallNo }}</span>
+                      <span class="name">{{ payment.stallholderName || 'Unknown' }}</span>
+                      <span class="stall-no">Stall #{{ payment.stallNo || 'N/A' }}</span>
                     </div>
                   </div>
                 </td>

@@ -46,8 +46,8 @@
                 <td class="id-cell">{{ payment.id }}</td>
                 <td class="name-cell">
                   <div class="stallholder-info">
-                    <div class="avatar">{{ payment.stallholderName.charAt(0) }}</div>
-                    <span class="name">{{ payment.stallholderName }}</span>
+                    <div class="avatar">{{ (payment.stallholderName || 'N/A').charAt(0) }}</div>
+                    <span class="name">{{ payment.stallholderName || 'N/A' }}</span>
                   </div>
                 </td>
                 <td class="stall-cell">
@@ -120,12 +120,44 @@
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
+                  v-model="form.paymentTime"
+                  label="Payment Time"
+                  variant="outlined"
+                  density="comfortable"
+                  type="time"
+                  :rules="[v => !!v || 'Required']"
+                  prepend-inner-icon="mdi-clock-outline"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="form.paymentForMonth"
+                  label="Payment For Month"
+                  variant="outlined"
+                  density="comfortable"
+                  type="month"
+                  prepend-inner-icon="mdi-calendar-month"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="form.paymentType"
+                  :items="['rental', 'utilities', 'maintenance', 'penalty', 'other']"
+                  label="Payment Type"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-tag-outline"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
                   v-model="form.collectedBy"
                   label="Collected By"
                   variant="outlined"
                   density="comfortable"
                   :rules="[v => !!v || 'Required']"
                   prepend-inner-icon="mdi-account-tie"
+                  readonly
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
@@ -136,7 +168,18 @@
                   density="comfortable"
                   :rules="[v => !!v || 'Required']"
                   prepend-inner-icon="mdi-receipt"
-                ></v-text-field>
+                  readonly
+                >
+                  <template #append>
+                    <v-btn
+                      icon="mdi-refresh"
+                      size="small"
+                      variant="text"
+                      @click="generateReceiptNumber"
+                      :loading="loading"
+                    ></v-btn>
+                  </template>
+                </v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-textarea
