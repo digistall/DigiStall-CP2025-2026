@@ -14,6 +14,8 @@ import {
 // Import components
 import SearchFilterBar from './components/SearchFilter/SearchFilterBar';
 import StallCard from './components/StallCard';
+import AuctionReminderModal from '../Auction/Components/AuctionReminderComponent/AuctionReminderModal';
+import RaffleReminderModal from '../Raffle/Components/RaffleReminderComponent/RaffleReminderModal';
 
 // Import services
 import ApiService from '../../../../services/ApiService';
@@ -22,7 +24,7 @@ import UserStorageService from '../../../../services/UserStorageService';
 const { width } = Dimensions.get('window');
 
 const TabbedStallScreen = () => {
-  const [activeTab, setActiveTab] = useState('Fixed Price'); // Default to Fixed Price
+  const [activeTab, setActiveTab] = useState('Fixed Price');
   const [stallsData, setStallsData] = useState([]);
   const [filteredStalls, setFilteredStalls] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
@@ -33,6 +35,8 @@ const TabbedStallScreen = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null);
   const [availableFilters, setAvailableFilters] = useState(['ALL']);
+  const [showAuctionReminder, setShowAuctionReminder] = useState(false);
+  const [showRaffleReminder, setShowRaffleReminder] = useState(false);
 
   // Tab configuration
   const tabs = [
@@ -56,6 +60,15 @@ const TabbedStallScreen = () => {
   // Load user data and stalls when component mounts or tab changes
   useEffect(() => {
     loadUserDataAndStalls();
+  }, [activeTab]);
+
+  // Show auction reminder every time user switches to Auction tab
+  useEffect(() => {
+    if (activeTab === 'Auction') {
+      setShowAuctionReminder(true);
+    } else if (activeTab === 'Raffle') {
+      setShowRaffleReminder(true);
+    }
   }, [activeTab]);
 
   // Filter and sort stalls when data or filters change
@@ -266,6 +279,18 @@ const TabbedStallScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Auction Reminder Modal */}
+      <AuctionReminderModal 
+        visible={showAuctionReminder}
+        onClose={() => setShowAuctionReminder(false)}
+      />
+
+      {/* Raffle Reminder Modal */}
+      <RaffleReminderModal 
+        visible={showRaffleReminder}
+        onClose={() => setShowRaffleReminder(false)}
+      />
+
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         {tabs.map((tab) => (
@@ -295,19 +320,22 @@ const TabbedStallScreen = () => {
         ))}
       </View>
 
-      {/* Search and Filter Bar */}
-      <SearchFilterBar
-        selectedFilter={selectedFilter}
-        onFilterChange={setSelectedFilter}
-        selectedSort={selectedSort}
-        onSortChange={setSelectedSort}
-        searchText={searchText}
-        onSearchChange={setSearchText}
-        availableFilters={availableFilters}
-      />
+      {/* Only show content if not showing auction or raffle reminder */}
+      {!((activeTab === 'Auction' && showAuctionReminder) || (activeTab === 'Raffle' && showRaffleReminder)) && (
+        <>
+          {/* Search and Filter Bar */}
+          <SearchFilterBar
+            selectedFilter={selectedFilter}
+            onFilterChange={setSelectedFilter}
+            selectedSort={selectedSort}
+            onSortChange={setSelectedSort}
+            searchText={searchText}
+            onSearchChange={setSearchText}
+            availableFilters={availableFilters}
+          />
 
-      {/* Stalls List */}
-      {loading ? (
+          {/* Stalls List */}
+          {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
           <Text style={styles.loadingText}>Loading {activeTab} stalls...</Text>
@@ -353,6 +381,8 @@ const TabbedStallScreen = () => {
             </View>
           )}
         </ScrollView>
+      )}
+        </>
       )}
     </View>
   );

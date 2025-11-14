@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
-const AuctionReminderModal = ({ visible, onClose }) => {
+const RaffleReminderModal = ({ visible, onClose }) => {
   const [checkboxes, setCheckboxes] = useState({
     reminders: false,
     terms: false,
@@ -37,7 +37,7 @@ const AuctionReminderModal = ({ visible, onClose }) => {
     <Modal transparent animationType="fade" visible={visible}>
       <View style={styles.overlay}>
         <View style={styles.modalBox}>
-          <Text style={styles.title}>Auction Reminders</Text>
+          <Text style={styles.title}>Raffle Reminders</Text>
 
           <Text style={styles.subtitle}>
             Please make sure you have read and understood the following:
@@ -47,25 +47,24 @@ const AuctionReminderModal = ({ visible, onClose }) => {
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.reminderList}>
               <Text style={styles.text}>
-                1. The auction will be held at the MEPO office. Please make sure
-                you arrive on time.
+                1. The raffle draw will be held at the MEPO office. Please make
+                sure you arrive on time.
               </Text>
               <Text style={styles.text}>
                 2. Please make sure you have prepared all required physical
-                documents before attending the auction.
+                documents before participating in the raffle.
               </Text>
               <Text style={styles.text}>
-                3. Once you pre-register for a stall, you cannot undo the
-                action. Your information and participation will be recorded in
-                the system.
+                3. Once you pre-register for a stall raffle, you cannot undo the
+                action. Your information and participation will be recorded.
               </Text>
               <Text style={styles.text}>
-                4. If you win the auction, payment must be made physically at
-                the MEPO office but will be recorded in the system.
+                4. Follow the marketplace rules and guidelines during the raffle
+                draw.
               </Text>
               <Text style={styles.text}>
-                5. Follow the marketplace rules and guidelines during the
-                auction.
+                5. If you win the raffle, you must pay for the stall awarded to
+                you by the MEPO.
               </Text>
             </View>
 
@@ -83,7 +82,7 @@ const AuctionReminderModal = ({ visible, onClose }) => {
                 color={checkboxes.reminders ? "#2563EB" : "#6B7280"}
               />
               <Text style={styles.checkboxText}>
-                I have read and understood the auction reminders.
+                I have read and understood the raffle reminders.
               </Text>
             </TouchableOpacity>
 
@@ -117,6 +116,6 @@ const AuctionReminderModal = ({ visible, onClose }) => {
   );
 };
 
-import { AuctionReminderStyles as styles } from "../AuctionReminderComponent/AuctionReminderStyles";
+import { RaffleReminderStyles as styles } from "./RaffleReminderStyles";
 
-export default AuctionReminderModal;
+export default RaffleReminderModal;
