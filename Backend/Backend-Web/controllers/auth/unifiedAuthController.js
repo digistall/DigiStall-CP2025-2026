@@ -177,6 +177,8 @@ export const login = async (req, res) => {
       userType: userType.toLowerCase(),
       username: userUsername,
       email: user.email || null,
+      firstName: user.first_name || null,
+      lastName: user.last_name || null,
       branchId: user.branch_id || null,
       permissions: additionalUserInfo.permissions || null
     };
