@@ -30,10 +30,10 @@ export default {
           const methodLower = payment.method.toString().toLowerCase().trim();
           const selectedLower = this.selectedMethod.toString().toLowerCase().trim();
           
-          // Handle different method variations
-          if (selectedLower === 'gcash') return methodLower === 'gcash';
-          if (selectedLower === 'maya') return methodLower === 'maya';
-          if (selectedLower === 'bank_transfer') return methodLower === 'bank transfer';
+          // Handle formatted method names from database  
+          if (selectedLower === 'gcash') return methodLower.includes('gcash');
+          if (selectedLower === 'maya') return methodLower.includes('maya');
+          if (selectedLower === 'bank_transfer') return methodLower.includes('bank') || methodLower.includes('transfer');
           
           return methodLower === selectedLower;
         });
@@ -98,23 +98,31 @@ export default {
           
           if (result.success && result.data) {
             // Transform and ensure all properties exist
-            this.onlinePayments = (result.data || []).map(payment => ({
-              id: payment.id || payment.payment_id || '',
-              stallholderId: payment.stallholderId || payment.stallholder_id || '',
-              stallholderName: payment.stallholderName || payment.stallholder_name || 'Unknown',
-              stallNo: payment.stallNo || payment.stall_no || 'N/A',
-              amount: parseFloat(payment.amountPaid || payment.amount) || 0,
-              paymentDate: payment.paymentDate || payment.payment_date || '',
-              paymentTime: payment.paymentTime || payment.payment_time || '',
-              paymentForMonth: payment.paymentForMonth || payment.payment_for_month || '',
-              paymentType: payment.paymentType || payment.payment_type || 'rental',
-              method: payment.method || payment.payment_method || payment.specific_payment_method || 'online',
-              referenceNo: payment.referenceNo || payment.reference_number || '',
-              notes: payment.notes || '',
-              status: payment.status || payment.payment_status || 'pending',
-              createdAt: payment.createdAt || payment.created_at || '',
-              branchName: payment.branchName || payment.branch_name || ''
-            }));
+            this.onlinePayments = (result.data || [])
+              .filter(payment => {
+                // Filter for online payment methods based on the formatted paymentMethod field
+                const method = (payment.paymentMethod || payment.method || '').toLowerCase();
+                return method.includes('gcash') || method.includes('maya') || 
+                       method.includes('bank') || method.includes('transfer') ||
+                       method === 'paymaya' || method === 'gcash' || method === 'maya';
+              })
+              .map(payment => ({
+                id: payment.id || payment.payment_id || '',
+                stallholderId: payment.stallholderId || payment.stallholder_id || '',
+                stallholderName: payment.stallholderName || payment.stallholder_name || 'Unknown',
+                stallNo: payment.stallNo || payment.stall_no || 'N/A',
+                amount: parseFloat(payment.amountPaid || payment.amount) || 0,
+                paymentDate: payment.paymentDate || payment.payment_date || '',
+                paymentTime: payment.paymentTime || payment.payment_time || '',
+                paymentForMonth: payment.paymentForMonth || payment.payment_for_month || '',
+                paymentType: payment.paymentType || payment.payment_type || 'rental',
+                method: payment.paymentMethod || payment.method || payment.specific_payment_method || 'online',
+                referenceNo: payment.referenceNo || payment.reference_number || '',
+                notes: payment.notes || '',
+                status: payment.status || payment.payment_status || 'pending',
+                createdAt: payment.createdAt || payment.created_at || '',
+                branchName: payment.branchName || payment.branch_name || ''
+              }));
             
             console.log('✅ Online payments loaded:', this.onlinePayments.length, 'records');
           } else {
@@ -218,11 +226,11 @@ export default {
         const methodLower = payment.method.toString().toLowerCase().trim();
         const selectedLower = methodId.toString().toLowerCase().trim();
         
-        // Handle different method variations
-        if (selectedLower === 'gcash') return methodLower === 'gcash';
-        if (selectedLower === 'maya') return methodLower === 'maya';
-        if (selectedLower === 'paymaya') return methodLower === 'paymaya';
-        if (selectedLower === 'bank_transfer') return methodLower === 'bank transfer';
+        // Handle formatted method names from database
+        if (selectedLower === 'gcash') return methodLower.includes('gcash');
+        if (selectedLower === 'maya') return methodLower.includes('maya');
+        if (selectedLower === 'paymaya') return methodLower.includes('paymaya') || methodLower.includes('maya');
+        if (selectedLower === 'bank_transfer') return methodLower.includes('bank') || methodLower.includes('transfer');
         
         return methodLower === selectedLower;
       }).length;

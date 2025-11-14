@@ -275,9 +275,12 @@ const PaymentController = {
       );
       
       const allPayments = result[0] || [];
-      const onlinePayments = allPayments.filter(payment => 
-        ['online', 'gcash', 'maya', 'paymaya', 'bank_transfer'].includes(payment.paymentMethod?.toLowerCase())
-      );
+      const onlinePayments = allPayments.filter(payment => {
+        const method = (payment.paymentMethod || '').toLowerCase();
+        return method.includes('gcash') || method.includes('maya') || 
+               method.includes('bank') || method.includes('transfer') ||
+               method === 'paymaya' || method === 'online';
+      });
       
       console.log('📋 Online payments found:', onlinePayments.length);
       
@@ -402,13 +405,17 @@ const PaymentController = {
       const statsQuery = `
         SELECT
           COUNT(*) as totalPayments,
-          SUM(CASE WHEN p.payment_method = 'online' THEN 1 ELSE 0 END) as onlinePayments,
+          SUM(CASE WHEN p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online') THEN 1 ELSE 0 END) as onlinePayments,
           SUM(CASE WHEN p.payment_method = 'onsite' THEN 1 ELSE 0 END) as onsitePayments,
           SUM(p.amount) as totalAmount,
-          SUM(CASE WHEN p.payment_method = 'online' THEN p.amount ELSE 0 END) as onlineAmount,
+          SUM(CASE WHEN p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online') THEN p.amount ELSE 0 END) as onlineAmount,
           SUM(CASE WHEN p.payment_method = 'onsite' THEN p.amount ELSE 0 END) as onsiteAmount,
           COUNT(CASE WHEN p.payment_status = 'completed' THEN 1 END) as completedPayments,
-          COUNT(CASE WHEN p.payment_status = 'pending' THEN 1 END) as pendingPayments
+          COUNT(CASE WHEN p.payment_status = 'pending' THEN 1 END) as pendingPayments,
+          SUM(CASE WHEN p.payment_method = 'gcash' THEN 1 ELSE 0 END) as gcashCount,
+          SUM(CASE WHEN p.payment_method = 'maya' THEN 1 ELSE 0 END) as mayaCount,
+          SUM(CASE WHEN p.payment_method = 'paymaya' THEN 1 ELSE 0 END) as paymayaCount,
+          SUM(CASE WHEN p.payment_method = 'bank_transfer' THEN 1 ELSE 0 END) as bankTransferCount
         FROM payments p
         WHERE p.payment_for_month = ?
         ${branchCondition}
@@ -423,7 +430,11 @@ const PaymentController = {
         onlineAmount: 0,
         onsiteAmount: 0,
         completedPayments: 0,
-        pendingPayments: 0
+        pendingPayments: 0,
+        gcashCount: 0,
+        mayaCount: 0,
+        paymayaCount: 0,
+        bankTransferCount: 0
       };
       
       console.log('📊 Payment stats retrieved:', stats);
@@ -441,7 +452,15 @@ const PaymentController = {
           onsiteAmount: parseFloat(stats.onsiteAmount) || 0,
           completedPayments: parseInt(stats.completedPayments),
           pendingPayments: parseInt(stats.pendingPayments),
-          averagePayment: stats.totalPayments > 0 ? parseFloat(stats.totalAmount) / parseInt(stats.totalPayments) : 0
+          averagePayment: stats.totalPayments > 0 ? parseFloat(stats.totalAmount) / parseInt(stats.totalPayments) : 0,
+          methodBreakdown: {
+            onsite: { count: parseInt(stats.onsitePayments), amount: parseFloat(stats.onsiteAmount) || 0 },
+            gcash: { count: parseInt(stats.gcashCount), amount: 0 },
+            maya: { count: parseInt(stats.mayaCount), amount: 0 },
+            paymaya: { count: parseInt(stats.paymayaCount), amount: 0 },
+            bank_transfer: { count: parseInt(stats.bankTransferCount), amount: 0 },
+            online: { count: parseInt(stats.onlinePayments), amount: parseFloat(stats.onlineAmount) || 0 }
+          }
         }
       });
       
