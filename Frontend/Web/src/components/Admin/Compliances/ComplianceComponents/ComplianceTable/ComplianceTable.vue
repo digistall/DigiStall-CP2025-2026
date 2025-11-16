@@ -11,12 +11,17 @@
             <th>Inspector</th>
             <th>Stallholder</th>
             <th>Status</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           <!-- ✅ Use paginatedCompliance instead of filteredCompliance -->
-          <tr v-for="compliance in paginatedCompliance" :key="compliance.id">
+          <tr
+            v-for="compliance in paginatedCompliance"
+            :key="compliance.id"
+            @click="viewCompliance(compliance)"
+            class="compliance-row-clickable"
+            :title="'Click to view details'"
+          >
             <td>{{ compliance.id }}</td>
             <td>{{ compliance.date }}</td>
             <td>{{ compliance.type }}</td>
@@ -36,28 +41,6 @@
               >
                 {{ compliance.status.toUpperCase() }}
               </span>
-            </td>
-            <td class="compliance-actions-cell">
-              <button
-                class="compliance-action-btn compliance-view-btn"
-                @click="viewCompliance(compliance)"
-                title="View Details"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-              <button
-                class="compliance-action-btn compliance-edit-btn"
-                @click="editCompliance(compliance)"
-                title="Edit"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="m18.5 2.5-5.5 5.5-2-2 5.5-5.5a2.1 2.1 0 0 1 3 3z"></path>
-                </svg>
-              </button>
             </td>
           </tr>
         </tbody>
