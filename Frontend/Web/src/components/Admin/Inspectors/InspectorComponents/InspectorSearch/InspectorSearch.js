@@ -1,5 +1,5 @@
 export default {
-  name: 'ComplianceSearch',
+  name: 'InspectorSearch',
   data() {
     return {
       searchQuery: '',
@@ -8,21 +8,17 @@ export default {
       searchTimeout: null,
       filters: {
         status: 'all',
-        severity: 'all',
-        type: 'All Types',
         dateFrom: '',
-        dateTo: ''
+        dateTo: '',
+        sortBy: 'Name (A-Z)'
       },
-      typeOptions: [
-        'All Types',
-        'Health & Sanitation',
-        'Safety',
-        'Documentation',
-        'Payment',
-        'Structural',
-        'Operational',
-        'Environmental',
-        'Other'
+      sortOptions: [
+        'Name (A-Z)',
+        'Name (Z-A)',
+        'Date Hired (Newest)',
+        'Date Hired (Oldest)',
+        'Status (Active First)',
+        'Status (Inactive First)'
       ]
     }
   },
@@ -30,16 +26,14 @@ export default {
     hasActiveFilters() {
       return (
         this.filters.status !== 'all' ||
-        this.filters.severity !== 'all' ||
-        this.filters.type !== 'All Types' ||
         this.filters.dateFrom !== '' ||
         this.filters.dateTo !== '' ||
+        this.filters.sortBy !== 'Name (A-Z)' ||
         this.searchQuery.trim() !== ''
       );
     }
   },
   mounted() {
-    // Close dropdown when clicking outside
     document.addEventListener('click', this.handleOutsideClick);
     document.addEventListener('keydown', this.handleKeyDown);
   },
@@ -74,10 +68,9 @@ export default {
       this.searchQuery = '';
       this.filters = {
         status: 'all',
-        severity: 'all',
-        type: 'All Types',
         dateFrom: '',
-        dateTo: ''
+        dateTo: '',
+        sortBy: 'Name (A-Z)'
       };
       this.handleSearch();
       this.showFilterPanel = false;
@@ -99,7 +92,6 @@ export default {
     },
 
     handleKeyDown(event) {
-      // Close on Escape key
       if (event.key === 'Escape' && this.showFilterPanel) {
         this.showFilterPanel = false;
       }
@@ -118,10 +110,7 @@ export default {
 
   watch: {
     searchQuery() {
-      // Debounce search to avoid too many API calls
       this.debouncedSearch();
     },
   },
 };
-
-

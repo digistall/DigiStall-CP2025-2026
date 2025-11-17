@@ -239,64 +239,49 @@
   border-color: rgb(0, 33, 129);
 }
 
-/* Severity color variations */
-.status-btn.severity-low {
+/* Status color variations */
+.status-btn.status-active {
   border-color: #e8f5e9;
 }
 
-.status-btn.severity-low:hover {
+.status-btn.status-active:hover {
   border-color: #4caf50;
   color: #2e7d32;
 }
 
-.status-btn.severity-low.active {
+.status-btn.status-active.active {
   background: #4caf50;
   border-color: #4caf50;
   color: white;
 }
 
-.status-btn.severity-medium {
-  border-color: #fff3e0;
-}
-
-.status-btn.severity-medium:hover {
-  border-color: #ff9800;
-  color: #e65100;
-}
-
-.status-btn.severity-medium.active {
-  background: #ff9800;
-  border-color: #ff9800;
-  color: white;
-}
-
-.status-btn.severity-high {
-  border-color: #fff3e0;
-}
-
-.status-btn.severity-high:hover {
-  border-color: #f57c00;
-  color: #bf360c;
-}
-
-.status-btn.severity-high.active {
-  background: #f57c00;
-  border-color: #f57c00;
-  color: white;
-}
-
-.status-btn.severity-critical {
+.status-btn.status-inactive {
   border-color: #ffebee;
 }
 
-.status-btn.severity-critical:hover {
+.status-btn.status-inactive:hover {
   border-color: #f44336;
   color: #b71c1c;
 }
 
-.status-btn.severity-critical.active {
+.status-btn.status-inactive.active {
   background: #f44336;
   border-color: #f44336;
+  color: white;
+}
+
+.status-btn.status-suspended {
+  border-color: #fff3e0;
+}
+
+.status-btn.status-suspended:hover {
+  border-color: #ff9800;
+  color: #e65100;
+}
+
+.status-btn.status-suspended.active {
+  background: #ff9800;
+  border-color: #ff9800;
   color: white;
 }
 
@@ -424,5 +409,3 @@
     width: 100%;
   }
 }
-
-

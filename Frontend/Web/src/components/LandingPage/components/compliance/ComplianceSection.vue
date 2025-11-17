@@ -3,15 +3,15 @@
     <div class="section-container">
       <div class="content-overlay">
         <h2 class="section-title">
-          Report & Monitor Compliance
+          Easy<span class="highlight"> Feedback</span> .
         </h2>
         <h3 class="section-subtitle">
-          with <span class="highlight">Ease</span>
+           Effortless <span class="highlight">Compliance</span>
         </h3>
         <p class="section-description">
           Keep market running smoothly report issues, stay compliant, and ensure a better business environment.
         </p>
-        <button class="member-btn">Report Now</button>
+
       </div>
       <div class="image-container">
         <img
@@ -158,11 +158,11 @@ export default {
   .section-container {
     max-width: 1200px;
   }
-  
+
   .background-image {
     width: 700px;
   }
-  
+
   .section-title,
   .section-subtitle {
     font-size: 4rem;
@@ -174,20 +174,20 @@ export default {
     padding: 100px 25px;
     min-height: 900px;
   }
-  
+
   .section-container {
     gap: 60px;
   }
-  
+
   .background-image {
     width: 600px;
   }
-  
+
   .section-title,
   .section-subtitle {
     font-size: 3.5rem;
   }
-  
+
   .section-description {
     font-size: 1.2rem;
   }
@@ -198,20 +198,20 @@ export default {
     padding: 80px 20px;
     min-height: 800px;
   }
-  
+
   .section-container {
     flex-direction: column;
     text-align: center;
     justify-content: center;
     gap: 50px;
   }
-  
+
   .content-overlay {
     text-align: center;
     max-width: 100%;
     padding-left: 0;
   }
-  
+
   .image-container {
     position: relative;
     left: 0;
@@ -220,21 +220,21 @@ export default {
     margin-top: 0;
     opacity: 0.8;
   }
-  
+
   .background-image {
     width: 500px;
   }
-  
+
   .section-title,
   .section-subtitle {
     font-size: 3.2rem;
   }
-  
+
   .section-description {
     font-size: 1.1rem;
     max-width: 100%;
   }
-  
+
   .member-btn {
     padding: 18px 40px;
     font-size: 20px;
@@ -246,21 +246,21 @@ export default {
     padding: 60px 15px;
     min-height: 700px;
   }
-  
+
   .section-title,
   .section-subtitle {
     font-size: 2.8rem;
   }
-  
+
   .section-description {
     font-size: 1rem;
   }
-  
+
   .member-btn {
     padding: 16px 36px;
     font-size: 18px;
   }
-  
+
   .background-image {
     width: 400px;
   }

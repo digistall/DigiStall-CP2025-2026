@@ -25,7 +25,7 @@ const ComplianceTable = {
     filteredCompliance() {
       let filtered = this.complianceList
 
-      // Apply search filter
+      // Apply universal search filter
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase()
         filtered = filtered.filter(compliance =>
@@ -33,7 +33,9 @@ const ComplianceTable = {
           compliance.type.toLowerCase().includes(query) ||
           compliance.inspector.toLowerCase().includes(query) ||
           compliance.stallholder.toLowerCase().includes(query) ||
-          compliance.status.toLowerCase().includes(query)
+          compliance.status.toLowerCase().includes(query) ||
+          (compliance.date && compliance.date.toLowerCase().includes(query)) ||
+          (compliance.severity && compliance.severity.toLowerCase().includes(query))
         )
       }
 
