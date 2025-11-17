@@ -110,9 +110,8 @@ export default {
 }
 
 .highlight {
-  color: #2563eb;
   text-shadow: 0 0 30px rgba(37, 99, 235, 0.3);
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: #002181;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

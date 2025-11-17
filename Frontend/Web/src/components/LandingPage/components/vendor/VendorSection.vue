@@ -93,7 +93,7 @@ export default {
 }
 
 .highlight-blue {
-  color: #2563eb;
+  color: #002181;
   text-shadow: 0 0 30px rgba(37, 99, 235, 0.3);
 }
 
