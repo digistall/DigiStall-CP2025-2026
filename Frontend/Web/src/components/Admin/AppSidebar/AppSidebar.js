@@ -74,6 +74,7 @@ export default {
           ],
         },
         { id: 10, icon: 'mdi-account-cash', name: 'Collectors', route: '/app/collectors' },
+        { id: 11, icon: 'mdi-account-eye', name: 'Inspectors', route: '/app/inspectors' },
       ],
     }
   },
@@ -165,9 +166,9 @@ export default {
     // Check if user has any stalls-related permission
     hasStallsPermission() {
       if (this.isBranchManager || this.isAdmin) return true
-      
+
       const perms = this.userPermissions
-      
+
       // Handle both array and object formats
       if (Array.isArray(perms)) {
         return perms.includes('read_stalls') || perms.includes('write_stalls') || perms.includes('stalls')
@@ -199,6 +200,7 @@ export default {
           8: 'stallholders', // Stallholders
           9: 'stalls', // Stalls (check read_stalls or write_stalls)
           10: 'collectors', // Collectors
+          11: 'inspectors', // Inspectors
         }
 
         const requiredPermission = permissionMap[item.id]
@@ -223,7 +225,7 @@ export default {
         } else {
           hasPermission = this.userPermissions[requiredPermission] === true
         }
-        
+
         console.log(
           `Item ${item.name} (ID: ${item.id}) - Required: ${requiredPermission}, Has permission: ${hasPermission}`,
         )
@@ -303,7 +305,7 @@ export default {
     eventBus.on(EVENTS.STALL_ADDED, this.handleStallEvent)
     eventBus.on(EVENTS.STALL_DELETED, this.handleStallEvent)
     eventBus.on(EVENTS.STALL_UPDATED, this.handleStallEvent)
-    
+
     // Listen for storage changes (cross-tab logout sync)
     window.addEventListener('storage', this.handleStorageChange)
   },
@@ -536,23 +538,23 @@ export default {
     // Handle storage changes from other tabs (cross-tab sync)
     handleStorageChange(event) {
       console.log('🔄 Storage change detected:', event.key)
-      
+
       // Check if authToken was removed (logout in another tab)
       if (event.key === 'authToken' && !event.newValue) {
         console.log('🚪 Logout detected from another tab - redirecting to login...')
-        
+
         // Clear all session data
         sessionStorage.clear()
         localStorage.clear()
-        
+
         // Redirect to login
         window.location.href = '/login'
       }
-      
+
       // Check if new login detected in another tab
       if (event.key === 'authToken' && event.newValue) {
         console.log('🔐 Login detected from another tab - reloading page...')
-        
+
         // Reload the page to update the UI with new session
         window.location.reload()
       }

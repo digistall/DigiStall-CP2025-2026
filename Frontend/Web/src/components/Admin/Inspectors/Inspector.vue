@@ -1,5 +1,5 @@
 <!-- eslint-disable vue/multi-word-component-names -->
-<!-- Compliance.vue -->
+<!-- Inspector.vue -->
 <template>
   <v-app>
     <!-- Main Content -->
@@ -7,35 +7,36 @@
       <v-row>
         <v-col cols="12">
           <!-- Search Component -->
-          <ComplianceSearch @search="handleSearch" />
+          <InspectorSearch @search="handleSearch" />
 
           <!-- Loading State -->
           <div v-if="isLoading" class="text-center pa-6">
             <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
-            <p class="mt-4 text-subtitle-1">Loading compliance records...</p>
+            <p class="mt-4 text-subtitle-1">Loading inspectors...</p>
           </div>
 
           <!-- Error State -->
           <v-alert v-else-if="error" type="error" class="ma-4" dismissible @click:close="error = null">
             <strong>Error:</strong> {{ error }}
-            <v-btn variant="text" size="small" @click="loadComplianceData" class="ml-2">Retry</v-btn>
+            <v-btn variant="text" size="small" @click="loadInspectorData" class="ml-2">Retry</v-btn>
           </v-alert>
 
           <!-- Table Component -->
-          <ComplianceTable
+          <InspectorTable
             v-else
             :searchQuery="searchQuery"
             :activeFilter="activeFilter"
-            :complianceList="complianceList"
-            @view-compliance="handleViewCompliance"
-            @edit-compliance="handleEditCompliance"
-            @delete-compliance="handleDeleteCompliance"
+            :inspectorList="inspectorList"
+            @view-inspector="handleViewInspector"
+            @edit-inspector="handleEditInspector"
+            @delete-inspector="handleDeleteInspector"
           />
-          <!-- View Compliance Modal -->
-          <ViewCompliance
-            :isVisible="showViewComplianceModal"
-            :compliance="selectedCompliance"
-            @close="closeViewComplianceModal"
+
+          <!-- View Inspector Modal -->
+          <ViewInspector
+            :isVisible="showViewInspectorModal"
+            :inspector="selectedInspector"
+            @close="closeViewInspectorModal"
           />
         </v-col>
       </v-row>
@@ -43,5 +44,5 @@
   </v-app>
 </template>
 
-<script src="./Compliance.js"></script>
-<style scoped src="./Compliance.css"></style>
+<script src="./Inspector.js"></script>
+<style scoped src="./Inspector.css"></style>

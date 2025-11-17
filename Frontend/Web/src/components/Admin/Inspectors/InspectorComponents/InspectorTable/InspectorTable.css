@@ -1,36 +1,35 @@
-/* ComplianceTable.css */
-.compliance-table-container {
+/* InspectorTable.css */
+.inspector-table-container {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: relative;
 }
 
-.compliance-table-wrapper {
+.inspector-table-wrapper {
   overflow-x: auto;
 }
 
-.compliance-table {
+.inspector-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.compliance-table thead {
+.inspector-table thead {
   background: rgb(0, 33, 129);
   color: white;
 }
 
-/* ✅ Rounded header corners */
-.compliance-table thead th:first-child {
+.inspector-table thead th:first-child {
   border-top-left-radius: 8px;
 }
 
-.compliance-table thead th:last-child {
+.inspector-table thead th:last-child {
   border-top-right-radius: 8px;
 }
 
-.compliance-table th {
+.inspector-table th {
   padding: 16px 12px;
   text-align: left;
   font-weight: 600;
@@ -39,51 +38,50 @@
   letter-spacing: 0.5px;
 }
 
-.compliance-table tbody tr {
+.inspector-table tbody tr {
   border-bottom: 1px solid #e0e0e0;
   transition: all 0.2s ease;
 }
 
-.compliance-table tbody tr:hover {
+.inspector-table tbody tr:hover {
   background: #f8f9fa;
 }
 
-/* Clickable Row Styling */
-.compliance-row-clickable {
+.inspector-row-clickable {
   cursor: pointer;
   position: relative;
 }
 
-.compliance-row-clickable:hover {
+.inspector-row-clickable:hover {
   background: #e3f2fd !important;
   transform: scale(1.001);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-.compliance-row-clickable:active {
+.inspector-row-clickable:active {
   transform: scale(0.999);
 }
 
-.compliance-table tbody tr:last-child {
+.inspector-table tbody tr:last-child {
   border-bottom: none;
 }
 
-.compliance-table td {
+.inspector-table td {
   padding: 16px 12px;
   vertical-align: middle;
 }
 
-.compliance-name-cell {
+.inspector-name-cell {
   min-width: 200px;
 }
 
-.compliance-name-wrapper {
+.inspector-name-wrapper {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.compliance-avatar {
+.inspector-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -97,7 +95,7 @@
   flex-shrink: 0;
 }
 
-.compliance-status-badge {
+.inspector-status-badge {
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -106,35 +104,33 @@
   letter-spacing: 0.5px;
 }
 
-.compliance-status-active {
+.inspector-status-active {
   background: #e8f5e8;
   color: #2e7d32;
 }
 
-.compliance-status-incomplete {
+.inspector-status-inactive {
   background: #ffebee;
   color: #c62828;
 }
 
-.compliance-status-pending {
+.inspector-status-suspended {
   background: #fff3e0;
   color: #ef6c00;
 }
 
-.compliance-status-complete {
+.inspector-status-leave {
   background: #e3f2fd;
   color: #1565c0;
 }
 
-/* Removed action buttons - rows are now fully clickable */
-
-.compliance-empty-state {
+.inspector-empty-state {
   text-align: center;
   padding: 60px 20px;
   color: #666;
 }
 
-.compliance-empty-icon {
+.inspector-empty-icon {
   width: 48px;
   height: 48px;
   margin: 0 auto 16px auto;
@@ -142,20 +138,20 @@
   color: #666;
 }
 
-.compliance-empty-state h3 {
+.inspector-empty-state h3 {
   margin: 0 0 8px 0;
   font-size: 20px;
   font-weight: 500;
   color: #333;
 }
 
-.compliance-empty-state p {
+.inspector-empty-state p {
   margin: 0;
   font-size: 14px;
 }
 
 /* Pagination */
-.compliance-pagination-wrapper {
+.inspector-pagination-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -164,7 +160,7 @@
   border-top: 1px solid #e0e0e0;
 }
 
-.compliance-page-btn {
+.inspector-page-btn {
   padding: 8px 16px;
   border: 1px solid #ddd;
   background: white;
@@ -175,48 +171,48 @@
   transition: all 0.2s ease;
 }
 
-.compliance-page-btn:hover:not(:disabled) {
+.inspector-page-btn:hover:not(:disabled) {
   background: rgb(0, 33, 129);
   color: white;
   border-color: rgb(0, 33, 129);
 }
 
-.compliance-page-btn:disabled {
+.inspector-page-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.compliance-page-info {
+.inspector-page-info {
   font-size: 14px;
   color: #666;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .compliance-table {
+  .inspector-table {
     font-size: 12px;
   }
 
-  .compliance-table th,
-  .compliance-table td {
+  .inspector-table th,
+  .inspector-table td {
     padding: 12px 8px;
   }
 
-  .compliance-name-cell {
+  .inspector-name-cell {
     min-width: 150px;
   }
 }
 
 @media (max-width: 480px) {
-  .compliance-table-wrapper {
+  .inspector-table-wrapper {
     overflow-x: scroll;
   }
 
-  .compliance-table {
+  .inspector-table {
     min-width: 800px;
   }
 
-  .compliance-pagination-wrapper {
+  .inspector-pagination-wrapper {
     flex-direction: column;
     gap: 10px;
   }

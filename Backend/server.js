@@ -20,6 +20,7 @@ import webBranchRoutes from './Backend-Web/routes/branchRoutes.js';
 import webEmployeeRoutes from './Backend-Web/routes/employeeRoutes.js';
 import stallholderRoutes from './Backend-Web/routes/stallholderRoutes.js';
 import paymentRoutes from './Backend-Web/routes/paymentRoutes.js';
+import complianceRoutes from './Backend-Web/routes/complianceRoutes.js';
 
 // Import Mobile routes (from Backend-Mobile)
 import mobileAuthRoutes from './Backend-Mobile/routes/authRoutes.js';
@@ -48,6 +49,7 @@ app.use('/api/applicants', authMiddleware.authenticateToken, webApplicantRoutes)
 app.use('/api/branches', authMiddleware.authenticateToken, webBranchRoutes);
 app.use('/api/stallholders', authMiddleware.authenticateToken, stallholderRoutes);
 app.use('/api/payments', authMiddleware.authenticateToken, paymentRoutes);
+app.use('/api/compliances', authMiddleware.authenticateToken, complianceRoutes);
 
 // ===== MOBILE ROUTES (Backend-Mobile functionality) =====
 // Mobile API routes with /mobile prefix to differentiate
