@@ -13,7 +13,7 @@ INSERT INTO `violation_report`
    status, offense_no, penalty_id, resolved_date, resolved_by)
 VALUES
   -- Completed compliance checks
-  (2, 13, 2, 54, 1, 
+  (2, 12, 2, 54, 1, 
    'Waste Segregation / Anti-Littering', 'minor', NULL, 
    '2025-11-01 09:00:00', 
    'Improper waste segregation. Resolved after warning.',
