@@ -33,18 +33,45 @@ const PaymentController = {
     try {
       connection = await createConnection();
       
-      const userInfo = PaymentController.extractUserFromToken(req);
-      const managerId = userInfo.userId;
+      console.log('🔍 getStallholdersByBranch started');
+      console.log('🔍 User from middleware:', req.user);
       
-      console.log('🔍 getStallholdersByBranch called for manager:', managerId);
+      // Use validated user data from auth middleware instead of re-parsing token
+      const userInfo = req.user;
+      if (!userInfo) {
+        console.log('❌ No user data from auth middleware');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
       
+      console.log('🔍 User info from middleware:', userInfo);
+      
+      const branchId = userInfo.branchId;
+      console.log('🔍 Branch ID extracted:', branchId);
+      
+      // Security check: Ensure user has branchId
+      if (!branchId && userInfo.userType !== 'admin') {
+        console.log('❌ Branch access denied - no branchId found');
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
+      
+      console.log('🔍 getStallholdersByBranch called for branch:', branchId);
+      
+      // Use stored procedure for consistency with working getStallholderDetails
+      console.log('🔍 Executing stored procedure with branchId:', branchId);
       const [result] = await connection.execute(
-        'CALL sp_get_stallholders_for_manager(?)',
-        [managerId]
+        'CALL sp_get_all_stallholders(?)',
+        [branchId]
       );
       
+      // Extract stallholders from stored procedure result
       const stallholders = result[0] || [];
-      console.log('📊 Stallholders found for manager:', stallholders.length);
+      console.log('📊 Stallholders found for branch', branchId + ':', stallholders.length);
       
       res.status(200).json({
         success: true,
@@ -54,10 +81,22 @@ const PaymentController = {
       
     } catch (error) {
       console.error('❌ Error fetching stallholders:', error);
+      console.error('❌ Error stack:', error.stack);
+      
+      // Check if it's a token error
+      if (error.message.includes('Authentication failed')) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication failed',
+          error: error.message
+        });
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Failed to fetch stallholders',
-        error: error.message
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     } finally {
       if (connection) await connection.end();
@@ -220,34 +259,76 @@ const PaymentController = {
     try {
       connection = await createConnection();
       
-      const userInfo = PaymentController.extractUserFromToken(req);
-      const managerId = userInfo.userId;
+      // Use validated user data from auth middleware
+      const userInfo = req.user;
+      const branchId = userInfo.branchId;
+      
+      // Security check: Ensure user has branchId
+      if (!branchId && userInfo.userType !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
       
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
       const search = req.query.search || '';
       
-      console.log('📊 Getting payments for manager:', managerId, { limit, offset, search });
+      console.log('📊 Getting onsite payments for branch:', branchId, { limit, offset, search });
       
-      const [result] = await connection.execute(
-        'CALL sp_get_payments_for_manager(?, ?, ?, ?)',
-        [managerId, limit, offset, search]
-      );
+      // Direct query with branch filtering for onsite payments only
+      const onsiteQuery = `
+        SELECT 
+          p.payment_id as id,
+          p.stallholder_id as stallholderId,
+          sh.stallholder_name as stallholderName,
+          COALESCE(st.stall_no, 'N/A') as stallNo,
+          p.amount as amountPaid,
+          p.payment_date as paymentDate,
+          p.payment_time as paymentTime,
+          p.payment_for_month as paymentForMonth,
+          p.payment_type as paymentType,
+          'Cash (Onsite)' as paymentMethod,
+          p.reference_number as referenceNo,
+          p.collected_by as collectedBy,
+          p.notes,
+          p.payment_status as status,
+          p.created_at as createdAt,
+          COALESCE(b.branch_name, 'Unknown') as branchName
+        FROM payments p
+        INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+        LEFT JOIN stall st ON sh.stall_id = st.stall_id
+        LEFT JOIN branch b ON sh.branch_id = b.branch_id
+        WHERE (? IS NULL OR sh.branch_id = ?)
+        AND p.payment_method = 'onsite'
+        AND (
+          ? = '' OR
+          p.reference_number LIKE CONCAT('%', ?, '%') OR
+          sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
+          st.stall_no LIKE CONCAT('%', ?, '%')
+        )
+        ORDER BY p.created_at DESC
+        LIMIT ? OFFSET ?
+      `;
       
-      const payments = result[0] || [];
-      console.log('📋 Payments found:', payments.length);
+      const [payments] = await connection.execute(onsiteQuery, [
+        branchId, branchId, search, search, search, search, limit, offset
+      ]);
+      
+      console.log('📋 Onsite payments found for branch', branchId + ':', payments.length);
       
       res.status(200).json({
         success: true,
-        message: 'Payments retrieved successfully',
+        message: 'Onsite payments retrieved successfully',
         data: payments
       });
       
     } catch (error) {
-      console.error('❌ Error fetching payments:', error);
+      console.error('❌ Error fetching onsite payments:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch payments',
+        message: 'Failed to fetch onsite payments',
         error: error.message
       });
     } finally {
@@ -260,29 +341,69 @@ const PaymentController = {
     try {
       connection = await createConnection();
       
-      const userInfo = PaymentController.extractUserFromToken(req);
-      const managerId = userInfo.userId;
+      // Use validated user data from auth middleware
+      const userInfo = req.user;
+      const branchId = userInfo.branchId;
+      
+      // Security check: Ensure user has branchId
+      if (!branchId && userInfo.userType !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
       
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
       const search = req.query.search || '';
       
-      console.log('📊 Getting online payments for manager:', managerId, { limit, offset, search });
+      console.log('📊 Getting online payments for branch:', branchId, { limit, offset, search });
       
-      const [result] = await connection.execute(
-        'CALL sp_get_payments_for_manager(?, ?, ?, ?)',
-        [managerId, limit, offset, search]
-      );
+      // Direct query with branch filtering for online payments only
+      const onlineQuery = `
+        SELECT 
+          p.payment_id as id,
+          p.stallholder_id as stallholderId,
+          sh.stallholder_name as stallholderName,
+          COALESCE(st.stall_no, 'N/A') as stallNo,
+          p.amount as amountPaid,
+          p.payment_date as paymentDate,
+          p.payment_time as paymentTime,
+          p.payment_for_month as paymentForMonth,
+          p.payment_type as paymentType,
+          CASE 
+            WHEN p.payment_method = 'gcash' THEN 'GCash'
+            WHEN p.payment_method = 'maya' THEN 'Maya'
+            WHEN p.payment_method = 'paymaya' THEN 'PayMaya'
+            WHEN p.payment_method = 'bank_transfer' THEN 'Bank Transfer'
+            ELSE 'Online Payment'
+          END as paymentMethod,
+          p.reference_number as referenceNo,
+          p.notes,
+          p.payment_status as status,
+          p.created_at as createdAt,
+          COALESCE(b.branch_name, 'Unknown') as branchName
+        FROM payments p
+        INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+        LEFT JOIN stall st ON sh.stall_id = st.stall_id
+        LEFT JOIN branch b ON sh.branch_id = b.branch_id
+        WHERE (? IS NULL OR sh.branch_id = ?)
+        AND p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online')
+        AND (
+          ? = '' OR
+          p.reference_number LIKE CONCAT('%', ?, '%') OR
+          sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
+          st.stall_no LIKE CONCAT('%', ?, '%')
+        )
+        ORDER BY p.created_at DESC
+        LIMIT ? OFFSET ?
+      `;
       
-      const allPayments = result[0] || [];
-      const onlinePayments = allPayments.filter(payment => {
-        const method = (payment.paymentMethod || '').toLowerCase();
-        return method.includes('gcash') || method.includes('maya') || 
-               method.includes('bank') || method.includes('transfer') ||
-               method === 'paymaya' || method === 'online';
-      });
+      const [onlinePayments] = await connection.execute(onlineQuery, [
+        branchId, branchId, search, search, search, search, limit, offset
+      ]);
       
-      console.log('📋 Online payments found:', onlinePayments.length);
+      console.log('📋 Online payments found for branch', branchId + ':', onlinePayments.length);
       
       res.status(200).json({
         success: true,
@@ -387,21 +508,21 @@ const PaymentController = {
       connection = await createConnection();
       
       const { month } = req.query;
-      const userInfo = PaymentController.extractUserFromToken(req);
-      const managerId = userInfo.userId;
+      // Use validated user data from auth middleware
+      const userInfo = req.user;
+      const branchId = userInfo.branchId;
       
-      console.log('📊 Getting payment stats for manager:', managerId, 'month:', month);
-      
-      // Base query conditions
-      let branchCondition = '';
-      let params = [month];
-      
-      // Check if user is admin or branch-specific
-      if (userInfo.userType !== 'admin' && userInfo.branchId) {
-        branchCondition = 'AND p.branch_id = ?';
-        params.push(userInfo.branchId);
+      // Security check: Ensure user has branchId (except for admin)
+      if (!branchId && userInfo.userType !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
       }
       
+      console.log('📊 Getting payment stats for branch:', branchId, 'month:', month);
+      
+      // Direct query with proper branch filtering using stallholder branch_id
       const statsQuery = `
         SELECT
           COUNT(*) as totalPayments,
@@ -417,11 +538,15 @@ const PaymentController = {
           SUM(CASE WHEN p.payment_method = 'paymaya' THEN 1 ELSE 0 END) as paymayaCount,
           SUM(CASE WHEN p.payment_method = 'bank_transfer' THEN 1 ELSE 0 END) as bankTransferCount
         FROM payments p
-        WHERE p.payment_for_month = ?
-        ${branchCondition}
+        INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+        WHERE (? IS NULL OR p.payment_for_month = ?)
+        AND (? IS NULL OR sh.branch_id = ?)
       `;
       
-      const [statsResult] = await connection.execute(statsQuery, params);
+      const [statsResult] = await connection.execute(statsQuery, [
+        month, month, branchId, branchId
+      ]);
+      
       const stats = statsResult[0] || {
         totalPayments: 0,
         onlinePayments: 0,
@@ -437,13 +562,14 @@ const PaymentController = {
         bankTransferCount: 0
       };
       
-      console.log('📊 Payment stats retrieved:', stats);
+      console.log('📊 Payment stats retrieved for branch', branchId + ':', stats);
       
       res.status(200).json({
         success: true,
         message: 'Payment statistics retrieved successfully',
         data: {
           month: month,
+          branchId: branchId,
           totalPayments: parseInt(stats.totalPayments),
           onlinePayments: parseInt(stats.onlinePayments),
           onsitePayments: parseInt(stats.onsitePayments),
