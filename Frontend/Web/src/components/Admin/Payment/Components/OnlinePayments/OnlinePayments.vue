@@ -44,7 +44,7 @@
           </div>
           <div class="tab-info">
             <span class="tab-label">All</span>
-            <span class="tab-count">{{ onlinePayments.length }}</span>
+            <span class="tab-count">{{ filteredPayments.length }}</span>
           </div>
         </div>
       </div>
@@ -191,4 +191,3 @@
 
 <script src="./OnlinePayments.js"></script>
 <style scoped src="./OnlinePayments.css"></style>
-          stallholderName: 'Juan Dela Cruz',

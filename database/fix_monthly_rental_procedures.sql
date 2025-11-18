@@ -12,6 +12,7 @@ BEGIN
         sh.contact_number as contact,
         sh.business_name as businessName,
         COALESCE(st.stall_no, 'N/A') as stallNo,
+        COALESCE(st.stall_location, 'N/A') as stallLocation,
         -- FIX: Use stallholder.monthly_rent instead of stall.rental_price
         COALESCE(sh.monthly_rent, st.rental_price, 0) as monthlyRental,
         COALESCE(b.branch_name, 'Unknown') as branchName,
