@@ -2,6 +2,7 @@ import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
 
 export default {
   name: 'OnsitePayments',
+  emits: ['payment-added', 'delete-payment', 'count-updated'],
   components: {
     StallholderDropdown
   },
@@ -44,6 +45,15 @@ export default {
         (payment.receiptNo || '').toLowerCase().includes(query) ||
         (payment.collectedBy || '').toLowerCase().includes(query)
       );
+    }
+  },
+  
+  watch: {
+    onsitePayments: {
+      handler() {
+        this.$emit('count-updated', this.onsitePayments.length);
+      },
+      immediate: true
     }
   },
   mounted() {

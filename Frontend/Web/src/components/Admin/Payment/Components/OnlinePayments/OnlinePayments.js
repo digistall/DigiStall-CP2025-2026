@@ -1,5 +1,6 @@
 export default {
   name: 'OnlinePayments',
+  emits: ['accept-payment', 'decline-payment', 'count-updated'],
   data() {
     return {
       searchQuery: '',
@@ -55,6 +56,15 @@ export default {
       }
       
       return payments;
+    }
+  },
+  
+  watch: {
+    onlinePayments: {
+      handler() {
+        this.$emit('count-updated', this.onlinePayments.length);
+      },
+      immediate: true
     }
   },
   
