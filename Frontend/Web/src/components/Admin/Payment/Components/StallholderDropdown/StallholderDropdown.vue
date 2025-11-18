@@ -48,7 +48,7 @@
             <div class="stallholder-meta">
               <span class="business-type">{{ item.raw?.stallholderData?.businessName || 'N/A' }}</span>
               <span class="separator">•</span>
-              <span class="monthly-rent">₱{{ formatCurrency(item.raw?.stallholderData?.monthlyRent || 0) }}/month</span>
+              <span class="monthly-rent">₱{{ formatCurrency(item.raw?.stallholderData?.monthlyRental || 0) }}/month</span>
               <span class="separator">•</span>
               <v-chip 
                 size="x-small"
@@ -114,7 +114,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Monthly Rent:</span>
-            <span class="info-value amount">₱{{ formatCurrency(selectedStallholderData.monthlyRent || 0) }}</span>
+            <span class="info-value amount">₱{{ formatCurrency(selectedStallholderData.monthlyRental || 0) }}</span>
           </div>
         </div>
       </v-card-text>
