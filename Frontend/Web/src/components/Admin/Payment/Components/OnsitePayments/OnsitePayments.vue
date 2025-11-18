@@ -28,11 +28,12 @@
                 <th>Payment Date</th>
                 <th>Collected By</th>
                 <th>Receipt No.</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="filteredPayments.length === 0">
-                <td colspan="7" class="empty-state">
+                <td colspan="8" class="empty-state">
                   <v-icon size="48" color="grey">mdi-inbox</v-icon>
                   <p>No onsite payments recorded</p>
                 </td>
@@ -59,6 +60,11 @@
                 <td class="date-cell">{{ formatDate(payment.paymentDate) }}</td>
                 <td class="collector-cell">{{ payment.collectedBy }}</td>
                 <td class="receipt-cell">{{ payment.receiptNo }}</td>
+                <td class="status-cell">
+                  <v-chip :color="payment.statusColor" variant="flat" size="small">
+                    {{ payment.status }}
+                  </v-chip>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -270,6 +276,28 @@
         <div class="fab-ripple-2"></div>
       </button>
     </div>
+
+    <!-- Success Snackbar -->
+    <v-snackbar
+      v-model="showSuccessSnackbar"
+      :timeout="4000"
+      :color="snackbarColor"
+      location="top"
+      elevation="6"
+    >
+      <div class="d-flex align-center">
+        <v-icon class="mr-2">{{ snackbarColor === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle' }}</v-icon>
+        <span>{{ successMessage }}</span>
+      </div>
+      <template v-slot:actions>
+        <v-btn
+          variant="text"
+          @click="showSuccessSnackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
