@@ -8,6 +8,14 @@ export default {
       showDetailsModal: false,
       selectedPayment: null,
       loading: false,
+      // Confirmation dialogs
+      showAcceptDialog: false,
+      showDeclineDialog: false,
+      pendingPayment: null,
+      declineReason: '',
+      // Success snackbar
+      showSuccessSnackbar: false,
+      successMessage: '',
       paymentMethods: [
         { id: 'gcash', name: 'GCash', color: '#007DFE', icon: 'mdi-cellphone' },
         { id: 'maya', name: 'Maya', color: '#00D4FF', icon: 'mdi-credit-card' },
@@ -311,17 +319,61 @@ export default {
     },
     
     acceptPayment(payment) {
-      // Implement payment approval logic
-      console.log('Approving payment:', payment.payment_id);
+      this.pendingPayment = payment;
+      this.showAcceptDialog = true;
+    },
+    
+    confirmAcceptPayment() {
+      if (!this.pendingPayment) return;
+      
+      console.log('Approving payment:', this.pendingPayment.payment_id);
       // Update payment status in database
-      this.$emit('payment-approved', payment);
+      this.$emit('payment-approved', this.pendingPayment);
+      
+      // Show success message
+      this.successMessage = `Payment #${this.pendingPayment.id} has been accepted successfully!`;
+      this.showSuccessSnackbar = true;
+      
+      // Close dialog and reset
+      this.showAcceptDialog = false;
+      this.pendingPayment = null;
     },
     
     declinePayment(payment) {
-      // Implement payment rejection logic  
-      console.log('Rejecting payment:', payment.payment_id);
+      this.pendingPayment = payment;
+      this.declineReason = '';
+      this.showDeclineDialog = true;
+    },
+    
+    confirmDeclinePayment() {
+      if (!this.pendingPayment) return;
+      
+      console.log('Rejecting payment:', this.pendingPayment.payment_id, 'Reason:', this.declineReason);
       // Update payment status in database
-      this.$emit('payment-declined', payment);
+      this.$emit('payment-declined', {
+        ...this.pendingPayment,
+        declineReason: this.declineReason
+      });
+      
+      // Show success message
+      this.successMessage = `Payment #${this.pendingPayment.id} has been declined.`;
+      this.showSuccessSnackbar = true;
+      
+      // Close dialog and reset
+      this.showDeclineDialog = false;
+      this.pendingPayment = null;
+      this.declineReason = '';
+    },
+    
+    cancelAcceptDialog() {
+      this.showAcceptDialog = false;
+      this.pendingPayment = null;
+    },
+    
+    cancelDeclineDialog() {
+      this.showDeclineDialog = false;
+      this.pendingPayment = null;
+      this.declineReason = '';
     }
   }
 };

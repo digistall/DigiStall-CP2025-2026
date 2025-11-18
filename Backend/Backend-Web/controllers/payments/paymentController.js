@@ -200,6 +200,7 @@ const PaymentController = {
         paymentForMonth,
         paymentType,
         referenceNumber,
+        collectedBy,
         notes
       } = req.body;
       
@@ -212,19 +213,21 @@ const PaymentController = {
       
       console.log('💳 Adding onsite payment:', { stallholderId, amount, paymentDate, referenceNumber });
       
+      // Call the enhanced addOnsitePayment procedure
       const [result] = await connection.execute(
-        'CALL sp_add_payment(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'CALL addOnsitePayment(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           parseInt(stallholderId),
           parseFloat(amount),
           paymentDate,
-          paymentTime || '00:00:00',
+          paymentTime || null,
           paymentForMonth || null,
           paymentType || 'rental',
-          'cash',
           referenceNumber,
-          userInfo.userId,
-          notes || null
+          collectedBy || userInfo.username || 'System',
+          notes || null,
+          userInfo.branchId || null,
+          userInfo.userId
         ]
       );
       
@@ -233,13 +236,25 @@ const PaymentController = {
       }
       
       const paymentResult = result[0][0];
+      
+      // Check if payment was successful
+      if (!paymentResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: paymentResult.message || 'Failed to add payment'
+        });
+      }
+      
       console.log('✅ Payment added successfully:', paymentResult);
       
       res.status(201).json({
         success: true,
-        message: 'Payment added successfully',
-        paymentId: paymentResult.paymentId,
-        referenceNumber: paymentResult.referenceNumber
+        message: paymentResult.message || 'Payment added successfully',
+        paymentId: paymentResult.payment_id,
+        amountPaid: paymentResult.amount_paid,
+        lateFee: paymentResult.late_fee || 0,
+        daysOverdue: paymentResult.days_overdue || 0,
+        receiptNumber: paymentResult.receipt_number
       });
       
     } catch (error) {

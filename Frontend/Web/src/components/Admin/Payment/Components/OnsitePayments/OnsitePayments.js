@@ -14,6 +14,10 @@ export default {
       formValid: false,
       selectedPayment: null,
       loading: false,
+      // Snackbar for notifications
+      showSuccessSnackbar: false,
+      successMessage: '',
+      snackbarColor: 'success',
       form: {
         stallholderId: null,
         stallholderName: '',
@@ -242,39 +246,38 @@ export default {
 
     async fetchOnsitePayments() {
       try {
-        this.loading = true
-        const token = sessionStorage.getItem('authToken')
-        
+        this.loading = true;
+        const token = sessionStorage.getItem('authToken');
+
         if (!token) {
-          console.log('🔐 No auth token found')
-          this.loadSampleData()
-          return
+          console.log('🔒 No auth token found');
+          this.loadSampleData();
+          return;
         }
 
         const params = new URLSearchParams({
           limit: 100,
-          offset: 0
-        })
+          offset: 0,
+        });
 
         if (this.searchQuery && this.searchQuery.toString().trim() !== '') {
-          params.append('search', this.searchQuery.toString().trim())
+          params.append('search', this.searchQuery.toString().trim());
         }
 
-        console.log('📡 Fetching onsite payments with params:', params.toString())
+        console.log('📡 Fetching onsite payments with params:', params.toString());
 
         const response = await fetch(`/api/payments/onsite?${params}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (response.ok) {
-          const result = await response.json()
-          console.log('✅ Onsite payments loaded:', result.data?.length || 0)
-          
-          // Transform the data to match frontend expectations
-          this.onsitePayments = (result.data || []).map(payment => ({
+          const result = await response.json();
+          console.log('✅ Onsite payments loaded:', result.data?.length || 0);
+
+          this.onsitePayments = (result.data || []).map((payment) => ({
             id: payment.id,
             stallholderId: payment.stallholderId,
             stallholderName: payment.stallholderName,
@@ -289,20 +292,26 @@ export default {
             receiptNo: payment.referenceNo,
             notes: payment.notes,
             status: payment.status,
+            statusColor: payment.status === 'ACTIVE' ? 'green' : 'red',
             createdAt: payment.createdAt,
-            branchName: payment.branchName
-          }))
-          
+            branchName: payment.branchName,
+          }));
         } else {
-          console.error('❌ Failed to fetch onsite payments:', response.status)
-          this.loadSampleData()
+          console.error('❌ Failed to fetch onsite payments:', response.status);
+          this.showSnackbar('Failed to fetch onsite payments. Please try again.', 'error');
         }
       } catch (error) {
-        console.error('❌ Error fetching onsite payments:', error)
-        this.loadSampleData()
+        console.error('❌ Error fetching onsite payments:', error);
+        this.showSnackbar('An error occurred while fetching payments.', 'error');
       } finally {
-        this.loading = false
+        this.loading = false;
       }
+    },
+
+    showSnackbar(message, color = 'success') {
+      this.successMessage = message;
+      this.snackbarColor = color;
+      this.showSuccessSnackbar = true;
     },
 
     loadSampleData() {
@@ -389,6 +398,7 @@ export default {
           paymentForMonth: this.form.paymentForMonth,
           paymentType: this.form.paymentType,
           referenceNumber: this.form.receiptNo,
+          collectedBy: this.form.collectedBy,
           notes: this.form.notes
         };
 
@@ -406,7 +416,12 @@ export default {
         const result = await response.json();
 
         if (response.ok && result.success) {
-          console.log('✅ Payment added successfully:', result.paymentId);
+          console.log('✅ Payment added successfully:', result);
+          
+          // Show late fee information if applicable
+          if (result.lateFee && result.lateFee > 0) {
+            console.log(`⚠️ Late fee applied: ₱${result.lateFee} (${result.daysOverdue} days overdue)`);
+          }
           
           // Refresh payments list
           await this.fetchOnsitePayments();
@@ -414,10 +429,21 @@ export default {
           // Close modal and reset form
           this.closeAddModal();
           
-          // Show success message (if you have a notification system)
-          console.log('Payment added successfully!');
+          // Emit event to parent
+          this.$emit('payment-added', result);
+          
+          // Show success message in snackbar
+          this.successMessage = result.lateFee > 0 
+            ? `Payment added successfully! (Including ₱${result.lateFee} late fee)`
+            : 'Payment added successfully!';
+          this.snackbarColor = 'success';
+          this.showSuccessSnackbar = true;
         } else {
           console.error('❌ Failed to add payment:', result.message);
+          // Show error in snackbar instead of alert
+          this.successMessage = result.message || 'Failed to add payment';
+          this.snackbarColor = 'error';
+          this.showSuccessSnackbar = true;
         }
       } catch (error) {
         console.error('❌ Error adding payment:', error);
