@@ -21,9 +21,9 @@ export default {
         { title: 'Vendor ID', value: 'id', width: 120 },
         { title: "Vendor's Name", value: 'name' },
         { title: 'Business Name', value: 'business' },
-        { title: 'Assigned Collector', value: 'collector' },
+        { title: 'Business Location', value: 'business_location' },
         { title: 'Status', value: 'status', width: 120 },
-        { title: 'Action', value: 'actions', sortable: false, align: 'end', width: 140 },
+        { title: 'Actions', value: 'actions', sortable: false, align: 'end', width: 140 },
       ],
       collectors: ['John Smith', 'Jane Garcia', 'Marco Reyes', 'Ava Santos'],
       statuses: ['Active', 'Inactive', 'On Hold'],
@@ -32,7 +32,7 @@ export default {
         id: 123456 + i,
         name: 'John Doe',
         business: 'Street Fisbol',
-        collector: 'John Smith',
+        business_location: 'Panganiban St, Naga City',
         status: 'Active',
       })),
 
@@ -43,7 +43,7 @@ export default {
         id: '',
         name: '',
         business: '',
-        collector: 'John Smith',
+        business_location: '',
         status: 'Active',
       },
     }
@@ -57,7 +57,7 @@ export default {
           String(v.id).includes(term) ||
           v.name.toLowerCase().includes(term) ||
           v.business.toLowerCase().includes(term) ||
-          v.collector.toLowerCase().includes(term) ||
+          (v.business_location || v.collector || '').toString().toLowerCase().includes(term) ||
           v.status.toLowerCase().includes(term)
 
         const hitsStatus = this.statusFilter === 'all' || v.status === this.statusFilter

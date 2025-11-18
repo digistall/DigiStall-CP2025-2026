@@ -11,18 +11,40 @@ export default {
       itemsPerPage: 12,
     }
   },
+  methods: {
+    getStatusClass(status) {
+      if (!status) return 'status-default'
+      const s = status.toString().toLowerCase()
+      if (s === 'active' || s === 'current') return 'status-active'
+      if (s === 'inactive' || s === 'terminated') return 'status-terminated'
+      if (s === 'pending' || s === 'on hold' || s === 'on_hold') return 'status-grace'
+      if (s === 'expired' || s === 'overdue') return 'status-overdue'
+      return 'status-default'
+    },
+    onView(row) {
+      this.$emit('view', row.raw || row)
+    },
+    onEdit(row) {
+      this.$emit('edit', row.raw || row)
+    },
+    onDelete(row) {
+      this.$emit('delete', row.raw || row)
+    },
+  },
   computed: {
     filteredVendors() {
       let list = Array.isArray(this.vendors) ? this.vendors.slice() : []
       const q = (this.searchQuery || '').toLowerCase().trim()
       if (q) {
-        list = list.filter(
-          (v) =>
+        list = list.filter((v) => {
+          const collectorText = (v.business_location || v.collector || '').toString().toLowerCase()
+          return (
             String(v.id).includes(q) ||
-            v.name.toLowerCase().includes(q) ||
-            v.business.toLowerCase().includes(q) ||
-            v.collector.toLowerCase().includes(q),
-        )
+            (v.name || '').toString().toLowerCase().includes(q) ||
+            (v.business || '').toString().toLowerCase().includes(q) ||
+            collectorText.includes(q)
+          )
+        })
       }
       if (this.activeFilter && this.activeFilter !== 'all') {
         list = list.filter((v) => v.status === this.activeFilter)
