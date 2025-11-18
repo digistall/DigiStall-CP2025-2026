@@ -16,6 +16,8 @@ import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import stallRoutes from './routes/stallRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
+import collectorRoutes from './routes/collectorRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +48,8 @@ app.use('/api/employees', employeeRoutes);     // Employee routes (login is publ
 // Management routes (authentication required)
 app.use('/api/applicants', authMiddleware.authenticateToken, applicantRoutes);
 app.use('/api/branches', authMiddleware.authenticateToken, branchRoutes);
+app.use('/api/vendors', authMiddleware.authenticateToken, vendorRoutes);
+app.use('/api/collectors', authMiddleware.authenticateToken, collectorRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {
@@ -96,7 +100,9 @@ app.get('/', (req, res) => {
       applicants: '/api/applicants',
       branches: '/api/branches',
       employees: '/api/employees',
-      health: '/api/health'
+      health: '/api/health',
+      vendors: '/api/vendors',
+      collectors: '/api/collectors'
     }
   });
 });
@@ -117,7 +123,9 @@ app.use('*', (req, res) => {
       '/api/applicants',
       '/api/branches',
       '/api/employees',
-      '/api/health'
+      '/api/health',
+      '/api/vendors',
+      '/api/collectors'
     ]
   });
 });
