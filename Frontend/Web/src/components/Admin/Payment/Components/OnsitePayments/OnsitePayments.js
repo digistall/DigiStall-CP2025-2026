@@ -292,7 +292,7 @@ export default {
             receiptNo: payment.referenceNo,
             notes: payment.notes,
             status: payment.status,
-            statusColor: payment.status === 'ACTIVE' ? 'green' : 'red',
+            statusColor: payment.status === 'ACTIVE' ? 'red' : 'green',
             createdAt: payment.createdAt,
             branchName: payment.branchName,
           }));
