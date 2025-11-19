@@ -99,7 +99,7 @@
                 </td>
                 <td class="amount-cell" @click="viewPaymentDetails(payment)">{{ formatCurrency(payment.amount) }}</td>
                 <td class="reference-cell" @click="viewPaymentDetails(payment)">{{ payment.referenceNo }}</td>
-                <td class="date-cell" @click="viewPaymentDetails(payment)">{{ formatDate(payment.date) }}</td>
+                <td class="date-cell" @click="viewPaymentDetails(payment)">{{ formatDate(payment.paymentDate || payment.date || payment.payment_date) }}</td>
                 <td class="actions-cell">
                   <div class="action-buttons">
                     <button class="table-action-btn accept-btn" @click.stop="acceptPayment(payment)">

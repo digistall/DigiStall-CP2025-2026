@@ -294,17 +294,21 @@ export default {
     },
     
     viewDetails(payment) {
+      // Normalize date/time fields from different API shapes
+      const normalizedDate = payment.paymentDate || payment.payment_date || payment.date || '';
+      const normalizedTime = payment.paymentTime || payment.payment_time || payment.time || '';
+
       this.selectedPayment = {
         ...payment,
         // Map database fields to component expected format
-        id: payment.payment_id,
-        stallholderName: payment.stallholder_name,
-        stallNo: payment.stall_no,
-        method: payment.payment_method === 'bank_transfer' ? 'Bank Transfer' : 'Online Payment',
-        referenceNo: payment.reference_number,
-        date: payment.payment_date,
-        time: payment.payment_time,
-        screenshot: null // Online payments may not have screenshots in database
+        id: payment.payment_id || payment.id,
+        stallholderName: payment.stallholder_name || payment.stallholderName,
+        stallNo: payment.stall_no || payment.stallNo,
+        method: payment.payment_method === 'bank_transfer' ? 'Bank Transfer' : (payment.method || payment.payment_method || 'Online Payment'),
+        referenceNo: payment.reference_number || payment.referenceNo,
+        date: normalizedDate,
+        time: normalizedTime,
+        screenshot: payment.screenshot || null // Online payments may not have screenshots in database
       };
       this.showDetailsModal = true;
     },

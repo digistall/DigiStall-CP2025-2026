@@ -1676,11 +1676,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_
     
     -- Return the payment ID and success message
     SELECT 
-        payment_id as paymentId,
-        'Payment added successfully' as message,
-        p_reference_number as referenceNumber,
-        collected_by_name as collectedBy;
-END
+      payment_id as paymentId,
+      'Payment added successfully' as message,
+      p_reference_number as referenceNumber,
+      collected_by_name as collectedBy;
+  END$$
 
 -- =====================================================
 -- 5. Get Payments for Manager's Branch
@@ -4271,6 +4271,8 @@ ALTER TABLE `stall`
 --
 -- Constraints for table `stallholder`
 --
+SET FOREIGN_KEY_CHECKS=0;
+
 ALTER TABLE `stallholder`
   ADD CONSTRAINT `fk_stallholder_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_stallholder_created_by` FOREIGN KEY (`created_by_manager`) REFERENCES `branch_manager` (`branch_manager_id`) ON DELETE SET NULL,
@@ -4301,6 +4303,8 @@ ALTER TABLE `violation_report`
   ADD CONSTRAINT `fk_report_stall` FOREIGN KEY (`stall_id`) REFERENCES `stall` (`stall_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_report_stallholder` FOREIGN KEY (`stallholder_id`) REFERENCES `stallholder` (`stallholder_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_report_violation` FOREIGN KEY (`violation_id`) REFERENCES `violation` (`violation_id`) ON UPDATE CASCADE;
+
+SET FOREIGN_KEY_CHECKS=1;
 
 DELIMITER $$
 --
