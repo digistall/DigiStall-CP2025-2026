@@ -56,14 +56,12 @@
               <div
                 class="status-badge"
                 :class="{
-                  'status-active': stallholder.contract_status === 'Active',
+                  'status-active': stallholder.contract_status === 'Active' && stallholder.payment_status !== 'overdue',
                   'status-expired': stallholder.contract_status === 'Expired',
                   'status-terminated': stallholder.contract_status === 'Terminated',
                   'status-current': stallholder.payment_status === 'current',
                   'status-overdue': stallholder.payment_status === 'overdue',
-                  'status-grace': stallholder.payment_status === 'grace_period',
-                  'status-compliant': stallholder.compliance_status === 'Compliant',
-                  'status-non-compliant': stallholder.compliance_status === 'Non-Compliant'
+                  'status-grace': stallholder.payment_status === 'grace_period'
                 }"
               >
                 <v-icon

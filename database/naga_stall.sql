@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 18, 2025 at 04:41 AM
+-- Generation Time: Nov 19, 2025 at 09:14 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,44 +44,78 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `addInspector` (IN `p_first_name` VA
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `addOnsitePayment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` VARCHAR(50), IN `p_reference_number` VARCHAR(100), IN `p_collected_by` VARCHAR(100), IN `p_notes` TEXT, IN `p_branch_id` INT, IN `p_created_by` INT)   BEGIN
-        DECLARE payment_id INT;
-        
-        INSERT INTO payments (
-            stallholder_id,
-            amount,
-            payment_date,
-            payment_time,
-            payment_for_month,
-            payment_type,
-            payment_method,
-            payment_status,
-            reference_number,
-            collected_by,
-            notes,
-            branch_id,
-            created_by,
-            created_at
-        ) VALUES (
-            p_stallholder_id,
-            p_amount,
-            p_payment_date,
-            p_payment_time,
-            p_payment_for_month,
-            p_payment_type,
-            'onsite',
-            'completed',
-            p_reference_number,
-            p_collected_by,
-            p_notes,
-            p_branch_id,
-            p_created_by,
-            NOW()
-        );
-        
-        SET payment_id = LAST_INSERT_ID();
-        
-        SELECT 1 as success, 'Payment added successfully' as message, payment_id as payment_id;
-    END$$
+                DECLARE payment_id INT;
+                DECLARE v_days_overdue INT DEFAULT 0;
+                DECLARE v_late_fee DECIMAL(10,2) DEFAULT 0.00;
+                DECLARE v_last_payment_date DATE;
+                DECLARE v_monthly_rent DECIMAL(10,2);
+                DECLARE v_total_amount DECIMAL(10,2);
+                DECLARE v_notes TEXT;
+                
+                DECLARE EXIT HANDLER FOR SQLEXCEPTION
+                BEGIN
+                    ROLLBACK;
+                    SELECT 0 as success, 'Payment processing failed' as message;
+                END;
+                
+                START TRANSACTION;
+                
+                SELECT last_payment_date, monthly_rent
+                INTO v_last_payment_date, v_monthly_rent
+                FROM stallholder
+                WHERE stallholder_id = p_stallholder_id;
+                
+                IF v_last_payment_date IS NOT NULL THEN
+                    SET v_days_overdue = DATEDIFF(p_payment_date, v_last_payment_date) - 30;
+                    IF v_days_overdue < 0 THEN
+                        SET v_days_overdue = 0;
+                    END IF;
+                END IF;
+                
+                IF v_days_overdue > 0 THEN
+                    SET v_late_fee = CEILING(v_days_overdue / 30) * 100.00;
+                END IF;
+                
+                SET v_total_amount = p_amount + v_late_fee;
+                
+                SET v_notes = p_notes;
+                IF v_late_fee > 0 THEN
+                    SET v_notes = CONCAT(
+                        COALESCE(p_notes, ''),
+                        IF(p_notes IS NOT NULL AND p_notes != '', ' | ', ''),
+                        'Late Fee: ₱', FORMAT(v_late_fee, 2),
+                        ' (', v_days_overdue, ' days overdue)'
+                    );
+                END IF;
+                
+                INSERT INTO payments (
+                    stallholder_id, amount, payment_date, payment_time, payment_for_month,
+                    payment_type, payment_method, reference_number, collected_by, notes,
+                    payment_status, branch_id, created_by, created_at, updated_at
+                ) VALUES (
+                    p_stallholder_id, v_total_amount, p_payment_date, p_payment_time, p_payment_for_month,
+                    p_payment_type, 'onsite', p_reference_number, p_collected_by, v_notes,
+                    'completed', p_branch_id, p_created_by, NOW(), NOW()
+                );
+                
+                SET payment_id = LAST_INSERT_ID();
+                
+                UPDATE stallholder
+                SET last_payment_date = p_payment_date,
+                    payment_status = 'paid',
+                    updated_at = NOW()
+                WHERE stallholder_id = p_stallholder_id;
+                
+                COMMIT;
+                
+                SELECT 
+                    1 as success,
+                    payment_id,
+                    v_total_amount as amount_paid,
+                    v_late_fee as late_fee,
+                    v_days_overdue as days_overdue,
+                    'Payment recorded successfully. Stallholder status updated to PAID.' as message;
+            END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `checkExistingApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT)   BEGIN
     SELECT application_id 
@@ -1439,6 +1473,37 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `logoutEmployee` (IN `p_session_toke
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `manual_reset_payment_status` ()   BEGIN
+                DECLARE reset_count INT DEFAULT 0;
+                
+                SELECT COUNT(*) INTO reset_count
+                FROM stallholder
+                WHERE payment_status = 'paid'
+                  AND contract_status = 'Active';
+                
+                UPDATE stallholder
+                SET payment_status = 'pending',
+                    updated_at = NOW()
+                WHERE payment_status = 'paid'
+                  AND contract_status = 'Active';
+                
+                INSERT INTO payment_status_log (
+                    reset_date,
+                    stallholders_reset_count,
+                    reset_type,
+                    notes
+                ) VALUES (
+                    CURDATE(),
+                    reset_count,
+                    'manual',
+                    CONCAT('Manual reset by admin on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))
+                );
+                
+                SELECT 
+                    reset_count as stallholders_reset,
+                    'Payment statuses reset from paid to pending' as message;
+            END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `registerMobileUser` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_username` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_password_hash` VARCHAR(255))   BEGIN
     INSERT INTO applicant (
         applicant_full_name, 
@@ -1656,24 +1721,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BE
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_all_stallholders` (IN `p_branch_id` INT)   BEGIN
-    SELECT 
-        sh.stallholder_id as id,
-        sh.stallholder_name as name,
-        sh.contact_number as contact,
-        sh.business_name as businessName,
-        COALESCE(st.stall_no, 'N/A') as stallNo,
-        COALESCE(st.stall_location, 'N/A') as stallLocation,
-        -- FIX: Use stallholder.monthly_rent instead of stall.rental_price
-        COALESCE(sh.monthly_rent, st.rental_price, 0) as monthlyRental,
-        COALESCE(b.branch_name, 'Unknown') as branchName,
-        sh.payment_status as paymentStatus
-    FROM stallholder sh
-    LEFT JOIN stall st ON sh.stall_id = st.stall_id
-    LEFT JOIN branch b ON sh.branch_id = b.branch_id
-    WHERE (p_branch_id IS NULL OR sh.branch_id = p_branch_id)
-      AND sh.contract_status = 'Active'
-    ORDER BY sh.stallholder_name ASC;
-END$$
+                SELECT 
+                    sh.stallholder_id as id,
+                    sh.stallholder_name as name,
+                    sh.contact_number as contact,
+                    sh.business_name as businessName,
+                    COALESCE(st.stall_no, 'N/A') as stallNo,
+                    COALESCE(st.stall_location, 'N/A') as stallLocation,
+                    COALESCE(sh.monthly_rent, st.rental_price, 0) as monthlyRental,
+                    COALESCE(b.branch_name, 'Unknown') as branchName,
+                    sh.payment_status as paymentStatus
+                FROM stallholder sh
+                LEFT JOIN stall st ON sh.stall_id = st.stall_id
+                LEFT JOIN branch b ON sh.branch_id = b.branch_id
+                WHERE (p_branch_id IS NULL OR sh.branch_id = p_branch_id)
+                  AND sh.contract_status = 'Active'
+                  AND sh.payment_status != 'paid'
+                ORDER BY sh.stallholder_name ASC;
+            END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_payments_for_manager` (IN `p_manager_id` INT, IN `p_limit` INT, IN `p_offset` INT, IN `p_search` VARCHAR(255))   BEGIN
             SELECT 
@@ -2406,7 +2471,7 @@ CREATE TABLE `credential` (
 --
 
 INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
-(9, 12, '25-72198', '$2b$10$ybs4aIFL9OlkD55HerFTPO3xIVDl.1mP2aCVTEGG2Z8FnKSkjCts.', '2025-10-09 00:49:20', '2025-11-14 04:15:12', 1),
+(9, 12, '25-72198', '$2b$10$ybs4aIFL9OlkD55HerFTPO3xIVDl.1mP2aCVTEGG2Z8FnKSkjCts.', '2025-10-09 00:49:20', '2025-11-19 07:11:14', 1),
 (12, 34, '25-24154', '$2b$10$2XDnKyjqkHcah78ERX8xmuHwuXpMvnKwuMapqhNmvb5YQIC8tCvCi', '2025-11-06 05:32:54', NULL, 1),
 (13, 33, '25-81261', '$2b$10$MZX3my2Aep0wCMpFQ07oQe0N3kAGNO9eBUPXFLGnswSaOXGmKCwBK', '2025-11-14 07:16:54', NULL, 1);
 
@@ -2807,7 +2872,30 @@ CREATE TABLE `payments` (
 INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amount`, `payment_date`, `payment_time`, `payment_for_month`, `payment_type`, `reference_number`, `collected_by`, `payment_status`, `notes`, `branch_id`, `created_by`, `created_at`, `updated_at`) VALUES
 (34, 13, 'onsite', 3500.00, '2025-11-03', '11:00:00', '2025-11', 'rental', 'RCP-20251103-001', 'Juan Dela Cruz', 'completed', 'Cash payment at office', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:19:40'),
 (37, 13, 'gcash', 3200.00, '2025-11-06', '16:30:00', '2025-11', 'rental', 'TXN-20251106-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - BPI', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
-(42, 13, 'maya', 3500.00, '2025-11-13', '11:15:00', '2025-11', 'rental', 'BT-20251113-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - UnionBank', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57');
+(42, 13, 'maya', 3500.00, '2025-11-13', '11:15:00', '2025-11', 'rental', 'BT-20251113-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - UnionBank', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
+(54, 13, 'onsite', 2400.00, '2025-11-18', '15:21:00', '2025-11', 'rental', 'RCP-20251118-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-11-18 07:22:03', '2025-11-18 07:22:03');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_status_log`
+--
+
+CREATE TABLE `payment_status_log` (
+  `log_id` int(11) NOT NULL,
+  `reset_date` date NOT NULL,
+  `stallholders_reset_count` int(11) DEFAULT 0,
+  `reset_type` enum('manual','automatic') DEFAULT 'automatic',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payment_status_log`
+--
+
+INSERT INTO `payment_status_log` (`log_id`, `reset_date`, `stallholders_reset_count`, `reset_type`, `notes`, `created_at`) VALUES
+(1, '2025-11-18', 1, 'manual', 'Manual reset by admin on 2025-11-18 13:48:18', '2025-11-18 05:48:18');
 
 -- --------------------------------------------------------
 
@@ -3054,7 +3142,7 @@ CREATE TABLE `stallholder` (
   `contract_status` enum('Active','Expired','Terminated') DEFAULT 'Active',
   `lease_amount` decimal(10,2) NOT NULL,
   `monthly_rent` decimal(10,2) DEFAULT NULL,
-  `payment_status` enum('current','overdue','grace_period') DEFAULT 'current',
+  `payment_status` enum('current','overdue','grace_period','paid','pending') DEFAULT 'pending',
   `last_payment_date` date DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `created_by_manager` int(11) DEFAULT NULL,
@@ -3069,10 +3157,10 @@ CREATE TABLE `stallholder` (
 --
 
 INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`, `contact_number`, `email`, `address`, `business_name`, `business_type`, `branch_id`, `stall_id`, `contract_start_date`, `contract_end_date`, `contract_status`, `lease_amount`, `monthly_rent`, `payment_status`, `last_payment_date`, `notes`, `created_by_manager`, `compliance_status`, `date_created`, `updated_at`, `last_violation_date`) VALUES
-(13, 12, 'Maria Santos', '09171234567', 'maria.santos@email.com', 'Barangay Carolina, Naga City', 'Santos General Merchandise', 'General Merchandise', 1, 54, '2024-01-15', '2024-12-31', 'Active', 28800.00, 2400.00, 'current', '2025-10-30', 'Reliable tenant, always pays on time', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-12 03:36:25', NULL),
-(14, 33, 'Roberto Cruz', '09181234567', 'roberto.cruz@email.com', 'Barangay Triangulo, Naga City', 'Cruz Electronics Repair', 'Electronics', 1, 57, '2024-03-01', '2025-02-28', 'Active', 31200.00, 2600.00, 'current', '2025-10-30', 'Electronics repair specialist', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-12 03:36:25', NULL),
-(15, 34, 'Elena Reyes', '09191234567', 'elena.reyes@email.com', 'Barangay San Francisco, Naga City', 'Elena\'s Fashion Corner', 'Clothing', 1, 58, '2023-06-01', '2024-05-31', 'Active', 25200.00, 2100.00, 'overdue', '2025-09-28', 'Payment overdue by 15 days. Last violation: improper display', 1, 'Non-Compliant', '2025-11-12 03:33:36', '2025-11-12 03:36:25', '2025-11-02'),
-(16, 35, 'Carlos Mendoza', '09201234567', 'carlos.mendoza@email.com', 'Barangay Concepcion Grande, Naga City', 'Mendoza Food Corner', 'Food Service', 1, 55, '2024-02-15', '2025-01-31', 'Active', 33600.00, 2800.00, 'current', '2025-11-05', 'Popular food stall, excellent customer ratings', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL),
+(13, 12, 'Maria Santos', '09171234567', 'maria.santos@email.com', 'Barangay Carolina, Naga City', 'Santos General Merchandise', 'General Merchandise', 1, 54, '2024-01-15', '2024-12-31', 'Active', 28800.00, 2400.00, 'paid', '2025-11-18', 'Reliable tenant, always pays on time', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-18 07:22:03', NULL),
+(14, 33, 'Roberto Cruz', '09181234567', 'roberto.cruz@email.com', 'Barangay Triangulo, Naga City', 'Cruz Electronics Repair', 'Electronics', 1, 57, '2024-03-01', '2025-02-28', 'Active', 31200.00, 2600.00, 'pending', '2025-11-18', 'Electronics repair specialist', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-18 07:21:10', NULL),
+(15, 34, 'Elena Reyes', '09191234567', 'elena.reyes@email.com', 'Barangay San Francisco, Naga City', 'Elena\'s Fashion Corner', 'Clothing', 1, 58, '2023-06-01', '2024-05-31', 'Active', 25200.00, 2100.00, 'pending', '2025-11-18', 'Payment overdue by 15 days. Last violation: improper display', 1, 'Non-Compliant', '2025-11-12 03:33:36', '2025-11-19 08:02:06', '2025-11-02'),
+(16, 35, 'Carlos Mendoza', '09201234567', 'carlos.mendoza@email.com', 'Barangay Concepcion Grande, Naga City', 'Mendoza Food Corner', 'Food Service', 1, 55, '2024-02-15', '2025-01-31', 'Active', 33600.00, 2800.00, 'pending', '2025-11-18', 'Popular food stall, excellent customer ratings', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-18 07:21:25', NULL),
 (17, 36, 'Ana Villanueva', '09211234567', 'ana.villanueva@email.com', 'Barangay Pacol, Naga City', 'Villanueva Meat Shop', 'Meat Products', 3, 91, '2024-01-01', '2024-12-31', 'Active', 30000.00, 2500.00, 'current', '2025-10-29', 'Fresh meat supplier, good hygiene practices', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL),
 (18, 37, 'Fernando Garcia', '09221234567', 'fernando.garcia@email.com', 'Barangay Balatas, Naga City', 'Garcia Fresh Produce', 'Vegetables & Fruits', 3, 93, '2023-09-01', '2024-08-31', 'Active', 21600.00, 1800.00, 'grace_period', '2025-10-08', 'Seasonal produce vendor, payment due in 5 days', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL);
 
@@ -3617,6 +3705,12 @@ ALTER TABLE `payments`
   ADD KEY `idx_branch_payments` (`branch_id`,`payment_date`);
 
 --
+-- Indexes for table `payment_status_log`
+--
+ALTER TABLE `payment_status_log`
+  ADD PRIMARY KEY (`log_id`);
+
+--
 -- Indexes for table `raffle`
 --
 ALTER TABLE `raffle`
@@ -3897,7 +3991,13 @@ ALTER TABLE `payment`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+
+--
+-- AUTO_INCREMENT for table `payment_status_log`
+--
+ALTER TABLE `payment_status_log`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `raffle`
@@ -4201,6 +4301,39 @@ ALTER TABLE `violation_report`
   ADD CONSTRAINT `fk_report_stall` FOREIGN KEY (`stall_id`) REFERENCES `stall` (`stall_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_report_stallholder` FOREIGN KEY (`stallholder_id`) REFERENCES `stallholder` (`stallholder_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_report_violation` FOREIGN KEY (`violation_id`) REFERENCES `violation` (`violation_id`) ON UPDATE CASCADE;
+
+DELIMITER $$
+--
+-- Events
+--
+CREATE DEFINER=`root`@`localhost` EVENT `reset_monthly_payment_status` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-01 00:01:00' ON COMPLETION PRESERVE ENABLE COMMENT 'Resets stallholder payment status from paid to pending on the 1s' DO BEGIN
+                DECLARE reset_count INT DEFAULT 0;
+                
+                SELECT COUNT(*) INTO reset_count
+                FROM stallholder
+                WHERE payment_status = 'paid'
+                  AND contract_status = 'Active';
+                
+                UPDATE stallholder
+                SET payment_status = 'pending',
+                    updated_at = NOW()
+                WHERE payment_status = 'paid'
+                  AND contract_status = 'Active';
+                
+                INSERT INTO payment_status_log (
+                    reset_date,
+                    stallholders_reset_count,
+                    reset_type,
+                    notes
+                ) VALUES (
+                    CURDATE(),
+                    reset_count,
+                    'automatic',
+                    CONCAT('Monthly automatic reset on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))
+                );
+            END$$
+
+DELIMITER ;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
