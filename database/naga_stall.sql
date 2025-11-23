@@ -2205,6 +2205,14 @@ INSERT INTO `applicant` (`applicant_id`, `applicant_full_name`, `applicant_conta
 (33, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2004-11-09', 'Single', 'High School Graduate', '2025-11-06 05:30:18', '2025-11-06 05:30:18', NULL, NULL, NULL, 0, NULL, 0, NULL),
 (34, 'Test_FullName', '09473430196', 'Zone 5', '2001-11-14', 'Single', 'Elementary Graduate', '2025-11-06 05:32:16', '2025-11-06 05:32:16', NULL, NULL, NULL, 0, NULL, 0, NULL);
 
+-- Additional sample applicants for UI testing (IDs 42-46)
+INSERT INTO `applicant` (`applicant_id`, `applicant_full_name`, `applicant_contact_number`, `applicant_address`, `applicant_birthdate`, `applicant_civil_status`, `applicant_educational_attainment`, `created_at`, `updated_at`, `applicant_username`, `applicant_email`, `applicant_password_hash`, `email_verified`, `last_login`, `login_attempts`, `account_locked_until`) VALUES
+(42, 'Ana Marie Lopez', '09170000001', 'Brgy. Santo Niño', '1990-05-15', 'Single', 'College', '2025-11-19 08:00:00', '2025-11-19 08:00:00', NULL, 'ana.lopez@example.com', NULL, 0, NULL, 0, NULL),
+(43, 'Carlos Reyes', '09170000002', 'Brgy. San Roque', '1985-08-20', 'Married', 'College', '2025-11-19 08:10:00', '2025-11-19 08:10:00', NULL, 'carlos.reyes@example.com', NULL, 0, NULL, 0, NULL),
+(44, 'Marian Cruz', '09170000003', 'Brgy. Tabuco', '1992-03-30', 'Single', 'Vocational', '2025-11-19 08:20:00', '2025-11-19 08:20:00', NULL, 'marian.cruz@example.com', NULL, 0, NULL, 0, NULL),
+(45, 'David Santos', '09170000004', 'Brgy. Poblacion', '1988-11-11', 'Married', 'High School Graduate', '2025-11-19 08:30:00', '2025-11-19 08:30:00', NULL, NULL, NULL, 0, NULL, 0, NULL),
+(46, 'Rosa Mendoza', '09170000005', 'Brgy. Concepcion', '1979-02-25', 'Widowed', 'College', '2025-11-19 08:40:00', '2025-11-19 08:40:00', NULL, 'rosa.mendoza@example.com', NULL, 0, NULL, 0, NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -2562,6 +2570,11 @@ INSERT INTO `employee` (`employee_id`, `employee_username`, `employee_password_h
 (32, 'EMP3920', '$2a$12$2NnpRhDuRB1FAdTHB2D36ORZWsN4Z6CWCdeipi4xIb0XRUgTNIUAC', 'Jonas', 'Laurente', 'laurentejeno73@gmail.com', '09473430196', 1, 1, '[\"dashboard\",\"applicants\",\"stallholders\",\"payments\"]', 'Active', NULL, 1, '2025-11-05 13:20:59', '2025-11-06 09:17:17'),
 (33, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 23, 16, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11');
 
+-- Additional sample employees for UI testing (IDs 34-35)
+INSERT INTO `employee` (`employee_id`, `employee_username`, `employee_password_hash`, `first_name`, `last_name`, `email`, `phone_number`, `branch_id`, `created_by_manager`, `permissions`, `status`, `last_login`, `password_reset_required`, `created_at`, `updated_at`) VALUES
+(34, 'EMP4001', '$2a$12$examplehash0000000000000000000000000000000000000000000', 'Liza', 'Garcia', 'liza.garcia@example.com', '09170010001', 1, 1, '["dashboard","payments"]', 'Active', NULL, 0, '2025-11-19 09:00:00', '2025-11-19 09:00:00'),
+(35, 'EMP4002', '$2a$12$examplehash1111111111111111111111111111111111111111111', 'Mark', 'Delos', 'mark.delos@example.com', '09170010002', 3, 3, '["payments","stallholders"]', 'Active', NULL, 0, '2025-11-19 09:05:00', '2025-11-19 09:05:00');
+
 -- --------------------------------------------------------
 
 --
@@ -2875,6 +2888,19 @@ INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amoun
 (42, 13, 'maya', 3500.00, '2025-11-13', '11:15:00', '2025-11', 'rental', 'BT-20251113-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - UnionBank', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
 (54, 13, 'onsite', 2400.00, '2025-11-18', '15:21:00', '2025-11', 'rental', 'RCP-20251118-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-11-18 07:22:03', '2025-11-18 07:22:03');
 
+-- Additional sample payments to produce table overflow (IDs 55-64)
+INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amount`, `payment_date`, `payment_time`, `payment_for_month`, `payment_type`, `reference_number`, `collected_by`, `payment_status`, `notes`, `branch_id`, `created_by`, `created_at`, `updated_at`) VALUES
+(55, 14, 'gcash', 2100.00, '2025-11-19', '10:00:00', '2025-11', 'rental', 'TXN-20251119-001', 'Juan Dela Cruz', 'completed', 'Online GCash payment', 1, 1, '2025-11-19 10:05:00', '2025-11-19 10:05:00'),
+(56, 15, 'bank_transfer', 2200.00, '2025-11-19', '10:10:00', '2025-11', 'rental', 'BT-20251119-001', 'System', 'completed', 'Bank transfer BPI', 1, 1, '2025-11-19 10:12:00', '2025-11-19 10:12:00'),
+(57, 16, 'maya', 2800.00, '2025-11-19', '10:20:00', '2025-11', 'rental', 'MY-20251119-001', 'System', 'completed', 'Maya payment', 1, 1, '2025-11-19 10:25:00', '2025-11-19 10:25:00'),
+(58, 19, 'gcash', 1800.00, '2025-11-19', '11:00:00', '2025-11', 'rental', 'TXN-20251119-002', 'Liza Garcia', 'completed', 'GCash payment sample', 1, 34, '2025-11-19 11:05:00', '2025-11-19 11:05:00'),
+(59, 20, 'onsite', 2000.00, '2025-11-19', '11:10:00', '2025-11', 'rental', 'RCP-20251119-002', 'Mark Delos', 'completed', 'Cash at branch', 1, 35, '2025-11-19 11:12:00', '2025-11-19 11:12:00'),
+(60, 21, 'gcash', 2101.00, '2025-11-19', '11:20:00', '2025-11', 'rental', 'TXN-20251119-003', 'System', 'completed', 'Online payment', 1, 1, '2025-11-19 11:25:00', '2025-11-19 11:25:00'),
+(61, 22, 'bank_transfer', 2400.00, '2025-11-19', '11:30:00', '2025-11', 'rental', 'BT-20251119-002', 'System', 'completed', 'Bank transfer sample', 3, 3, '2025-11-19 11:35:00', '2025-11-19 11:35:00'),
+(62, 23, 'maya', 1800.00, '2025-11-19', '11:40:00', '2025-11', 'rental', 'MY-20251119-002', 'System', 'completed', 'Maya sample', 3, 3, '2025-11-19 11:45:00', '2025-11-19 11:45:00'),
+(63, 24, 'gcash', 2200.00, '2025-11-19', '11:50:00', '2025-11', 'rental', 'TXN-20251119-004', 'System', 'completed', 'GCash', 1, 1, '2025-11-19 11:55:00', '2025-11-19 11:55:00'),
+(64, 13, 'onsite', 2400.00, '2025-11-19', '12:00:00', '2025-11', 'rental', 'RCP-20251119-003', 'Juan Dela Cruz', 'completed', 'Cash at office', 1, 1, '2025-11-19 12:05:00', '2025-11-19 12:05:00');
+
 -- --------------------------------------------------------
 
 --
@@ -3163,6 +3189,15 @@ INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`,
 (16, 35, 'Carlos Mendoza', '09201234567', 'carlos.mendoza@email.com', 'Barangay Concepcion Grande, Naga City', 'Mendoza Food Corner', 'Food Service', 1, 55, '2024-02-15', '2025-01-31', 'Active', 33600.00, 2800.00, 'pending', '2025-11-18', 'Popular food stall, excellent customer ratings', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-18 07:21:25', NULL),
 (17, 36, 'Ana Villanueva', '09211234567', 'ana.villanueva@email.com', 'Barangay Pacol, Naga City', 'Villanueva Meat Shop', 'Meat Products', 3, 91, '2024-01-01', '2024-12-31', 'Active', 30000.00, 2500.00, 'current', '2025-10-29', 'Fresh meat supplier, good hygiene practices', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL),
 (18, 37, 'Fernando Garcia', '09221234567', 'fernando.garcia@email.com', 'Barangay Balatas, Naga City', 'Garcia Fresh Produce', 'Vegetables & Fruits', 3, 93, '2023-09-01', '2024-08-31', 'Active', 21600.00, 1800.00, 'grace_period', '2025-10-08', 'Seasonal produce vendor, payment due in 5 days', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL);
+
+-- Additional sample stallholders for UI testing (IDs 19-24)
+INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`, `contact_number`, `email`, `address`, `business_name`, `business_type`, `branch_id`, `stall_id`, `contract_start_date`, `contract_end_date`, `contract_status`, `lease_amount`, `monthly_rent`, `payment_status`, `last_payment_date`, `notes`, `created_by_manager`, `compliance_status`, `date_created`, `updated_at`, `last_violation_date`) VALUES
+(19, 42, 'Liza Martinez', '09170020001', 'liza.martinez@example.com', 'Brgy. Santo Niño', 'Martinez Foods', 'Food Service', 1, 93, '2025-01-01', '2025-12-31', 'Active', 21600.00, 1800.00, 'pending', NULL, 'New tenant sample', 1, 'Compliant', '2025-11-19 09:10:00', '2025-11-19 09:10:00', NULL),
+(20, 43, 'Roberto Navarro', '09170020002', 'roberto.navarro@example.com', 'Brgy. San Roque', 'Navarro Electronics', 'Electronics', 1, 94, '2025-02-01', '2026-01-31', 'Active', 24000.00, 2000.00, 'pending', NULL, 'Sample stallholder', 1, 'Compliant', '2025-11-19 09:11:00', '2025-11-19 09:11:00', NULL),
+(21, 44, 'Marian Santos', '09170020003', 'marian.santos@example.com', 'Brgy. Tabuco', 'Santos Boutique', 'Clothing', 1, 96, '2025-03-01', '2026-02-28', 'Active', 25200.00, 2100.00, 'pending', NULL, 'Sample', 1, 'Compliant', '2025-11-19 09:12:00', '2025-11-19 09:12:00', NULL),
+(22, 45, 'David Cruz', '09170020004', NULL, 'Cruz Goods', 'General Merchandise', 3, 116, '2025-04-01', '2026-03-31', 'Active', 28800.00, 2400.00, 'pending', NULL, 'Sample', 3, 'Compliant', '2025-11-19 09:13:00', '2025-11-19 09:13:00', NULL),
+(23, 46, 'Rosa Diaz', '09170020005', 'rosa.diaz@example.com', 'Brgy. Concepcion', 'Diaz Fresh', 'Fresh Produce', 3, 123, '2025-05-01', '2026-04-30', 'Active', 21600.00, 1800.00, 'pending', NULL, 'Sample produce vendor', 3, 'Compliant', '2025-11-19 09:14:00', '2025-11-19 09:14:00', NULL),
+(24, 42, 'Extra Vendor', '09170020006', 'extra.vendor@example.com', 'Brgy. Extra', 'Extra Shop', 'Misc', 1, 124, '2025-06-01', '2026-05-31', 'Active', 27500.00, 2200.00, 'pending', NULL, 'Another sample', 1, 'Compliant', '2025-11-19 09:15:00', '2025-11-19 09:15:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -3839,8 +3874,8 @@ ALTER TABLE `admin`
 
 --
 -- AUTO_INCREMENT for table `applicant`
---
 ALTER TABLE `applicant`
+  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
   MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
@@ -3911,8 +3946,8 @@ ALTER TABLE `document_types`
 
 --
 -- AUTO_INCREMENT for table `employee`
---
 ALTER TABLE `employee`
+  MODIFY `employee_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
   MODIFY `employee_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
@@ -3989,8 +4024,8 @@ ALTER TABLE `payment`
 
 --
 -- AUTO_INCREMENT for table `payments`
---
 ALTER TABLE `payments`
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
   MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
@@ -4043,8 +4078,8 @@ ALTER TABLE `stall`
 
 --
 -- AUTO_INCREMENT for table `stallholder`
---
 ALTER TABLE `stallholder`
+  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
   MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --

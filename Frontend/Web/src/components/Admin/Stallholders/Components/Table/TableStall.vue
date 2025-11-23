@@ -15,7 +15,7 @@
       </div>
 
       <!-- Table Body -->
-      <div class="table-body">
+      <div class="table-body scrollable-table-wrapper">
         <div
           v-for="stallholder in paginatedStallholders"
           :key="stallholder.stallholder_id"
