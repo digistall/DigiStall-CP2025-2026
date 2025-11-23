@@ -16,7 +16,7 @@
       </div>
 
       <!-- Table Body -->
-      <div class="table-body">
+      <div class="table-body scrollable-table-wrapper">
         <div
           v-for="applicant in applicants"
           :key="applicant.id"

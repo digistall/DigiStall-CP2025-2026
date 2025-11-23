@@ -53,7 +53,7 @@
     <!-- Payments Table -->
     <div class="payments-table-container">
       <v-card class="payments-card" elevation="0">
-        <div class="table-wrapper">
+        <div class="table-wrapper scrollable-table-wrapper">
           <table class="payments-table">
             <thead>
               <tr>
