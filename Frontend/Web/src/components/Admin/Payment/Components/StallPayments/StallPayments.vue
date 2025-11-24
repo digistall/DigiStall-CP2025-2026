@@ -31,11 +31,13 @@
           v-if="activeTab === 'online'"
           @accept-payment="handleAcceptPayment"
           @decline-payment="handleDeclinePayment"
+          @count-updated="handleOnlineCountUpdate"
         />
         <OnsitePayments
           v-else
           @payment-added="handlePaymentAdded"
           @delete-payment="handleDeletePayment"
+          @count-updated="handleOnsiteCountUpdate"
         />
       </transition>
     </div>
