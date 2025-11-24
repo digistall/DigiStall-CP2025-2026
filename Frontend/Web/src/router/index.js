@@ -7,6 +7,7 @@ import Payment from '../components/Admin/Payment/Payment.vue'
 import Applicants from '../components/Admin/Applicants/Applicants.vue'
 import Complaints from '../components/Admin/Complaints/Complaints.vue'
 import Compliances from '../components/Admin/Compliances/Compliance.vue'
+import Inspectors from '../components/Admin/Inspectors/Inspector.vue'
 import Vendors from '../components/Admin/Vendors/Vendors.vue'
 import Stallholders from '../components/Admin/Stallholders/Stallholders.vue'
 import MainLayout from '../components/MainLayout/MainLayout.vue'
@@ -32,7 +33,7 @@ const isAuthenticated = () => {
 const hasRole = (...roles) => {
   const userData = sessionStorage.getItem('currentUser');
   if (!userData) return false;
-  
+
   try {
     const user = JSON.parse(userData);
     return roles.some(role => role.toLowerCase() === user.userType?.toLowerCase());
@@ -47,15 +48,15 @@ const hasRole = (...roles) => {
 const hasPermission = (...permissions) => {
   const userData = sessionStorage.getItem('currentUser');
   if (!userData) return false;
-  
+
   try {
     const user = JSON.parse(userData);
-    
+
     // Admins and managers have all permissions
     if (user.userType === 'admin' || user.userType === 'branch_manager') {
       return true;
     }
-    
+
     // Check employee permissions
     if (user.userType === 'employee' && user.permissions) {
       // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
@@ -70,7 +71,7 @@ const hasPermission = (...permissions) => {
         });
       }
     }
-    
+
     return false;
   } catch {
     return false;
@@ -232,6 +233,13 @@ const router = createRouter({
           name: 'Compliances',
           component: Compliances,
           meta: { title: 'Compliances' },
+          beforeEnter: requiresPermission('compliances'),
+        },
+        {
+          path: 'inspectors',
+          name: 'Inspectors',
+          component: Inspectors,
+          meta: { title: 'Inspectors' },
           beforeEnter: requiresPermission('compliances'),
         },
         {

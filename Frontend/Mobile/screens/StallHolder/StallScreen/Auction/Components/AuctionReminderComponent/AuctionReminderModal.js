@@ -65,7 +65,7 @@ const AuctionReminderModal = ({ visible, onClose }) => {
                   checkboxes.reminders ? "checkbox-outline" : "square-outline"
                 }
                 size={24}
-                color={checkboxes.reminders ? "#2563EB" : "#6B7280"}
+                color={checkboxes.reminders ? "#002181" : "#6B7280"}
               />
               <Text style={styles.checkboxText}>
                 I have read and understood the auction reminders.
@@ -80,7 +80,7 @@ const AuctionReminderModal = ({ visible, onClose }) => {
               <Ionicons
                 name={checkboxes.terms ? "checkbox-outline" : "square-outline"}
                 size={24}
-                color={checkboxes.terms ? "#2563EB" : "#6B7280"}
+                color={checkboxes.terms ? "#002181" : "#6B7280"}
               />
               <Text style={styles.checkboxText}>
                 I agree to the Terms & Conditions.

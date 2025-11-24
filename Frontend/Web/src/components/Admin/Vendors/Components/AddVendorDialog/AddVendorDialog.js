@@ -1,114 +1,106 @@
-import { computed, reactive, watch, ref } from 'vue'
-
 export default {
-  setup(props, { emit }) {
-    const model = computed({
-      get: () => props.modelValue,
-      set: (v) => emit('update:modelValue', v),
-    })
-
-    /** Step control */
-    const step = ref(1)
-
-    /** Form state */
-    const form = reactive({
-      // page 1
-      lastName: 'Dela Cruz',
-      firstName: 'Juan',
-      middleName: 'Perez',
-      suffix: 'Jr.',
-      birthdate: '1990-10-05',
-      gender: 'Male',
-      phone: '09123456789',
-      email: 'juan.delacruz@email.com',
-      vendorId: '123456',
-      address: 'Block 6 Lot 15 Maharlika Village Barangay Rosario Naga City',
-      spouseLast: 'Dela Cruz',
-      spouseFirst: 'Jessa',
-      spouseMiddle: 'Caceres',
-      childLast: 'Dela Cruz',
-      childFirst: 'Pedro',
-      childMiddle: 'Caceres',
-
-      // page 2
-      businessName: "Juan's Street Foods",
-      businessType: 'Street Foods',
-      productsSold: 'Street Foods',
-      vendStart: '09:00',
-      vendEnd: '13:00',
-      businessAddress: 'Panganiban Naga City',
-
-      // files
-      files: {
-        clearance: null,
-        votersId: null,
-        cedula: null,
-        picture: null,
-        association: null,
-        healthcard: null,
+  name: 'AddVendorDialog',
+  data() {
+    return {
+      activeTab: 0,
+      formValid: false,
+      saving: false,
+      showSuccess: false,
+      showError: false,
+      errorMessage: '',
+      
+      // Form fields
+      form: {
+        lastName: '',
+        firstName: '',
+        middleName: '',
+        phone: '',
+        email: '',
+        birthdate: '',
+        gender: '',
+        address: '',
+        businessName: '',
+        businessType: '',
+        businessDescription: '',
+        vendorId: '',
+        assignedCollector: '',
       },
-    })
-
-    function importSampleData() {
-      // already seeded above to match your mock; this function can pull from OCR/CSV in the future
+      
+      // Options
+      genderOptions: ['Male', 'Female', 'Other'],
+      collectors: ['John Smith', 'Jane Garcia', 'Marco Reyes', 'Ava Santos'],
+      
+      // Validation rules
+      emailRules: [
+        v => !!v || 'Email is required',
+        v => /.+@.+\..+/.test(v) || 'Email must be valid',
+      ],
     }
+  },
+  
+  computed: {
+    visibleModel() {
+      return this.isVisible !== undefined ? this.isVisible : this.modelValue
+    },
+  },
 
-    function goNext() {
-      // simple front-end validation for required fields on page 1
-      const required = [
-        'lastName',
-        'firstName',
-        'birthdate',
-        'gender',
-        'phone',
-        'email',
-        'vendorId',
-        'address',
-      ]
-      const missing = required.filter((k) => !String(form[k] || '').trim())
-      if (missing.length) {
-        // Emit error message to parent component to handle with proper popup
-        emit('show-error', 'Please fill out all required personal fields.')
+  watch: {
+    visibleModel(newVal) {
+      if (!newVal) {
+        this.resetForm()
+      }
+    },
+  },
+
+  methods: {
+    closeDialog() {
+      this.$emit('update:modelValue', false)
+      if (this.isVisible !== undefined) {
+        this.$emit('close')
+      }
+    },
+
+    resetForm() {
+      this.$refs.vendorForm?.reset()
+      this.activeTab = 0
+      this.formValid = false
+    },
+
+    save() {
+      if (!this.$refs.vendorForm.validate()) {
+        this.errorMessage = 'Please fill out all required fields'
+        this.showError = true
         return
       }
-      step.value = 2
-    }
 
-    function submit() {
-      // front-end only: emit a compact object back to parent to add to table
-      const newRow = {
-        id: form.vendorId,
-        name: `${form.firstName} ${form.lastName}`,
-        business: form.businessName,
-        collector: 'John Smith', // default; parent can change or show another input
-        status: 'Active',
-        raw: JSON.parse(JSON.stringify(form)), // keep whole payload if parent needs it
-      }
-      emit('save', newRow)
-      model.value = false
-    }
+      this.saving = true
 
-    function cancel() {
-      model.value = false
-      step.value = 1
-    }
+      // Simulate API call
+      setTimeout(() => {
+        const newRow = {
+          id: this.form.vendorId || Math.floor(Math.random() * 1000000),
+          name: `${this.form.firstName} ${this.form.lastName}`,
+          business: this.form.businessName,
+          collector: this.form.assignedCollector || 'John Smith',
+          status: 'Active',
+          raw: JSON.parse(JSON.stringify(this.form)),
+        }
 
-    watch(model, (v) => {
-      if (!v) step.value = 1
-    })
-
-    return {
-      model,
-      step,
-      form,
-      importSampleData,
-      goNext,
-      submit,
-      cancel
-    }
+        this.$emit('save', newRow)
+        this.saving = false
+        this.showSuccess = true
+        this.$emit('update:modelValue', false)
+        if (this.isVisible !== undefined) {
+          this.$emit('close')
+        }
+      }, 500)
+    },
   },
+
   props: {
     modelValue: { type: Boolean, default: false },
+    isVisible: { type: Boolean, required: false },
   },
-  emits: ['update:modelValue', 'save']
+
+  emits: ['update:modelValue', 'save', 'close'],
 }
