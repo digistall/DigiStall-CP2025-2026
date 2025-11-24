@@ -159,12 +159,12 @@ export const createComplianceRecord = async (req, res) => {
     // Get branch_id from user or stallholder
     let branch_id = userBranchId;
     if (!branch_id) {
-      // If admin, get branch from stallholder
+      // If admin, get branch from stallholder using stored procedure
       const [stallholderData] = await connection.execute(
-        'SELECT branch_id FROM stallholder WHERE stallholder_id = ?',
+        'CALL getStallholderBranchId(?)',
         [stallholder_id]
       );
-      branch_id = stallholderData[0]?.branch_id || null;
+      branch_id = stallholderData[0][0]?.branch_id || null;
     }
 
     // Create compliance record using stored procedure
@@ -245,13 +245,13 @@ export const updateComplianceRecord = async (req, res) => {
 
     connection = await createConnection();
 
-    // Check if record exists
+    // Check if record exists using stored procedure
     const [existing] = await connection.execute(
-      'SELECT report_id FROM violation_report WHERE report_id = ?',
+      'CALL checkComplianceRecordExists(?)',
       [id]
     );
 
-    if (existing.length === 0) {
+    if (existing[0][0]?.record_exists === 0) {
       return res.status(404).json({
         success: false,
         message: `Compliance record with ID ${id} not found`
@@ -313,13 +313,13 @@ export const deleteComplianceRecord = async (req, res) => {
 
     connection = await createConnection();
 
-    // Check if record exists
+    // Check if record exists using stored procedure
     const [existing] = await connection.execute(
-      'SELECT report_id FROM violation_report WHERE report_id = ?',
+      'CALL checkComplianceRecordExists(?)',
       [id]
     );
 
-    if (existing.length === 0) {
+    if (existing[0][0]?.record_exists === 0) {
       return res.status(404).json({
         success: false,
         message: `Compliance record with ID ${id} not found`
@@ -405,20 +405,9 @@ export const getAllInspectors = async (req, res) => {
 
     connection = await createConnection();
 
-    const [inspectors] = await connection.execute(
-      `SELECT 
-        inspector_id,
-        CONCAT(first_name, ' ', last_name) as inspector_name,
-        first_name,
-        last_name,
-        email,
-        contact_no,
-        status,
-        date_hired
-      FROM inspector
-      WHERE status = 'active'
-      ORDER BY first_name, last_name`
-    );
+    // Use stored procedure instead of raw SQL
+    const [result] = await connection.execute('CALL getAllActiveInspectors()');
+    const inspectors = result[0];
 
     console.log(`✅ Found ${inspectors.length} active inspectors`);
 
@@ -452,15 +441,9 @@ export const getAllViolations = async (req, res) => {
 
     connection = await createConnection();
 
-    const [violations] = await connection.execute(
-      `SELECT 
-        violation_id,
-        ordinance_no,
-        violation_type,
-        details
-      FROM violation
-      ORDER BY violation_type`
-    );
+    // Use stored procedure instead of raw SQL
+    const [result] = await connection.execute('CALL getAllViolationTypes()');
+    const violations = result[0];
 
     console.log(`✅ Found ${violations.length} violation types`);
 
@@ -496,18 +479,12 @@ export const getViolationPenalties = async (req, res) => {
 
     connection = await createConnection();
 
-    const [penalties] = await connection.execute(
-      `SELECT 
-        penalty_id,
-        violation_id,
-        offense_no,
-        penalty_amount,
-        remarks
-      FROM violation_penalty
-      WHERE violation_id = ?
-      ORDER BY offense_no`,
+    // Use stored procedure instead of raw SQL
+    const [result] = await connection.execute(
+      'CALL getViolationPenaltiesByViolationId(?)',
       [violationId]
     );
+    const penalties = result[0];
 
     console.log(`✅ Found ${penalties.length} penalties`);
 
