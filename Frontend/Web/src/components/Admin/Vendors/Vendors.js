@@ -2,10 +2,12 @@
 import AddVendorDialog from './Components/AddVendorDialog/AddVendorDialog.vue'
 import VendorDetailsDialog from './Components/VendorDetailsDialog/VendorDetailsDialog.vue'
 import EditVendorDialog from './Components/EditVendorDialog/EditVendorDialog.vue'
+import SearchVendor from './Components/Search/SearchVendor.vue'
+import TableVendor from './Components/Table/TableVendor.vue'
 
 export default {
   name: 'Vendors',
-  components: { AddVendorDialog, VendorDetailsDialog, EditVendorDialog },
+  components: { AddVendorDialog, VendorDetailsDialog, EditVendorDialog, SearchVendor, TableVendor },
   data() {
     return {
       addDialog: false,
@@ -35,8 +37,7 @@ export default {
       })),
 
       search: '',
-      collectorFilter: null,
-      statusFilter: null,
+      statusFilter: 'all',
 
       newVendor: {
         id: '',
@@ -59,10 +60,9 @@ export default {
           v.collector.toLowerCase().includes(term) ||
           v.status.toLowerCase().includes(term)
 
-        const hitsCollector = !this.collectorFilter || v.collector === this.collectorFilter
-        const hitsStatus = !this.statusFilter || v.status === this.statusFilter
+        const hitsStatus = this.statusFilter === 'all' || v.status === this.statusFilter
 
-        return hitsSearch && hitsCollector && hitsStatus
+        return hitsSearch && hitsStatus
       })
     },
   },
@@ -78,6 +78,12 @@ export default {
     // receive new row and add to table
     handleSave(newRow) {
       this.vendors.unshift(newRow)
+    },
+
+    handleSearch(payload) {
+      if (!payload) return
+      this.search = payload.query || ''
+      this.statusFilter = payload.filter || 'all'
     },
 
     initializeVendors() {

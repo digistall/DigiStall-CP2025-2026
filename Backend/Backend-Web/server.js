@@ -3,12 +3,16 @@
 
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+
+// Load environment variables
+dotenv.config();
 
 // Import route files
 import authRoutes from './routes/authRoutes.js';
