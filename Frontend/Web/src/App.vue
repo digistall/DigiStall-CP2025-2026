@@ -59,3 +59,5 @@ export default {
   }
 };
 </script>
+
+<style src="@/assets/css/scrollable-tables.css"></style>

@@ -1,7 +1,7 @@
 <!-- ComplianceTable.vue (component) -->
 <template>
   <div class="compliance-table-container">
-    <div class="compliance-table-wrapper">
+    <div class="compliance-table-wrapper scrollable-table-wrapper">
       <table class="compliance-table">
         <thead>
           <tr>

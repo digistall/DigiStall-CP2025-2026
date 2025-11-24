@@ -75,6 +75,10 @@
     margin-left: 50px;
   }
 
+  .main-content {
+    padding: 12px;
+  }
+
   .content-placeholder {
     padding: 20px;
     min-height: 300px;
