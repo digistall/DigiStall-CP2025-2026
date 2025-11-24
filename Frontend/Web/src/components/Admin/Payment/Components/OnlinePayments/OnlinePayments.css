@@ -104,13 +104,19 @@
   overflow: hidden;
 }
 
+/* Use CSS vars from shared scrollable-tables to style the sticky header */
+.payments-table-container {
+  --table-head-bg: #002181;
+  --table-head-color: #ffffff;
+}
+
 .payments-card {
   border: 2px solid #e5e7eb;
 }
 
 .table-wrapper {
   width: 100%;
-  overflow-x: visible;
+  overflow-x: hidden; /* prevent horizontal scrolling at the wrapper level */
 }
 
 .payments-table {
@@ -129,7 +135,8 @@
   font-size: 14px;
   font-weight: 600;
   color: white;
-  white-space: nowrap;
+  /* allow wrapping so long tokens don't force horizontal scroll */
+  white-space: normal !important;
 }
 
 .payments-table th:last-child {
@@ -366,6 +373,31 @@
   .table-wrapper {
     overflow-x: auto;
   }
+}
+
+/* On small screens prefer a single-row table with horizontal scroll rather than wrapping every cell */
+@media (max-width: 768px) {
+  .payments-table {
+    min-width: 720px; /* force table to be wider than small viewports so horizontal scroll appears */
+  }
+
+  .payments-table th,
+  .payments-table td {
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .payments-table-container .table-wrapper {
+    overflow-x: auto !important;
+  }
+}
+
+/* Ensure table cells inside payments container wrap and break long tokens */
+.payments-table-container .payments-table th,
+.payments-table-container .payments-table td {
+  white-space: normal !important;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {
