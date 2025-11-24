@@ -26,6 +26,9 @@ export default {
   mounted() {
     this.initializeCompliance()
   },
+  mounted() {
+    this.initializeCompliance()
+  },
   methods: {
     // Search
     handleSearch(searchData) {

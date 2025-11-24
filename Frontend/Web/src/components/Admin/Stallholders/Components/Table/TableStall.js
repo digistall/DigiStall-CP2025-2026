@@ -3,6 +3,7 @@ import AddStallholder from '../AddStallholder/AddStallholder.vue'
 import ExcelImport from '../ExcelImport/ExcelImport.vue'
 import DocumentCustomization from '../DocumentCustomization/DocumentCustomization.vue'
 import AddStallholderChoiceModal from '../ChoicesModal/AddStallholderChoiceModal.vue'
+import '@/assets/css/scrollable-tables.css'
 
 export default {
   name: 'TableStall',

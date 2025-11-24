@@ -13,7 +13,7 @@
       </div>
 
       <!-- Table Body -->
-      <div class="table-body">
+      <div class="table-body scrollable-table-wrapper">
         <div v-if="employees.length === 0" class="no-data-container">
           <v-icon size="64" color="grey-lighten-2">mdi-account-off</v-icon>
           <p class="no-data-text">No employees found</p>
