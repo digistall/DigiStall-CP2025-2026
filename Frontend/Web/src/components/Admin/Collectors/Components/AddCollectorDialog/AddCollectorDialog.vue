@@ -1,11 +1,11 @@
 <template>
   <v-dialog v-model="visibleModel" max-width="900px" persistent>
     <v-card>
-      <!-- Toolbar Header (matching Stallholders) -->
+      <!-- Toolbar Header -->
       <v-toolbar color="primary" dark dense>
         <v-toolbar-title class="toolbar-title">
-          <v-icon left>mdi-store-plus</v-icon>
-          Add New Vendor
+          <v-icon left>mdi-account-plus</v-icon>
+          Add New Collector
         </v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="closeDialog">
@@ -13,10 +13,10 @@
         </v-btn>
       </v-toolbar>
 
-      <!-- Tabbed Content (matching Stallholders structure) -->
+      <!-- Tabbed Content -->
       <v-card-text class="pa-0">
         <v-container>
-          <v-form ref="vendorForm" v-model="formValid" lazy-validation>
+          <v-form ref="collectorForm" v-model="formValid" lazy-validation>
             <v-tabs v-model="activeTab" show-arrows>
               <v-tab>
                 <v-icon left>mdi-account</v-icon>
@@ -24,14 +24,14 @@
               </v-tab>
               <v-tab>
                 <v-icon left>mdi-briefcase</v-icon>
-                Business Info
+                Assignment Info
               </v-tab>
             </v-tabs>
 
             <v-window v-model="activeTab">
               <!-- Personal Information Tab -->
               <v-window-item>
-                <v-container>
+                <v-container class="pt-6">
                   <v-row>
                     <v-col cols="12" md="4">
                       <v-text-field
@@ -77,12 +77,10 @@
                     <v-col cols="12" md="6">
                       <v-text-field
                         v-model="form.email"
-                        label="Email Address *"
-                        :rules="emailRules"
+                        label="Email Address"
                         outlined
-                        prepend-inner-icon="mdi-email"
                         type="email"
-                        required
+                        prepend-inner-icon="mdi-email"
                       ></v-text-field>
                     </v-col>
                   </v-row>
@@ -91,95 +89,71 @@
                     <v-col cols="12" md="6">
                       <v-text-field
                         v-model="form.birthdate"
-                        label="Date of Birth"
-                        outlined
+                        label="Birthdate"
                         type="date"
+                        outlined
                         prepend-inner-icon="mdi-calendar"
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-select
                         v-model="form.gender"
-                        :items="genderOptions"
                         label="Gender"
+                        :items="['Male', 'Female', 'Other']"
                         outlined
-                        prepend-inner-icon="mdi-gender-male-female"
+                        prepend-inner-icon="mdi-human"
                       ></v-select>
                     </v-col>
                   </v-row>
 
                   <v-row>
                     <v-col cols="12">
-                      <v-textarea
+                      <v-text-field
                         v-model="form.address"
-                        label="Complete Address *"
-                        :rules="[(v) => !!v || 'Address is required']"
+                        label="Address"
                         outlined
-                        rows="3"
-                        prepend-inner-icon="mdi-home"
-                        required
-                      ></v-textarea>
+                        prepend-inner-icon="mdi-map-marker"
+                      ></v-text-field>
                     </v-col>
                   </v-row>
                 </v-container>
               </v-window-item>
 
-              <!-- Business Information Tab -->
+              <!-- Assignment Information Tab -->
               <v-window-item>
-                <v-container>
+                <v-container class="pt-6">
                   <v-row>
                     <v-col cols="12" md="6">
                       <v-text-field
-                        v-model="form.businessName"
-                        label="Business Name *"
-                        :rules="[(v) => !!v || 'Business name is required']"
+                        v-model="form.collectorId"
+                        label="Collector ID"
                         outlined
-                        prepend-inner-icon="mdi-store"
-                        required
+                        prepend-inner-icon="mdi-identifier"
+                        disabled
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model="form.businessType"
-                        label="Business Type *"
-                        :rules="[(v) => !!v || 'Business type is required']"
+                      <v-select
+                        v-model="form.location"
+                        label="Assigned Location *"
+                        :items="locations"
                         outlined
-                        prepend-inner-icon="mdi-briefcase"
+                        prepend-inner-icon="mdi-map-marker"
+                        :rules="[(v) => !!v || 'Location is required']"
                         required
-                      ></v-text-field>
+                      ></v-select>
                     </v-col>
                   </v-row>
 
                   <v-row>
                     <v-col cols="12">
                       <v-textarea
-                        v-model="form.businessDescription"
-                        label="Business Description"
+                        v-model="form.notes"
+                        label="Notes"
                         outlined
-                        rows="3"
-                        prepend-inner-icon="mdi-text"
-                        hint="Describe the products or services offered"
+                        rows="4"
+                        prepend-inner-icon="mdi-note-text"
                       ></v-textarea>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model="form.vendorId"
-                        label="Vendor ID"
-                        outlined
-                        prepend-inner-icon="mdi-identifier"
-                      ></v-text-field>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-select
-                        v-model="form.assignedCollector"
-                        :items="collectors"
-                        label="Assigned Collector"
-                        outlined
-                        prepend-inner-icon="mdi-account-tie"
-                      ></v-select>
                     </v-col>
                   </v-row>
                 </v-container>
@@ -189,31 +163,31 @@
         </v-container>
       </v-card-text>
 
-      <v-divider></v-divider>
-      <!-- Action Buttons (matching Stallholders) -->
-      <v-card-actions class="px-6 py-4">
-        <v-btn color="grey" text @click="closeDialog">Cancel</v-btn>
+      <!-- Action Buttons -->
+      <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
-        <v-btn color="primary" @click="save" :loading="saving" :disabled="!formValid">
-          <v-icon left>mdi-content-save</v-icon>
-          Add Vendor
-        </v-btn>
+        <v-btn variant="outlined" @click="closeDialog"> Cancel </v-btn>
+        <v-btn color="primary" :loading="saving" @click="save"> Add Collector </v-btn>
       </v-card-actions>
 
       <!-- Success Snackbar -->
-      <v-snackbar v-model="showSuccess" color="success" timeout="3000" bottom>
-        <v-icon left>mdi-check-circle</v-icon>
-        Vendor added successfully!
+      <v-snackbar v-model="showSuccess" color="success" timeout="3000">
+        <template #prepend>
+          <v-icon>mdi-check-circle</v-icon>
+        </template>
+        Collector added successfully!
       </v-snackbar>
 
       <!-- Error Snackbar -->
-      <v-snackbar v-model="showError" color="error" timeout="5000" bottom>
-        <v-icon left>mdi-alert-circle</v-icon>
-        {{ errorMessage }}
+      <v-snackbar v-model="showError" color="error" timeout="3000">
+        <template #prepend>
+          <v-icon>mdi-alert-circle</v-icon>
+        </template>
+        Error adding collector. Please try again.
       </v-snackbar>
     </v-card>
   </v-dialog>
 </template>
 
-<script src="./AddVendorDialog.js"></script>
-<style scoped src="./AddVendorDialog.css"></style>
+<script src="./AddCollectorDialog.js"></script>
+<style scoped src="./AddCollectorDialog.css"></style>
