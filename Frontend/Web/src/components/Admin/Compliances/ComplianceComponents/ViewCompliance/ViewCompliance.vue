@@ -56,7 +56,7 @@
         </div>
 
         <!-- Notes -->
-        <div class="info-card" style="grid-column: span 2; margin-top: 12px;">
+        <div class="info-card notes-section">
           <strong>Notes</strong>
           <p>{{ compliance.notes || "No additional notes." }}</p>
         </div>
