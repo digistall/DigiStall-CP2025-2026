@@ -208,14 +208,14 @@
   letter-spacing: 0.5px;
 }
 
-/* Status buttons */
-.status-buttons {
+/* Location buttons */
+.location-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.status-btn {
+.location-btn {
   padding: 12px 16px;
   background: white;
   border: 2px solid #e9ecef;
@@ -227,13 +227,13 @@
   transition: all 0.2s ease;
 }
 
-.status-btn:hover {
+.location-btn:hover {
   border-color: rgb(0, 33, 129);
   color: rgb(0, 33, 129);
   background: #f8f9ff;
 }
 
-.status-btn.active {
+.location-btn.active {
   background: rgb(0, 33, 129);
   color: white;
   border-color: rgb(0, 33, 129);
@@ -325,7 +325,7 @@
     max-width: 400px;
   }
 
-  .status-buttons {
+  .location-buttons {
     grid-template-columns: 1fr;
   }
 
