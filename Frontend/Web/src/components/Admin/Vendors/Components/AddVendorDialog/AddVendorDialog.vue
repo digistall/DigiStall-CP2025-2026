@@ -175,7 +175,9 @@
                     <v-col cols="12" md="6">
                       <v-select
                         v-model="form.assignedCollector"
-                        :items="collectors"
+                        :items="collectorItems"
+                        :item-text="collectorItemText"
+                        :item-value="collectorItemValue"
                         label="Assigned Collector"
                         outlined
                         prepend-inner-icon="mdi-account-tie"

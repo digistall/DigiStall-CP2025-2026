@@ -4,6 +4,8 @@ import VendorDetailsDialog from './Components/VendorDetailsDialog/VendorDetailsD
 import EditVendorDialog from './Components/EditVendorDialog/EditVendorDialog.vue'
 import SearchVendor from './Components/Search/SearchVendor.vue'
 import TableVendor from './Components/Table/TableVendor.vue'
+import vendorsService from '../../../services/vendorsService'
+import collectorsService from '../../../services/collectorsService'
 
 export default {
   name: 'Vendors',
@@ -25,16 +27,10 @@ export default {
         { title: 'Status', value: 'status', width: 120 },
         { title: 'Actions', value: 'actions', sortable: false, align: 'end', width: 140 },
       ],
-      collectors: ['John Smith', 'Jane Garcia', 'Marco Reyes', 'Ava Santos'],
+      collectors: [],
       statuses: ['Active', 'Inactive', 'On Hold'],
 
-      vendors: Array.from({ length: 15 }, (_, i) => ({
-        id: 123456 + i,
-        name: 'John Doe',
-        business: 'Street Fisbol',
-        business_location: 'Panganiban St, Naga City',
-        status: 'Active',
-      })),
+      vendors: [],
 
       search: '',
       statusFilter: 'all',
@@ -45,8 +41,7 @@ export default {
         business: '',
         business_location: '',
         status: 'Active',
-      },
-    }
+      },    }
   },
   computed: {
     filteredVendors() {
@@ -87,7 +82,47 @@ export default {
     },
 
     initializeVendors() {
-      console.log('Vendors page initialized')
+      // Fetch vendors from API
+      vendorsService
+        .getAllVendors()
+        .then((result) => {
+          // result is { success, data, count }
+          const data = result?.data || []
+          console.debug('Vendors API result:', result)
+          // Transform to compact table rows expected by component
+          this.vendors = (data || []).map((v) => ({
+            id: v.vendor_id || v.vendorId || v.id,
+            name: `${v.first_name || ''} ${v.last_name || ''}`.trim(),
+            business: v.business_name || v.business || '-',
+            business_location: v.address || '-',
+            status: v.status || 'Active',
+            collector: (v.collector_first_name && v.collector_last_name)
+              ? `${v.collector_first_name} ${v.collector_last_name}`
+              : v.collector || null,
+            raw: v,
+          }))
+        })
+        .catch((err) => {
+          console.error('Failed to load vendors:', err)
+        })
+
+      // Fetch collectors for select lists
+      collectorsService
+        .getAllCollectors()
+        .then((result) => {
+          // result is { success, data, count }
+          const data = result?.data || []
+          console.debug('Collectors API result:', result)
+          // Keep collectors as array of objects so we can map id -> name later
+          this.collectors = (data || []).map((c) => ({
+            id: c.collector_id || c.id,
+            name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
+            raw: c,
+          }))
+        })
+        .catch((err) => {
+          console.error('Failed to load collectors:', err)
+        })
     },
 
     edit(row) {
