@@ -7,6 +7,7 @@ export default {
       get: () => (props.isVisible === undefined ? props.modelValue : props.isVisible),
       set: (v) => {
         emit('update:modelValue', v)
+        emit('update:isVisible', v)
         if (props.isVisible !== undefined && !v) emit('close')
       },
     })
@@ -51,6 +52,7 @@ export default {
         vendStart: '',
         vendEnd: '',
         businessAddress: '',
+        assignedCollector: null,
         // files
         files: {
           clearance: null,
@@ -65,9 +67,22 @@ export default {
       if (src && typeof src === 'object') {
         Object.assign(f, src)
         f.files = { ...f.files, ...(src.files || {}) }
+        // normalize assignedCollector from incoming raw payloads
+        if (src.collector_id) f.assignedCollector = src.collector_id
+        else if (src.collector) f.assignedCollector = src.collector
       }
       return f
     }
+
+    const collectorItems = computed(() => {
+      if (props.collectors && props.collectors.length && typeof props.collectors[0] === 'object') {
+        return props.collectors
+      }
+      return (props.collectors || []).map((s, i) => ({ id: i, name: s }))
+    })
+
+    const collectorItemText = 'name'
+    const collectorItemValue = 'id'
 
     function goNext() {
       // very light check
@@ -80,11 +95,21 @@ export default {
 
     function submit() {
       // return both compact row and full raw payload
+      // resolve collector display name
+      let collectorDisplay = null
+      const ac = form.assignedCollector
+      if (ac == null || ac === '') collectorDisplay = null
+      else if (typeof ac === 'object') collectorDisplay = ac.name || ac.first_name || ac.last_name || null
+      else if (props.collectors && props.collectors.length && typeof props.collectors[0] === 'object') {
+        const found = props.collectors.find((c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`)
+        collectorDisplay = found ? found.name : ac
+      } else collectorDisplay = ac
+
       const updatedRow = {
         id: form.vendorId,
         name: [form.firstName, form.lastName].filter(Boolean).join(' '),
         business: form.businessName,
-        collector: 'John Smith',
+        collector: collectorDisplay || 'John Smith',
         status: 'Active',
         raw: { ...form, files: { ...form.files } }, // keep File refs
       }
@@ -104,11 +129,15 @@ export default {
       goNext,
       submit,
       cancel,
+      collectorItems,
+      collectorItemText,
+      collectorItemValue,
     }
   },
   props: {
     modelValue: { type: Boolean, default: false },
     isVisible: { type: Boolean, required: false },
+    collectors: { type: Array, default: () => [] },
     /** pass the full vendor payload (what you stored in item.raw) */
     data: { type: Object, default: () => ({}) },
   },

@@ -20,8 +20,8 @@
             <v-avatar size="120" class="mb-4">
               <v-img :src="photo" />
             </v-avatar>
-            <h3 class="text-h6 font-weight-bold mb-2">{{ data.firstName }} {{ data.lastName }}</h3>
-            <p class="text-body2 text-medium-emphasis">{{ data.collectorId }}</p>
+            <h3 class="text-h6 font-weight-bold mb-2">{{ normalizedData.firstName }} {{ normalizedData.lastName }}</h3>
+            <p class="text-body2 text-medium-emphasis">{{ normalizedData.collectorId }}</p>
           </v-col>
 
           <v-col cols="12" md="8">
@@ -29,13 +29,13 @@
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Phone Number</label>
-                  <p class="info-value">{{ data.phone }}</p>
+                  <p class="info-value">{{ normalizedData.phone }}</p>
                 </div>
               </v-col>
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Email Address</label>
-                  <p class="info-value">{{ data.email }}</p>
+                  <p class="info-value">{{ normalizedData.email }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -44,13 +44,13 @@
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Birthdate</label>
-                  <p class="info-value">{{ formatDate(data.birthdate) }}</p>
+                  <p class="info-value">{{ formatDate(normalizedData.birthdate) }}</p>
                 </div>
               </v-col>
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Gender</label>
-                  <p class="info-value">{{ data.gender }}</p>
+                  <p class="info-value">{{ normalizedData.gender }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -59,7 +59,7 @@
               <v-col cols="12">
                 <div class="info-item">
                   <label class="info-label">Address</label>
-                  <p class="info-value">{{ data.address }}</p>
+                  <p class="info-value">{{ normalizedData.address }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -73,23 +73,23 @@
             <div class="info-item">
               <label class="info-label">Assigned Location</label>
               <v-chip color="primary" text-color="white">
-                {{ data.location }}
+                {{ normalizedData.location }}
               </v-chip>
             </div>
           </v-col>
           <v-col cols="12" md="6">
             <div class="info-item">
               <label class="info-label">Collector ID</label>
-              <p class="info-value">{{ data.collectorId }}</p>
+              <p class="info-value">{{ normalizedData.collectorId }}</p>
             </div>
           </v-col>
         </v-row>
 
-        <v-row v-if="data.notes">
+        <v-row v-if="normalizedData.notes">
           <v-col cols="12">
             <div class="info-item">
               <label class="info-label">Notes</label>
-              <p class="info-value">{{ data.notes }}</p>
+              <p class="info-value">{{ normalizedData.notes }}</p>
             </div>
           </v-col>
         </v-row>

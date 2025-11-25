@@ -38,7 +38,7 @@ CREATE PROCEDURE `createCollector`(
 BEGIN
   INSERT INTO collector (first_name, last_name, email, contact_number, branch_id)
   VALUES (p_first_name, p_last_name, p_email, p_contact_no, p_branch_id);
-  SELECT LAST_INSERT_ID() AS collector_id;
+  SELECT * FROM collector WHERE collector_id = LAST_INSERT_ID();
 END$$
 
 DROP PROCEDURE IF EXISTS `getAllCollectors`$$
@@ -136,7 +136,10 @@ BEGIN
     p_business_name, p_business_type, p_business_description, p_vendor_identifier, p_collector_id
   );
 
-  SELECT LAST_INSERT_ID() AS vendor_id;
+  SELECT v.*, c.first_name AS collector_first_name, c.last_name AS collector_last_name
+  FROM vendor v
+  LEFT JOIN collector c ON v.collector_id = c.collector_id
+  WHERE v.vendor_id = LAST_INSERT_ID();
 END$$
 
 DROP PROCEDURE IF EXISTS `getAllVendors`$$
