@@ -47,12 +47,14 @@ export default {
       // Determine user type from username pattern
       const username = this.username.toLowerCase()
       
-      if (username.includes('admin')) {
-        return 'admin'
+      if (username.includes('sysadmin') || username.includes('system')) {
+        return 'system_administrator'
+      } else if (username.includes('admin') || username.includes('owner')) {
+        return 'stall_business_owner'
       } else if (username.includes('manager')) {
-        return 'branch_manager'
+        return 'business_manager'
       } else {
-        return 'employee'
+        return 'business_employee'
       }
     },
   },

@@ -46,24 +46,31 @@ export const useAuthStore = defineStore('auth', () => {
   });
 
   /**
-   * Check if user is admin
+   * Check if user is system administrator
    */
-  const isAdmin = computed(() => {
-    return user.value?.userType === 'admin';
+  const isSystemAdministrator = computed(() => {
+    return user.value?.userType === 'system_administrator';
   });
 
   /**
-   * Check if user is branch manager
+   * Check if user is stall business owner
    */
-  const isBranchManager = computed(() => {
-    return user.value?.userType === 'branch_manager';
+  const isStallBusinessOwner = computed(() => {
+    return user.value?.userType === 'stall_business_owner';
   });
 
   /**
-   * Check if user is employee
+   * Check if user is business manager
    */
-  const isEmployee = computed(() => {
-    return user.value?.userType === 'employee';
+  const isBusinessManager = computed(() => {
+    return user.value?.userType === 'business_manager';
+  });
+
+  /**
+   * Check if user is business employee
+   */
+  const isBusinessEmployee = computed(() => {
+    return user.value?.userType === 'business_employee';
   });
 
   /**
@@ -394,13 +401,15 @@ export const useAuthStore = defineStore('auth', () => {
   function hasPermission(...permissions) {
     if (!user.value) return false;
     
-    // Admins and managers have all permissions
-    if (user.value.userType === 'admin' || user.value.userType === 'branch_manager') {
+    // System administrators, stall business owners, and business managers have all permissions
+    if (user.value.userType === 'system_administrator' || 
+        user.value.userType === 'stall_business_owner' || 
+        user.value.userType === 'business_manager') {
       return true;
     }
     
-    // Check employee permissions
-    if (user.value.userType === 'employee' && user.value.permissions) {
+    // Check business employee permissions
+    if (user.value.userType === 'business_employee' && user.value.permissions) {
       // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
       if (Array.isArray(user.value.permissions)) {
         // Array format: check if permission exists in array
@@ -479,9 +488,10 @@ export const useAuthStore = defineStore('auth', () => {
     authenticated,
     userRole,
     userPermissions,
-    isAdmin,
-    isBranchManager,
-    isEmployee,
+    isSystemAdministrator,
+    isStallBusinessOwner,
+    isBusinessManager,
+    isBusinessEmployee,
     userFullName,
     userBranchId,
     
