@@ -42,13 +42,21 @@ export default {
           name: 'Employees',
           route: '/app/employees',
           description: 'Manage employee accounts and permissions',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'], // Available for all management roles
         },
-        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors' },
+        { 
+          id: 7, 
+          icon: 'mdi-account-group', 
+          name: 'Vendors', 
+          route: '/app/vendors',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
         {
           id: 8,
           icon: 'mdi-account-multiple',
           name: 'Stallholders',
           route: '/app/stallholders',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
         },
         {
           id: 9,
@@ -56,6 +64,7 @@ export default {
           name: 'Stalls',
           route: '/app/stalls',
           hasSubMenu: true,
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
           subItems: [
             {
               id: 91,
@@ -73,12 +82,46 @@ export default {
             },
           ],
         },
-        { id: 10, icon: 'mdi-account-cash', name: 'Collectors', route: '/app/collectors' },
-        { id: 11, icon: 'mdi-account-eye', name: 'Inspectors', route: '/app/inspectors' },
+        { 
+          id: 10, 
+          icon: 'mdi-account-cash', 
+          name: 'Collectors', 
+          route: '/app/collectors',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
+        { 
+          id: 11, 
+          icon: 'mdi-account-eye', 
+          name: 'Inspectors', 
+          route: '/app/inspectors',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
+        {
+          id: 12,
+          icon: 'mdi-shield-check',
+          name: 'Compliances',
+          route: '/app/compliances',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
+        {
+          id: 13,
+          icon: 'mdi-credit-card-outline',
+          name: 'My Subscription',
+          route: '/app/subscription',
+          roles: ['stall_business_owner'], // Only for Business Owner
+          description: 'View and manage your subscription plan',
+        },
       ],
     }
   },
   computed: {
+    // Check if current user is system administrator
+    isSystemAdministrator() {
+      const userType = sessionStorage.getItem('userType')
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      return userType === 'system_administrator' || currentUser.userType === 'system_administrator'
+    },
+
     // Check if current user is admin
     isAdmin() {
       const userType = sessionStorage.getItem('userType')
@@ -150,7 +193,7 @@ export default {
       }
     },
 
-    // Check if user is branch manager (has access to everything)
+    // Check if user is branch manager or business owner (has access to everything in More menu)
     isBranchManager() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
@@ -159,6 +202,10 @@ export default {
         currentUser.userType === 'branch_manager' ||
         userType === 'branch-manager' ||
         currentUser.userType === 'branch-manager' ||
+        userType === 'business_manager' ||
+        currentUser.userType === 'business_manager' ||
+        userType === 'stall_business_owner' ||
+        currentUser.userType === 'stall_business_owner' ||
         this.isAdmin
       )
     },
@@ -178,65 +225,31 @@ export default {
       }
     },
 
-    // Filter sidebar items based on user permissions
+    // Filter sidebar items based on user permissions and roles
     filteredMoreItems() {
       console.log('🔍 Filtering sidebar items...')
-      console.log('User type:', sessionStorage.getItem('userType'))
-      console.log('Employee permissions raw:', sessionStorage.getItem('employeePermissions'))
-      console.log('Permissions raw:', sessionStorage.getItem('permissions'))
+      const userType = sessionStorage.getItem('userType')
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      const actualUserType = userType || currentUser.userType
+      
+      console.log('User type:', actualUserType)
       console.log('Is branch manager:', this.isBranchManager)
-      console.log('User permissions computed:', this.userPermissions)
 
-      if (this.isBranchManager) {
-        console.log('✅ Branch manager - showing all items')
-        return this.moreItems // Branch managers see everything
-      }
-
-      const filteredItems = this.moreItems.filter((item) => {
-        // Map sidebar items to their required permissions
-        const permissionMap = {
-          6: 'employees', // Employees (only branch managers should see this)
-          7: 'vendors', // Vendors
-          8: 'stallholders', // Stallholders
-          9: 'stalls', // Stalls (check read_stalls or write_stalls)
-          10: 'collectors', // Collectors
-          11: 'inspectors', // Inspectors
+      // Filter items based on role definitions
+      const filtered = this.moreItems.filter((item) => {
+        // If item has roles specified, check if user's role is in the allowed roles
+        if (item.roles && item.roles.length > 0) {
+          const hasRole = item.roles.includes(actualUserType)
+          console.log(`Item ${item.name} (ID ${item.id}): ${hasRole ? '✅ Allowed' : '❌ Denied'} for role ${actualUserType}`)
+          return hasRole
         }
-
-        const requiredPermission = permissionMap[item.id]
-
-        // If no permission mapping, show to everyone (fallback)
-        if (!requiredPermission) return true
-
-        // Hide employees section from non-managers (employees section is only for branch managers)
-        if (item.id === 6) return this.isBranchManager
-
-        // Special handling for stalls - check for read_stalls or write_stalls
-        if (item.id === 9) {
-          const hasStalls = this.hasStallsPermission
-          console.log(`🏪 Stalls permission check: ${hasStalls}`)
-          return hasStalls
-        }
-
-        // Check if user has the required permission (handle both array and object formats)
-        let hasPermission = false
-        if (Array.isArray(this.userPermissions)) {
-          hasPermission = this.userPermissions.includes(requiredPermission)
-        } else {
-          hasPermission = this.userPermissions[requiredPermission] === true
-        }
-
-        console.log(
-          `Item ${item.name} (ID: ${item.id}) - Required: ${requiredPermission}, Has permission: ${hasPermission}`,
-        )
-        return hasPermission
+        
+        // If no roles specified, allow for branch managers only (legacy items)
+        return this.isBranchManager
       })
-
-      console.log(
-        '✅ Filtered items:',
-        filteredItems.map((item) => item.name),
-      )
-      return filteredItems
+      
+      console.log(`✅ Filtered ${filtered.length} items from ${this.moreItems.length} total`)
+      return filtered
     },
 
     // Get filtered submenu items based on available stall types

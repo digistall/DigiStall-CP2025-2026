@@ -1,0 +1,204 @@
+import axios from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+export default {
+  name: 'BusinessOwners',
+  data() {
+    return {
+      businessOwners: [],
+      subscriptionPlans: [],
+      loading: false,
+      creating: false,
+      recording: false,
+      showCreateDialog: false,
+      showPaymentDialog: false,
+      selectedOwner: null,
+      newOwner: {
+        username: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        contactNumber: '',
+        planId: null
+      },
+      payment: {
+        amount: null,
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentMethod: '',
+        referenceNumber: '',
+        periodStart: '',
+        periodEnd: '',
+        notes: ''
+      },
+      paymentMethods: ['Cash', 'Bank Transfer', 'Credit Card', 'Debit Card', 'Online Payment', 'Check'],
+      headers: [
+        { title: 'ID', value: 'business_owner_id' },
+        { title: 'Name', value: 'full_name' },
+        { title: 'Email', value: 'email' },
+        { title: 'Contact', value: 'contact_number' },
+        { title: 'Plan', value: 'plan_name' },
+        { title: 'Status', value: 'subscription_status' },
+        { title: 'Expiry Date', value: 'subscription_expiry_date' },
+        { title: 'Days Until Expiry', value: 'days_until_expiry' },
+        { title: 'Actions', value: 'actions', sortable: false }
+      ],
+      snackbar: {
+        show: false,
+        message: '',
+        color: 'success'
+      }
+    }
+  },
+  mounted() {
+    this.loadData()
+  },
+  methods: {
+    async loadData() {
+      this.loading = true
+      try {
+        const token = sessionStorage.getItem('authToken')
+        
+        // Load subscription plans
+        const plansResponse = await axios.get(`${API_BASE_URL}/api/subscriptions/plans`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (plansResponse.data.success) {
+          this.subscriptionPlans = plansResponse.data.data.map(plan => ({
+            ...plan,
+            plan_display: `${plan.plan_name} - ₱${this.formatCurrency(plan.monthly_fee)}/month`
+          }))
+        }
+        
+        // Load business owners
+        const ownersResponse = await axios.get(`${API_BASE_URL}/api/subscriptions/business-owners`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (ownersResponse.data.success) {
+          this.businessOwners = ownersResponse.data.data
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error)
+        this.showSnackbar('Failed to load data', 'error')
+      } finally {
+        this.loading = false
+      }
+    },
+    async createBusinessOwner() {
+      const { valid } = await this.$refs.createForm.validate()
+      if (!valid) return
+
+      this.creating = true
+      try {
+        const token = sessionStorage.getItem('authToken')
+        
+        const response = await axios.post(`${API_BASE_URL}/api/subscriptions/business-owner`, this.newOwner, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (response.data.success) {
+          this.showSnackbar('Business owner created successfully! Awaiting first payment.', 'success')
+          this.closeCreateDialog()
+          this.loadData()
+        }
+      } catch (error) {
+        console.error('Failed to create business owner:', error)
+        this.showSnackbar(error.response?.data?.message || 'Failed to create business owner', 'error')
+      } finally {
+        this.creating = false
+      }
+    },
+    showRecordPayment(owner) {
+      this.selectedOwner = owner
+      const today = new Date().toISOString().split('T')[0]
+      const nextMonth = new Date()
+      nextMonth.setMonth(nextMonth.getMonth() + 1)
+      const periodEnd = nextMonth.toISOString().split('T')[0]
+      
+      this.payment = {
+        amount: owner.monthly_fee,
+        paymentDate: today,
+        paymentMethod: '',
+        referenceNumber: '',
+        periodStart: today,
+        periodEnd: periodEnd,
+        notes: ''
+      }
+      this.showPaymentDialog = true
+    },
+    async recordPayment() {
+      const { valid } = await this.$refs.paymentForm.validate()
+      if (!valid) return
+
+      this.recording = true
+      try {
+        const token = sessionStorage.getItem('authToken')
+        
+        const paymentData = {
+          subscriptionId: this.selectedOwner.subscription_id,
+          businessOwnerId: this.selectedOwner.business_owner_id,
+          ...this.payment
+        }
+        
+        const response = await axios.post(`${API_BASE_URL}/api/subscriptions/payment`, paymentData, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (response.data.success) {
+          this.showSnackbar(`Payment recorded successfully! Receipt: ${response.data.data.receipt_number}`, 'success')
+          this.closePaymentDialog()
+          this.loadData()
+        }
+      } catch (error) {
+        console.error('Failed to record payment:', error)
+        this.showSnackbar(error.response?.data?.message || 'Failed to record payment', 'error')
+      } finally {
+        this.recording = false
+      }
+    },
+    viewPaymentHistory(owner) {
+      this.$router.push(`/system-admin/payments?businessOwnerId=${owner.business_owner_id}`)
+    },
+    closeCreateDialog() {
+      this.showCreateDialog = false
+      this.newOwner = {
+        username: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        contactNumber: '',
+        planId: null
+      }
+      this.$refs.createForm?.resetValidation()
+    },
+    closePaymentDialog() {
+      this.showPaymentDialog = false
+      this.selectedOwner = null
+      this.$refs.paymentForm?.resetValidation()
+    },
+    formatCurrency(value) {
+      return new Intl.NumberFormat('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value)
+    },
+    getStatusColor(status) {
+      const colors = {
+        Active: 'green',
+        Expired: 'red',
+        Suspended: 'grey',
+        Pending: 'orange'
+      }
+      return colors[status] || 'grey'
+    },
+    showSnackbar(message, color = 'success') {
+      this.snackbar.message = message
+      this.snackbar.color = color
+      this.snackbar.show = true
+    }
+  }
+}

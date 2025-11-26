@@ -16,6 +16,15 @@ import Stalls from '../components/Admin/Stalls/Stalls.vue'
 import BranchManagement from '../components/Admin/Branch/Branch.vue'
 import Employees from '../components/Admin/Employees/Employees.vue'
 
+// Business Owner Components
+import MySubscription from '../components/Admin/Subscription/MySubscription.vue'
+
+// System Administrator Components
+import SystemAdminDashboard from '../components/SystemAdmin/Dashboard/SystemAdminDashboard.vue'
+import BusinessOwners from '../components/SystemAdmin/BusinessOwners/BusinessOwners.vue'
+import Payments from '../components/SystemAdmin/Payments/Payments.vue'
+import Reports from '../components/SystemAdmin/Reports/Reports.vue'
+
 // ===== ROUTE GUARDS WITH SIMPLE AUTH =====
 
 /**
@@ -52,13 +61,15 @@ const hasPermission = (...permissions) => {
   try {
     const user = JSON.parse(userData);
 
-    // Admins and managers have all permissions
-    if (user.userType === 'admin' || user.userType === 'branch_manager') {
+    // System administrators, stall business owners, and business managers have all permissions
+    if (user.userType === 'system_administrator' || 
+        user.userType === 'stall_business_owner' || 
+        user.userType === 'business_manager') {
       return true;
     }
 
-    // Check employee permissions
-    if (user.userType === 'employee' && user.permissions) {
+    // Check business employee permissions
+    if (user.userType === 'business_employee' && user.permissions) {
       // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
       if (Array.isArray(user.permissions)) {
         // Array format: check if permission exists in array
@@ -199,9 +210,20 @@ const router = createRouter({
           meta: {
             title: 'Branch Management',
             requiresAuth: true,
-            requiresRole: ['admin']
+            requiresRole: ['stall_business_owner']
           },
-          beforeEnter: requireRole('admin'),
+          beforeEnter: requireRole('stall_business_owner'),
+        },
+        {
+          path: 'subscription',
+          name: 'MySubscription',
+          component: MySubscription,
+          meta: {
+            title: 'My Subscription',
+            requiresAuth: true,
+            requiresRole: ['stall_business_owner']
+          },
+          beforeEnter: requireRole('stall_business_owner'),
         },
         {
           path: 'employees',
@@ -210,9 +232,9 @@ const router = createRouter({
           meta: {
             title: 'Employee Management',
             requiresAuth: true,
-            requiresRole: ['admin', 'branch_manager']
+            requiresRole: ['stall_business_owner', 'business_manager']
           },
-          beforeEnter: requireRole('admin', 'branch_manager'),
+          beforeEnter: requireRole('stall_business_owner', 'business_manager'),
         },
         {
           path: 'payment',
@@ -284,6 +306,43 @@ const router = createRouter({
             import('../components/Admin/Stalls/AuctionComponents/AuctionsPage/AuctionsPage.vue'),
           meta: { title: 'Active Auctions' },
           beforeEnter: requiresPermission('stalls'),
+        },
+      ],
+    },
+
+    // System Administrator Routes
+    {
+      path: '/system-admin',
+      component: MainLayout,
+      meta: { requiresRole: ['system_administrator'] },
+      children: [
+        {
+          path: '',
+          redirect: 'dashboard'
+        },
+        {
+          path: 'dashboard',
+          name: 'SystemAdminDashboard',
+          component: SystemAdminDashboard,
+          meta: { title: 'System Admin Dashboard', requiresRole: ['system_administrator'] },
+        },
+        {
+          path: 'business-owners',
+          name: 'BusinessOwners',
+          component: BusinessOwners,
+          meta: { title: 'Business Owners Management', requiresRole: ['system_administrator'] },
+        },
+        {
+          path: 'payments',
+          name: 'SubscriptionPayments',
+          component: Payments,
+          meta: { title: 'Subscription Payments', requiresRole: ['system_administrator'] },
+        },
+        {
+          path: 'reports',
+          name: 'SubscriptionReports',
+          component: Reports,
+          meta: { title: 'Subscription Reports', requiresRole: ['system_administrator'] },
         },
       ],
     },
