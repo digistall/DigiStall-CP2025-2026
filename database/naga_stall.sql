@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 19, 2025 at 09:14 AM
+-- Generation Time: Nov 26, 2025 at 04:46 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -116,6 +116,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `addOnsitePayment` (IN `p_stallholde
                     v_days_overdue as days_overdue,
                     'Payment recorded successfully. Stallholder status updated to PAID.' as message;
             END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkComplianceRecordExists` (IN `p_report_id` INT)   BEGIN
+  SELECT COUNT(*) AS record_exists
+  FROM violation_report
+  WHERE report_id = p_report_id;
+END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `checkExistingApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT)   BEGIN
     SELECT application_id 
@@ -654,6 +660,21 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveBranches` ()   BEGIN
     ORDER BY area, branch_name;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveInspectors` ()   BEGIN
+  SELECT 
+    inspector_id,
+    CONCAT(first_name, ' ', last_name) AS inspector_name,
+    first_name,
+    last_name,
+    email,
+    contact_no,
+    status,
+    date_hired
+  FROM inspector
+  WHERE status = 'active'
+  ORDER BY first_name, last_name;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllApplicants` ()   BEGIN
     SELECT * FROM applicant ORDER BY created_at DESC;
 END$$
@@ -884,6 +905,16 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallsDetailed` ()   BEGIN
     JOIN floor f ON s.floor_id = f.floor_id
     JOIN branch b ON f.branch_id = b.branch_id
     ORDER BY b.branch_name, f.floor_name, sec.section_name;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllViolationTypes` ()   BEGIN
+  SELECT 
+    violation_id,
+    ordinance_no,
+    violation_type,
+    details
+  FROM violation
+  ORDER BY violation_type;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantAdditionalInfo` (IN `p_applicant_id` INT)   BEGIN
@@ -1312,6 +1343,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallById` (IN `p_stall_id` INT)
     WHERE s.stall_id = p_stall_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderBranchId` (IN `p_stallholder_id` INT)   BEGIN
+  SELECT branch_id
+  FROM stallholder
+  WHERE stallholder_id = p_stallholder_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderById` (IN `p_stallholder_id` INT)   BEGIN
     SELECT 
         sh.stallholder_id,
@@ -1441,6 +1478,18 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallWithBranchInfo` (IN `p_stal
     JOIN floor f ON sec.floor_id = f.floor_id
     JOIN branch b ON f.branch_id = b.branch_id
     WHERE st.stall_id = p_stall_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getViolationPenaltiesByViolationId` (IN `p_violation_id` INT)   BEGIN
+  SELECT 
+    penalty_id,
+    violation_id,
+    offense_no,
+    penalty_amount,
+    remarks
+  FROM violation_penalty
+  WHERE violation_id = p_violation_id
+  ORDER BY offense_no;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `loginEmployee` (IN `p_username` VARCHAR(20), IN `p_session_token` VARCHAR(255), IN `p_ip_address` VARCHAR(45), IN `p_user_agent` TEXT)   BEGIN
@@ -1681,10 +1730,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_
       p_reference_number as referenceNumber,
       collected_by_name as collectedBy;
   END$$
-
--- =====================================================
--- 5. Get Payments for Manager's Branch
--- =====================================================$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BEGIN
     DECLARE current_date_str VARCHAR(8);
@@ -2562,6 +2607,7 @@ INSERT INTO `employee` (`employee_id`, `employee_username`, `employee_password_h
 (32, 'EMP3920', '$2a$12$2NnpRhDuRB1FAdTHB2D36ORZWsN4Z6CWCdeipi4xIb0XRUgTNIUAC', 'Jonas', 'Laurente', 'laurentejeno73@gmail.com', '09473430196', 1, 1, '[\"dashboard\",\"applicants\",\"stallholders\",\"payments\"]', 'Active', NULL, 1, '2025-11-05 13:20:59', '2025-11-06 09:17:17'),
 (33, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 23, 16, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11');
 
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `employee_activity_log`
@@ -2795,7 +2841,8 @@ INSERT INTO `migrations` (`migration_id`, `migration_name`, `version`, `executed
 (13, '014_fix_createApplicantComplete_parameters', '1.0.0', '2025-11-05 16:00:23'),
 (14, '018_complete_mobile_login_fix', '1.0.0', '2025-11-07 05:26:49'),
 (15, '019_fix_mobile_stored_procedures', '1.0.0', '2025-11-07 06:57:37'),
-(16, '022_compliance_system_enhancement', '1.0.0', '2025-11-17 03:52:29');
+(16, '022_compliance_system_enhancement', '1.0.0', '2025-11-17 03:52:29'),
+(18, '023_compliance_helper_procedures', '1.0.0', '2025-11-26 03:44:56');
 
 -- --------------------------------------------------------
 
@@ -2874,6 +2921,7 @@ INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amoun
 (42, 13, 'maya', 3500.00, '2025-11-13', '11:15:00', '2025-11', 'rental', 'BT-20251113-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - UnionBank', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
 (54, 13, 'onsite', 2400.00, '2025-11-18', '15:21:00', '2025-11', 'rental', 'RCP-20251118-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-11-18 07:22:03', '2025-11-18 07:22:03');
 
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `payment_status_log`
@@ -3837,12 +3885,9 @@ ALTER TABLE `admin`
 
 --
 -- AUTO_INCREMENT for table `applicant`
+--
 ALTER TABLE `applicant`
   MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
-
---
-ALTER TABLE `employee`
-  MODIFY `employee_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `auction`
@@ -3906,8 +3951,10 @@ ALTER TABLE `document_types`
 
 --
 -- AUTO_INCREMENT for table `employee`
+--
 ALTER TABLE `employee`
   MODIFY `employee_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+
 --
 -- AUTO_INCREMENT for table `employee_activity_log`
 --
@@ -3966,7 +4013,7 @@ ALTER TABLE `inspector_assignment`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `migration_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `migration_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `other_information`
@@ -3982,6 +4029,7 @@ ALTER TABLE `payment`
 
 --
 -- AUTO_INCREMENT for table `payments`
+--
 ALTER TABLE `payments`
   MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
@@ -4035,6 +4083,7 @@ ALTER TABLE `stall`
 
 --
 -- AUTO_INCREMENT for table `stallholder`
+--
 ALTER TABLE `stallholder`
   MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
@@ -4262,8 +4311,6 @@ ALTER TABLE `stall`
 --
 -- Constraints for table `stallholder`
 --
-SET FOREIGN_KEY_CHECKS=0;
-
 ALTER TABLE `stallholder`
   ADD CONSTRAINT `fk_stallholder_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_stallholder_created_by` FOREIGN KEY (`created_by_manager`) REFERENCES `branch_manager` (`branch_manager_id`) ON DELETE SET NULL,
@@ -4294,8 +4341,6 @@ ALTER TABLE `violation_report`
   ADD CONSTRAINT `fk_report_stall` FOREIGN KEY (`stall_id`) REFERENCES `stall` (`stall_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_report_stallholder` FOREIGN KEY (`stallholder_id`) REFERENCES `stallholder` (`stallholder_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_report_violation` FOREIGN KEY (`violation_id`) REFERENCES `violation` (`violation_id`) ON UPDATE CASCADE;
-
-SET FOREIGN_KEY_CHECKS=1;
 
 DELIMITER $$
 --
