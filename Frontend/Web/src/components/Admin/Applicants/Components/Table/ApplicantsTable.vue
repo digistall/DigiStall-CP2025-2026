@@ -11,7 +11,7 @@
           <div class="header-cell email-col">Email Address</div>
           <div class="header-cell phone-col">Phone Number</div>
           <div class="header-cell address-col">Address</div>
-          <div class="header-cell action-col">Status/Action</div>
+          <div class="header-cell action-col">Status</div>
         </div>
       </div>
 
