@@ -142,8 +142,8 @@ BEGIN
     
     -- Create business owner account
     INSERT INTO stall_business_owner (
-        business_owner_username,
-        business_owner_password_hash,
+        owner_username,
+        owner_password_hash,
         first_name,
         last_name,
         email,
@@ -333,7 +333,8 @@ CREATE PROCEDURE getAllBusinessOwnersWithSubscription()
 BEGIN
     SELECT 
         bo.business_owner_id,
-        bo.business_owner_username,
+        bo.owner_username,
+        CONCAT(bo.first_name, ' ', bo.last_name) as full_name,
         bo.first_name,
         bo.last_name,
         bo.email,
