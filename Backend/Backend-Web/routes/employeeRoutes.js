@@ -1,5 +1,6 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import {
   createEmployee,
   getAllEmployees,
@@ -49,7 +50,7 @@ router.use(authMiddleware.authenticateToken);
  * @access  Business Manager
  * @body    { firstName, lastName, email, phoneNumber, branchId, permissions, createdByManager }
  */
-router.post('/', createEmployee);
+router.post('/', viewOnlyForOwners, createEmployee);
 
 /**
  * @route   GET /api/employees
@@ -74,7 +75,7 @@ router.get('/:id', getEmployeeById);
  * @params  id - Employee ID
  * @body    { firstName, lastName, email, phoneNumber, permissions, status, updatedBy }
  */
-router.put('/:id', updateEmployee);
+router.put('/:id', viewOnlyForOwners, updateEmployee);
 
 /**
  * @route   PUT /api/employees/:id/permissions
@@ -83,7 +84,7 @@ router.put('/:id', updateEmployee);
  * @params  id - Employee ID
  * @body    { permissions }
  */
-router.put('/:id/permissions', updateEmployeePermissions);
+router.put('/:id/permissions', viewOnlyForOwners, updateEmployeePermissions);
 
 /**
  * @route   DELETE /api/employees/:id
@@ -92,7 +93,7 @@ router.put('/:id/permissions', updateEmployeePermissions);
  * @params  id - Employee ID
  * @body    { deletedBy }
  */
-router.delete('/:id', deleteEmployee);
+router.delete('/:id', viewOnlyForOwners, deleteEmployee);
 
 // ========================================
 // BRANCH-SPECIFIC OPERATIONS
@@ -118,7 +119,7 @@ router.get('/branch/:branchId', getEmployeesByBranch);
  * @params  id - Employee ID
  * @body    { newPassword, resetBy }
  */
-router.post('/:id/reset-password', resetEmployeePassword);
+router.post('/:id/reset-password', viewOnlyForOwners, resetEmployeePassword);
 
 /**
  * @route   POST /api/employees/logout

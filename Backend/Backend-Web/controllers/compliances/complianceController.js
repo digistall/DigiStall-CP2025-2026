@@ -3,6 +3,7 @@
 // Includes CRUD operations, filtering, and statistics
 
 import { createConnection } from '../../../config/database.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
 
 /**
  * Get all compliance records with optional filters
@@ -12,38 +13,56 @@ import { createConnection } from '../../../config/database.js';
 export const getAllComplianceRecords = async (req, res) => {
   let connection;
   try {
-    const { status, search, branch_id } = req.query;
+    const { status, search } = req.query;
     const userType = req.user?.userType;
-    const userBranchId = req.user?.branchId;
 
-    console.log('📋 Fetching compliance records with filters:', { status, search, branch_id, userType });
+    console.log('📋 Fetching compliance records with filters:', { status, search, userType });
 
     connection = await createConnection();
 
-    // Determine which branch to query based on user type
-    let queryBranchId = null;
-    if (userType === 'branch_manager' || userType === 'employee') {
-      // Branch managers and employees can only see their branch
-      queryBranchId = userBranchId || null;
-    } else if (userType === 'admin') {
-      // Admins can filter by specific branch or see all
-      queryBranchId = branch_id ? parseInt(branch_id) : null;
-    }
+    // Get branch filter based on user role and business_owner_managers table
+    const branchFilter = await getBranchFilter(req, connection);
 
-    // Prepare parameters - convert undefined to null for MySQL
+    // Prepare status and search parameters
     const statusParam = status || 'all';
     const searchParam = search || null;
 
-    console.log('🔧 Query parameters:', { queryBranchId, statusParam, searchParam });
+    let complianceRecords;
 
-    // Use stored procedure for efficient querying
-    const [records] = await connection.execute(
-      'CALL getAllComplianceRecords(?, ?, ?)',
-      [queryBranchId, statusParam, searchParam]
-    );
-
-    // The stored procedure returns results in first element
-    const complianceRecords = records[0];
+    if (branchFilter === null) {
+      // System administrator - see all compliance records
+      console.log('🔍 getAllComplianceRecords - System admin viewing all branches');
+      const [records] = await connection.execute(
+        'CALL getAllComplianceRecords(?, ?, ?)',
+        [null, statusParam, searchParam]
+      );
+      complianceRecords = records[0];
+    } else if (branchFilter.length === 0) {
+      // Business owner with no accessible branches
+      console.log('⚠️ getAllComplianceRecords - Business owner has no accessible branches');
+      complianceRecords = [];
+    } else if (branchFilter.length === 1) {
+      // Single branch (business manager or owner with one branch)
+      console.log(`🔍 getAllComplianceRecords - Fetching for branch: ${branchFilter[0]}`);
+      const [records] = await connection.execute(
+        'CALL getAllComplianceRecords(?, ?, ?)',
+        [branchFilter[0], statusParam, searchParam]
+      );
+      complianceRecords = records[0];
+    } else {
+      // Multiple branches (business owner with multiple branches)
+      console.log(`🔍 getAllComplianceRecords - Fetching for branches: ${branchFilter.join(', ')}`);
+      // Query each branch and combine results
+      const allRecords = [];
+      for (const branchId of branchFilter) {
+        const [records] = await connection.execute(
+          'CALL getAllComplianceRecords(?, ?, ?)',
+          [branchId, statusParam, searchParam]
+        );
+        allRecords.push(...records[0]);
+      }
+      complianceRecords = allRecords;
+    }
 
     console.log(`✅ Found ${complianceRecords.length} compliance records`);
 
@@ -159,7 +178,7 @@ export const createComplianceRecord = async (req, res) => {
     // Get branch_id from user or stallholder
     let branch_id = userBranchId;
     if (!branch_id) {
-      // If admin, get branch from stallholder using stored procedure
+      // If owner/admin, get branch from stallholder using stored procedure
       const [stallholderData] = await connection.execute(
         'CALL getStallholderBranchId(?)',
         [stallholder_id]
@@ -303,11 +322,11 @@ export const deleteComplianceRecord = async (req, res) => {
 
     console.log(`🗑️ Deleting compliance record ID: ${id}`);
 
-    // Only admins and branch managers can delete
-    if (userType !== 'admin' && userType !== 'branch_manager') {
+    // Only system admins, business owners, and business managers can delete
+    if (userType !== 'system_administrator' && userType !== 'stall_business_owner' && userType !== 'business_manager') {
       return res.status(403).json({
         success: false,
-        message: 'Only admins and branch managers can delete compliance records'
+        message: 'Only system administrators, business owners, and business managers can delete compliance records'
       });
     }
 
@@ -364,7 +383,7 @@ export const getComplianceStatistics = async (req, res) => {
     connection = await createConnection();
 
     // Determine branch filter
-    const branchId = userType === 'admin' ? null : userBranchId;
+    const branchId = (userType === 'system_administrator' || userType === 'stall_business_owner') ? null : userBranchId;
 
     const [stats] = await connection.execute(
       'CALL getComplianceStatistics(?)',

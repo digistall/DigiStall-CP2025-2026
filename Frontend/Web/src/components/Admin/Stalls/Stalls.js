@@ -92,7 +92,7 @@ export default {
       console.log('🔄 Event bus update received:', data)
       
       // Re-check floors and sections availability
-      if (this.currentUser?.userType === 'branch_manager') {
+      if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Re-checking floors and sections after event bus update...')
         this.hasFloorsSections = await this.checkFloorsAndSections()
         
@@ -204,9 +204,9 @@ export default {
         // Load stalls first - always allow viewing existing stalls
         await this.fetchStalls()
 
-        // For branch managers, check floors and sections availability for adding new stalls
+        // For business managers, check floors and sections availability for adding new stalls
         // But don't block access to viewing existing stalls
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           this.hasFloorsSections = await this.checkFloorsAndSections()
           if (!this.hasFloorsSections) {
             console.log('⚠️ No floors/sections available - will show warning when trying to add stalls')
@@ -444,13 +444,13 @@ export default {
     checkStallsPermission() {
       const userType = sessionStorage.getItem('userType')
 
-      // Admins and branch managers always have access (check both formats)
-      if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
+      // Admins and business managers always have access
+      if (userType === 'system_administrator' || userType === 'stall_business_owner' || userType === 'business_manager') {
         return true
       }
 
       // For employees, check specific permissions - NEW FORMAT (object)
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try new format first (object with permissions)
         const permissions = JSON.parse(sessionStorage.getItem('permissions') || '{}')
         if (permissions.stalls === true) {
@@ -603,8 +603,8 @@ export default {
       console.log('🎯 FAB clicked - checking floors and sections availability')
       console.log('🎯 Current user type:', this.currentUser?.userType)
       
-      // For branch managers, always re-check floors and sections in real-time
-      if (this.currentUser?.userType === 'branch_manager') {
+      // For business managers, always re-check floors and sections in real-time
+      if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Re-checking floors and sections availability in real-time...')
         this.hasFloorsSections = await this.checkFloorsAndSections()
         console.log('🎯 Real-time check - Has floors and sections:', this.hasFloorsSections)
@@ -622,8 +622,8 @@ export default {
 
     // Add stall functions
     async openAddStallModal() {
-      // For branch managers, check if floors and sections are available before allowing stall creation
-      if (this.currentUser?.userType === 'branch_manager') {
+      // For business managers, check if floors and sections are available before allowing stall creation
+      if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Checking floors and sections availability before opening stall modal...')
         this.hasFloorsSections = await this.checkFloorsAndSections()
         
@@ -661,7 +661,7 @@ export default {
         console.log('Handling new floor data:', newFloorData)
         
         // Re-check floors and sections availability after adding a floor
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           console.log('🔄 Re-checking floors and sections availability after floor addition...')
           this.hasFloorsSections = await this.checkFloorsAndSections()
           
@@ -685,7 +685,7 @@ export default {
         console.log('Handling new section data:', newSectionData)
         
         // Re-check floors and sections availability after adding a section
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           console.log('🔄 Re-checking floors and sections availability after section addition...')
           this.hasFloorsSections = await this.checkFloorsAndSections()
           
@@ -714,7 +714,7 @@ export default {
         console.log('🔄 Handling refresh data request - re-checking floors and sections...')
         
         // Re-check floors and sections availability
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           this.hasFloorsSections = await this.checkFloorsAndSections()
           
           if (this.hasFloorsSections) {

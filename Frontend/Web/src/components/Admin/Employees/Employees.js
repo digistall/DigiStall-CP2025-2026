@@ -223,15 +223,15 @@ export default {
 
           // Provide user feedback based on role
           if (this.employees.length === 0) {
-            if (currentUser.userType === "branch_manager") {
+            if (currentUser.userType === "business_manager") {
               console.log(
-                "ℹ️  No employees found - Branch manager has not created any employees yet"
+                "ℹ️  No employees found - Business manager has not created any employees yet"
               );
             } else {
               console.log("ℹ️  No employees found");
             }
           } else {
-            if (currentUser.userType === "branch_manager") {
+            if (currentUser.userType === "business_manager") {
               console.log(
                 `ℹ️  Showing ${this.employees.length} employees for branch ${userBranchId}`
               );

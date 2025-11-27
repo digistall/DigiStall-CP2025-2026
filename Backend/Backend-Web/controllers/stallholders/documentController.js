@@ -41,7 +41,7 @@ export const getBranchDocumentRequirements = async (req, res) => {
         CONCAT(bm.first_name, ' ', bm.last_name) as created_by_name
       FROM branch_document_requirements bdr
       INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-      LEFT JOIN branch_manager bm ON bdr.created_by_manager = bm.branch_manager_id
+      LEFT JOIN business_manager bm ON bdr.created_by_business_manager = bm.business_manager_id
       WHERE bdr.branch_id = ?
       ORDER BY dt.document_name ASC
     `, [branch_id]);
@@ -74,7 +74,7 @@ export const createBranchDocumentRequirement = async (req, res) => {
   try {
     const { document_type_id, is_required = 1, instructions } = req.body;
     const branch_id = req.user.branchId || req.user.branch_id;
-    const created_by_manager = req.user.userId || req.user.user_id || req.user.id || req.user.branch_manager_id;
+    const created_by_manager = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
 
     if (!branch_id) {
       return res.status(403).json({

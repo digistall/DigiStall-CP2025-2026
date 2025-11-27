@@ -1,4 +1,5 @@
 import { createConnection } from "../../../config/database.js";
+import { getBranchFilter } from "../../../middleware/rolePermissions.js";
 
 // Get all stalls for the authenticated user (branch manager or employee with stalls permission)
 export const getAllStalls = async (req, res) => {
@@ -23,15 +24,15 @@ export const getAllStalls = async (req, res) => {
       });
     }
 
+    // Get branch filter based on user role
+    const branchFilter = await getBranchFilter(req, connection);
+
     let stalls = [];
 
-    // Handle different user types (check both userType and role for compatibility)
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager: Get all stalls in their branch
-      const branchManagerId = req.user?.branchManagerId || userId;
-
-      console.log("Fetching stalls for branch manager ID:", branchManagerId);
-
+    // Handle different user types
+    if (branchFilter === null) {
+      // System administrator - see all stalls across all branches
+      console.log("🔍 getAllStalls - System admin viewing all branches");
       const [result] = await connection.execute(
         `SELECT 
           s.*,
@@ -39,8 +40,6 @@ export const getAllStalls = async (req, res) => {
           sec.section_name,
           f.floor_name,
           f.floor_number,
-          bm.first_name as manager_first_name,
-          bm.last_name as manager_last_name,
           b.area,
           b.location as branch_location,
           b.branch_name
@@ -48,14 +47,41 @@ export const getAllStalls = async (req, res) => {
         INNER JOIN section sec ON s.section_id = sec.section_id
         INNER JOIN floor f ON sec.floor_id = f.floor_id
         INNER JOIN branch b ON f.branch_id = b.branch_id
-        INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-        WHERE bm.branch_manager_id = ? AND s.status != 'Inactive' AND s.is_available = 1
-        ORDER BY s.created_at DESC`,
-        [branchManagerId]
+        WHERE s.status != 'Inactive' AND s.is_available = 1
+        ORDER BY s.created_at DESC`
       );
-
       stalls = result;
-    } else if (userType === "employee") {
+    } else if (branchFilter.length === 0) {
+      // Business owner with no accessible branches
+      console.log("⚠️ getAllStalls - Business owner has no accessible branches");
+      stalls = [];
+    } else if (userType === "business_manager" || userType === "stall_business_owner") {
+      // Business manager or business owner: Get stalls for accessible branches
+      console.log(`🔍 getAllStalls - Fetching stalls for branches: ${branchFilter.join(', ')}`);
+      
+      const placeholders = branchFilter.map(() => '?').join(',');
+      const query = `SELECT 
+        s.*,
+        s.stall_id as id,
+        sec.section_name,
+        f.floor_name,
+        f.floor_number,
+        bm.first_name as manager_first_name,
+        bm.last_name as manager_last_name,
+        b.area,
+        b.location as branch_location,
+        b.branch_name
+      FROM stall s
+      INNER JOIN section sec ON s.section_id = sec.section_id
+      INNER JOIN floor f ON sec.floor_id = f.floor_id
+      INNER JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+      WHERE b.branch_id IN (${placeholders}) AND s.status != 'Inactive' AND s.is_available = 1
+      ORDER BY s.created_at DESC`;
+      
+      const [result] = await connection.execute(query, branchFilter);
+      stalls = result;
+    } else if (userType === "business_employee") {
       // Employee: Check permissions first
       const permissions = req.user?.permissions || [];
 
@@ -113,9 +139,9 @@ export const getAllStalls = async (req, res) => {
       );
 
       stalls = result;
-    } else if (userType === "admin") {
-      // Admin: Get all stalls
-      console.log("Fetching all stalls for admin");
+    } else if (userType === "system_administrator" || userType === "stall_business_owner") {
+      // System admin or business owner: Get all stalls
+      console.log("Fetching all stalls for admin/owner");
 
       const [result] = await connection.execute(
         `SELECT 

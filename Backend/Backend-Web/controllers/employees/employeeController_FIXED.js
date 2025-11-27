@@ -1,5 +1,4 @@
 import { createConnection } from '../../config/database.js';
-import { getBranchFilter } from '../../middleware/rolePermissions.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -78,38 +77,29 @@ export async function getAllEmployees(req, res) {
             branchId: userBranchId,
             username: req.user?.username
         });
+        
+        if (!userBranchId) {
+            console.log('❌ getAllEmployees - No branch ID found in user session');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Branch ID not found in user session' 
+            });
+        }
 
         connection = await createConnection();
         
-        // Get branch filter based on user role and business_owner_managers table
-        const branchFilter = await getBranchFilter(req, connection);
+        console.log(`🔍 getAllEmployees - Fetching employees for branch: ${userBranchId}`);
         
-        let employees;
-        if (branchFilter === null) {
-            // System administrator - see all employees across all branches
-            console.log('🔍 getAllEmployees - System admin viewing all branches');
-            const [result] = await connection.execute(
-                'SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name FROM business_employee be LEFT JOIN branch b ON be.branch_id = b.branch_id LEFT JOIN business_manager bm ON be.created_by_manager = bm.business_manager_id WHERE be.status = ? ORDER BY be.created_at DESC',
-                ['Active']
-            );
-            employees = result;
-        } else if (branchFilter.length === 0) {
-            // Business owner with no accessible branches
-            console.log('⚠️ getAllEmployees - Business owner has no accessible branches');
-            employees = [];
-        } else {
-            // Business owner (multiple branches) or business manager (single branch)
-            console.log(`🔍 getAllEmployees - Fetching employees for branches: ${branchFilter.join(', ')}`);
-            const placeholders = branchFilter.map(() => '?').join(',');
-            const query = `SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name FROM business_employee be LEFT JOIN branch b ON be.branch_id = b.branch_id LEFT JOIN business_manager bm ON be.created_by_manager = bm.business_manager_id WHERE be.status = ? AND be.branch_id IN (${placeholders}) ORDER BY be.created_at DESC`;
-            const [result] = await connection.execute(query, ['Active', ...branchFilter]);
-            employees = result;
-        }
+        // Call stored procedure to get all business employees (correct procedure name)
+        const [[employees]] = await connection.execute(
+            'CALL getAllBusinessEmployees(?, ?, NULL, NULL)',
+            ['Active', userBranchId]
+        );
         
-        console.log(`✅ getAllEmployees - Found ${employees.length} employees`);
+        console.log(`✅ getAllEmployees - Found ${employees?.length || 0} employees for branch ${userBranchId}`);
         
         // Parse permissions for each employee
-        const employeesWithPermissions = employees.map(emp => ({
+        const employeesWithPermissions = (employees || []).map(emp => ({
             ...emp,
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
@@ -118,7 +108,7 @@ export async function getAllEmployees(req, res) {
             success: true, 
             data: employeesWithPermissions,
             metadata: {
-                branchFilter: branchFilter === null ? 'all' : branchFilter,
+                branchId: userBranchId,
                 count: employeesWithPermissions.length,
                 requestedBy: {
                     userId,

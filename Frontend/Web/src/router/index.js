@@ -405,14 +405,14 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // Check legacy requiresAdmin and requiresBranchManager
-  if (to.meta?.requiresAdmin && !hasRole('admin')) {
+  if (to.meta?.requiresAdmin && !hasRole('system_administrator', 'stall_business_owner')) {
     console.log('❌ Admin access required')
     next('/app/dashboard')
     return
   }
 
-  if (to.meta?.requiresBranchManager && !hasRole('admin', 'branch_manager')) {
-    console.log('❌ Branch manager or admin access required')
+  if (to.meta?.requiresBranchManager && !hasRole('system_administrator', 'stall_business_owner', 'business_manager')) {
+    console.log('❌ Business manager or admin access required')
     next('/app/dashboard')
     return
   }

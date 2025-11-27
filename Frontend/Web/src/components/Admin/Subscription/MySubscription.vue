@@ -81,7 +81,118 @@
           <p>No subscription found. Please contact the system administrator.</p>
         </div>
       </v-card-text>
+      <v-card-actions v-if="!loading && subscription">
+        <v-spacer></v-spacer>
+        <v-btn color="primary" @click="showUpgradeDialog = true">
+          <v-icon left>mdi-arrow-up-circle</v-icon>
+          Change Plan
+        </v-btn>
+      </v-card-actions>
     </v-card>
+
+    <!-- Available Plans Dialog -->
+    <v-dialog v-model="showUpgradeDialog" max-width="1200px" scrollable>
+      <v-card>
+        <v-card-title class="text-h5">
+          Choose Your Subscription Plan
+          <v-spacer></v-spacer>
+          <v-btn icon @click="showUpgradeDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        
+        <v-card-text class="pt-4">
+          <v-row v-if="loadingPlans" class="justify-center py-8">
+            <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          </v-row>
+          
+          <v-row v-else>
+            <v-col
+              v-for="plan in availablePlans"
+              :key="plan.plan_id"
+              cols="12"
+              md="4"
+            >
+              <v-card
+                :class="{ 'current-plan-card': plan.plan_id === subscription?.plan_id }"
+                elevation="3"
+                outlined
+              >
+                <v-card-title class="justify-center text-h5 pb-2">
+                  {{ plan.plan_name }}
+                  <v-chip
+                    v-if="plan.plan_id === subscription?.plan_id"
+                    color="success"
+                    size="small"
+                    class="ml-2"
+                  >
+                    Current
+                  </v-chip>
+                </v-card-title>
+                
+                <v-card-subtitle class="text-center">
+                  {{ plan.plan_description }}
+                </v-card-subtitle>
+                
+                <v-card-text>
+                  <div class="text-center mb-4">
+                    <div class="text-h3 primary--text font-weight-bold">
+                      ₱{{ formatCurrency(plan.monthly_fee) }}
+                    </div>
+                    <div class="text-caption grey--text">per month</div>
+                  </div>
+                  
+                  <v-divider class="mb-4"></v-divider>
+                  
+                  <div class="plan-features-list">
+                    <div class="feature-item-sm">
+                      <v-icon color="success" size="small">mdi-check-circle</v-icon>
+                      <span>{{ plan.max_branches }} Branch{{ plan.max_branches > 1 ? 'es' : '' }}</span>
+                    </div>
+                    <div class="feature-item-sm">
+                      <v-icon color="success" size="small">mdi-check-circle</v-icon>
+                      <span>{{ plan.max_employees }} Employee{{ plan.max_employees > 1 ? 's' : '' }}</span>
+                    </div>
+                    <div v-if="plan.features" class="feature-item-sm">
+                      <v-icon color="success" size="small">mdi-check-circle</v-icon>
+                      <span>{{ plan.features.max_stalls || 'Unlimited' }} Stalls</span>
+                    </div>
+                    <div class="feature-item-sm">
+                      <v-icon color="success" size="small">mdi-check-circle</v-icon>
+                      <span>{{ plan.features?.priority_support ? 'Priority' : 'Standard' }} Support</span>
+                    </div>
+                    <div class="feature-item-sm">
+                      <v-icon color="success" size="small">mdi-check-circle</v-icon>
+                      <span>{{ plan.features?.advanced_reporting ? 'Advanced' : 'Basic' }} Reporting</span>
+                    </div>
+                  </div>
+                </v-card-text>
+                
+                <v-card-actions class="justify-center pb-4">
+                  <v-btn
+                    v-if="plan.plan_id !== subscription?.plan_id"
+                    color="primary"
+                    block
+                    @click="selectPlan(plan)"
+                    :loading="selectingPlanId === plan.plan_id"
+                  >
+                    Select Plan
+                  </v-btn>
+                  <v-btn
+                    v-else
+                    color="grey"
+                    block
+                    disabled
+                  >
+                    Current Plan
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
 
     <!-- Payment History -->
     <v-card elevation="2">

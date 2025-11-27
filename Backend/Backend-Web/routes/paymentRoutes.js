@@ -1,6 +1,7 @@
 import express from 'express';
 import PaymentController from '../controllers/payments/paymentController.js';
 import authMiddleware from '../middleware/auth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import { authorizePermission } from '../middleware/enhancedAuth.js';
 
 const router = express.Router();
@@ -87,6 +88,7 @@ router.get('/generate-receipt-number',
  */
 router.post('/onsite', 
   authMiddleware.authenticateToken,
+  viewOnlyForOwners,
   PaymentController.addOnsitePayment
 );
 
