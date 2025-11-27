@@ -319,7 +319,7 @@
                 <strong>Premium Exclusive Benefits</strong>
               </div>
               <ul class="benefits-list">
-                <li>✨ Unlimited branches and employees</li>
+                <li>✨ More branches and employees</li>
                 <li>🎯 Priority 24/7 customer support</li>
                 <li>📊 Advanced analytics and reporting</li>
                 <li>🚀 Early access to new features</li>
