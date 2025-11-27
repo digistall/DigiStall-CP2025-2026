@@ -90,6 +90,24 @@ const hasPermission = (...permissions) => {
 }
 
 /**
+ * Get the appropriate dashboard path for the current user
+ */
+const getDashboardPath = () => {
+  const userData = sessionStorage.getItem('currentUser');
+  if (!userData) return '/app/dashboard';
+
+  try {
+    const user = JSON.parse(userData);
+    if (user.userType === 'system_administrator') {
+      return '/system-admin/dashboard';
+    }
+    return '/app/dashboard';
+  } catch {
+    return '/app/dashboard';
+  }
+}
+
+/**
  * Route guard: Require authentication
  * Usage: beforeEnter: requireAuth
  */
@@ -364,10 +382,12 @@ router.beforeEach(async (to, from, next) => {
     await authStore.initialize()
   }
 
-  // If trying to access login while authenticated, redirect to dashboard
+  // If trying to access login while authenticated, redirect to appropriate dashboard
   if (to.path === '/login' && isAuthenticated()) {
     console.log('✅ Already authenticated, redirecting to dashboard')
-    next('/app/dashboard')
+    const dashboardPath = getDashboardPath()
+    console.log('🔄 Redirecting to:', dashboardPath)
+    next(dashboardPath)
     return
   }
 
@@ -384,12 +404,19 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
+  // Prevent system administrators from accessing /app routes
+  if (to.path.startsWith('/app') && hasRole('system_administrator')) {
+    console.log('⚠️ System administrator trying to access /app route, redirecting to system admin dashboard')
+    next('/system-admin/dashboard')
+    return
+  }
+
   // Check role-based access
   if (to.meta?.requiresRole && to.meta.requiresRole.length > 0) {
     const roles = Array.isArray(to.meta.requiresRole) ? to.meta.requiresRole : [to.meta.requiresRole]
     if (!hasRole(...roles)) {
       console.log(`❌ Role check failed. Required: ${roles.join(', ')}`)
-      next('/app/dashboard')
+      next(getDashboardPath())
       return
     }
   }
@@ -399,7 +426,7 @@ router.beforeEach(async (to, from, next) => {
     const permissions = Array.isArray(to.meta.requiresPermission) ? to.meta.requiresPermission : [to.meta.requiresPermission]
     if (!hasPermission(...permissions)) {
       console.log(`❌ Permission check failed. Required: ${permissions.join(', ')}`)
-      next('/app/dashboard')
+      next(getDashboardPath())
       return
     }
   }
@@ -407,13 +434,13 @@ router.beforeEach(async (to, from, next) => {
   // Check legacy requiresAdmin and requiresBranchManager
   if (to.meta?.requiresAdmin && !hasRole('system_administrator', 'stall_business_owner')) {
     console.log('❌ Admin access required')
-    next('/app/dashboard')
+    next(getDashboardPath())
     return
   }
 
   if (to.meta?.requiresBranchManager && !hasRole('system_administrator', 'stall_business_owner', 'business_manager')) {
     console.log('❌ Business manager or admin access required')
-    next('/app/dashboard')
+    next(getDashboardPath())
     return
   }
 
