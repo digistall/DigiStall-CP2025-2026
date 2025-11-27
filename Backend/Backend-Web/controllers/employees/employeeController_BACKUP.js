@@ -1,5 +1,4 @@
 import { createConnection } from '../../config/database.js';
-import { getBranchFilter } from '../../middleware/rolePermissions.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -78,38 +77,29 @@ export async function getAllEmployees(req, res) {
             branchId: userBranchId,
             username: req.user?.username
         });
+        
+        if (!userBranchId) {
+            console.log('❌ getAllEmployees - No branch ID found in user session');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Branch ID not found in user session' 
+            });
+        }
 
         connection = await createConnection();
         
-        // Get branch filter based on user role and business_owner_managers table
-        const branchFilter = await getBranchFilter(req, connection);
+        console.log(`🔍 getAllEmployees - Fetching employees for branch: ${userBranchId}`);
         
-        let employees;
-        if (branchFilter === null) {
-            // System administrator - see all employees across all branches
-            console.log('🔍 getAllEmployees - System admin viewing all branches');
-            const [result] = await connection.execute(
-                'SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name FROM business_employee be LEFT JOIN branch b ON be.branch_id = b.branch_id LEFT JOIN business_manager bm ON be.created_by_manager = bm.business_manager_id WHERE be.status = ? ORDER BY be.created_at DESC',
-                ['Active']
-            );
-            employees = result;
-        } else if (branchFilter.length === 0) {
-            // Business owner with no accessible branches
-            console.log('⚠️ getAllEmployees - Business owner has no accessible branches');
-            employees = [];
-        } else {
-            // Business owner (multiple branches) or business manager (single branch)
-            console.log(`🔍 getAllEmployees - Fetching employees for branches: ${branchFilter.join(', ')}`);
-            const placeholders = branchFilter.map(() => '?').join(',');
-            const query = `SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name FROM business_employee be LEFT JOIN branch b ON be.branch_id = b.branch_id LEFT JOIN business_manager bm ON be.created_by_manager = bm.business_manager_id WHERE be.status = ? AND be.branch_id IN (${placeholders}) ORDER BY be.created_at DESC`;
-            const [result] = await connection.execute(query, ['Active', ...branchFilter]);
-            employees = result;
-        }
+        // Call stored procedure to get all business employees (correct procedure name)
+        const [[employees]] = await connection.execute(
+            'CALL getAllBusinessEmployees(?, ?, NULL, NULL)',
+            ['Active', userBranchId]
+        );
         
-        console.log(`✅ getAllEmployees - Found ${employees.length} employees`);
+        console.log(`✅ getAllEmployees - Found ${employees?.length || 0} employees for branch ${userBranchId}`);
         
         // Parse permissions for each employee
-        const employeesWithPermissions = employees.map(emp => ({
+        const employeesWithPermissions = (employees || []).map(emp => ({
             ...emp,
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
@@ -118,7 +108,7 @@ export async function getAllEmployees(req, res) {
             success: true, 
             data: employeesWithPermissions,
             metadata: {
-                branchFilter: branchFilter === null ? 'all' : branchFilter,
+                branchId: userBranchId,
                 count: employeesWithPermissions.length,
                 requestedBy: {
                     userId,
@@ -172,7 +162,7 @@ export async function getEmployeeById(req, res) {
         res.json({ success: true, data: employeeData });
     } catch (error) {
         console.error('Error getting employee:', error);
-        res.status(500).json({ success: false, message: 'Failed to get employee', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to get employee' });
     } finally {
         if (connection) await connection.end();
     }
@@ -194,9 +184,9 @@ export async function updateEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Verify employee belongs to the same branch (correct name: getBusinessEmployeeById)
+        // Verify employee belongs to the same branch
         const [[checkEmployee]] = await connection.execute(
-            'CALL getBusinessEmployeeById(?)',
+            'CALL getEmployeeById(?)',
             [id]
         );
         
@@ -226,7 +216,7 @@ export async function updateEmployee(req, res) {
         res.json({ success: true, message: 'Employee updated successfully' });
     } catch (error) {
         console.error('Error updating employee:', error);
-        res.status(500).json({ success: false, message: 'Failed to update employee', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to update employee' });
     } finally {
         if (connection) await connection.end();
     }
@@ -255,9 +245,9 @@ export async function updateEmployeePermissions(req, res) {
         
         connection = await createConnection();
         
-        // Verify employee belongs to the same branch (correct name: getBusinessEmployeeById)
+        // Verify employee belongs to the same branch
         const [[checkEmployee]] = await connection.execute(
-            'CALL getBusinessEmployeeById(?)',
+            'CALL getEmployeeById(?)',
             [id]
         );
         
@@ -270,9 +260,9 @@ export async function updateEmployeePermissions(req, res) {
         
         const permissionsJson = JSON.stringify(permissions);
         
-        // Call stored procedure (correct name: updateBusinessEmployee with null for other fields)
+        // Call stored procedure (passing null for fields we don't want to update)
         const [[result]] = await connection.execute(
-            'CALL updateBusinessEmployee(?, NULL, NULL, NULL, NULL, ?, NULL)',
+            'CALL updateEmployee(?, NULL, NULL, NULL, NULL, ?, NULL)',
             [id, permissionsJson]
         );
 
@@ -290,7 +280,7 @@ export async function updateEmployeePermissions(req, res) {
         });
     } catch (error) {
         console.error('Error updating employee permissions:', error);
-        res.status(500).json({ success: false, message: 'Failed to update employee permissions', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to update employee permissions' });
     } finally {
         if (connection) await connection.end();
     }
@@ -311,9 +301,9 @@ export async function deleteEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Verify employee belongs to the same branch (correct name: getBusinessEmployeeById)
+        // Verify employee belongs to the same branch
         const [[checkEmployee]] = await connection.execute(
-            'CALL getBusinessEmployeeById(?)',
+            'CALL getEmployeeById(?)',
             [id]
         );
         
@@ -324,9 +314,9 @@ export async function deleteEmployee(req, res) {
             });
         }
         
-        // Call stored procedure (correct name: deleteBusinessEmployee)
+        // Call stored procedure
         const [[result]] = await connection.execute(
-            'CALL deleteBusinessEmployee(?)',
+            'CALL deleteEmployee(?)',
             [id]
         );
 
@@ -340,7 +330,7 @@ export async function deleteEmployee(req, res) {
         res.json({ success: true, message: 'Employee deactivated successfully' });
     } catch (error) {
         console.error('Error deleting employee:', error);
-        res.status(500).json({ success: false, message: 'Failed to delete employee', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to delete employee' });
     } finally {
         if (connection) await connection.end();
     }
@@ -360,9 +350,9 @@ export async function loginEmployee(req, res) {
 
         connection = await createConnection();
         
-        // Call stored procedure to get employee by username (correct name: getBusinessEmployeeByUsername)
+        // Call stored procedure to get employee by username
         const [[employees]] = await connection.execute(
-            'CALL getBusinessEmployeeByUsername(?)',
+            'CALL getEmployeeByUsername(?)',
             [username]
         );
 
@@ -385,17 +375,17 @@ export async function loginEmployee(req, res) {
 
         // Generate session token for the stored procedure
         const sessionToken = jwt.sign(
-            { employeeId: employee.business_employee_id, timestamp: Date.now() },
+            { employeeId: employee.employee_id, timestamp: Date.now() },
             process.env.JWT_SECRET || 'fallback_secret',
             { expiresIn: '24h' }
         );
         
-        // Call stored procedure to create session and update last_login (correct name: loginBusinessEmployee)
+        // Call stored procedure to create session and update last_login
         const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
         const userAgent = req.headers['user-agent'] || 'unknown';
         
         await connection.execute(
-            'CALL loginBusinessEmployee(?, ?, ?, ?)',
+            'CALL loginEmployee(?, ?, ?, ?)',
             [username, sessionToken, ipAddress, userAgent]
         );
 
@@ -404,15 +394,17 @@ export async function loginEmployee(req, res) {
 
         const token = jwt.sign(
             {
-                userId: employee.business_employee_id,
-                employeeId: employee.business_employee_id,
+                userId: employee.employee_id,
+                employeeId: employee.employee_id,
                 username: employee.employee_username,
                 email: employee.email,
-                role: 'business_employee',
-                type: 'business_employee',
-                userType: 'business_employee',
+                role: 'employee',
+                type: 'employee',
+                userType: 'employee',
                 branchId: employee.branch_id,
                 branchName: employee.branch_name,
+                area: employee.area,
+                location: employee.location,
                 fullName: `${employee.first_name} ${employee.last_name}`,
                 permissions: permissions
             },
@@ -425,20 +417,22 @@ export async function loginEmployee(req, res) {
             message: 'Employee login successful',
             token,
             user: {
-                id: employee.business_employee_id,
-                employeeId: employee.business_employee_id,
+                id: employee.employee_id,
+                employeeId: employee.employee_id,
                 username: employee.employee_username,
                 email: employee.email,
                 firstName: employee.first_name,
                 lastName: employee.last_name,
                 fullName: `${employee.first_name} ${employee.last_name}`,
                 phoneNumber: employee.phone_number,
-                role: 'business_employee',
-                type: 'business_employee',
-                userType: 'business_employee',
+                role: 'employee',
+                type: 'employee',
+                userType: 'employee',
                 branch: {
                     id: employee.branch_id,
-                    name: employee.branch_name
+                    name: employee.branch_name,
+                    area: employee.area,
+                    location: employee.location
                 },
                 permissions: permissions
             }
@@ -457,26 +451,7 @@ export async function loginEmployee(req, res) {
 }
 
 export async function logoutEmployee(req, res) {
-    let connection;
-    try {
-        const sessionToken = req.headers.authorization?.split(' ')[1];
-        
-        if (sessionToken) {
-            connection = await createConnection();
-            // Call stored procedure (correct name: logoutBusinessEmployee)
-            await connection.execute(
-                'CALL logoutBusinessEmployee(?)',
-                [sessionToken]
-            );
-        }
-        
-        res.json({ success: true, message: 'Logout successful' });
-    } catch (error) {
-        console.error('Error logging out employee:', error);
-        res.json({ success: true, message: 'Logout successful' });
-    } finally {
-        if (connection) await connection.end();
-    }
+    res.json({ success: true, message: 'Logout successful' });
 }
 
 export async function resetEmployeePassword(req, res) {
@@ -484,7 +459,7 @@ export async function resetEmployeePassword(req, res) {
     try {
         const { id } = req.params;
         const userBranchId = req.user?.branchId;
-        const userId = req.user?.userId || req.user?.businessManagerId;
+        const userId = req.user?.userId || req.user?.branchManagerId;
         
         if (!userBranchId) {
             return res.status(400).json({ 
@@ -495,9 +470,9 @@ export async function resetEmployeePassword(req, res) {
         
         connection = await createConnection();
         
-        // Verify employee belongs to the same branch (correct name: getBusinessEmployeeById)
+        // Verify employee belongs to the same branch
         const [[checkEmployee]] = await connection.execute(
-            'CALL getBusinessEmployeeById(?)',
+            'CALL getEmployeeById(?)',
             [id]
         );
         
@@ -512,9 +487,9 @@ export async function resetEmployeePassword(req, res) {
         const newPassword = Math.random().toString(36).substring(2, 10);
         const hashedPassword = await bcrypt.hash(newPassword, 12);
         
-        // Call stored procedure (correct name: resetBusinessEmployeePassword)
+        // Call stored procedure
         const [[result]] = await connection.execute(
-            'CALL resetBusinessEmployeePassword(?, ?, ?)',
+            'CALL resetEmployeePassword(?, ?, ?)',
             [id, hashedPassword, userId]
         );
 
@@ -532,7 +507,7 @@ export async function resetEmployeePassword(req, res) {
         });
     } catch (error) {
         console.error('Error resetting password:', error);
-        res.status(500).json({ success: false, message: 'Failed to reset password', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to reset password' });
     } finally {
         if (connection) await connection.end();
     }
@@ -560,14 +535,14 @@ export async function getEmployeesByBranch(req, res) {
         
         connection = await createConnection();
         
-        // Call stored procedure (correct name: getBusinessEmployeesByBranch)
+        // Call stored procedure
         const [[employees]] = await connection.execute(
-            'CALL getBusinessEmployeesByBranch(?, ?)',
+            'CALL getEmployeesByBranch(?, ?)',
             [branchId, 'Active']
         );
         
         // Parse permissions for each employee
-        const employeesWithPermissions = (employees || []).map(emp => ({
+        const employeesWithPermissions = employees.map(emp => ({
             ...emp,
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
@@ -575,7 +550,7 @@ export async function getEmployeesByBranch(req, res) {
         res.json({ success: true, data: employeesWithPermissions });
     } catch (error) {
         console.error('Error getting employees by branch:', error);
-        res.status(500).json({ success: false, message: 'Failed to get employees', error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to get employees' });
     } finally {
         if (connection) await connection.end();
     }

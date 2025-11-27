@@ -42,21 +42,21 @@ export default {
           name: 'Employees',
           route: '/app/employees',
           description: 'Manage employee accounts and permissions',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'], // Available for all management roles
+          roles: ['business_manager', 'stall_business_owner', 'system_administrator'], // Available for all management roles
         },
         { 
           id: 7, 
           icon: 'mdi-account-group', 
           name: 'Vendors', 
           route: '/app/vendors',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
         },
         {
           id: 8,
           icon: 'mdi-account-multiple',
           name: 'Stallholders',
           route: '/app/stallholders',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
         },
         {
           id: 9,
@@ -97,13 +97,6 @@ export default {
           roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
         },
         {
-          id: 12,
-          icon: 'mdi-shield-check',
-          name: 'Compliances',
-          route: '/app/compliances',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
-        },
-        {
           id: 13,
           icon: 'mdi-credit-card-outline',
           name: 'My Subscription',
@@ -126,21 +119,22 @@ export default {
     isAdmin() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-      return userType === 'admin' || currentUser.userType === 'admin'
+      return userType === 'system_administrator' || userType === 'stall_business_owner' || 
+             currentUser.userType === 'system_administrator' || currentUser.userType === 'stall_business_owner'
     },
 
     // Check if current user is employee
     isEmployee() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-      return userType === 'employee' || currentUser.userType === 'employee'
+      return userType === 'business_employee' || currentUser.userType === 'business_employee'
     },
 
     // Get current user permissions - Return as object { permission: true/false }
     userPermissions() {
       const userType = sessionStorage.getItem('userType')
 
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try to get permissions from currentUser first (most reliable)
         const currentUser = sessionStorage.getItem('currentUser')
         if (currentUser) {
@@ -373,7 +367,7 @@ export default {
         console.log('Has stalls permission:', this.hasStallsPermission)
 
         // EXTRA DEFENSIVE CHECK: If this is an employee, double-check permissions
-        if (userType === 'employee') {
+        if (userType === 'business_employee') {
           // Check new format first
           const permissions = sessionStorage.getItem('permissions')
           if (permissions) {

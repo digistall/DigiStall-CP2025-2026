@@ -40,10 +40,10 @@ export default {
       return this.userType === 'system_administrator'
     },
     isAdmin() {
-      return this.userType === 'admin' || this.userType === 'stall_business_owner'
+      return this.userType === 'system_administrator' || this.userType === 'stall_business_owner'
     },
     isEmployee() {
-      return this.userType === 'employee' || this.userType === 'business_employee'
+      return this.userType === 'business_employee'
     },
     currentUserData() {
       if (this.isSystemAdministrator) return this.adminData
@@ -305,7 +305,7 @@ export default {
         if (storedCurrentUser) {
           try {
             const userData = JSON.parse(storedCurrentUser)
-            if (userData.userType === 'employee') {
+            if (userData.userType === 'business_employee') {
               // Get branch name from various possible sources
               const branchName = userData.branchName || userData.branch_name || userData.branch?.branch_name || userData.branch?.name || null
               

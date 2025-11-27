@@ -8,8 +8,12 @@ export default {
     return {
       subscription: null,
       payments: [],
+      availablePlans: [],
       loading: false,
       loadingPayments: false,
+      loadingPlans: false,
+      showUpgradeDialog: false,
+      selectingPlanId: null,
       headers: [
         { title: 'Payment ID', value: 'payment_id' },
         { title: 'Receipt #', value: 'receipt_number' },
@@ -23,6 +27,7 @@ export default {
   },
   mounted() {
     this.loadSubscriptionData()
+    this.loadAvailablePlans()
   },
   methods: {
     async loadSubscriptionData() {
@@ -31,17 +36,10 @@ export default {
       
       try {
         const token = sessionStorage.getItem('authToken')
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-        const businessOwnerId = currentUser.id || currentUser.business_owner_id || currentUser.adminId
         
-        if (!businessOwnerId) {
-          console.error('No business owner ID found')
-          return
-        }
-        
-        // Get subscription details
+        // Get subscription details using simplified endpoint
         const subResponse = await axios.get(
-          `${API_BASE_URL}/api/subscriptions/business-owner/${businessOwnerId}`,
+          `${API_BASE_URL}/api/subscriptions/my-subscription`,
           { headers: { Authorization: `Bearer ${token}` } }
         )
         
@@ -55,9 +53,9 @@ export default {
         
         this.loading = false
         
-        // Get payment history
+        // Get payment history using simplified endpoint
         const paymentsResponse = await axios.get(
-          `${API_BASE_URL}/api/subscriptions/payment-history/${businessOwnerId}`,
+          `${API_BASE_URL}/api/subscriptions/my-payment-history`,
           { headers: { Authorization: `Bearer ${token}` } }
         )
         
@@ -69,11 +67,68 @@ export default {
         }
       } catch (error) {
         console.error('Failed to load subscription data:', error)
+        if (error.response?.status === 404) {
+          console.log('No subscription found for this user')
+        }
       } finally {
         this.loading = false
         this.loadingPayments = false
       }
     },
+    
+    async loadAvailablePlans() {
+      this.loadingPlans = true
+      
+      try {
+        const token = sessionStorage.getItem('authToken')
+        
+        const response = await axios.get(
+          `${API_BASE_URL}/api/subscriptions/plans`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        
+        if (response.data.success) {
+          this.availablePlans = response.data.data.map(plan => ({
+            ...plan,
+            features: typeof plan.features === 'string' ? JSON.parse(plan.features) : plan.features
+          }))
+        }
+      } catch (error) {
+        console.error('Failed to load subscription plans:', error)
+      } finally {
+        this.loadingPlans = false
+      }
+    },
+    
+    async selectPlan(plan) {
+      if (confirm(`Are you sure you want to change to ${plan.plan_name} plan? Monthly fee: ₱${this.formatCurrency(plan.monthly_fee)}`)) {
+        this.selectingPlanId = plan.plan_id
+        
+        try {
+          const token = sessionStorage.getItem('authToken')
+          
+          const response = await axios.post(
+            `${API_BASE_URL}/api/subscriptions/change-plan`,
+            { planId: plan.plan_id },
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          
+          if (response.data.success) {
+            alert('Subscription plan updated successfully! Your new plan is now active.')
+            this.showUpgradeDialog = false
+            await this.loadSubscriptionData() // Reload subscription data
+          } else {
+            alert('Failed to update subscription plan: ' + response.data.message)
+          }
+        } catch (error) {
+          console.error('Failed to update subscription plan:', error)
+          alert('Error updating subscription plan. Please contact support.')
+        } finally {
+          this.selectingPlanId = null
+        }
+      }
+    },
+    
     formatCurrency(value) {
       return new Intl.NumberFormat('en-PH', {
         minimumFractionDigits: 2,

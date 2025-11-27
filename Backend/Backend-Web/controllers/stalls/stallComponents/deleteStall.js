@@ -21,10 +21,10 @@ export const deleteStall = async (req, res) => {
     }
 
     // Authorization check based on user type
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager authorization (existing logic)
-      console.log("🔍 Authorizing branch manager for stall deletion");
-    } else if (userType === "employee") {
+    if (userType === "business_manager") {
+      // Business manager authorization (existing logic)
+      console.log("🔍 Authorizing business manager for stall deletion");
+    } else if (userType === "business_employee") {
       // Employee authorization - check permissions
       const permissions = req.user?.permissions || [];
       const hasStallsPermission = Array.isArray(permissions)
@@ -55,18 +55,18 @@ export const deleteStall = async (req, res) => {
     // Check if stall exists and user has permission to delete it
     let stallQuery, stallParams;
 
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager: Check if stall belongs to their branch
-      const branchManagerId = req.user?.branchManagerId || userId;
+    if (userType === "business_manager") {
+      // Business manager: Check if stall belongs to their branch
+      const businessManagerId = req.user?.businessManagerId || userId;
       stallQuery = `SELECT s.stall_id, s.stall_no 
                    FROM stall s
                    INNER JOIN section sec ON s.section_id = sec.section_id
                    INNER JOIN floor f ON sec.floor_id = f.floor_id
                    INNER JOIN branch b ON f.branch_id = b.branch_id
-                   INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-                   WHERE s.stall_id = ? AND bm.branch_manager_id = ?`;
-      stallParams = [id, branchManagerId];
-    } else if (userType === "employee") {
+                   INNER JOIN business_manager bm ON b.branch_id = bm.branch_id
+                   WHERE s.stall_id = ? AND bm.business_manager_id = ?`;
+      stallParams = [id, businessManagerId];
+    } else if (userType === "business_employee") {
       // Employee: Check if stall belongs to their branch
       const branchId = req.user?.branchId;
       if (!branchId) {

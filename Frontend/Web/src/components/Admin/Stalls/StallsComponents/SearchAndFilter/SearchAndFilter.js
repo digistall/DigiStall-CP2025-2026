@@ -261,12 +261,12 @@ export default {
       const userType = sessionStorage.getItem('userType')
 
       // Admins and branch managers always have access (check both formats)
-      if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
+      if (userType === 'system_administrator' || userType === 'stall_business_owner' || userType === 'business_manager') {
         return true
       }
 
       // For employees, check specific permissions - Handle both new and old formats
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try new format first (object)
         const permissions = JSON.parse(sessionStorage.getItem('permissions') || '{}')
         if (permissions.stalls === true) {

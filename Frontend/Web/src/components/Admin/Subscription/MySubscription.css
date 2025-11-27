@@ -81,3 +81,26 @@
   color: #2c3e50;
   font-size: 14px;
 }
+
+/* Plan Selection Dialog Styles */
+.current-plan-card {
+  border: 2px solid #4caf50 !important;
+  background-color: #f1f8f4 !important;
+}
+
+.plan-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-item-sm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.feature-item-sm span {
+  color: #2c3e50;
+}

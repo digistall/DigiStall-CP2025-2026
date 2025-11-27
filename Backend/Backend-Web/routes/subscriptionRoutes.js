@@ -1,5 +1,5 @@
 // ===== SUBSCRIPTION MANAGEMENT ROUTES =====
-// System Administrator only routes for managing subscriptions
+// Routes for managing subscriptions (System Administrator and Business Owners)
 
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
@@ -15,16 +15,98 @@ import {
 
 const router = express.Router();
 
-// Apply authentication middleware - System Administrator only
+// Apply authentication middleware to all routes
 router.use(authMiddleware.authenticateToken);
-router.use(authMiddleware.authenticateSystemAdministrator);
+
+// ===== BUSINESS OWNER ROUTES (view own subscription and change plans) =====
 
 /**
  * @route   GET /api/subscriptions/plans
- * @desc    Get all subscription plans
- * @access  System Administrator
+ * @desc    Get all subscription plans (available to business owners for selection)
+ * @access  Business Owner, System Administrator
  */
 router.get('/plans', getAllSubscriptionPlans);
+
+/**
+ * @route   GET /api/subscriptions/my-subscription
+ * @desc    Get current user's subscription details
+ * @access  Business Owner
+ */
+router.get('/my-subscription', async (req, res, next) => {
+  // Get business owner ID from authenticated user
+  req.params.businessOwnerId = req.user?.userId || req.user?.business_owner_id || req.user?.businessOwnerId;
+  next();
+}, getBusinessOwnerSubscription);
+
+/**
+ * @route   GET /api/subscriptions/my-payment-history
+ * @desc    Get current user's payment history
+ * @access  Business Owner
+ */
+router.get('/my-payment-history', async (req, res, next) => {
+  // Get business owner ID from authenticated user
+  req.params.businessOwnerId = req.user?.userId || req.user?.business_owner_id || req.user?.businessOwnerId;
+  next();
+}, getBusinessOwnerPaymentHistory);
+
+/**
+ * @route   POST /api/subscriptions/change-plan
+ * @desc    Change subscription plan for current user
+ * @access  Business Owner
+ */
+router.post('/change-plan', async (req, res) => {
+  try {
+    const businessOwnerId = req.user?.userId || req.user?.business_owner_id || req.user?.businessOwnerId;
+    const { planId } = req.body;
+    
+    if (!planId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Plan ID is required'
+      });
+    }
+    
+    // Import createConnection here to avoid circular dependency
+    const { createConnection } = await import('../../config/database.js');
+    const connection = await createConnection();
+    
+    try {
+      // Update subscription plan
+      const [result] = await connection.execute(
+        `UPDATE business_owner_subscription 
+         SET plan_id = ?, 
+             updated_at = NOW()
+         WHERE business_owner_id = ?`,
+        [planId, businessOwnerId]
+      );
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Subscription not found'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Subscription plan updated successfully'
+      });
+    } finally {
+      await connection.end();
+    }
+  } catch (error) {
+    console.error('❌ Error changing subscription plan:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to change subscription plan',
+      error: error.message
+    });
+  }
+});
+
+// ===== SYSTEM ADMINISTRATOR ROUTES =====
+// Apply System Administrator authentication to routes below
+router.use(authMiddleware.authenticateSystemAdministrator);
 
 /**
  * @route   POST /api/subscriptions/business-owner
