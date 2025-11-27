@@ -47,15 +47,15 @@ router.use(authMiddleware.authenticateToken);
 /**
  * @route   POST /api/employees
  * @desc    Create new business employee with auto-generated credentials
- * @access  Business Manager
+ * @access  Business Manager and Business Owner
  * @body    { firstName, lastName, email, phoneNumber, branchId, permissions, createdByManager }
  */
-router.post('/', viewOnlyForOwners, createEmployee);
+router.post('/', createEmployee);
 
 /**
  * @route   GET /api/employees
  * @desc    Get all business employees with filtering options (filtered by user's branch)
- * @access  Business Manager
+ * @access  Business Manager and Business Owner
  * @query   ?status=active&search=john&page=1&limit=50&sortBy=created_at&sortOrder=DESC
  */
 router.get('/', getAllEmployees);
@@ -63,7 +63,7 @@ router.get('/', getAllEmployees);
 /**
  * @route   GET /api/employees/:id
  * @desc    Get business employee by ID with detailed information
- * @access  Business Manager
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  */
 router.get('/:id', getEmployeeById);
@@ -71,29 +71,29 @@ router.get('/:id', getEmployeeById);
 /**
  * @route   PUT /api/employees/:id
  * @desc    Update business employee information
- * @access  Business Manager
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  * @body    { firstName, lastName, email, phoneNumber, permissions, status, updatedBy }
  */
-router.put('/:id', viewOnlyForOwners, updateEmployee);
+router.put('/:id', updateEmployee);
 
 /**
  * @route   PUT /api/employees/:id/permissions
  * @desc    Update business employee permissions
- * @access  Business Manager
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  * @body    { permissions }
  */
-router.put('/:id/permissions', viewOnlyForOwners, updateEmployeePermissions);
+router.put('/:id/permissions', updateEmployeePermissions);
 
 /**
  * @route   DELETE /api/employees/:id
  * @desc    Delete (deactivate) business employee
- * @access  Business Manager
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  * @body    { deletedBy }
  */
-router.delete('/:id', viewOnlyForOwners, deleteEmployee);
+router.delete('/:id', deleteEmployee);
 
 // ========================================
 // BRANCH-SPECIFIC OPERATIONS
@@ -115,11 +115,11 @@ router.get('/branch/:branchId', getEmployeesByBranch);
 /**
  * @route   POST /api/employees/:id/reset-password
  * @desc    Reset employee password by manager
- * @access  Manager
+ * @access  Manager and Business Owner
  * @params  id - Employee ID
  * @body    { newPassword, resetBy }
  */
-router.post('/:id/reset-password', viewOnlyForOwners, resetEmployeePassword);
+router.post('/:id/reset-password', resetEmployeePassword);
 
 /**
  * @route   POST /api/employees/logout
