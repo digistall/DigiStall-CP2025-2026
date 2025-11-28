@@ -1,9 +1,17 @@
 import axios from 'axios'
+import ReportCards from './Components/Cards/ReportCards.vue'
+import PlanDistributionTable from './Components/Table/PlanDistributionTable.vue'
+import ExpiringSubscriptionsTable from './Components/Table/ExpiringSubscriptionsTable.vue'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '')
 
 export default {
   name: 'SystemAdminReports',
+  components: {
+    ReportCards,
+    PlanDistributionTable,
+    ExpiringSubscriptionsTable
+  },
   data() {
     return {
       loading: false,

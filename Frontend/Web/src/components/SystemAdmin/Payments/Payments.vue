@@ -1,112 +1,176 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <div class="payments-page">
-    <h1 class="page-title">Subscription Payments</h1>
+  <v-app>
+    <v-main>
+      <v-container fluid class="payments-page">
+        
+        <!-- Search and Filter Component -->
+        <PaymentsSearch
+          :businessOwners="businessOwners"
+          :paymentMethods="paymentMethods"
+          @search="handleSearch"
+          @filter="handleFilter"
+        />
 
-    <!-- Filter Section -->
-    <v-card class="mb-4" elevation="2">
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="4">
-            <v-select
-              v-model="filter.businessOwnerId"
-              :items="businessOwners"
-              item-title="full_name"
-              item-value="business_owner_id"
-              label="Filter by Business Owner"
-              clearable
-              @update:modelValue="loadPayments"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-select
-              v-model="filter.status"
-              :items="['Completed', 'Pending', 'Failed', 'Refunded']"
-              label="Filter by Status"
-              clearable
-              @update:modelValue="loadPayments"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-select
-              v-model="filter.paymentMethod"
-              :items="paymentMethods"
-              label="Filter by Payment Method"
-              clearable
-              @update:modelValue="loadPayments"
-            ></v-select>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-
-    <!-- Payments Table -->
-    <v-card elevation="2">
-      <v-card-text>
-        <v-data-table
-          :headers="headers"
-          :items="payments"
+        <!-- Payments Table -->
+        <PaymentsTable
+          :payments="payments"
           :loading="loading"
-          class="elevation-1"
-        >
-          <template #[`item.payment_status`]="{ item }">
-            <v-chip
-              :color="getPaymentStatusColor(item.payment_status)"
-              text-color="white"
-              small
-            >
-              {{ item.payment_status }}
-            </v-chip>
-          </template>
-          <template #[`item.amount`]="{ item }">
-            ₱{{ formatCurrency(item.amount) }}
-          </template>
-          <template #[`item.receipt_number`]="{ item }">
-            <v-chip size="small" color="primary" variant="outlined">
-              {{ item.receipt_number }}
-            </v-chip>
-          </template>
-        </v-data-table>
-      </v-card-text>
-    </v-card>
+          :headers="headers"
+          @format-currency="formatCurrency"
+          @get-payment-status-color="getPaymentStatusColor"
+        />
 
-    <!-- Payment Summary -->
-    <v-row class="mt-6">
-      <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text>
-            <div class="summary-label">Total Payments</div>
-            <div class="summary-value">{{ payments.length }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text>
-            <div class="summary-label">Total Amount</div>
-            <div class="summary-value">₱{{ formatCurrency(totalAmount) }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text>
-            <div class="summary-label">Completed</div>
-            <div class="summary-value completed">{{ completedCount }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text>
-            <div class="summary-label">Pending</div>
-            <div class="summary-value pending">{{ pendingCount }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </div>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
-<script src="./Payments.js"></script>
-<style scoped src="./Payments.css"></style>
+<script>
+import PaymentsSearch from './Components/Search/PaymentsSearch.vue'
+import PaymentsTable from './Components/Table/PaymentsTable.vue'
+import axios from 'axios'
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '')
+
+export default {
+  name: 'SubscriptionPayments',
+  components: {
+    PaymentsSearch,
+    PaymentsTable
+  },
+  data() {
+    return {
+      payments: [],
+      allPayments: [],
+      businessOwners: [],
+      loading: false,
+      filter: {
+        businessOwnerId: null,
+        status: null,
+        paymentMethod: null
+      },
+      searchQuery: '',
+      paymentMethods: ['Cash', 'Bank Transfer', 'Credit Card', 'Debit Card', 'Online Payment', 'Check'],
+      headers: [
+        { title: 'Payment ID', value: 'payment_id' },
+        { title: 'Receipt #', value: 'receipt_number' },
+        { title: 'Business Owner', value: 'owner_name' },
+        { title: 'Amount', value: 'amount' },
+        { title: 'Payment Date', value: 'payment_date' },
+        { title: 'Method', value: 'payment_method' },
+        { title: 'Status', value: 'payment_status' },
+        { title: 'Reference', value: 'reference_number' },
+        { title: 'Period', value: 'payment_period' }
+      ]
+    }
+  },
+  mounted() {
+    this.loadBusinessOwners()
+    this.loadPayments()
+  },
+  methods: {
+    handleSearch(query) {
+      this.searchQuery = query
+      this.applySearchAndFilters()
+    },
+    handleFilter(filterData) {
+      this.filter = filterData
+      this.loadPayments()
+    },
+    async loadBusinessOwners() {
+      try {
+        const token = sessionStorage.getItem('authToken')
+        const response = await axios.get(`${API_BASE_URL}/api/subscriptions/business-owners`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (response.data.success) {
+          this.businessOwners = response.data.data
+        }
+      } catch (error) {
+        console.error('Failed to load business owners:', error)
+      }
+    },
+    async loadPayments() {
+      this.loading = true
+      try {
+        const token = sessionStorage.getItem('authToken')
+        const ownersResponse = await axios.get(`${API_BASE_URL}/api/subscriptions/business-owners`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (ownersResponse.data.success) {
+          const allPayments = []
+          
+          for (const owner of ownersResponse.data.data) {
+            const paymentResponse = await axios.get(
+              `${API_BASE_URL}/api/subscriptions/payment-history/${owner.business_owner_id}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            )
+            
+            if (paymentResponse.data.success) {
+              const ownerPayments = paymentResponse.data.data.map(p => ({
+                ...p,
+                payment_period: `${p.payment_period_start} to ${p.payment_period_end}`,
+                owner_name: owner.full_name
+              }))
+              allPayments.push(...ownerPayments)
+            }
+          }
+          
+          this.allPayments = allPayments
+          this.applySearchAndFilters()
+        }
+      } catch (error) {
+        console.error('Failed to load payments:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    applySearchAndFilters() {
+      let filtered = [...this.allPayments]
+      
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase()
+        filtered = filtered.filter(p =>
+          p.owner_name?.toLowerCase().includes(query) ||
+          p.receipt_number?.toLowerCase().includes(query) ||
+          p.payment_method?.toLowerCase().includes(query)
+        )
+      }
+      
+      if (this.filter.businessOwnerId) {
+        filtered = filtered.filter(p => p.business_owner_id === this.filter.businessOwnerId)
+      }
+      if (this.filter.status) {
+        filtered = filtered.filter(p => p.payment_status === this.filter.status)
+      }
+      if (this.filter.paymentMethod) {
+        filtered = filtered.filter(p => p.payment_method === this.filter.paymentMethod)
+      }
+      
+      this.payments = filtered
+    },
+    formatCurrency(amount) {
+      return parseFloat(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    },
+    getPaymentStatusColor(status) {
+      const colors = {
+        'Completed': 'success',
+        'Pending': 'warning',
+        'Failed': 'error',
+        'Refunded': 'info'
+      }
+      return colors[status] || 'default'
+    }
+  }
+}
+</script>
+
+<style scoped>
+.payments-page {
+  background-color: #fafafa;
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+}
+</style>

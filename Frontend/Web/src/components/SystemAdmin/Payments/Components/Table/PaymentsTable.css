@@ -1,0 +1,92 @@
+/* Data Table Card */
+.data-table-card {
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.table-header {
+  background: rgb(0, 33, 129) !important;
+  color: white !important;
+  padding: 16px 20px !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  border-bottom: none !important;
+  display: flex;
+  align-items: center;
+}
+
+/* Professional Table Styling - Matching Applicants Exactly */
+.professional-table {
+  background-color: white !important;
+}
+
+.professional-table :deep(thead) {
+  background-color: #002181 !important;
+}
+
+.professional-table :deep(thead tr th) {
+  background-color: #002181 !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  padding: 12px 6px !important;
+  border-bottom: 2px solid #1565c0 !important;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.professional-table :deep(tbody tr) {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.professional-table :deep(tbody tr:hover) {
+  background-color: #f5f5f5 !important;
+}
+
+.professional-table :deep(tbody tr td) {
+  padding: 12px 6px !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  font-size: 14px !important;
+  color: #2c3e50 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.professional-table :deep(tbody tr:last-child) {
+  border-bottom: none;
+}
+
+.professional-table :deep(tbody tr:last-child td) {
+  border-bottom: none !important;
+}
+
+/* Remove default v-data-table styling */
+.professional-table :deep(.v-table__wrapper) {
+  border-radius: 0 !important;
+}
+
+.professional-table :deep(table) {
+  border-collapse: collapse !important;
+  width: 100%;
+}
+
+/* Force center alignment on all table cells */
+.professional-table :deep(th),
+.professional-table :deep(td) {
+  text-align: center !important;
+}
+
+/* Status Chips - Matching Applicants */
+.professional-table :deep(.v-chip) {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  padding: 6px 12px !important;
+  height: 28px !important;
+  border-radius: 20px !important;
+}
