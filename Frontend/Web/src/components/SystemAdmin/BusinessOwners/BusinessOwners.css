@@ -1,37 +1,62 @@
-.business-owners-page {
+/* Business Owners Page - Page-Level Styling Only */
+.v-main {
+  padding-left: 0 !important;
+}
+
+/* Page Header */
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #002181;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #666;
+  font-weight: 400;
+}
+
+
+.v-dialog .v-card-text {
   padding: 24px;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.text-red {
-  color: #e74c3c;
-  font-weight: 600;
-}
-
 .owner-info {
-  background-color: #f8f9fa;
-  padding: 16px;
+  background-color: #f0f4ff;
+  padding: 20px;
   border-radius: 8px;
+  border-left: 4px solid #002181;
 }
 
 .owner-info h3 {
+  color: #002181;
+  font-weight: 700;
   margin-bottom: 8px;
-  color: #2c3e50;
 }
 
 .owner-info p {
+  color: #666;
   margin: 4px 0;
-  color: #7f8c8d;
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+  .business-owners-page {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .table-header {
+    padding: 16px 20px !important;
+    font-size: 1.1rem !important;
+  }
 }

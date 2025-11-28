@@ -1,57 +1,18 @@
-.reports-page {
-  padding: 24px;
+/* Reports Page - Page-Level Styling Only */
+.v-main {
+  padding-left: 0 !important;
 }
 
+/* Page Header */
 .page-title {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 24px;
-}
-
-.report-stat {
-  padding: 16px 0;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: #7f8c8d;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #002181;
   margin-bottom: 8px;
 }
 
-.stat-value {
-  font-size: 36px;
-  font-weight: 700;
-  color: #27ae60;
-}
-
-.stat-value.secondary {
-  color: #95a5a6;
-  font-size: 28px;
-}
-
-.status-distribution {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px 0;
-}
-
-.status-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.status-count {
-  font-size: 24px;
-  font-weight: 700;
-  color: #2c3e50;
-}
-
-.text-red {
-  color: #e74c3c;
-  font-weight: 600;
+.page-subtitle {
+  font-size: 14px;
+  color: #666;
+  font-weight: 400;
 }

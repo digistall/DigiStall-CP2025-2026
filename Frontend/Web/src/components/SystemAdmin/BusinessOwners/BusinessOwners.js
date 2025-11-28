@@ -1,9 +1,17 @@
 import axios from 'axios'
+import BusinessOwnersTable from './Components/Table/BusinessOwnersTable.vue'
+import CreateBusinessOwnerDialog from './Components/Dialogs/CreateBusinessOwnerDialog.vue'
+import RecordPaymentDialog from './Components/Dialogs/RecordPaymentDialog.vue'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '')
 
 export default {
   name: 'BusinessOwners',
+  components: {
+    BusinessOwnersTable,
+    CreateBusinessOwnerDialog,
+    RecordPaymentDialog
+  },
   data() {
     return {
       businessOwners: [],
@@ -161,6 +169,16 @@ export default {
     },
     viewPaymentHistory(owner) {
       this.$router.push(`/system-admin/payments?businessOwnerId=${owner.business_owner_id}`)
+    },
+    handleCreateBusinessOwner(formData) {
+      // Update newOwner with formData and call createBusinessOwner
+      this.newOwner = formData
+      this.createBusinessOwner()
+    },
+    handleRecordPayment(formData) {
+      // Update payment data from dialog
+      this.payment = formData
+      this.recordPayment()
     },
     closeCreateDialog() {
       this.showCreateDialog = false

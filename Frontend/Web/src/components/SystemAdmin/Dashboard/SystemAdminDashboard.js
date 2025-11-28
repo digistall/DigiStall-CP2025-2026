@@ -1,9 +1,15 @@
 import axios from 'axios'
+import DashboardStats from './Components/Stats/DashboardStats.vue'
+import DashboardTable from './Components/Table/DashboardTable.vue'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '')
 
 export default {
   name: 'SystemAdminDashboard',
+  components: {
+    DashboardStats,
+    DashboardTable
+  },
   data() {
     return {
       dashboardStats: {},
