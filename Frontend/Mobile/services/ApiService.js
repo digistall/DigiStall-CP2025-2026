@@ -642,6 +642,76 @@ class ApiService {
     }
   }
 
+  // Pre-register for auction
+  static async preRegisterForAuction(applicantId, stallId, applicationId = null) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      console.log('Pre-registering for auction:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.AUCTION_PRE_REGISTER}`);
+      console.log('Auction registration data:', { applicant_id: applicantId, stall_id: stallId, application_id: applicationId });
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.AUCTION_PRE_REGISTER}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({
+          applicant_id: applicantId,
+          stall_id: stallId,
+          application_id: applicationId
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Auction pre-registration failed');
+      }
+
+      console.log('Pre-registered for auction successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('Pre-register for Auction API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Check if applicant is registered for auction
+  static async checkAuctionRegistration(auctionId, applicantId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.CHECK_AUCTION_REGISTRATION}/${auctionId}/${applicantId}`, {
+        method: 'GET',
+        headers: API_CONFIG.HEADERS,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check auction registration');
+      }
+
+      return {
+        success: true,
+        isRegistered: data.isRegistered,
+        data: data.data
+      };
+    } catch (error) {
+      console.error('❌ Check Auction Registration API Error:', error);
+      return {
+        success: false,
+        isRegistered: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // ===== UTILITY METHODS =====
 
   // Reset network configuration (force server rediscovery)

@@ -25,6 +25,7 @@ import paymentRoutes from './Backend-Web/routes/paymentRoutes.js';
 import mobileAuthRoutes from './Backend-Mobile/routes/authRoutes.js';
 import mobileStallRoutes from './Backend-Mobile/routes/stallRoutes.js';
 import mobileApplicationRoutes from './Backend-Mobile/routes/applicationRoutes.js';
+import mobileAuctionRoutes from './Backend-Mobile/routes/auctionRoutes.js';
 
 const app = express();
 const WEB_PORT = process.env.WEB_PORT || 3001;
@@ -54,6 +55,7 @@ app.use('/api/payments', authMiddleware.authenticateToken, paymentRoutes);
 app.use('/mobile/api/auth', mobileAuthRoutes);
 app.use('/mobile/api/stalls', mobileStallRoutes);
 app.use('/mobile/api/applications', mobileApplicationRoutes);
+app.use('/api/mobile/auction', mobileAuctionRoutes);  // Auction pre-registration
 
 // Mobile areas endpoint (separate from stalls)
 app.get('/mobile/api/areas', async (req, res) => {

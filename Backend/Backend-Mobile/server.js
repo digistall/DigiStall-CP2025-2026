@@ -10,6 +10,7 @@ import loginRoutes from './routes/loginRouter.js';
 import stallRoutes from './routes/stallRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
+import auctionRoutes from './routes/auctionRoutes.js';
 
 const app = express();
 const PORT = process.env.MOBILE_PORT || 5001;
@@ -20,7 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // CORS configuration for mobile apps
 app.use(cors({
-  origin: ['http://localhost:3003', 'http://10.0.2.2:5001'], // Include Android emulator IP
+  origin: ['http://localhost:3003', 'http://10.0.2.2:5001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -42,6 +43,7 @@ app.use('/api/mobile/auth', loginRoutes);
 app.use('/api/mobile/stalls', stallRoutes);
 app.use('/api/mobile/users', userRoutes);
 app.use('/api/mobile/applications', applicationRoutes);
+app.use('/api/mobile/auction', auctionRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/mobile/health', async (req, res) => {

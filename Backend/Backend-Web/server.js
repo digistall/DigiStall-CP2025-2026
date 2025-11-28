@@ -20,6 +20,7 @@ import stallRoutes from './routes/stallRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
+import auctionRoutes from './routes/auctionRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,6 +49,7 @@ app.use('/api/stalls', stallRoutes);            // Stalls routes (public for lan
 app.use('/api/applications', applicationRoutes); // Applications (public for submissions)
 app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page applicant submissions (public)
 app.use('/api/employees', employeeRoutes);      // Employee routes (login is public, others protected internally)
+app.use('/api/mobile/auction', auctionRoutes);  // Auction pre-registration for mobile app
 
 // Management routes (authentication required)
 // Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility

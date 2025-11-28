@@ -61,6 +61,11 @@ export const API_CONFIG = {
     GET_APPLICATION_STATUS: '/mobile/api/applications',
     UPDATE_APPLICATION: '/mobile/api/applications',
     
+    // Auction endpoints
+    AUCTION_PRE_REGISTER: '/api/mobile/auction/pre-register',
+    CHECK_AUCTION_REGISTRATION: '/api/mobile/auction/check-registration',
+    GET_AUCTION_PARTICIPANTS: '/api/mobile/auction/participants',
+    
     // Health check
     HEALTH: '/api/health'  // Main health endpoint
   },
