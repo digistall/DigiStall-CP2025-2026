@@ -1,4 +1,9 @@
 /* Business Owners Page - Page-Level Styling Only */
+
+*{
+  font-family: 'Poppins', sans-serif;
+}
+
 .v-main {
   padding-left: 0 !important;
 }
@@ -15,6 +20,30 @@
   font-size: 14px;
   color: #666;
   font-weight: 400;
+}
+
+/* Floating Action Button */
+.fab-add {
+  background: rgb(0, 33, 129) !important;
+  color: white !important;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  width: 64px !important;
+  height: 64px !important;
+  z-index: 9999 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 8px rgba(0, 33, 129, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.fab-add:hover {
+  box-shadow: 0 6px 12px rgba(0, 33, 129, 0.4) !important;
+  transform: translateY(-2px) !important;
+}
+
+.fab-add:active {
+  transform: translateY(0) !important;
 }
 
 

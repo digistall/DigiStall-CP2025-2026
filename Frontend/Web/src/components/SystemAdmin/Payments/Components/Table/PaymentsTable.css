@@ -80,6 +80,19 @@
   text-align: center !important;
 }
 
+/* Force center alignment for all custom slot content */
+.professional-table :deep(.v-data-table__td),
+.professional-table :deep(.v-data-table__th),
+.professional-table :deep(.v-data-table-header__content),
+.professional-table :deep(.v-data-table__cell),
+.professional-table :deep(.v-data-table__column),
+.professional-table :deep(.v-data-table__row),
+.professional-table :deep(.v-data-table__wrapper) {
+  text-align: center !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
 /* Status Chips - Matching Applicants */
 .professional-table :deep(.v-chip) {
   font-size: 12px !important;
