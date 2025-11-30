@@ -168,6 +168,10 @@ export default {
 </script>
 
 <style scoped>
+*{
+  font-family: 'Poppins', sans-serif;
+}
+
 .payments-page {
   background-color: #fafafa;
   min-height: calc(100vh - 64px);

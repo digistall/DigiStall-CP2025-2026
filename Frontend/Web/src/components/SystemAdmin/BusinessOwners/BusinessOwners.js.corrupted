@@ -90,16 +90,19 @@ export default {
         })
         
         if (ownersResponse.data.success) {
-          this.businessOwners = ownersResponse.data.data
-        }
       } catch (error) {
         console.error('Failed to load data:', error)
         this.showPopup('Failed to load data. Please try again.', 'error')
       } finally {
         this.loading = false
       }
+    },  this.loading = false
+      }
     },
     async createBusinessOwner() {
+      const { valid } = await this.$refs.createForm.validate()
+      if (!valid) return
+
       this.creating = true
       try {
         const token = sessionStorage.getItem('authToken')
@@ -139,6 +142,9 @@ export default {
       this.showPaymentDialog = true
     },
     async recordPayment() {
+      const { valid } = await this.$refs.paymentForm.validate()
+      if (!valid) return
+
       this.recording = true
       try {
         const token = sessionStorage.getItem('authToken')

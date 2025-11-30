@@ -7,11 +7,6 @@
             <h1 class="page-title">Business Owners Management</h1>
             <p class="page-subtitle">Manage business owners and their subscriptions</p>
           </v-col>
-          <v-col cols="auto">
-            <v-btn color="primary" @click="showCreateDialog = true" prepend-icon="mdi-plus">
-              Create Business Owner
-            </v-btn>
-          </v-col>
         </v-row>
 
         <!-- Business Owners Table Component -->
@@ -42,12 +37,36 @@
           @record="handleRecordPayment"
         />
 
-        <!-- Snackbar -->
-        <v-snackbar v-model="snackbar.show" :color="snackbar.color">
-          {{ snackbar.message }}
-        </v-snackbar>
       </v-container>
     </v-main>
+
+    <!-- Floating Action Button -->
+    <v-tooltip location="left">
+      <template v-slot:activator="{ props }">
+        <v-btn
+          fab
+          color="primary"
+          class="fab-add"
+          @click="showCreateDialog = true"
+          v-bind="props"
+          :aria-label="'Add Business Owner'"
+          role="button"
+        >
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
+      </template>
+      <span>Add Business Owner</span>
+    </v-tooltip>
+
+    <!-- Universal Popup -->
+    <UniversalPopup
+      :show="popup.show"
+      :message="popup.message"
+      :type="popup.type"
+      :operation="popup.operation"
+      :operationType="popup.operationType"
+      @close="popup.show = false"
+    />
   </v-app>
 </template>
 

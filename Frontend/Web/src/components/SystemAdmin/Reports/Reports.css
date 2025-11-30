@@ -1,4 +1,8 @@
 /* Reports Page - Page-Level Styling Only */
+*{
+  font-family: 'Poppins', sans-serif;
+}
+
 .v-main {
   padding-left: 0 !important;
 }
