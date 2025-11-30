@@ -1,6 +1,7 @@
 import AddStallholder from '../AddStallholder/AddStallholder.vue'
 import ExcelImport from '../ExcelImport/ExcelImport.vue'
 import DocumentCustomization from '../DocumentCustomization/DocumentCustomization.vue'
+import { useAuthStore } from '@/stores/authStore.js'
 
 export default {
   name: 'AddStallholderChoiceModal',
@@ -15,12 +16,24 @@ export default {
       default: false,
     },
   },
+  setup() {
+    const authStore = useAuthStore()
+    return {
+      authStore
+    }
+  },
   data() {
     return {
       loading: false,
       showAddStallholderModal: false,
       showExcelImportModal: false,
       showDocumentModal: false,
+    }
+  },
+  computed: {
+    // Check if user is stall_business_owner
+    isStallBusinessOwner() {
+      return this.authStore.isStallBusinessOwner
     }
   },
   methods: {
