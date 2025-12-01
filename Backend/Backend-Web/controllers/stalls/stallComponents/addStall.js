@@ -12,6 +12,8 @@ export const addStall = async (req, res) => {
     
     console.log("🔍 ADD STALL DEBUG:");
     console.log("- User Type:", userType);
+    console.log("- User Type (typeof):", typeof userType);
+    console.log("- User Type comparison result:", userType === "business_manager");
     console.log("- User ID:", userId);
     console.log("- User Object:", req.user);
 
@@ -23,10 +25,15 @@ export const addStall = async (req, res) => {
     }
 
     // Authorization check based on user type
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager authorization (existing logic)
-      console.log("🔍 Authorizing branch manager for stall creation");
-    } else if (userType === "employee") {
+    console.log("🔍 BEFORE AUTHORIZATION CHECK - userType:", userType);
+    if (userType === "business_manager") {
+      console.log("✅ MATCHED: business_manager");
+      console.log("✅ MATCHED: business_manager");
+      // Business manager authorization
+      console.log("🔍 Authorizing business manager for stall creation");
+    } else if (userType === "business_employee") {
+      console.log("✅ MATCHED: business_employee");
+      console.log("✅ MATCHED: business_employee");
       // Employee authorization - check permissions
       const permissions = req.user?.permissions || [];
       const hasStallsPermission = Array.isArray(permissions)
@@ -46,6 +53,7 @@ export const addStall = async (req, res) => {
         });
       }
     } else {
+      console.log("❌ NO MATCH - Rejecting user type:", userType);
       return res.status(403).json({
         success: false,
         message: `Access denied. User type '${userType}' cannot create stalls.`,
@@ -195,31 +203,31 @@ export const addStall = async (req, res) => {
     let branchName;
     let actualManagerId; // The ID to store in created_by_manager field
 
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // For branch managers, get their branch directly
-      const branchManagerId = req.user?.branchManagerId || userId;
+    if (userType === "business_manager") {
+      // For business managers, get their branch directly
+      const businessManagerId = req.user?.businessManagerId || userId;
       
-      const [branchManagerInfo] = await connection.execute(
-        `SELECT bm.branch_id, b.branch_name, b.area, bm.branch_manager_id
-         FROM branch_manager bm
+      const [managerInfo] = await connection.execute(
+        `SELECT bm.branch_id, b.branch_name, b.area, bm.business_manager_id
+         FROM business_manager bm
          INNER JOIN branch b ON bm.branch_id = b.branch_id
-         WHERE bm.branch_manager_id = ?`,
-        [branchManagerId]
+         WHERE bm.business_manager_id = ?`,
+        [businessManagerId]
       );
 
-      if (!branchManagerInfo || branchManagerInfo.length === 0) {
+      if (!managerInfo || managerInfo.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Branch manager not found or not assigned to a branch",
+          message: "Business manager not found or not assigned to a branch",
         });
       }
 
-      branchInfo = branchManagerInfo[0];
+      branchInfo = managerInfo[0];
       managerBranchId = branchInfo.branch_id;
       branchName = branchInfo.branch_name;
-      actualManagerId = branchInfo.branch_manager_id;
+      actualManagerId = branchInfo.business_manager_id;
       
-    } else if (userType === "employee") {
+    } else if (userType === "business_employee") {
       // For employees, get their branch and find the branch manager
       const employeeBranchId = req.user?.branchId;
       
@@ -231,9 +239,9 @@ export const addStall = async (req, res) => {
       }
 
       const [employeeBranchInfo] = await connection.execute(
-        `SELECT b.branch_id, b.branch_name, b.area, bm.branch_manager_id
+        `SELECT b.branch_id, b.branch_name, b.area, bm.business_manager_id
          FROM branch b
-         LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
+         LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
          WHERE b.branch_id = ?`,
         [employeeBranchId]
       );
@@ -249,7 +257,7 @@ export const addStall = async (req, res) => {
       managerBranchId = branchInfo.branch_id;
       branchName = branchInfo.branch_name;
       // For employees, we still need to record which manager's branch this stall belongs to
-      actualManagerId = branchInfo.branch_manager_id || null;
+      actualManagerId = branchInfo.business_manager_id || null;
     }
 
     console.log(
@@ -319,18 +327,14 @@ export const addStall = async (req, res) => {
       raffle_auction_deadline: (priceType_final === "Raffle" || priceType_final === "Auction") ? parsedDeadline : null,
       deadline_active: 0, // Initially false, will be activated when first applicant applies
       raffle_auction_status: (priceType_final === "Raffle" || priceType_final === "Auction") ? "Not Started" : "Not Started",
-      created_by_manager: actualManagerId // Use the actual manager ID, which works for both branch managers and employees
+      created_by_business_manager: actualManagerId // Use the actual manager ID, which works for both business managers and employees
     };
 
     console.log("Mapped database data:", stallData);
 
-    // Insert new stall with proper floor_id and section_id
-    const [result] = await connection.execute(
-      `INSERT INTO stall (
-        stall_no, stall_location, size, floor_id, section_id, rental_price, 
-        price_type, status, stamp, description, stall_image, is_available, 
-        raffle_auction_deadline, deadline_active, raffle_auction_status, created_by_manager, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    // Use stored procedure to insert stall
+    const [spResult] = await connection.execute(
+      `CALL sp_addStall(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @stall_id, @success, @message)`,
       [
         stallData.stall_no,
         stallData.stall_location,
@@ -345,39 +349,33 @@ export const addStall = async (req, res) => {
         stallData.stall_image,
         stallData.is_available,
         stallData.raffle_auction_deadline,
-        stallData.deadline_active,
-        stallData.raffle_auction_status,
-        stallData.created_by_manager,
+        stallData.created_by_business_manager,
       ]
     );
 
-    const stallId = result.insertId;
+    // Get the output parameters
+    const [outParams] = await connection.execute(
+      `SELECT @stall_id as stall_id, @success as success, @message as message`
+    );
+
+    const { stall_id: stallId, success, message } = outParams[0];
+
+    if (!success) {
+      return res.status(400).json({
+        success: false,
+        message: message || 'Failed to add stall'
+      });
+    }
+
     console.log("✅ Stall created with ID:", stallId);
 
-    // Create raffle or auction record if needed
+    // Additional info for response
     let additionalInfo = {};
     
     if (priceType_final === "Raffle") {
-      const [raffleResult] = await connection.execute(
-        `INSERT INTO raffle (
-          stall_id, raffle_status, created_by_manager, created_at
-        ) VALUES (?, 'Waiting for Participants', ?, NOW())`,
-        [stallId, actualManagerId]
-      );
-      
-      additionalInfo.raffleId = raffleResult.insertId;
-      console.log("✅ Raffle created with ID:", raffleResult.insertId);
-      
+      additionalInfo.priceTypeInfo = 'Raffle created';
     } else if (priceType_final === "Auction") {
-      const [auctionResult] = await connection.execute(
-        `INSERT INTO auction (
-          stall_id, starting_price, auction_status, created_by_manager, created_at
-        ) VALUES (?, ?, 'Waiting for Bidders', ?, NOW())`,
-        [stallId, finalPrice, actualManagerId]
-      );
-      
-      additionalInfo.auctionId = auctionResult.insertId;
-      console.log("✅ Auction created with ID:", auctionResult.insertId);
+      additionalInfo.priceTypeInfo = 'Auction created';
     }
 
     let successMessage = `Stall ${stallNo_final} added successfully to ${floorName}, ${sectionName}`;

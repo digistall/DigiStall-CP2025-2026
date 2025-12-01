@@ -69,12 +69,6 @@ export default {
       sectionOptions: [],
       allSections: [], // Store all sections for filtering by floor
       loading: false,
-      // Success popup states
-      showSuccessPopup: false,
-      popupState: 'loading', // 'loading' or 'success'
-      successMessage: '',
-      popupTimeout: null,
-      refreshTimeout: null, // Added for auto-refresh timing
       lastAddedStall: null, // Store the last added stall data for real-time updates
       // API base URL
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -254,49 +248,6 @@ export default {
       }
     },
 
-    showSuccessAnimation(message) {
-      this.successMessage = message
-      this.popupState = 'loading'
-      this.showSuccessPopup = true
-
-      // Transition to success state after loading animation
-      setTimeout(() => {
-        this.popupState = 'success'
-
-        // Auto close after 2 seconds and emit stall-added event
-        this.popupTimeout = setTimeout(() => {
-          this.closeSuccessPopup()
-
-          // Emit local event for parent component
-          this.$emit('stall-added', this.lastAddedStall)
-
-          // NEW: Emit global event for real-time sidebar update
-          eventBus.emit(EVENTS.STALL_ADDED, {
-            stallData: this.lastAddedStall,
-            priceType: this.lastAddedStall?.priceType || this.lastAddedStall?.price_type,
-            message: 'Stall added successfully',
-          })
-        }, 2000)
-      }, 1500)
-    },
-
-    closeSuccessPopup() {
-      if (this.popupTimeout) {
-        clearTimeout(this.popupTimeout)
-        this.popupTimeout = null
-      }
-      if (this.refreshTimeout) {
-        clearTimeout(this.refreshTimeout)
-        this.refreshTimeout = null
-      }
-      this.showSuccessPopup = false
-      this.popupState = 'loading'
-      this.successMessage = ''
-
-      // Close the add stall modal after success popup closes
-      this.closeModal()
-    },
-
     async convertImageToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
@@ -434,14 +385,20 @@ export default {
           // Store the stall data for later use
           this.lastAddedStall = result.data || stallData
 
-          // Show success popup animation
-          this.showSuccessAnimation(result.message || 'Stall added successfully!')
+          console.log('Stall added successfully - emitting real-time update')
 
-          // ENHANCED: Additional success actions
-          console.log('Stall added successfully - will show real-time update after popup')
+          // Emit local event for parent component
+          this.$emit('stall-added', this.lastAddedStall)
 
-          // Do NOT emit immediately - wait for popup to close to avoid double-display
-          // The event will be emitted from the popup timeout
+          // Emit global event for real-time sidebar update
+          eventBus.emit(EVENTS.STALL_ADDED, {
+            stallData: this.lastAddedStall,
+            priceType: this.lastAddedStall?.priceType || this.lastAddedStall?.price_type,
+            message: result.message || 'Stall added successfully!',
+          })
+
+          // Close the modal
+          this.closeModal()
         } else {
           throw new Error(result.message || 'Failed to add stall')
         }
@@ -542,9 +499,6 @@ export default {
     // Handle form submission errors
     handleSubmissionError(error) {
       console.error('Form submission error:', error)
-
-      // Clear any existing success popup
-      this.closeSuccessPopup()
 
       let userMessage = 'An error occurred while adding the stall.'
 

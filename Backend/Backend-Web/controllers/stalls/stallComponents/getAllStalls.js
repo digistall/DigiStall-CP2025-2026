@@ -1,7 +1,7 @@
 import { createConnection } from "../../../config/database.js";
 import { getBranchFilter } from "../../../middleware/rolePermissions.js";
 
-// Get all stalls for the authenticated user (branch manager or employee with stalls permission)
+// Get all stalls for the authenticated user using stored procedure
 export const getAllStalls = async (req, res) => {
   let connection;
   try {
@@ -9,11 +9,12 @@ export const getAllStalls = async (req, res) => {
 
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
+    const branchId = req.user?.branchId;
 
     console.log("🔍 getAllStalls - User details:", {
       userType,
       userId,
-      branchId: req.user?.branchId,
+      branchId: branchId,
       permissions: req.user?.permissions,
     });
 
@@ -24,68 +25,24 @@ export const getAllStalls = async (req, res) => {
       });
     }
 
-    // Get branch filter based on user role
-    const branchFilter = await getBranchFilter(req, connection);
-
     let stalls = [];
 
     // Handle different user types
-    if (branchFilter === null) {
-      // System administrator - see all stalls across all branches
-      console.log("🔍 getAllStalls - System admin viewing all branches");
+    if (userType === "business_manager") {
+      // Use stored procedure for business manager
+      const businessManagerId = req.user?.businessManagerId || userId;
+      console.log("🔍 getAllStalls - Fetching stalls for business manager:", businessManagerId);
+      
       const [result] = await connection.execute(
-        `SELECT 
-          s.*,
-          s.stall_id as id,
-          sec.section_name,
-          f.floor_name,
-          f.floor_number,
-          b.area,
-          b.location as branch_location,
-          b.branch_name
-        FROM stall s
-        INNER JOIN section sec ON s.section_id = sec.section_id
-        INNER JOIN floor f ON sec.floor_id = f.floor_id
-        INNER JOIN branch b ON f.branch_id = b.branch_id
-        WHERE s.status != 'Inactive' AND s.is_available = 1
-        ORDER BY s.created_at DESC`
+        `CALL sp_getAllStallsByManager(?)`,
+        [businessManagerId]
       );
-      stalls = result;
-    } else if (branchFilter.length === 0) {
-      // Business owner with no accessible branches
-      console.log("⚠️ getAllStalls - Business owner has no accessible branches");
-      stalls = [];
-    } else if (userType === "business_manager" || userType === "stall_business_owner") {
-      // Business manager or business owner: Get stalls for accessible branches
-      console.log(`🔍 getAllStalls - Fetching stalls for branches: ${branchFilter.join(', ')}`);
       
-      const placeholders = branchFilter.map(() => '?').join(',');
-      const query = `SELECT 
-        s.*,
-        s.stall_id as id,
-        sec.section_name,
-        f.floor_name,
-        f.floor_number,
-        bm.first_name as manager_first_name,
-        bm.last_name as manager_last_name,
-        b.area,
-        b.location as branch_location,
-        b.branch_name
-      FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
-      WHERE b.branch_id IN (${placeholders}) AND s.status != 'Inactive' AND s.is_available = 1
-      ORDER BY s.created_at DESC`;
-      
-      const [result] = await connection.execute(query, branchFilter);
-      stalls = result;
+      stalls = result[0] || [];
     } else if (userType === "business_employee") {
       // Employee: Check permissions first
       const permissions = req.user?.permissions || [];
 
-      // Check if permissions is an array (from employee login) or object (legacy)
       let hasStallsPermission = false;
       if (Array.isArray(permissions)) {
         hasStallsPermission = permissions.includes("stalls");
@@ -95,7 +52,6 @@ export const getAllStalls = async (req, res) => {
 
       console.log("🔍 Employee permission check:", {
         permissions,
-        isArray: Array.isArray(permissions),
         hasStallsPermission,
       });
 
@@ -106,9 +62,6 @@ export const getAllStalls = async (req, res) => {
         });
       }
 
-      // Get employee's branch ID
-      const branchId = req.user?.branchId;
-
       if (!branchId) {
         return res.status(400).json({
           success: false,
@@ -116,47 +69,57 @@ export const getAllStalls = async (req, res) => {
         });
       }
 
-      console.log("Fetching stalls for employee in branch ID:", branchId);
+      console.log("🔍 getAllStalls - Fetching stalls for branch:", branchId);
 
-      // Get all stalls in the employee's branch
+      // Use stored procedure for branch
       const [result] = await connection.execute(
-        `SELECT 
-          s.*,
-          s.stall_id as id,
-          sec.section_name,
-          f.floor_name,
-          f.floor_number,
-          b.area,
-          b.location as branch_location,
-          b.branch_name
-        FROM stall s
-        INNER JOIN section sec ON s.section_id = sec.section_id
-        INNER JOIN floor f ON sec.floor_id = f.floor_id
-        INNER JOIN branch b ON f.branch_id = b.branch_id
-        WHERE b.branch_id = ? AND s.status != 'Inactive' AND s.is_available = 1
-        ORDER BY s.created_at DESC`,
+        `CALL sp_getAllStallsByBranch(?)`,
         [branchId]
       );
 
-      stalls = result;
-    } else if (userType === "system_administrator" || userType === "stall_business_owner") {
-      // System admin or business owner: Get all stalls
-      console.log("Fetching all stalls for admin/owner");
-
+      stalls = result[0] || [];
+    } else if (userType === "system_administrator") {
+      // System admin: Get all stalls (we'll need to modify this or add a new stored procedure)
+      console.log("🔍 getAllStalls - System admin viewing all stalls");
+      
       const [result] = await connection.execute(
         `SELECT 
-          s.*,
-          s.stall_id as id,
-          sec.section_name,
+          s.stall_id,
+          s.stall_no,
+          s.stall_location,
+          s.size,
+          s.floor_id,
           f.floor_name,
-          f.floor_number,
+          s.section_id,
+          sec.section_name,
+          s.rental_price,
+          s.price_type,
+          s.status,
+          s.stamp,
+          s.description,
+          s.stall_image,
+          s.is_available,
+          s.raffle_auction_deadline,
+          s.deadline_active,
+          s.raffle_auction_status,
+          s.created_by_business_manager,
+          s.created_at,
+          s.updated_at,
+          b.branch_id,
+          b.branch_name,
           b.area,
-          b.location as branch_location,
-          b.branch_name
+          CASE 
+            WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+            WHEN s.is_available = 1 THEN 'Available'
+            ELSE 'Unavailable'
+          END as availability_status,
+          sh.stallholder_id,
+          sh.stallholder_name
         FROM stall s
         INNER JOIN section sec ON s.section_id = sec.section_id
-        INNER JOIN floor f ON sec.floor_id = f.floor_id
+        INNER JOIN floor f ON s.floor_id = f.floor_id
         INNER JOIN branch b ON f.branch_id = b.branch_id
+        LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
         ORDER BY s.created_at DESC`
       );
 

@@ -2,7 +2,7 @@ import CardStallsComponent from '../Stalls/StallsComponents/CardStallsComponent/
 import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFilter.vue'
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
-import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
 import dataCacheService from '../../../services/dataCacheService.js'
 
@@ -13,7 +13,7 @@ export default {
     SearchFilter,
     AddChoiceModal,
     EditStall,
-    UniversalPopup,
+    ToastNotification,
   },
   data() {
     return {
@@ -38,13 +38,11 @@ export default {
         message: '',
         type: 'primary'
       },
-      // Custom popup for notifications
-      popup: {
+      // Toast notification for add, update, delete operations
+      toast: {
         show: false,
         message: '',
-        type: 'error', // error, success, warning, info, loading
-        operation: '', // add, update, delete
-        operationType: 'stall', // stall, employee, stallholder, etc.
+        type: 'success', // success, update, delete, error, warning, info
       },
       
       // Flag to track when we're in the middle of updating a stall
@@ -129,6 +127,13 @@ export default {
           // Close modal if it's open
           this.closeAddStallModal()
           
+          // Show success toast notification
+          this.toast = {
+            show: true,
+            message: data.message || 'Stall added successfully!',
+            type: 'success',
+          }
+          
           console.log('✅ EventBus: Stall added successfully via real-time update')
         }
       } catch (error) {
@@ -144,6 +149,14 @@ export default {
         if (data.stallData) {
           // Use the existing handleStallUpdated method which already has the logic
           await this.handleStallUpdated(data.stallData)
+          
+          // Show update toast notification
+          this.toast = {
+            show: true,
+            message: data.message || 'Stall updated successfully!',
+            type: 'update',
+          }
+          
           console.log('✅ EventBus: Stall updated successfully via real-time update')
         }
       } catch (error) {
@@ -159,6 +172,14 @@ export default {
         if (data.stallId) {
           // Use the existing handleStallDeleted method which already has the logic
           await this.handleStallDeleted(data.stallId)
+          
+          // Show delete toast notification
+          this.toast = {
+            show: true,
+            message: data.message || 'Stall deleted successfully!',
+            type: 'delete',
+          }
+          
           console.log('✅ EventBus: Stall deleted successfully via real-time update')
         }
       } catch (error) {
@@ -728,30 +749,30 @@ export default {
       }
     },
 
-    // Message handling with enhanced display options
+    // Message handling with toast notifications for add/update/delete operations
     showMessage(text, color = 'success', operation = '', operationType = 'stall') {
       // Handle case where an object is passed instead of string
       const messageText = typeof text === 'string' ? text : JSON.stringify(text)
 
-      // Map old color values to new popup types
-      const typeMapping = {
-        success: 'success',
-        error: 'error',
-        warning: 'warning',
-        info: 'info',
-        primary: 'info',
-        red: 'error',
-        green: 'success',
-        orange: 'warning',
-        blue: 'info',
-      }
+      // Determine if this is an add, update, or delete operation that should show toast
+      const isOperationNotification = ['add', 'added', 'update', 'updated', 'delete', 'deleted'].includes(operation.toLowerCase())
+      
+      if (isOperationNotification && operationType === 'stall') {
+        // Map operation to toast type
+        let toastType = 'success'
+        if (operation.toLowerCase().includes('delete')) {
+          toastType = 'delete'
+        } else if (operation.toLowerCase().includes('update')) {
+          toastType = 'update'
+        } else if (operation.toLowerCase().includes('add')) {
+          toastType = 'success'
+        }
 
-      this.popup = {
-        show: true,
-        message: messageText,
-        type: typeMapping[color] || 'error',
-        operation: operation,
-        operationType: operationType,
+        this.toast = {
+          show: true,
+          message: messageText,
+          type: toastType,
+        }
       }
 
       console.log(`Message (${color}): ${messageText}`)

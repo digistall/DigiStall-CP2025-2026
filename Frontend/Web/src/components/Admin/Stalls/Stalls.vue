@@ -138,14 +138,12 @@
       </v-card>
     </v-dialog>
 
-    <!-- Custom Universal Popup -->
-    <UniversalPopup
-      :show="popup.show"
-      :message="popup.message"
-      :type="popup.type"
-      :operation="popup.operation"
-      :operationType="popup.operationType"
-      @close="popup.show = false"
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
     />
   </v-app>
 </template>

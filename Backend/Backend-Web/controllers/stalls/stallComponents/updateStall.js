@@ -60,7 +60,7 @@ export const updateStall = async (req, res) => {
     if (userType === "business_manager") {
       // Business manager: Check if stall belongs to their branch
       const businessManagerId = req.user?.businessManagerId || userId;
-      stallQuery = `SELECT s.stall_id, s.stall_no 
+      stallQuery = `SELECT s.* 
                    FROM stall s
                    INNER JOIN section sec ON s.section_id = sec.section_id
                    INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -77,7 +77,7 @@ export const updateStall = async (req, res) => {
           message: "Branch ID not found for employee",
         });
       }
-      stallQuery = `SELECT s.stall_id, s.stall_no 
+      stallQuery = `SELECT s.* 
                    FROM stall s
                    INNER JOIN section sec ON s.section_id = sec.section_id
                    INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -95,81 +95,56 @@ export const updateStall = async (req, res) => {
       });
     }
 
-    // Build dynamic update query
-    const updateFields = [];
-    const updateValues = [];
+    // Build dynamic update query - extract all values
+    const stallNo = updateData.stallNo || updateData.stallNumber || existingStall[0].stall_no;
+    const stallLocation = updateData.stall_location || updateData.location || existingStall[0].stall_location;
+    const size = updateData.size || existingStall[0].size;
+    const rentalPrice = updateData.rental_price || updateData.price || existingStall[0].rental_price;
+    const priceType = updateData.price_type || updateData.priceType || existingStall[0].price_type;
+    const status = updateData.status || existingStall[0].status;
+    const description = updateData.description !== undefined ? updateData.description : existingStall[0].description;
+    const stallImage = updateData.stall_image || updateData.image || existingStall[0].stall_image;
+    const isAvailable = updateData.is_available !== undefined ? updateData.is_available : 
+                        updateData.isAvailable !== undefined ? updateData.isAvailable : 
+                        existingStall[0].is_available;
+    const floorId = updateData.floor_id || updateData.floorId || existingStall[0].floor_id;
+    const sectionId = updateData.section_id || updateData.sectionId || existingStall[0].section_id;
+    const raffleAuctionDeadline = updateData.raffle_auction_deadline || updateData.deadline || existingStall[0].raffle_auction_deadline;
 
-    // Map frontend fields to database fields
-    if (updateData.stallNo || updateData.stallNumber) {
-      updateFields.push("stall_no = ?");
-      updateValues.push(updateData.stallNo || updateData.stallNumber);
-    }
+    // Use stored procedure to update stall
+    await connection.execute(
+      `CALL sp_updateStall(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @success, @message)`,
+      [
+        id,                          // stall_id
+        stallNo,                     // stall_no
+        stallLocation,               // stall_location
+        size,                        // size
+        floorId,                     // floor_id
+        sectionId,                   // section_id
+        parseFloat(rentalPrice),     // rental_price
+        priceType,                   // price_type
+        status,                      // status
+        description,                 // description
+        stallImage,                  // stall_image
+        isAvailable ? 1 : 0,         // is_available
+        raffleAuctionDeadline,       // raffle_auction_deadline
+        userId,                      // updated_by_business_manager
+      ]
+    );
 
-    if (updateData.stall_location || updateData.location) {
-      updateFields.push("stall_location = ?");
-      updateValues.push(updateData.stall_location || updateData.location);
-    }
+    // Get the output parameters
+    const [outParams] = await connection.execute(
+      `SELECT @success as success, @message as message`
+    );
 
-    if (updateData.size) {
-      updateFields.push("size = ?");
-      updateValues.push(updateData.size);
-    }
+    const { success, message } = outParams[0];
 
-    if (updateData.rental_price || updateData.price) {
-      updateFields.push("rental_price = ?");
-      updateValues.push(
-        parseFloat(updateData.rental_price || updateData.price)
-      );
-    }
-
-    if (updateData.price_type || updateData.priceType) {
-      updateFields.push("price_type = ?");
-      updateValues.push(updateData.price_type || updateData.priceType);
-    }
-
-    if (updateData.status) {
-      updateFields.push("status = ?");
-      updateValues.push(updateData.status);
-    }
-
-    if (updateData.description !== undefined) {
-      updateFields.push("description = ?");
-      updateValues.push(updateData.description);
-    }
-
-    if (updateData.stall_image || updateData.image) {
-      updateFields.push("stall_image = ?");
-      updateValues.push(updateData.stall_image || updateData.image);
-    }
-
-    if (
-      updateData.is_available !== undefined ||
-      updateData.isAvailable !== undefined
-    ) {
-      const isAvailable =
-        updateData.is_available !== undefined
-          ? updateData.is_available
-          : updateData.isAvailable;
-      updateFields.push("is_available = ?");
-      updateValues.push(isAvailable ? 1 : 0);
-    }
-
-    if (updateFields.length === 0) {
+    if (!success) {
       return res.status(400).json({
         success: false,
-        message: "No valid fields provided for update",
+        message: message || 'Failed to update stall'
       });
     }
-
-    // Add updated_at timestamp
-    updateFields.push("updated_at = NOW()");
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE stall SET ${updateFields.join(
-      ", "
-    )} WHERE stall_id = ?`;
-
-    await connection.execute(updateQuery, updateValues);
 
     // Get updated stall data with explicit field selection to avoid ID confusion
     const [updatedStall] = await connection.execute(
