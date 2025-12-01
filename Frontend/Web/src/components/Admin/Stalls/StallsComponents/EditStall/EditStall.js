@@ -25,10 +25,6 @@ export default {
       showDeleteConfirm: false,
       valid: false,
       loading: false,
-      showSuccessPopup: false,
-      popupState: 'loading', // 'loading' or 'success'
-      successMessage: '',
-      popupTimeout: null,
       rules: {
         stallNumber: [
           (v) => !!v || 'Stall number is required',
@@ -94,40 +90,6 @@ export default {
     },
   },
   methods: {
-    showSuccessAnimation(message) {
-      console.log('✅ Showing success popup:', message)
-      this.successMessage = message
-      this.popupState = 'loading'
-      this.showSuccessPopup = true
-
-      // Transition to success state after loading animation
-      setTimeout(() => {
-        this.popupState = 'success'
-
-        // Auto close after 2 seconds
-        this.popupTimeout = setTimeout(() => {
-          this.closeSuccessPopup()
-        }, 2000)
-      }, 1500)
-    },
-
-    closeSuccessPopup() {
-      if (this.popupTimeout) {
-        clearTimeout(this.popupTimeout)
-        this.popupTimeout = null
-      }
-      this.showSuccessPopup = false
-      this.popupState = 'loading'
-      this.successMessage = ''
-
-      // Don't automatically close the modal after success
-      // Let the user manually close it or continue editing
-      console.log('✅ Success popup closed, modal remains open for continued editing')
-
-      // No auto-refresh needed - parent component handles real-time updates
-      console.log('✅ Stall updated successfully - using real-time updates')
-    },
-
     closeModal() {
       this.resetForm()
       this.$emit('close')
@@ -350,9 +312,8 @@ export default {
             message: result.message || 'Stall updated successfully!',
           })
 
-          // Show success animation AFTER emitting the update event
-          const successMessage = result.message || 'Stall updated successfully!'
-          this.showSuccessAnimation(successMessage)
+          // Close the modal after successful update
+          this.closeModal()
         } else {
           throw new Error(result.message || 'Failed to update stall')
         }

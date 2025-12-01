@@ -17,10 +17,6 @@ export default {
   data() {
     return {
       loading: false,
-      showSuccessPopup: false,
-      popupState: 'loading', // 'loading' or 'success'
-      successMessage: '',
-      popupTimeout: null,
       // API base URL
       apiBaseUrl: (() => {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -29,43 +25,6 @@ export default {
     }
   },
   methods: {
-    showSuccessAnimation(message) {
-      console.log('🎬 Showing delete success animation...')
-      console.log(`✅ Success message: ${message}`)
-
-      this.successMessage = message
-      this.popupState = 'loading'
-      this.showSuccessPopup = true
-
-      // Transition to success state after loading animation
-      setTimeout(() => {
-        console.log('🎉 Transitioning to success state')
-        this.popupState = 'success'
-
-        // Auto close after 2 seconds
-        this.popupTimeout = setTimeout(() => {
-          console.log('⏰ Auto-closing success popup')
-          this.closeSuccessPopup()
-        }, 2000)
-      }, 1500)
-    },
-
-    closeSuccessPopup() {
-      console.log('🚪 Closing success popup and returning to main view')
-
-      if (this.popupTimeout) {
-        clearTimeout(this.popupTimeout)
-        this.popupTimeout = null
-      }
-      this.showSuccessPopup = false
-      this.popupState = 'loading'
-      this.successMessage = ''
-      this.loading = false
-
-      // Close the main modal after success popup closes
-      this.handleCancel()
-    },
-
     async handleConfirmDelete() {
       // Check for stall ID using correct field names from backend
       const stallId = this.stallData.stall_id || this.stallData.ID || this.stallData.id
@@ -138,9 +97,6 @@ export default {
           console.log('✅ Stall deletion successful!')
           console.log(`🎉 Successfully deleted stall: ${stallNumber}`)
 
-          // Show success animation after API success
-          this.showSuccessAnimation(result.message || `Stall ${stallNumber} deleted successfully!`)
-
           // Emit success event to parent component
           this.$emit('deleted', {
             stallId: stallId,
@@ -155,6 +111,10 @@ export default {
             priceType: this.stallData?.priceType || this.stallData?.price_type,
             message: result.message || `Stall ${stallNumber} deleted successfully`,
           })
+
+          // Close the modal after successful delete
+          this.loading = false
+          this.handleCancel()
         } else {
           throw new Error(result.message || 'Failed to delete stall')
         }
@@ -167,7 +127,6 @@ export default {
         })
 
         this.loading = false
-        this.closeSuccessPopup()
 
         // Emit error event to parent component
         this.$emit('error', {

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 01, 2025 at 04:17 AM
+-- Generation Time: Dec 01, 2025 at 03:27 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -1756,10 +1756,16 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBranchDocumentRequirements` (IN 
         bdr.is_required,
         bdr.instructions,
         bdr.created_at,
-        CONCAT(bm.first_name, ' ', bm.last_name) as created_by_name
+        bdr.created_by_business_manager,
+        COALESCE(
+            CONCAT(bm.first_name, ' ', bm.last_name),
+            CONCAT(sbo.first_name, ' ', sbo.last_name),
+            'System'
+        ) as created_by_name
     FROM branch_document_requirements bdr
     INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-    LEFT JOIN branch_manager bm ON bdr.created_by_manager = bm.branch_manager_id
+    LEFT JOIN business_manager bm ON bdr.created_by_business_manager = bm.business_manager_id
+    LEFT JOIN stall_business_owner sbo ON bdr.created_by_business_manager = sbo.business_owner_id
     WHERE bdr.branch_id = p_branch_id
     ORDER BY dt.document_name;
 END$$
@@ -2493,10 +2499,37 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerMobileUser` (IN `p_full_nam
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `removeBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT)   BEGIN
-    DELETE FROM branch_document_requirements 
+    DECLARE v_affected_rows INT DEFAULT 0;
+    
+    DELETE FROM branch_document_requirements
     WHERE branch_id = p_branch_id AND document_type_id = p_document_type_id;
     
-    SELECT ROW_COUNT() as affected_rows;
+    SET v_affected_rows = ROW_COUNT();
+    
+    SELECT 
+        v_affected_rows as affected_rows,
+        'deleted' as operation,
+        CASE 
+            WHEN v_affected_rows > 0 THEN 'Document requirement deleted successfully'
+            ELSE 'No document requirement found to delete'
+        END as message;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `removeBranchDocumentRequirementById` (IN `p_requirement_id` INT)   BEGIN
+    DECLARE v_affected_rows INT DEFAULT 0;
+    
+    DELETE FROM branch_document_requirements
+    WHERE requirement_id = p_requirement_id;
+    
+    SET v_affected_rows = ROW_COUNT();
+    
+    SELECT 
+        v_affected_rows as affected_rows,
+        'deleted' as operation,
+        CASE 
+            WHEN v_affected_rows > 0 THEN 'Document requirement deleted successfully'
+            ELSE 'No document requirement found to delete'
+        END as message;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `removeManagerFromBusinessOwner` (IN `p_relationship_id` INT)   BEGIN
@@ -2645,16 +2678,178 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `revokeAllUserTokens` (IN `p_user_id
     SELECT p_user_id as user_id, p_user_type as user_type, 'tokens_revoked' as status;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `setBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_is_required` TINYINT, IN `p_instructions` TEXT, IN `p_manager_id` INT)   BEGIN
-    INSERT INTO branch_document_requirements 
-    (branch_id, document_type_id, is_required, instructions, created_by_manager)
-    VALUES (p_branch_id, p_document_type_id, p_is_required, p_instructions, p_manager_id)
-    ON DUPLICATE KEY UPDATE
-        is_required = VALUES(is_required),
-        instructions = VALUES(instructions),
-        updated_at = CURRENT_TIMESTAMP;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `setBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_is_required` TINYINT, IN `p_instructions` TEXT, IN `p_created_by_manager` INT)   BEGIN
+    DECLARE v_requirement_id INT DEFAULT 0;
+    DECLARE v_affected_rows INT DEFAULT 0;
     
-    SELECT ROW_COUNT() as affected_rows;
+    SELECT requirement_id INTO v_requirement_id
+    FROM branch_document_requirements
+    WHERE branch_id = p_branch_id AND document_type_id = p_document_type_id
+    LIMIT 1;
+    
+    IF v_requirement_id > 0 THEN
+        UPDATE branch_document_requirements
+        SET 
+            is_required = p_is_required,
+            instructions = p_instructions,
+            created_by_business_manager = p_created_by_manager,
+            created_at = CURRENT_TIMESTAMP
+        WHERE requirement_id = v_requirement_id;
+        
+        SET v_affected_rows = ROW_COUNT();
+        
+        SELECT 
+            v_requirement_id as requirement_id,
+            'updated' as operation,
+            v_affected_rows as affected_rows,
+            'Document requirement updated successfully' as message;
+    ELSE
+        INSERT INTO branch_document_requirements (
+            branch_id,
+            document_type_id,
+            is_required,
+            instructions,
+            created_by_business_manager,
+            created_at
+        ) VALUES (
+            p_branch_id,
+            p_document_type_id,
+            p_is_required,
+            p_instructions,
+            p_created_by_manager,
+            CURRENT_TIMESTAMP
+        );
+        
+        SET v_requirement_id = LAST_INSERT_ID();
+        SET v_affected_rows = ROW_COUNT();
+        
+        SELECT 
+            v_requirement_id as requirement_id,
+            'created' as operation,
+            v_affected_rows as affected_rows,
+            'Document requirement created successfully' as message;
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_created_by_business_manager` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
+    DECLARE v_existing_stall INT DEFAULT 0;
+    DECLARE v_floor_section_valid INT DEFAULT 0;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = 'Database error occurred while adding stall';
+        SET p_stall_id = NULL;
+    END;
+
+    START TRANSACTION;
+
+    -- Validate floor and section relationship
+    SELECT COUNT(*) INTO v_floor_section_valid
+    FROM section s
+    INNER JOIN floor f ON s.floor_id = f.floor_id
+    WHERE s.section_id = p_section_id AND f.floor_id = p_floor_id;
+
+    IF v_floor_section_valid = 0 THEN
+        SET p_success = FALSE;
+        SET p_message = 'Invalid floor and section combination';
+        SET p_stall_id = NULL;
+        ROLLBACK;
+    ELSE
+        -- Check for duplicate stall number in the same section
+        SELECT COUNT(*) INTO v_existing_stall
+        FROM stall
+        WHERE stall_no = p_stall_no AND section_id = p_section_id;
+
+        IF v_existing_stall > 0 THEN
+            SET p_success = FALSE;
+            SET p_message = CONCAT('Stall number ', p_stall_no, ' already exists in this section');
+            SET p_stall_id = NULL;
+            ROLLBACK;
+        ELSE
+            -- Insert the stall
+            INSERT INTO stall (
+                stall_no, 
+                stall_location, 
+                size, 
+                floor_id, 
+                section_id, 
+                rental_price,
+                price_type, 
+                status, 
+                stamp, 
+                description, 
+                stall_image, 
+                is_available,
+                raffle_auction_deadline,
+                deadline_active,
+                raffle_auction_status,
+                created_by_business_manager,
+                created_at
+            ) VALUES (
+                p_stall_no,
+                p_stall_location,
+                p_size,
+                p_floor_id,
+                p_section_id,
+                p_rental_price,
+                p_price_type,
+                p_status,
+                p_stamp,
+                p_description,
+                p_stall_image,
+                p_is_available,
+                p_raffle_auction_deadline,
+                0, -- deadline_active starts as false
+                CASE 
+                    WHEN p_price_type IN ('Raffle', 'Auction') THEN 'Not Started'
+                    ELSE 'Not Started'
+                END,
+                p_created_by_business_manager,
+                NOW()
+            );
+
+            SET p_stall_id = LAST_INSERT_ID();
+            SET p_success = TRUE;
+            SET p_message = CONCAT('Stall ', p_stall_no, ' added successfully');
+
+            -- If it's a raffle, create raffle record
+            IF p_price_type = 'Raffle' THEN
+                INSERT INTO raffle (
+                    stall_id, 
+                    raffle_status, 
+                    created_by_business_manager, 
+                    created_at
+                ) VALUES (
+                    p_stall_id, 
+                    'Waiting for Participants', 
+                    p_created_by_business_manager, 
+                    NOW()
+                );
+            END IF;
+
+            -- If it's an auction, create auction record
+            IF p_price_type = 'Auction' THEN
+                INSERT INTO auction (
+                    stall_id, 
+                    starting_price, 
+                    current_highest_bid, 
+                    auction_status,
+                    created_by_business_manager, 
+                    created_at
+                ) VALUES (
+                    p_stall_id, 
+                    p_rental_price, 
+                    p_rental_price,
+                    'Waiting for Bids',
+                    p_created_by_business_manager, 
+                    NOW()
+                );
+            END IF;
+
+            COMMIT;
+        END IF;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` ENUM('rental','utilities','maintenance','penalty','other'), IN `p_payment_method` ENUM('cash','gcash','maya','paymaya','bank_transfer','check'), IN `p_reference_number` VARCHAR(100), IN `p_collected_by_user_id` INT, IN `p_notes` TEXT)   BEGIN
@@ -2732,6 +2927,70 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_
       collected_by_name as collectedBy;
   END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall` (IN `p_stall_id` INT, IN `p_deleted_by_business_manager` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
+    DECLARE v_stall_exists INT DEFAULT 0;
+    DECLARE v_has_active_applications INT DEFAULT 0;
+    DECLARE v_has_stallholder INT DEFAULT 0;
+    DECLARE v_stall_no VARCHAR(20);
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = 'Database error occurred while deleting stall';
+    END;
+
+    START TRANSACTION;
+
+    -- Check if stall exists and get stall number
+    SELECT COUNT(*), stall_no INTO v_stall_exists, v_stall_no
+    FROM stall
+    WHERE stall_id = p_stall_id;
+
+    IF v_stall_exists = 0 THEN
+        SET p_success = FALSE;
+        SET p_message = 'Stall not found';
+        ROLLBACK;
+    ELSE
+        -- Check for active applications
+        SELECT COUNT(*) INTO v_has_active_applications
+        FROM application
+        WHERE stall_id = p_stall_id 
+        AND application_status IN ('Pending', 'Under Review', 'Approved');
+
+        IF v_has_active_applications > 0 THEN
+            SET p_success = FALSE;
+            SET p_message = 'Cannot delete stall with active applications';
+            ROLLBACK;
+        ELSE
+            -- Check for active stallholders
+            SELECT COUNT(*) INTO v_has_stallholder
+            FROM stallholder
+            WHERE stall_id = p_stall_id 
+            AND contract_status = 'Active';
+
+            IF v_has_stallholder > 0 THEN
+                SET p_success = FALSE;
+                SET p_message = 'Cannot delete stall with active stallholder';
+                ROLLBACK;
+            ELSE
+                -- Delete related raffle records
+                DELETE FROM raffle WHERE stall_id = p_stall_id;
+                
+                -- Delete related auction records
+                DELETE FROM auction WHERE stall_id = p_stall_id;
+                
+                -- Delete the stall
+                DELETE FROM stall WHERE stall_id = p_stall_id;
+                
+                SET p_success = TRUE;
+                SET p_message = CONCAT('Stall ', v_stall_no, ' deleted successfully');
+                COMMIT;
+            END IF;
+        END IF;
+    END IF;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BEGIN
     DECLARE current_date_str VARCHAR(8);
     DECLARE last_reference VARCHAR(20);
@@ -2764,6 +3023,163 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BE
     SET new_receipt_number = CONCAT('RCP-', current_date_str, '-', LPAD(sequence_number, 3, '0'));
     
     SELECT new_receipt_number as receiptNumber, 'success' as status;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByBranch` (IN `p_branch_id` INT)   BEGIN
+    SELECT 
+        s.stall_id,
+        s.stall_no,
+        s.stall_location,
+        s.size,
+        s.floor_id,
+        f.floor_name,
+        s.section_id,
+        sec.section_name,
+        s.rental_price,
+        s.price_type,
+        s.status,
+        s.stamp,
+        s.description,
+        s.stall_image,
+        s.is_available,
+        s.raffle_auction_deadline,
+        s.deadline_active,
+        s.raffle_auction_status,
+        s.created_by_business_manager,
+        s.created_at,
+        s.updated_at,
+        b.branch_id,
+        b.branch_name,
+        CASE 
+            WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+            WHEN s.is_available = 1 THEN 'Available'
+            ELSE 'Unavailable'
+        END as availability_status,
+        sh.stallholder_id,
+        sh.stallholder_name
+    FROM stall s
+    INNER JOIN section sec ON s.section_id = sec.section_id
+    INNER JOIN floor f ON s.floor_id = f.floor_id
+    INNER JOIN branch b ON f.branch_id = b.branch_id
+    LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+    WHERE b.branch_id = p_branch_id
+    ORDER BY s.stall_no ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByManager` (IN `p_business_manager_id` INT)   BEGIN
+    SELECT 
+        s.stall_id,
+        s.stall_no,
+        s.stall_location,
+        s.size,
+        s.floor_id,
+        f.floor_name,
+        s.section_id,
+        sec.section_name,
+        s.rental_price,
+        s.price_type,
+        s.status,
+        s.stamp,
+        s.description,
+        s.stall_image,
+        s.is_available,
+        s.raffle_auction_deadline,
+        s.deadline_active,
+        s.raffle_auction_status,
+        s.created_by_business_manager,
+        s.created_at,
+        s.updated_at,
+        b.branch_id,
+        b.branch_name,
+        CASE 
+            WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+            WHEN s.is_available = 1 THEN 'Available'
+            ELSE 'Unavailable'
+        END as availability_status,
+        sh.stallholder_id,
+        sh.stallholder_name
+    FROM stall s
+    INNER JOIN section sec ON s.section_id = sec.section_id
+    INNER JOIN floor f ON s.floor_id = f.floor_id
+    INNER JOIN branch b ON f.branch_id = b.branch_id
+    INNER JOIN business_manager bm ON b.branch_id = bm.branch_id
+    LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+    WHERE bm.business_manager_id = p_business_manager_id
+    ORDER BY s.stall_no ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAvailableStallsByBranch` (IN `p_branch_id` INT)   BEGIN
+    SELECT 
+        s.stall_id,
+        s.stall_no,
+        s.stall_location,
+        s.size,
+        s.floor_id,
+        f.floor_name,
+        s.section_id,
+        sec.section_name,
+        s.rental_price,
+        s.price_type,
+        s.status,
+        s.description,
+        s.stall_image,
+        s.raffle_auction_deadline,
+        s.deadline_active,
+        s.raffle_auction_status,
+        b.branch_id,
+        b.branch_name,
+        b.area,
+        b.location
+    FROM stall s
+    INNER JOIN section sec ON s.section_id = sec.section_id
+    INNER JOIN floor f ON s.floor_id = f.floor_id
+    INNER JOIN branch b ON f.branch_id = b.branch_id
+    WHERE b.branch_id = p_branch_id
+    AND s.is_available = 1
+    AND s.status = 'Active'
+    AND s.stall_id NOT IN (
+        SELECT stall_id FROM stallholder WHERE contract_status = 'Active'
+    )
+    ORDER BY s.stall_no ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallById` (IN `p_stall_id` INT)   BEGIN
+    SELECT 
+        s.stall_id,
+        s.stall_no,
+        s.stall_location,
+        s.size,
+        s.floor_id,
+        f.floor_name,
+        s.section_id,
+        sec.section_name,
+        s.rental_price,
+        s.price_type,
+        s.status,
+        s.stamp,
+        s.description,
+        s.stall_image,
+        s.is_available,
+        s.raffle_auction_deadline,
+        s.deadline_active,
+        s.raffle_auction_status,
+        s.raffle_auction_start_time,
+        s.raffle_auction_end_time,
+        s.created_by_business_manager,
+        s.created_at,
+        s.updated_at,
+        b.branch_id,
+        b.branch_name,
+        b.area,
+        b.location,
+        bm.first_name as manager_first_name,
+        bm.last_name as manager_last_name
+    FROM stall s
+    INNER JOIN section sec ON s.section_id = sec.section_id
+    INNER JOIN floor f ON s.floor_id = f.floor_id
+    INNER JOIN branch b ON f.branch_id = b.branch_id
+    LEFT JOIN business_manager bm ON s.created_by_business_manager = bm.business_manager_id
+    WHERE s.stall_id = p_stall_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_all_stallholders` (IN `p_branch_id` INT)   BEGIN
@@ -2869,6 +3285,116 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_stallholder_details` (IN `p_
     LEFT JOIN branch b ON sh.branch_id = b.branch_id
     WHERE sh.stallholder_id = p_stallholder_id
       AND sh.contract_status = 'Active';
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_updated_by_business_manager` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
+    DECLARE v_stall_exists INT DEFAULT 0;
+    DECLARE v_duplicate_stall INT DEFAULT 0;
+    DECLARE v_floor_section_valid INT DEFAULT 0;
+    DECLARE v_current_price_type VARCHAR(20);
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = 'Database error occurred while updating stall';
+    END;
+
+    START TRANSACTION;
+
+    -- Check if stall exists
+    SELECT COUNT(*), price_type INTO v_stall_exists, v_current_price_type
+    FROM stall
+    WHERE stall_id = p_stall_id;
+
+    IF v_stall_exists = 0 THEN
+        SET p_success = FALSE;
+        SET p_message = 'Stall not found';
+        ROLLBACK;
+    ELSE
+        -- Validate floor and section relationship
+        SELECT COUNT(*) INTO v_floor_section_valid
+        FROM section s
+        INNER JOIN floor f ON s.floor_id = f.floor_id
+        WHERE s.section_id = p_section_id AND f.floor_id = p_floor_id;
+
+        IF v_floor_section_valid = 0 THEN
+            SET p_success = FALSE;
+            SET p_message = 'Invalid floor and section combination';
+            ROLLBACK;
+        ELSE
+            -- Check for duplicate stall number (excluding current stall)
+            SELECT COUNT(*) INTO v_duplicate_stall
+            FROM stall
+            WHERE stall_no = p_stall_no 
+            AND section_id = p_section_id 
+            AND stall_id != p_stall_id;
+
+            IF v_duplicate_stall > 0 THEN
+                SET p_success = FALSE;
+                SET p_message = CONCAT('Stall number ', p_stall_no, ' already exists in this section');
+                ROLLBACK;
+            ELSE
+                -- Update the stall
+                UPDATE stall SET
+                    stall_no = p_stall_no,
+                    stall_location = p_stall_location,
+                    size = p_size,
+                    floor_id = p_floor_id,
+                    section_id = p_section_id,
+                    rental_price = p_rental_price,
+                    price_type = p_price_type,
+                    status = p_status,
+                    description = p_description,
+                    stall_image = p_stall_image,
+                    is_available = p_is_available,
+                    raffle_auction_deadline = p_raffle_auction_deadline,
+                    updated_at = NOW()
+                WHERE stall_id = p_stall_id;
+
+                -- Handle price type changes
+                IF v_current_price_type != p_price_type THEN
+                    -- If changing to Raffle, ensure raffle record exists
+                    IF p_price_type = 'Raffle' THEN
+                        INSERT IGNORE INTO raffle (
+                            stall_id, 
+                            raffle_status, 
+                            created_by_business_manager, 
+                            created_at
+                        ) VALUES (
+                            p_stall_id, 
+                            'Waiting for Participants', 
+                            p_updated_by_business_manager, 
+                            NOW()
+                        );
+                    END IF;
+
+                    -- If changing to Auction, ensure auction record exists
+                    IF p_price_type = 'Auction' THEN
+                        INSERT IGNORE INTO auction (
+                            stall_id, 
+                            starting_price, 
+                            current_highest_bid, 
+                            auction_status,
+                            created_by_business_manager, 
+                            created_at
+                        ) VALUES (
+                            p_stall_id, 
+                            p_rental_price, 
+                            p_rental_price,
+                            'Waiting for Bids',
+                            p_updated_by_business_manager, 
+                            NOW()
+                        );
+                    END IF;
+                END IF;
+
+                SET p_success = TRUE;
+                SET p_message = CONCAT('Stall ', p_stall_no, ' updated successfully');
+                COMMIT;
+            END IF;
+        END IF;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateInspector` (IN `p_inspector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
@@ -3495,8 +4021,8 @@ CREATE TABLE `branch_document_requirements` (
   `requirement_id` int(11) NOT NULL,
   `branch_id` int(11) NOT NULL,
   `document_type_id` int(11) NOT NULL,
-  `is_required` tinyint(1) DEFAULT 1 COMMENT 'Whether this document is mandatory for stallholders in this branch',
-  `instructions` text DEFAULT NULL COMMENT 'Special instructions for this document in this branch',
+  `is_required` tinyint(1) DEFAULT 1,
+  `instructions` text DEFAULT NULL,
   `created_by_business_manager` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -3507,19 +4033,39 @@ CREATE TABLE `branch_document_requirements` (
 --
 
 INSERT INTO `branch_document_requirements` (`requirement_id`, `branch_id`, `document_type_id`, `is_required`, `instructions`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 1, 'Must be current and valid. Renewal required annually.', 1, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(2, 3, 1, 1, 'Must be current and valid. Renewal required annually.', 3, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(3, 23, 1, 1, 'Must be current and valid. Renewal required annually.', 16, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(4, 1, 4, 1, NULL, 1, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(5, 3, 4, 1, NULL, 3, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(6, 23, 4, 1, NULL, 16, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(7, 1, 2, 0, 'Required for all food-related businesses.', 1, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(8, 3, 2, 0, 'Required for all food-related businesses.', 3, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(9, 23, 2, 0, 'Required for all food-related businesses.', 16, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(10, 1, 5, 1, 'Any government-issued photo ID accepted.', 1, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(11, 3, 5, 1, 'Any government-issued photo ID accepted.', 3, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(12, 23, 5, 1, 'Any government-issued photo ID accepted.', 16, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
-(17, 1, 9, 1, '', 1, '2025-11-12 08:53:11', '2025-11-12 08:53:11');
+(1, 1, 1, 1, 'Valid business permit from Naga City LGU', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(2, 1, 2, 1, 'Current sanitary permit from City Health Office', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(3, 1, 3, 1, 'Fire safety inspection certificate', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(4, 1, 5, 1, 'Community Tax Certificate (Cedula)', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(5, 1, 6, 1, 'Valid government-issued ID (both sides)', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(6, 1, 7, 1, 'Barangay clearance from place of residence', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(7, 1, 11, 1, 'TIN ID or certificate', 1, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(8, 3, 1, 1, 'Business permit from Naga City', 3, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(9, 3, 2, 1, 'Sanitary permit', 3, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(10, 3, 3, 1, 'Fire safety certificate', 3, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(11, 3, 5, 1, 'Cedula', 3, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(12, 3, 6, 1, 'Valid ID', 3, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(13, 3, 7, 1, 'Barangay clearance', 3, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(14, 23, 1, 1, 'Business permit', 16, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(15, 23, 6, 1, 'Valid ID', 16, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
+(16, 23, 5, 1, 'Cedula', 16, '2025-12-01 07:53:42', '2025-12-01 07:53:42');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `branch_document_requirements_backup`
+--
+
+CREATE TABLE `branch_document_requirements_backup` (
+  `requirement_id` int(11) NOT NULL DEFAULT 0,
+  `branch_id` int(11) NOT NULL,
+  `document_type_id` int(11) NOT NULL,
+  `is_required` tinyint(1) DEFAULT 1,
+  `instructions` text DEFAULT NULL,
+  `created_by_business_manager` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -3686,28 +4232,9 @@ CREATE TABLE `credential` (
 --
 
 INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
-(9, 12, '25-72198', '$2b$10$ybs4aIFL9OlkD55HerFTPO3xIVDl.1mP2aCVTEGG2Z8FnKSkjCts.', '2025-10-09 00:49:20', '2025-12-01 03:13:24', 1),
+(9, 12, '25-72198', '$2b$10$ybs4aIFL9OlkD55HerFTPO3xIVDl.1mP2aCVTEGG2Z8FnKSkjCts.', '2025-10-09 00:49:20', '2025-12-01 04:15:28', 1),
 (12, 34, '25-24154', '$2b$10$2XDnKyjqkHcah78ERX8xmuHwuXpMvnKwuMapqhNmvb5YQIC8tCvCi', '2025-11-06 05:32:54', NULL, 1),
 (13, 33, '25-13962', '$2b$10$nqLfFP3TgPE9Ar/y5D37dOe.iD.Ot0mX5.uzJew/g3BuCJv6foGXy', '2025-11-14 07:16:54', NULL, 1);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `document`
---
-
-CREATE TABLE `document` (
-  `document_id` int(11) NOT NULL,
-  `application_id` int(11) NOT NULL,
-  `award_paper` varchar(500) DEFAULT NULL,
-  `lease_contract` varchar(500) DEFAULT NULL,
-  `market_clearance` varchar(500) DEFAULT NULL,
-  `cedula` varchar(500) DEFAULT NULL,
-  `health_card` varchar(500) DEFAULT NULL,
-  `date_uploaded` timestamp NOT NULL DEFAULT current_timestamp(),
-  `verification_status` enum('Pending','Verified','Rejected') DEFAULT 'Pending',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -4013,37 +4540,6 @@ INSERT INTO `other_information` (`other_info_id`, `applicant_id`, `signature_of_
 (12, 12, 'Gemini_Generated_Image_7rbb2p7rbb2p7rbb.png', '552653185_808836058297483_1273040061360099495_n.jpg', 'Trillion Peso March.png', 'laurentejeno73@gmail.com', '2025-10-05 09:11:25', '2025-10-05 09:11:25'),
 (31, 33, 'balance.jpg', '024d5f08-4675-4461-b959-7bd308b04745.jpg', 'Contrast.png', 'requiem121701@gmail.com', '2025-11-06 05:30:18', '2025-11-06 05:30:18'),
 (32, 34, 'unity.jpg', '024d5f08-4675-4461-b959-7bd308b04745.jpg', 'Contrast.png', 'requiem121701@gmail.com', '2025-11-06 05:32:16', '2025-11-06 05:32:16');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `owner_document_requirements`
---
-
-CREATE TABLE `owner_document_requirements` (
-  `requirement_id` int(11) NOT NULL,
-  `owner_id` int(11) NOT NULL,
-  `document_type` varchar(100) NOT NULL,
-  `document_name` varchar(255) NOT NULL,
-  `description` text DEFAULT NULL,
-  `is_required` tinyint(1) DEFAULT 1,
-  `file_size_limit` int(11) DEFAULT 10485760,
-  `allowed_file_types` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '["application/pdf","image/jpeg","image/png"]' CHECK (json_valid(`allowed_file_types`)),
-  `display_order` int(11) DEFAULT 0,
-  `is_active` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `owner_document_requirements`
---
-
-INSERT INTO `owner_document_requirements` (`requirement_id`, `owner_id`, `document_type`, `document_name`, `description`, `is_required`, `file_size_limit`, `allowed_file_types`, `display_order`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 3, 'valid_id', 'Valid Government ID', 'Government-issued identification (Driver\'s License, Passport, UMID, SSS, PhilHealth, etc.)', 1, 10485760, '[\"application/pdf\",\"image/jpeg\",\"image/png\"]', 1, 1, '2025-11-30 14:49:30', '2025-11-30 14:49:30'),
-(2, 3, 'business_permit', 'Business Permit / DTI Registration', 'Valid business permit or DTI registration certificate', 1, 10485760, '[\"application/pdf\",\"image/jpeg\",\"image/png\"]', 2, 1, '2025-11-30 14:49:30', '2025-11-30 14:49:30'),
-(3, 3, 'barangay_clearance', 'Barangay Clearance', 'Valid barangay clearance from your area of residence', 1, 10485760, '[\"application/pdf\",\"image/jpeg\",\"image/png\"]', 3, 1, '2025-11-30 14:49:30', '2025-11-30 14:49:30'),
-(4, 3, 'cedula', 'Community Tax Certificate (Cedula)', 'Current year community tax certificate', 0, 10485760, '[\"application/pdf\",\"image/jpeg\",\"image/png\"]', 4, 1, '2025-11-30 14:49:30', '2025-11-30 14:49:30');
 
 -- --------------------------------------------------------
 
@@ -4944,10 +5440,8 @@ ALTER TABLE `branch`
 --
 ALTER TABLE `branch_document_requirements`
   ADD PRIMARY KEY (`requirement_id`),
-  ADD UNIQUE KEY `unique_branch_document` (`branch_id`,`document_type_id`),
   ADD KEY `idx_branch_requirements` (`branch_id`),
-  ADD KEY `idx_document_requirements` (`document_type_id`),
-  ADD KEY `idx_manager_requirements` (`created_by_business_manager`);
+  ADD KEY `idx_document_type` (`document_type_id`);
 
 --
 -- Indexes for table `business_employee`
@@ -5005,13 +5499,6 @@ ALTER TABLE `credential`
   ADD PRIMARY KEY (`registrationid`),
   ADD UNIQUE KEY `user_name` (`user_name`),
   ADD KEY `applicant_id` (`applicant_id`);
-
---
--- Indexes for table `document`
---
-ALTER TABLE `document`
-  ADD PRIMARY KEY (`document_id`),
-  ADD KEY `application_id` (`application_id`);
 
 --
 -- Indexes for table `document_types`
@@ -5111,14 +5598,6 @@ ALTER TABLE `migrations`
 ALTER TABLE `other_information`
   ADD PRIMARY KEY (`other_info_id`),
   ADD KEY `applicant_id` (`applicant_id`);
-
---
--- Indexes for table `owner_document_requirements`
---
-ALTER TABLE `owner_document_requirements`
-  ADD PRIMARY KEY (`requirement_id`),
-  ADD UNIQUE KEY `unique_owner_document` (`owner_id`,`document_type`),
-  ADD KEY `idx_owner_active` (`owner_id`,`is_active`);
 
 --
 -- Indexes for table `payments`
@@ -5359,7 +5838,7 @@ ALTER TABLE `branch`
 -- AUTO_INCREMENT for table `branch_document_requirements`
 --
 ALTER TABLE `branch_document_requirements`
-  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `business_employee`
@@ -5396,12 +5875,6 @@ ALTER TABLE `business_owner_subscriptions`
 --
 ALTER TABLE `credential`
   MODIFY `registrationid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
-
---
--- AUTO_INCREMENT for table `document`
---
-ALTER TABLE `document`
-  MODIFY `document_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `document_types`
@@ -5474,12 +5947,6 @@ ALTER TABLE `migrations`
 --
 ALTER TABLE `other_information`
   MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
-
---
--- AUTO_INCREMENT for table `owner_document_requirements`
---
-ALTER TABLE `owner_document_requirements`
-  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -5657,9 +6124,8 @@ ALTER TABLE `branch`
 -- Constraints for table `branch_document_requirements`
 --
 ALTER TABLE `branch_document_requirements`
-  ADD CONSTRAINT `fk_requirement_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_requirement_business_manager` FOREIGN KEY (`created_by_business_manager`) REFERENCES `business_manager` (`business_manager_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_requirement_document_type` FOREIGN KEY (`document_type_id`) REFERENCES `document_types` (`document_type_id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_branch_doc_req_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_branch_doc_req_type` FOREIGN KEY (`document_type_id`) REFERENCES `document_types` (`document_type_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `business_employee`
@@ -5702,12 +6168,6 @@ ALTER TABLE `business_owner_subscriptions`
 --
 ALTER TABLE `credential`
   ADD CONSTRAINT `credential_ibfk_1` FOREIGN KEY (`applicant_id`) REFERENCES `applicant` (`applicant_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `document`
---
-ALTER TABLE `document`
-  ADD CONSTRAINT `document_ibfk_1` FOREIGN KEY (`application_id`) REFERENCES `application` (`application_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `employee_activity_log`
@@ -5762,12 +6222,6 @@ ALTER TABLE `inspector_assignment`
 --
 ALTER TABLE `other_information`
   ADD CONSTRAINT `other_information_ibfk_1` FOREIGN KEY (`applicant_id`) REFERENCES `applicant` (`applicant_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `owner_document_requirements`
---
-ALTER TABLE `owner_document_requirements`
-  ADD CONSTRAINT `owner_document_requirements_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `stall_business_owner` (`business_owner_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `payments`

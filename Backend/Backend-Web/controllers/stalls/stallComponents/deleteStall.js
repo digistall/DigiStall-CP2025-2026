@@ -93,106 +93,39 @@ export const deleteStall = async (req, res) => {
       });
     }
 
-    // Instead of hard delete, use soft delete to preserve data integrity
-    // Check if stall has related records that prevent deletion
-    try {
-      // First, try to find related records
-      const [relatedRecords] = await connection.execute(
-        `SELECT 
-          (SELECT COUNT(*) FROM violation_report WHERE stall_id = ?) as violation_count,
-          (SELECT COUNT(*) FROM application WHERE stall_id = ?) as application_count`,
-        [id, id]
-      );
+    // Use stored procedure to delete stall
+    await connection.execute(
+      `CALL sp_deleteStall(?, ?, @success, @message)`,
+      [id, userId]
+    );
 
-      const hasRelatedData =
-        relatedRecords[0].violation_count > 0 ||
-        relatedRecords[0].application_count > 0;
+    // Get the output parameters
+    const [outParams] = await connection.execute(
+      `SELECT @success as success, @message as message`
+    );
 
-      console.log("🔍 Related data check:", {
-        violations: relatedRecords[0].violation_count,
-        applications: relatedRecords[0].application_count,
-        hasRelatedData,
+    const { success, message } = outParams[0];
+
+    if (!success) {
+      return res.status(400).json({
+        success: false,
+        message: message || 'Failed to delete stall'
       });
-
-      if (hasRelatedData) {
-        // Soft delete: Mark as deleted/inactive instead of removing
-        await connection.execute(
-          `UPDATE stall SET 
-            status = 'Inactive',
-            is_available = 0,
-            updated_at = NOW()
-          WHERE stall_id = ?`,
-          [id]
-        );
-
-        console.log(
-          `✅ Stall soft-deleted successfully by ${userType}:`,
-          existingStall[0].stall_no
-        );
-
-        res.json({
-          success: true,
-          message: "Stall removed successfully (archived due to related data)",
-          data: {
-            id: id,
-            stallNumber: existingStall[0].stall_no,
-            deleteType: "soft",
-            reason: "Has related violation reports or applicant data",
-          },
-        });
-      } else {
-        // Hard delete if no related records
-        await connection.execute("DELETE FROM stall WHERE stall_id = ?", [id]);
-
-        console.log(
-          `✅ Stall hard-deleted successfully by ${userType}:`,
-          existingStall[0].stall_no
-        );
-
-        res.json({
-          success: true,
-          message: "Stall deleted successfully",
-          data: {
-            id: id,
-            stallNumber: existingStall[0].stall_no,
-            deleteType: "hard",
-          },
-        });
-      }
-    } catch (deleteError) {
-      // If constraint error occurs, fall back to soft delete
-      if (deleteError.code === "ER_ROW_IS_REFERENCED_2") {
-        console.log("🔄 Constraint error detected, performing soft delete...");
-
-        await connection.execute(
-          `UPDATE stall SET 
-            status = 'Inactive',
-            is_available = 0,
-            updated_at = NOW()
-          WHERE stall_id = ?`,
-          [id]
-        );
-
-        console.log(
-          `✅ Stall soft-deleted successfully by ${userType}:`,
-          existingStall[0].stall_no
-        );
-
-        res.json({
-          success: true,
-          message:
-            "Stall removed successfully (archived due to database constraints)",
-          data: {
-            id: id,
-            stallNumber: existingStall[0].stall_no,
-            deleteType: "soft",
-            reason: "Has related data that prevents deletion",
-          },
-        });
-      } else {
-        throw deleteError; // Re-throw if it's a different error
-      }
     }
+
+    console.log(
+      `✅ Stall deleted successfully by ${userType}:`,
+      existingStall[0].stall_no
+    );
+
+    res.json({
+      success: true,
+      message: message,
+      data: {
+        id: id,
+        stallNumber: existingStall[0].stall_no,
+      },
+    });
   } catch (error) {
     console.error("❌ Delete stall error:", error);
     res.status(500).json({
