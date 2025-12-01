@@ -1,19 +1,62 @@
 import { createConnection } from '../../config/database.js';
 
 /**
- * Get branch document requirements for a branch manager
- * Auto-detects branch from JWT token
+ * Get branch document requirements for a branch manager or business owner
+ * Business owners see requirements for ALL their branches (no branch selection needed)
+ * Branch managers see requirements for their assigned branch
  */
 export const getBranchDocumentRequirements = async (req, res) => {
   let connection;
   try {
     console.log('🔍 User from token:', JSON.stringify(req.user, null, 2));
     
-    // Get branch_id from authenticated user (try multiple field names)
-    const branch_id = req.user.branchId || req.user.branch_id || req.params.branchId;
+    const userRole = req.user.role;
+    const userId = req.user.userId;
     
-    console.log('🎯 Branch ID detected:', branch_id);
-    console.log('📋 Available user fields:', Object.keys(req.user || {}));
+    connection = await createConnection();
+    
+    // Business owners manage document requirements for ALL their branches
+    if (userRole === 'stall_business_owner') {
+      console.log('👤 Business owner accessing document requirements');
+      
+      // Get all branches owned by this business owner
+      const [branches] = await connection.execute(`
+        SELECT DISTINCT b.branch_id, b.branch_name, b.area, b.location
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+        ORDER BY b.branch_name
+      `, [userId]);
+      
+      if (branches.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No branches found for this business owner'
+        });
+      }
+      
+      const branchIds = branches.map(b => b.branch_id);
+      console.log(`📍 Owner manages ${branchIds.length} branches:`, branchIds);
+      
+      // Get document requirements for the first branch using stored procedure
+      const firstBranchId = branchIds[0];
+      const [rows] = await connection.execute('CALL getBranchDocumentRequirements(?)', [firstBranchId]);
+      const requirements = rows[0]; // First result set from stored procedure
+
+      console.log(`✅ Found ${requirements.length} requirements for business owner`);
+      
+      return res.json({
+        success: true,
+        data: requirements,
+        branch_id: firstBranchId,
+        managed_branches: branches,
+        note: 'Document requirements apply to all your branches'
+      });
+    }
+    
+    // Branch managers have a direct branchId
+    const branch_id = req.user.branchId || req.user.branch_id || req.params.branchId;
     
     if (!branch_id) {
       console.log('❌ No branch ID found in user object:', req.user);
@@ -23,28 +66,17 @@ export const getBranchDocumentRequirements = async (req, res) => {
         debug: { user: req.user }
       });
     }
-
-    connection = await createConnection();
     
-    const [requirements] = await connection.execute(`
-      SELECT 
-        bdr.requirement_id,
-        bdr.branch_id,
-        dt.document_type_id,
-        dt.document_name,
-        dt.description,
-        bdr.is_required,
-        bdr.instructions,
-        bdr.created_by_manager,
-        bdr.created_at,
-        bdr.updated_at,
-        CONCAT(bm.first_name, ' ', bm.last_name) as created_by_name
-      FROM branch_document_requirements bdr
-      INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-      LEFT JOIN business_manager bm ON bdr.created_by_business_manager = bm.business_manager_id
-      WHERE bdr.branch_id = ?
-      ORDER BY dt.document_name ASC
-    `, [branch_id]);
+    console.log('🎯 Branch ID detected:', branch_id);
+    console.log('📋 Available user fields:', Object.keys(req.user || {}));
+
+    if (!connection) {
+      connection = await createConnection();
+    }
+    
+    // Use stored procedure to get branch requirements
+    const [rows] = await connection.execute('CALL getBranchDocumentRequirements(?)', [branch_id]);
+    const requirements = rows[0]; // First result set from stored procedure
 
     console.log('✅ Found requirements:', requirements.length);
     
@@ -73,14 +105,46 @@ export const createBranchDocumentRequirement = async (req, res) => {
   let connection;
   try {
     const { document_type_id, is_required = 1, instructions } = req.body;
-    const branch_id = req.user.branchId || req.user.branch_id;
-    const created_by_manager = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
+    let branch_id = req.user.branchId || req.user.branch_id;
+    const userId = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
+    const isBusinessOwner = req.user.role === 'stall_business_owner';
 
-    if (!branch_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: No branch associated with user'
-      });
+    connection = await createConnection();
+
+    // Business owners: apply to all their branches with correct manager_id for each branch
+    let branchManagerPairs = [];
+    
+    if (isBusinessOwner) {
+      // Get branches with their manager IDs
+      const [ownerBranches] = await connection.execute(`
+        SELECT DISTINCT bm.branch_id, bm.business_manager_id
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+        ORDER BY bm.branch_id
+      `, [userId]);
+
+      if (ownerBranches.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'No branches found for business owner'
+        });
+      }
+
+      branchManagerPairs = ownerBranches.map(b => ({
+        branchId: b.branch_id,
+        managerId: b.business_manager_id
+      }));
+    } else {
+      // Regular manager: just their branch
+      if (!branch_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
+      branchManagerPairs = [{ branchId: branch_id, managerId: userId }];
     }
 
     if (!document_type_id) {
@@ -90,37 +154,34 @@ export const createBranchDocumentRequirement = async (req, res) => {
       });
     }
 
-    connection = await createConnection();
-    
-    // Check if this document type already exists for this branch
-    const [existing] = await connection.execute(`
-      SELECT requirement_id FROM branch_document_requirements 
-      WHERE branch_id = ? AND document_type_id = ?
-    `, [branch_id, document_type_id]);
-
-    if (existing.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: 'Document requirement already exists for this branch'
+    // Apply to all branches with correct manager for each
+    let totalAffected = 0;
+    let createdRequirements = [];
+    for (const pair of branchManagerPairs) {
+      const [rows] = await connection.execute(
+        'CALL setBranchDocumentRequirement(?, ?, ?, ?, ?)',
+        [pair.branchId, document_type_id, is_required, instructions, pair.managerId]
+      );
+      const result = rows[0][0]; // First row of first result set
+      totalAffected += result.affected_rows || 0;
+      createdRequirements.push({
+        branch_id: pair.branchId,
+        manager_id: pair.managerId,
+        requirement_id: result.requirement_id
       });
     }
-    
-    const [result] = await connection.execute(`
-      INSERT INTO branch_document_requirements 
-      (branch_id, document_type_id, is_required, instructions, created_by_manager) 
-      VALUES (?, ?, ?, ?, ?)
-    `, [branch_id, document_type_id, is_required, instructions, created_by_manager]);
 
     res.json({
       success: true,
-      message: 'Document requirement created successfully',
+      message: `Document requirement created for ${branchManagerPairs.length} branch(es)`,
       data: {
-        requirement_id: result.insertId,
-        branch_id,
+        affected_rows: totalAffected,
+        branches_updated: branchManagerPairs.length,
+        requirements: createdRequirements,
         document_type_id,
         is_required,
         instructions,
-        created_by_manager
+        created_by_role: isBusinessOwner ? 'business_owner' : 'manager'
       }
     });
 
@@ -151,24 +212,58 @@ export const setBranchDocumentRequirement = async (req, res) => {
   try {
     const { documentTypeId } = req.params;
     const { is_required, instructions } = req.body;
-    const branch_id = req.user.branchId || req.user.branch_id;
-
-    if (!branch_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: No branch associated with user'
-      });
-    }
+    let branch_id = req.user.branchId || req.user.branch_id;
+    const userId = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
+    const isBusinessOwner = req.user.role === 'stall_business_owner';
 
     connection = await createConnection();
-    
-    const [result] = await connection.execute(`
-      UPDATE branch_document_requirements 
-      SET is_required = ?, instructions = ?, updated_at = NOW()
-      WHERE document_type_id = ? AND branch_id = ?
-    `, [is_required, instructions, documentTypeId, branch_id]);
 
-    if (result.affectedRows === 0) {
+    // Business owners: apply to all their branches with correct manager_id
+    let branchManagerPairs = [];
+    if (isBusinessOwner) {
+      const [ownerBranches] = await connection.execute(`
+        SELECT DISTINCT bm.branch_id, bm.business_manager_id
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+        ORDER BY bm.branch_id
+      `, [userId]);
+
+      if (ownerBranches.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'No branches found for business owner'
+        });
+      }
+
+      branchManagerPairs = ownerBranches.map(b => ({
+        branchId: b.branch_id,
+        managerId: b.business_manager_id
+      }));
+    } else {
+      // Regular manager: just their branch
+      if (!branch_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
+      branchManagerPairs = [{ branchId: branch_id, managerId: userId }];
+    }
+
+    // Apply to all branches
+    let totalAffected = 0;
+    for (const pair of branchManagerPairs) {
+      const [rows] = await connection.execute(
+        'CALL setBranchDocumentRequirement(?, ?, ?, ?, ?)',
+        [pair.branchId, documentTypeId, is_required, instructions, pair.managerId]
+      );
+      const result = rows[0][0]; // First row of first result set
+      totalAffected += result.affected_rows || 0;
+    }
+
+    if (totalAffected === 0) {
       return res.status(404).json({
         success: false,
         message: 'Document requirement not found or access denied'
@@ -177,7 +272,10 @@ export const setBranchDocumentRequirement = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Document requirement updated successfully'
+      message: `Document requirement updated for ${branchManagerPairs.length} branch(es)`,
+      affected_rows: totalAffected,
+      branches_updated: branchManagerPairs.length,
+      updated_by_role: isBusinessOwner ? 'business_owner' : 'manager'
     });
 
   } catch (error) {
@@ -194,28 +292,70 @@ export const setBranchDocumentRequirement = async (req, res) => {
 
 /**
  * Delete a document requirement
+ * For business owners: deletes the document type from ALL their branches
+ * For managers: deletes from their assigned branch only
  */
 export const removeBranchDocumentRequirement = async (req, res) => {
   let connection;
   try {
-    const { documentTypeId } = req.params;
-    const branch_id = req.user.branchId || req.user.branch_id;
-
-    if (!branch_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: No branch associated with user'
-      });
-    }
+    const { documentTypeId } = req.params;  // This is either requirement_id or document_type_id
+    let branch_id = req.user.branchId || req.user.branch_id;
+    const userId = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
+    const isBusinessOwner = req.user.role === 'stall_business_owner';
 
     connection = await createConnection();
-    
-    const [result] = await connection.execute(`
-      DELETE FROM branch_document_requirements 
-      WHERE document_type_id = ? AND branch_id = ?
-    `, [documentTypeId, branch_id]);
 
-    if (result.affectedRows === 0) {
+    // Business owners: apply to all their branches
+    let branchIds = [];
+    if (isBusinessOwner) {
+      const [ownerBranches] = await connection.execute(`
+        SELECT DISTINCT bm.branch_id
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+        ORDER BY bm.branch_id
+      `, [userId]);
+
+      if (ownerBranches.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'No branches found for business owner'
+        });
+      }
+
+      branchIds = ownerBranches.map(b => b.branch_id);
+    } else {
+      // Regular manager: just their branch
+      if (!branch_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
+      branchIds = [branch_id];
+    }
+
+    // Get the document_type_id from the requirement if needed
+    const [reqInfo] = await connection.execute(
+      'SELECT document_type_id FROM branch_document_requirements WHERE requirement_id = ? LIMIT 1',
+      [documentTypeId]
+    );
+    
+    const docTypeId = reqInfo.length > 0 ? reqInfo[0].document_type_id : documentTypeId;
+
+    // Apply to all branches
+    let totalAffected = 0;
+    for (const branchId of branchIds) {
+      const [rows] = await connection.execute(
+        'CALL removeBranchDocumentRequirement(?, ?)',
+        [branchId, docTypeId]
+      );
+      const result = rows[0][0]; // First row of first result set
+      totalAffected += result.affected_rows || 0;
+    }
+
+    if (totalAffected === 0) {
       return res.status(404).json({
         success: false,
         message: 'Document requirement not found or access denied'
@@ -224,7 +364,9 @@ export const removeBranchDocumentRequirement = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Document requirement deleted successfully'
+      message: `Document requirement deleted from ${branchIds.length} branch(es)`,
+      affected_rows: totalAffected,
+      branches_updated: branchIds.length
     });
 
   } catch (error) {

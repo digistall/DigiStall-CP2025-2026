@@ -88,16 +88,6 @@
                       <div class="panel-content">
                         <v-row>
                           <v-col cols="12" md="6">
-                            <v-text-field
-                              :value="docType.document_name"
-                              label="Document Name"
-                              outlined
-                              dense
-                              readonly
-                              hint="Predefined document type"
-                            ></v-text-field>
-                          </v-col>
-                          <v-col cols="12" md="6">
                             <v-switch
                               v-model="docType.is_required"
                               :label="docType.is_required ? 'Required Document' : 'Optional Document'"
@@ -108,15 +98,13 @@
                         </v-row>
                         <v-row>
                           <v-col cols="12" md="6">
-                            <v-textarea
-                              :value="docType.description"
-                              label="Document Description"
-                              outlined
-                              dense
-                              rows="2"
-                              readonly
-                              hint="Standard description for this document type"
-                            ></v-textarea>
+                            <div class="description-display">
+                              <label class="field-label">Document Description</label>
+                              <div class="description-content">
+                                {{ docType.description || 'No description available' }}
+                              </div>
+                              <span class="field-hint">Standard description for this document type</span>
+                            </div>
                           </v-col>
                           <v-col cols="12" md="6">
                             <v-textarea
@@ -124,9 +112,12 @@
                               label="Special Instructions"
                               outlined
                               dense
-                              rows="2"
+                              rows="3"
+                              auto-grow
                               @change="updateDocumentRequirement(docType)"
                               hint="Add specific instructions for this branch"
+                              persistent-hint
+                              placeholder="No special instructions set"
                             ></v-textarea>
                           </v-col>
                         </v-row>
