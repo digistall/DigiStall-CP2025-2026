@@ -1,4 +1,5 @@
 import apiClient from '@/services/apiClient'
+import { useAuthStore } from '@/stores/authStore.js'
 
 export default {
   name: 'DocumentCustomization',
@@ -13,6 +14,7 @@ export default {
       // Document data
       availableDocumentTypes: [], // All predefined document types
       branchRequirements: [], // Currently required types for this branch
+      documentTypes: [], // Mapped document types for display
       userBranchId: null,
       
       // UI state
@@ -44,6 +46,20 @@ export default {
       originalRequirements: []
     }
   },
+  computed: {
+    authStore() {
+      return useAuthStore()
+    },
+    isBusinessOwner() {
+      return this.authStore.isStallBusinessOwner
+    },
+    currentUser() {
+      return this.authStore.user.value || {}
+    },
+    userRole() {
+      return this.currentUser.role || this.currentUser.userType
+    }
+  },
   watch: {
     isVisible(newVal) {
       if (newVal) {
@@ -56,7 +72,8 @@ export default {
     async loadBranchRequirements() {
       this.loading = true
       try {
-        // Load both the available document types and current branch requirements
+        // For business owners, don't pass branchId - they manage all branches
+        // For branch managers, backend will use their assigned branchId from token
         const [typesResponse, requirementsResponse] = await Promise.all([
           apiClient.get('/stallholders/documents/types'),
           apiClient.get('/stallholders/documents/requirements')

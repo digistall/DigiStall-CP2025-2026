@@ -147,7 +147,7 @@ router.get('/documents/types-with-status', authenticateToken, DocumentController
 /**
  * @route GET /api/stallholders/documents/requirements
  * @description Get document requirements for current branch
- * @access Branch Manager, Employee
+ * @access Branch Manager, Employee, Business Owner
  */
 router.get('/documents/requirements', authenticateToken, getBranchDocumentRequirements);
 
