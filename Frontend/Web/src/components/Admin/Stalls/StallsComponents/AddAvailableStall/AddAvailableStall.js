@@ -364,6 +364,7 @@ export default {
 
         const result = await response.json()
         console.log('Backend response:', result)
+        console.log('Backend response data:', result.data)
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -382,10 +383,13 @@ export default {
         }
 
         if (result.success) {
-          // Store the stall data for later use
+          // Store the stall data for later use - use backend data first
           this.lastAddedStall = result.data || stallData
 
-          console.log('Stall added successfully - emitting real-time update')
+          console.log('✅ Stall added successfully!')
+          console.log('📦 Stall data from backend:', this.lastAddedStall)
+          console.log('🏢 Floor name:', this.lastAddedStall.floor_name)
+          console.log('🏪 Section name:', this.lastAddedStall.section_name)
 
           // Emit local event for parent component
           this.$emit('stall-added', this.lastAddedStall)
@@ -501,19 +505,23 @@ export default {
       console.error('Form submission error:', error)
 
       let userMessage = 'An error occurred while adding the stall.'
+      let autoRedirect = false
 
       if (error.message.includes('network') || error.message.includes('fetch')) {
-        userMessage = 'Network error. Please check your connection and try again.'
+        userMessage = '❌ Network Error: Unable to connect to server. Please check your connection and try again.'
       } else if (error.message.includes('authentication') || error.message.includes('token')) {
-        userMessage = 'Session expired. Please login again.'
-        // Auto redirect to login after showing message
-        setTimeout(() => {
-          this.$router.push('/login')
-        }, 3000)
+        userMessage = '🔒 Session Expired: Please login again to continue.'
+        autoRedirect = true
       } else if (error.message.includes('already exists')) {
-        userMessage = error.message || 'This stall number already exists. Please use a different number.'
+        userMessage = `⚠️ Duplicate Stall: ${error.message}`
+      } else if (error.message.includes('Access denied')) {
+        userMessage = `🚫 Access Denied: ${error.message}`
+      } else if (error.message.includes('Invalid section')) {
+        userMessage = `⚠️ Invalid Section: ${error.message}`
+      } else if (error.message.includes('Bad request')) {
+        userMessage = `⚠️ Validation Error: ${error.message}`
       } else if (error.message) {
-        userMessage = error.message
+        userMessage = `❌ Error: ${error.message}`
       }
 
       this.$emit('show-message', {
@@ -522,6 +530,13 @@ export default {
         operation: 'add',
         operationType: 'stall'
       })
+
+      // Auto redirect to login if session expired
+      if (autoRedirect) {
+        setTimeout(() => {
+          this.$router.push('/login')
+        }, 3000)
+      }
     },
   },
 

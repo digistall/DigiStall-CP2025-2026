@@ -290,7 +290,10 @@ export default {
         if (!response.ok) {
           if (response.status === 401) {
             console.error('Session expired')
-            this.$router.push('/login')
+            this.$emit('error', '🔒 Session Expired: Please login again to continue.')
+            setTimeout(() => {
+              this.$router.push('/login')
+            }, 2000)
             return
           } else if (response.status === 403) {
             throw new Error('Access denied - you do not have permission to update this stall')
@@ -328,11 +331,26 @@ export default {
         }
       } catch (error) {
         console.error('Update stall error:', error)
-        // Show error notification via event bus
-        eventBus.emit('show-notification', {
-          message: error.message || 'Failed to update stall',
-          type: 'error',
-        })
+        
+        // Format error message with appropriate icon
+        let errorMessage = '❌ Error: Failed to update stall'
+        
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = '❌ Network Error: Unable to connect to server. Please check your connection and try again.'
+        } else if (error.message.includes('already exists')) {
+          errorMessage = `⚠️ Duplicate Stall: ${error.message}`
+        } else if (error.message.includes('Access denied')) {
+          errorMessage = `🚫 Access Denied: ${error.message}`
+        } else if (error.message.includes('Stall not found')) {
+          errorMessage = `⚠️ Not Found: ${error.message}`
+        } else if (error.message.includes('Invalid section')) {
+          errorMessage = `⚠️ Invalid Section: ${error.message}`
+        } else if (error.message) {
+          errorMessage = `❌ Error: ${error.message}`
+        }
+        
+        // Emit error event to parent component
+        this.$emit('error', errorMessage)
       } finally {
         this.loading = false
       }
@@ -389,7 +407,9 @@ export default {
 
     handleDeleteError(error) {
       console.error('❌ Delete error:', error)
-      this.$emit('stall-deleted-error', error)
+      // Emit error to parent component with the formatted message
+      const errorMessage = typeof error === 'object' ? error.message : error
+      this.$emit('error', errorMessage)
       this.showDeleteConfirm = false
     },
 
