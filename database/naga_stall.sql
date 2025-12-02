@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 01, 2025 at 03:47 PM
+-- Generation Time: Dec 02, 2025 at 04:11 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2852,6 +2852,187 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall` (IN `p_stall_no` VARCH
     END IF;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+    DECLARE v_existing_stall INT DEFAULT 0;
+    DECLARE v_floor_section_valid INT DEFAULT 0;
+    DECLARE v_branch_valid INT DEFAULT 0;
+    DECLARE v_business_manager_id INT DEFAULT NULL;
+    DECLARE v_floor_name VARCHAR(100);
+    DECLARE v_section_name VARCHAR(100);
+    DECLARE v_branch_name VARCHAR(100);
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = 'Database error occurred while adding stall';
+        SET p_stall_id = NULL;
+    END;
+
+    START TRANSACTION;
+
+    
+    IF p_user_type = 'business_manager' THEN
+        SET v_business_manager_id = p_user_id;
+        
+        
+        SELECT COUNT(*) INTO v_branch_valid
+        FROM business_manager
+        WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
+        
+        IF v_branch_valid = 0 THEN
+            SET p_success = FALSE;
+            SET p_message = 'Access denied. Manager does not belong to this branch';
+            SET p_stall_id = NULL;
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+        
+    ELSEIF p_user_type = 'business_employee' THEN
+        
+        SELECT bm.business_manager_id INTO v_business_manager_id
+        FROM branch b
+        LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+        WHERE b.branch_id = p_branch_id
+        LIMIT 1;
+        
+        IF v_business_manager_id IS NULL THEN
+            SET p_success = FALSE;
+            SET p_message = 'Branch does not have an assigned manager';
+            SET p_stall_id = NULL;
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+    ELSE
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Access denied. User type ', p_user_type, ' cannot create stalls');
+        SET p_stall_id = NULL;
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    SELECT COUNT(*), MAX(f.floor_name), MAX(sec.section_name), MAX(b.branch_name)
+    INTO v_floor_section_valid, v_floor_name, v_section_name, v_branch_name
+    FROM section sec
+    INNER JOIN floor f ON sec.floor_id = f.floor_id
+    INNER JOIN branch b ON f.branch_id = b.branch_id
+    WHERE sec.section_id = p_section_id 
+      AND f.floor_id = p_floor_id 
+      AND b.branch_id = p_branch_id;
+
+    IF v_floor_section_valid = 0 THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Invalid floor (', p_floor_id, ') or section (', p_section_id, ') for your branch');
+        SET p_stall_id = NULL;
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    SELECT COUNT(*) INTO v_existing_stall
+    FROM stall
+    WHERE stall_no = p_stall_no AND section_id = p_section_id;
+
+    IF v_existing_stall > 0 THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Stall number ', p_stall_no, ' already exists in ', v_section_name, ' section on ', v_floor_name);
+        SET p_stall_id = NULL;
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    INSERT INTO stall (
+        stall_no, 
+        stall_location, 
+        size, 
+        floor_id, 
+        section_id, 
+        rental_price,
+        price_type, 
+        status, 
+        stamp, 
+        description, 
+        stall_image, 
+        is_available,
+        raffle_auction_deadline,
+        deadline_active,
+        raffle_auction_status,
+        created_by_business_manager,
+        created_at
+    ) VALUES (
+        p_stall_no,
+        p_stall_location,
+        p_size,
+        p_floor_id,
+        p_section_id,
+        p_rental_price,
+        p_price_type,
+        p_status,
+        p_stamp,
+        p_description,
+        p_stall_image,
+        p_is_available,
+        p_raffle_auction_deadline,
+        0, 
+        CASE 
+            WHEN p_price_type IN ('Raffle', 'Auction') THEN 'Not Started'
+            ELSE NULL
+        END,
+        v_business_manager_id,
+        NOW()
+    );
+
+    SET p_stall_id = LAST_INSERT_ID();
+    SET p_success = TRUE;
+    
+    
+    IF p_price_type = 'Raffle' THEN
+        SET p_message = CONCAT('Stall ', p_stall_no, ' added successfully to ', v_floor_name, ', ', v_section_name, '. Raffle will start when first applicant applies');
+    ELSEIF p_price_type = 'Auction' THEN
+        SET p_message = CONCAT('Stall ', p_stall_no, ' added successfully to ', v_floor_name, ', ', v_section_name, '. Auction will start when first bid is placed');
+    ELSE
+        SET p_message = CONCAT('Stall ', p_stall_no, ' added successfully to ', v_floor_name, ', ', v_section_name);
+    END IF;
+
+    
+    IF p_price_type = 'Raffle' THEN
+        INSERT INTO raffle (
+            stall_id, 
+            raffle_status, 
+            created_by_business_manager, 
+            created_at
+        ) VALUES (
+            p_stall_id, 
+            'Waiting for Participants', 
+            v_business_manager_id, 
+            NOW()
+        );
+    END IF;
+
+    
+    IF p_price_type = 'Auction' THEN
+        INSERT INTO auction (
+            stall_id, 
+            starting_price, 
+            current_highest_bid, 
+            auction_status,
+            created_by_business_manager, 
+            created_at
+        ) VALUES (
+            p_stall_id, 
+            p_rental_price, 
+            p_rental_price,
+            'Waiting for Bids',
+            v_business_manager_id, 
+            NOW()
+        );
+    END IF;
+
+    COMMIT;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` ENUM('rental','utilities','maintenance','penalty','other'), IN `p_payment_method` ENUM('cash','gcash','maya','paymaya','bank_transfer','check'), IN `p_reference_number` VARCHAR(100), IN `p_collected_by_user_id` INT, IN `p_notes` TEXT)   BEGIN
     DECLARE payment_id INT;
     DECLARE collected_by_name VARCHAR(200);
@@ -2991,6 +3172,132 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall` (IN `p_stall_id` IN
     END IF;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_stall_id` INT, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+    DECLARE v_existing_branch_id INT DEFAULT NULL;
+    DECLARE v_has_active_subscription INT DEFAULT 0;
+    DECLARE v_has_applications INT DEFAULT 0;
+    DECLARE v_stall_no VARCHAR(20) DEFAULT NULL;
+    DECLARE v_floor_id INT DEFAULT NULL;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        GET DIAGNOSTICS CONDITION 1
+            @sqlstate = RETURNED_SQLSTATE, 
+            @errno = MYSQL_ERRNO, 
+            @text = MESSAGE_TEXT;
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Database error: ', @text);
+    END;
+
+    START TRANSACTION;
+
+    
+    SELECT s.stall_no, s.section_id INTO v_stall_no, v_floor_id
+    FROM stall s
+    WHERE s.stall_id = p_stall_id;
+
+    IF v_stall_no IS NULL THEN
+        SET p_success = FALSE;
+        SET p_message = 'Stall not found';
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    SELECT f.branch_id INTO v_existing_branch_id
+    FROM section sec
+    INNER JOIN floor f ON sec.floor_id = f.floor_id
+    WHERE sec.section_id = v_floor_id;
+
+    IF v_existing_branch_id IS NULL THEN
+        SET p_success = FALSE;
+        SET p_message = 'Stall not found';
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    IF p_user_type = 'business_manager' THEN
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM business_manager 
+            WHERE business_manager_id = p_user_id AND branch_id = v_existing_branch_id
+        ) THEN
+            SET p_success = FALSE;
+            SET p_message = 'Access denied. Stall does not belong to your branch';
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+        
+    ELSEIF p_user_type = 'business_employee' THEN
+        
+        IF p_branch_id != v_existing_branch_id THEN
+            SET p_success = FALSE;
+            SET p_message = 'Access denied. Stall does not belong to your branch';
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+    ELSE
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Access denied. User type ', p_user_type, ' cannot delete stalls');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    SELECT COUNT(*) INTO v_has_applications
+    FROM application
+    WHERE stall_id = p_stall_id;
+
+    IF v_has_applications > 0 THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Application records exist. Archive stall instead of deleting');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    IF EXISTS (SELECT 1 FROM stallholder WHERE stall_id = p_stall_id) THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Stallholder records exist. Archive stall instead of deleting');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    IF EXISTS (SELECT 1 FROM auction WHERE stall_id = p_stall_id) THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Auction records exist. Archive stall instead of deleting');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    IF EXISTS (SELECT 1 FROM raffle WHERE stall_id = p_stall_id) THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Raffle records exist. Archive stall instead of deleting');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    IF EXISTS (SELECT 1 FROM violation_report WHERE stall_id = p_stall_id) THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Violation reports exist. Archive stall instead of deleting');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    DELETE FROM stall WHERE stall_id = p_stall_id;
+
+    SET p_success = TRUE;
+    SET p_message = CONCAT('Stall ', v_stall_no, ' deleted successfully');
+
+    COMMIT;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BEGIN
     DECLARE current_date_str VARCHAR(8);
     DECLARE last_reference VARCHAR(20);
@@ -3106,6 +3413,98 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByManager` (IN `p_bu
     LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
     WHERE bm.business_manager_id = p_business_manager_id
     ORDER BY s.stall_no ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStalls_complete` (IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT)   BEGIN
+    IF p_user_type = 'business_manager' THEN
+        
+        SELECT 
+            s.stall_id,
+            s.stall_no,
+            s.stall_location,
+            s.size,
+            s.floor_id,
+            f.floor_name,
+            s.section_id,
+            sec.section_name,
+            s.rental_price,
+            s.price_type,
+            s.status,
+            s.stamp,
+            s.description,
+            s.stall_image,
+            s.is_available,
+            s.raffle_auction_deadline,
+            s.deadline_active,
+            s.raffle_auction_status,
+            s.created_by_business_manager,
+            s.created_at,
+            s.updated_at,
+            b.branch_id,
+            b.branch_name,
+            b.area,
+            CASE 
+                WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+                WHEN s.is_available = 1 THEN 'Available'
+                ELSE 'Unavailable'
+            END as availability_status,
+            sh.stallholder_id,
+            sh.stallholder_name
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON s.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        INNER JOIN business_manager bm ON b.branch_id = bm.branch_id
+        LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+        WHERE bm.business_manager_id = p_user_id
+        ORDER BY s.created_at DESC;
+        
+    ELSEIF p_user_type = 'business_employee' THEN
+        
+        SELECT 
+            s.stall_id,
+            s.stall_no,
+            s.stall_location,
+            s.size,
+            s.floor_id,
+            f.floor_name,
+            s.section_id,
+            sec.section_name,
+            s.rental_price,
+            s.price_type,
+            s.status,
+            s.stamp,
+            s.description,
+            s.stall_image,
+            s.is_available,
+            s.raffle_auction_deadline,
+            s.deadline_active,
+            s.raffle_auction_status,
+            s.created_by_business_manager,
+            s.created_at,
+            s.updated_at,
+            b.branch_id,
+            b.branch_name,
+            b.area,
+            CASE 
+                WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+                WHEN s.is_available = 1 THEN 'Available'
+                ELSE 'Unavailable'
+            END as availability_status,
+            sh.stallholder_id,
+            sh.stallholder_name
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON s.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+        WHERE b.branch_id = p_branch_id
+        ORDER BY s.created_at DESC;
+        
+    ELSE
+        
+        SELECT NULL LIMIT 0;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAvailableStallsByBranch` (IN `p_branch_id` INT)   BEGIN
@@ -3395,6 +3794,125 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall` (IN `p_stall_id` IN
             END IF;
         END IF;
     END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+    DECLARE v_existing_branch_id INT;
+    DECLARE v_floor_section_valid INT DEFAULT 0;
+    DECLARE v_duplicate_stall INT DEFAULT 0;
+    DECLARE v_business_manager_id INT;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_success = FALSE;
+        SET p_message = 'Database error occurred while updating stall';
+    END;
+
+    START TRANSACTION;
+
+    
+    SELECT f.branch_id INTO v_existing_branch_id
+    FROM stall s
+    INNER JOIN section sec ON s.section_id = sec.section_id
+    INNER JOIN floor f ON sec.floor_id = f.floor_id
+    WHERE s.stall_id = p_stall_id;
+
+    IF v_existing_branch_id IS NULL THEN
+        SET p_success = FALSE;
+        SET p_message = 'Stall not found';
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    IF p_user_type = 'business_manager' THEN
+        
+        SELECT COUNT(*) INTO v_floor_section_valid
+        FROM business_manager
+        WHERE business_manager_id = p_user_id AND branch_id = v_existing_branch_id;
+        
+        IF v_floor_section_valid = 0 THEN
+            SET p_success = FALSE;
+            SET p_message = 'Access denied. Stall does not belong to your branch';
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+        
+        SET v_business_manager_id = p_user_id;
+        
+    ELSEIF p_user_type = 'business_employee' THEN
+        
+        IF p_branch_id != v_existing_branch_id THEN
+            SET p_success = FALSE;
+            SET p_message = 'Access denied. Stall does not belong to your branch';
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+        
+        
+        SELECT business_manager_id INTO v_business_manager_id
+        FROM business_manager
+        WHERE branch_id = p_branch_id
+        LIMIT 1;
+        
+    ELSE
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Access denied. User type ', p_user_type, ' cannot update stalls');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    SELECT COUNT(*) INTO v_floor_section_valid
+    FROM section sec
+    INNER JOIN floor f ON sec.floor_id = f.floor_id
+    WHERE sec.section_id = p_section_id 
+      AND f.floor_id = p_floor_id 
+      AND f.branch_id = v_existing_branch_id;
+
+    IF v_floor_section_valid = 0 THEN
+        SET p_success = FALSE;
+        SET p_message = 'Invalid floor or section for this stall';
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    SELECT COUNT(*) INTO v_duplicate_stall
+    FROM stall
+    WHERE stall_no = p_stall_no 
+      AND section_id = p_section_id 
+      AND stall_id != p_stall_id;
+
+    IF v_duplicate_stall > 0 THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Stall number ', p_stall_no, ' already exists in this section');
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+
+    
+    UPDATE stall SET
+        stall_no = p_stall_no,
+        stall_location = p_stall_location,
+        size = p_size,
+        floor_id = p_floor_id,
+        section_id = p_section_id,
+        rental_price = p_rental_price,
+        price_type = p_price_type,
+        status = p_status,
+        description = p_description,
+        stall_image = p_stall_image,
+        is_available = p_is_available,
+        raffle_auction_deadline = p_raffle_auction_deadline,
+        updated_at = NOW()
+    WHERE stall_id = p_stall_id;
+
+    SET p_success = TRUE;
+    SET p_message = 'Stall updated successfully';
+
+    COMMIT;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateInspector` (IN `p_inspector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
@@ -4817,8 +5335,7 @@ INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_lo
 (123, 6, 2, 'NPM-003', 'main', '3x4', 2500.00, 'Raffle', 'Active', 'APPROVED', 'try', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-07 23:00:00', 1, 'Active', '2025-10-05 11:26:37', '2025-10-07 23:00:00', 1, '2025-10-03 17:36:32', '2025-10-07 08:47:01'),
 (124, 6, 2, 'NPM-005', 'Main Entrance', '3x4', 2750.00, 'Raffle', 'Active', 'APPROVED', 'try lang', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-25 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-10-15 06:03:28', '2025-10-24 08:04:13'),
 (140, 35, 16, 'TEST-001', 'Main', '3x4', 2510.00, 'Raffle', 'Active', 'APPROVED', 'Test Data Stall', 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 1, '2025-11-08 23:00:00', 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:52:01', '2025-11-05 15:52:12'),
-(142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45'),
-(143, 6, 2, 'NPM-001', 'Main', '3x4', 2550.00, 'Fixed Price', 'Active', 'APPROVED', 'Test Data', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-12-01 14:41:13', '2025-12-01 14:44:28');
+(142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45');
 
 -- --------------------------------------------------------
 
@@ -5999,7 +6516,7 @@ ALTER TABLE `spouse`
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=144;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=145;
 
 --
 -- AUTO_INCREMENT for table `stallholder`

@@ -14,7 +14,7 @@
       </v-overlay>
 
       <!-- Error State -->
-      <v-alert v-if="error && !loading" type="error" prominent border="left" class="ma-4">
+      <v-alert v-if="error && !loading" type="error" prominent border="start" class="ma-4">
         <div class="text-h6">Failed to load stalls</div>
         <div>{{ error }}</div>
         <template v-slot:append>

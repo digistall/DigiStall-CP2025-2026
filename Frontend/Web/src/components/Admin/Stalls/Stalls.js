@@ -380,12 +380,20 @@ export default {
         throw new Error('Stall data is missing required ID field')
       }
 
+      // Log price data for debugging
+      console.log('💰 Price data:', {
+        rental_price: stall.rental_price,
+        price: stall.price,
+        typeof_rental: typeof stall.rental_price,
+        typeof_price: typeof stall.price
+      })
+
       const transformed = {
         // Basic stall info - ensure ID is consistent
         id: Number(extractedId),
         stallNumber: stall.stall_no || stall.stallNumber,
-        price: this.formatPrice(stall.rental_price || stall.price),
-        location: stall.stall_location,
+        price: this.formatPrice(stall.rental_price || stall.price || 0),
+        location: stall.stall_location || stall.location,
         size: stall.size,
         dimensions: stall.size || stall.dimensions, // Use size as primary, dimensions as fallback
         description: stall.description,
@@ -439,7 +447,13 @@ export default {
 
     // Format price display
     formatPrice(price) {
-      return `₱${parseFloat(price).toLocaleString()}`
+      // Handle null, undefined, or invalid price values
+      const numericPrice = parseFloat(price)
+      if (isNaN(numericPrice)) {
+        console.warn('Invalid price value:', price)
+        return '₱0'
+      }
+      return `₱${numericPrice.toLocaleString()}`
     },
 
     // Get default image based on section from database
@@ -539,9 +553,29 @@ export default {
     async handleStallUpdated(updatedStallData) {
       try {
         console.log('📝 Handling stall update:', updatedStallData)
+        console.log('📊 Update data fields:', {
+          stall_id: updatedStallData.stall_id,
+          rental_price: updatedStallData.rental_price,
+          price: updatedStallData.price,
+          stall_no: updatedStallData.stall_no,
+          section_name: updatedStallData.section_name,
+          floor_name: updatedStallData.floor_name
+        })
         
         // Set flag to prevent filter interference
         this.isUpdatingStall = true
+        
+        // Check if updated data is complete (has essential fields)
+        const hasCompleteData = updatedStallData.stall_no && 
+                               (updatedStallData.rental_price !== undefined) && 
+                               updatedStallData.section_name
+        
+        if (!hasCompleteData) {
+          console.warn('⚠️ Incomplete stall data received, refetching all stalls...')
+          // Refetch all stalls to get complete data
+          await this.fetchStalls()
+          return
+        }
         
         // Find and update the stall in stallsData
         const stallIndex = this.stallsData.findIndex(stall => 
@@ -552,6 +586,7 @@ export default {
         if (stallIndex !== -1) {
           // Transform the updated data to match our format
           const transformedStall = this.transformStallData(updatedStallData)
+          console.log('✨ Transformed stall:', transformedStall)
           
           // Update stallsData
           this.stallsData.splice(stallIndex, 1, transformedStall)
@@ -569,10 +604,13 @@ export default {
           
           console.log('✅ Stall updated successfully - using real-time updates')
         } else {
-          console.warn('⚠️ Stall not found for update')
+          console.warn('⚠️ Stall not found for update, refetching all stalls...')
+          await this.fetchStalls()
         }
       } catch (error) {
         console.error('❌ Error updating stall:', error)
+        // Fallback: refetch all stalls
+        await this.fetchStalls()
       } finally {
         // Always clear the flag after update
         this.isUpdatingStall = false
@@ -760,7 +798,9 @@ export default {
       if (isOperationNotification && operationType === 'stall') {
         // Map operation to toast type
         let toastType = 'success'
-        if (operation.toLowerCase().includes('delete')) {
+        if (color === 'error') {
+          toastType = 'error'
+        } else if (operation.toLowerCase().includes('delete')) {
           toastType = 'delete'
         } else if (operation.toLowerCase().includes('update')) {
           toastType = 'update'
