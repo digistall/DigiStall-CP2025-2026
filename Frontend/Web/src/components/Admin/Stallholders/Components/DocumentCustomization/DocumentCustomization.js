@@ -1,8 +1,12 @@
 import apiClient from '@/services/apiClient'
 import { useAuthStore } from '@/stores/authStore.js'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'DocumentCustomization',
+  components: {
+    ToastNotification
+  },
   props: {
     isVisible: {
       type: Boolean,
@@ -35,11 +39,12 @@ export default {
       showDeleteDialog: false,
       docTypeToDelete: null,
       
-      // Feedback
-      showSuccess: false,
-      successMessage: '',
-      showError: false,
-      errorMessage: '',
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       
       // Change tracking
       hasChanges: false,
@@ -237,13 +242,19 @@ export default {
     },
 
     showSuccessMessage(message) {
-      this.successMessage = message
-      this.showSuccess = true
+      this.showToast(`✅ ${message}`, 'success')
     },
 
     showErrorMessage(message) {
-      this.errorMessage = message
-      this.showError = true
+      this.showToast(`❌ ${message}`, 'error')
+    },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     }
   }
 }

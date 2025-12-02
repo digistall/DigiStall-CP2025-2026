@@ -310,27 +310,13 @@
       </v-card>
     </v-dialog>
 
-    <!-- Success Snackbar -->
-    <v-snackbar
-      v-model="showSuccessSnackbar"
-      :timeout="4000"
-      color="success"
-      location="top"
-      elevation="6"
-    >
-      <div class="d-flex align-center">
-        <v-icon class="mr-2">mdi-check-circle</v-icon>
-        <span>{{ successMessage }}</span>
-      </div>
-      <template v-slot:actions>
-        <v-btn
-          variant="text"
-          @click="showSuccessSnackbar = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 

@@ -3,6 +3,7 @@ import VendorSearchFilter from './Components/Search/ApplicantsSearch.vue'
 import VendorApplicantsTable from './Components/Table/ApplicantsTable.vue'
 import ApproveApplicants from './Components/ApproveApplicants/ApproveApplicants.vue'
 import DeclineApplicants from './Components/DeclineApplicants/DeclineApplicants.vue'
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -14,12 +15,19 @@ export default {
     VendorApplicantsTable,
     ApproveApplicants,
     DeclineApplicants,
+    ToastNotification,
   },
   data() {
     return {
       pageTitle: 'Applicants',
       searchQuery: '',
       filterCriteria: null,
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success',
+      },
       // Dropdown functionality
       currentApplicantType: 'Stall Applicants',
       showDropdown: false,
@@ -477,6 +485,12 @@ export default {
         })
       }
 
+      // Show success toast
+      this.showToast(
+        `✅ Applicant ${result.applicant?.fullName || ''} approved successfully`,
+        'success',
+      )
+
       // Refresh the applicant list
       if (this.currentApplicantType === 'Stall Applicants') {
         this.refreshStallApplicants()
@@ -500,6 +514,12 @@ export default {
           },
         )
       }
+
+      // Show success toast
+      this.showToast(
+        `🚫 Applicant ${result.applicant?.fullName || ''} declined`,
+        'delete',
+      )
 
       // Refresh the applicant list to show updated status
       if (this.currentApplicantType === 'Stall Applicants') {
@@ -984,7 +1004,7 @@ export default {
         const result = await response.json();
         
         if (result.success) {
-          alert(`Cleanup completed: ${result.data.deletedCount} expired applicants removed`);
+          this.showToast(`✅ Cleanup completed: ${result.data.deletedCount} expired applicants removed`, 'success');
           // Refresh the applicants list
           await this.fetchStallApplicants();
         } else {
@@ -992,8 +1012,15 @@ export default {
         }
       } catch (error) {
         console.error('❌ Manual cleanup error:', error);
-        alert(`Failed to trigger cleanup: ${error.message}`);
+        this.showToast(`❌ Failed to trigger cleanup: ${error.message}`, 'error');
       }
+    },
+
+    // Toast notification helper
+    showToast(message, type = 'success') {
+      this.toast.show = true;
+      this.toast.message = message;
+      this.toast.type = type;
     },
   },
 }
