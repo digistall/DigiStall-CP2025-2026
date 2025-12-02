@@ -96,10 +96,44 @@ export const addStall = async (req, res) => {
       });
     }
 
+    // Fetch the complete stall data with floor and section names
+    const [stallData] = await connection.execute(
+      `SELECT 
+        s.stall_id,
+        s.stall_no,
+        s.stall_location,
+        s.size,
+        s.floor_id,
+        s.section_id,
+        s.rental_price,
+        s.price_type,
+        s.status,
+        s.description,
+        s.stall_image,
+        s.is_available,
+        s.raffle_auction_deadline,
+        s.created_at,
+        s.updated_at,
+        f.floor_name,
+        f.floor_number,
+        sec.section_name,
+        b.location as branch_location,
+        b.area,
+        bm.first_name as manager_first_name,
+        bm.last_name as manager_last_name
+      FROM stall s
+      INNER JOIN section sec ON s.section_id = sec.section_id
+      INNER JOIN floor f ON s.floor_id = f.floor_id
+      INNER JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+      WHERE s.stall_id = ?`,
+      [stallId]
+    );
+
     res.status(201).json({
       success: true,
       message: message,
-      data: { id: stallId }
+      data: stallData[0] || { id: stallId }
     });
 
   } catch (error) {

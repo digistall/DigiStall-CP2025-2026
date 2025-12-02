@@ -374,6 +374,14 @@ export default {
         'extractedId': extractedId,
         'extractedId type': typeof extractedId
       })
+      
+      console.log('🏢 Floor/Section extraction debug:', {
+        'stall.floor_name': stall.floor_name,
+        'stall.floor_number': stall.floor_number,
+        'stall.floor_id': stall.floor_id,
+        'stall.section_name': stall.section_name,
+        'stall.section_id': stall.section_id
+      })
 
       if (!extractedId) {
         console.error('❌ No valid ID found in stall data:', stall)

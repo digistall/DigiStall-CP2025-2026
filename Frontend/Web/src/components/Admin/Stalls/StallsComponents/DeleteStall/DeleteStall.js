@@ -51,8 +51,13 @@ export default {
         const token = sessionStorage.getItem('authToken')
 
         if (!token) {
-          this.$emit('error', 'Authentication token not found. Please login again.')
-          this.$router.push('/login')
+          this.$emit('error', {
+            message: '🔒 Authentication Required: Please login again to continue.',
+            error: new Error('Authentication token not found')
+          })
+          setTimeout(() => {
+            this.$router.push('/login')
+          }, 2000)
           return
         }
 
@@ -82,8 +87,13 @@ export default {
 
         if (!response.ok) {
           if (response.status === 401) {
-            this.$emit('error', 'Session expired. Please login again.')
-            this.$router.push('/login')
+            this.$emit('error', {
+              message: '🔒 Session Expired: Please login again to continue.',
+              error: new Error('Session expired')
+            })
+            setTimeout(() => {
+              this.$router.push('/login')
+            }, 2000)
             return
           } else if (response.status === 403) {
             throw new Error('Access denied - you do not have permission to delete this stall')
@@ -128,9 +138,28 @@ export default {
 
         this.loading = false
 
+        // Format error message with appropriate icon
+        let errorMessage = '❌ Error: Failed to delete stall'
+        
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = '❌ Network Error: Unable to connect to server. Please check your connection and try again.'
+        } else if (error.message.includes('Application records exist') || error.message.includes('Stallholder records exist')) {
+          errorMessage = `⚠️ Cannot Delete: ${error.message}. Please archive the stall instead.`
+        } else if (error.message.includes('Access denied')) {
+          errorMessage = `🚫 Access Denied: ${error.message}`
+        } else if (error.message.includes('Stall not found')) {
+          errorMessage = `⚠️ Not Found: ${error.message}`
+        } else if (error.message.includes('Auction records exist') || error.message.includes('Raffle records exist')) {
+          errorMessage = `⚠️ Cannot Delete: ${error.message}. Archive stall instead of deleting.`
+        } else if (error.message.includes('Violation reports exist')) {
+          errorMessage = `⚠️ Cannot Delete: ${error.message}. Archive stall instead of deleting.`
+        } else if (error.message) {
+          errorMessage = `❌ Error: ${error.message}`
+        }
+
         // Emit error event to parent component
         this.$emit('error', {
-          message: error.message || 'Failed to delete stall',
+          message: errorMessage,
           error: error,
         })
       }
