@@ -511,8 +511,7 @@ export default {
           this.$router.push('/login')
         }, 3000)
       } else if (error.message.includes('already exists')) {
-        userMessage =
-          'This stall number already exists in your branch. Please use a different number.'
+        userMessage = error.message || 'This stall number already exists. Please use a different number.'
       } else if (error.message) {
         userMessage = error.message
       }
@@ -520,6 +519,8 @@ export default {
       this.$emit('show-message', {
         type: 'error',
         text: userMessage,
+        operation: 'add',
+        operationType: 'stall'
       })
     },
   },

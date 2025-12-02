@@ -101,7 +101,9 @@ export default {
         stallNumber: '',
         price: '',
         floor: '',
+        floorId: null, // Store floor ID separately
         section: '',
+        sectionId: null, // Store section ID separately
         size: '',
         location: '',
         description: '',
@@ -126,8 +128,10 @@ export default {
         id: extractedId,
         stallNumber: data.stall_no || data.stallNumber || '',
         price: this.extractNumericPrice(data.rental_price || data.price) || '',
-        floor: data.floor || '',
-        section: data.section || '',
+        floor: data.floor_name || data.floor || '',
+        floorId: data.floor_id || data.floorId || null,
+        section: data.section_name || data.section || '',
+        sectionId: data.section_id || data.sectionId || null,
         size: data.size || data.dimensions || '',
         location: data.stall_location || data.location || '',
         description: data.description || '',
@@ -236,11 +240,11 @@ export default {
         }
 
         const updateData = {
-          stallNumber: this.editForm.stallNumber.trim(),
+          stall_no: this.editForm.stallNumber.trim(), // Backend expects stall_no
           price: numericPrice,
-          floor: this.editForm.floor,
-          section: this.editForm.section,
-          size: this.editForm.size ? this.editForm.size.trim() : null, // Use size instead of dimensions
+          floor_id: this.editForm.floorId, // Send floor ID instead of name
+          section_id: this.editForm.sectionId, // Send section ID instead of name
+          size: this.editForm.size ? this.editForm.size.trim() : null,
           location: this.editForm.location,
           description: this.editForm.description.trim(),
           image: imageData,
@@ -296,19 +300,24 @@ export default {
           throw new Error(result.message || `Server error: ${response.status}`)
         }
 
-        if (result.success && result.data) {
-          console.log('🔄 Update successful - backend response data:', result.data)
+        if (result.success) {
+          console.log('🔄 Update successful - backend response:', result)
 
-          // Send the raw backend data to parent - let parent transform it consistently
-          console.log('🔄 Sending raw backend data to parent for transformation')
+          // If backend returned updated stall data, use it
+          if (result.data) {
+            console.log('🔄 Sending raw backend data to parent for transformation')
+            // Emit stall-updated event with raw backend data (parent will transform)
+            this.$emit('stall-updated', result.data)
+          } else {
+            // If no data returned, just emit a refresh signal
+            console.log('🔄 No data returned, emitting refresh signal')
+            this.$emit('stall-updated', { stall_id: this.editForm.id })
+          }
 
-          // Emit stall-updated event with raw backend data (parent will transform)
-          this.$emit('stall-updated', result.data)
-
-          // NEW: Emit global event for real-time sidebar update
+          // Emit global event for real-time sidebar update with toast notification
           eventBus.emit(EVENTS.STALL_UPDATED, {
-            stallData: result.data,
-            priceType: result.data?.priceType || result.data?.price_type,
+            stallData: result.data || { stall_id: this.editForm.id },
+            priceType: result.data?.priceType || result.data?.price_type || this.editForm.priceType,
             message: result.message || 'Stall updated successfully!',
           })
 
@@ -319,7 +328,11 @@ export default {
         }
       } catch (error) {
         console.error('Update stall error:', error)
-        // Only log errors, no user-facing messages
+        // Show error notification via event bus
+        eventBus.emit('show-notification', {
+          message: error.message || 'Failed to update stall',
+          type: 'error',
+        })
       } finally {
         this.loading = false
       }
@@ -332,8 +345,10 @@ export default {
           stallData.rental_price || stallData.price,
           stallData.price_type || stallData.priceType,
         ),
-        floor: stallData.floor,
-        section: stallData.section,
+        floor: stallData.floor_name || stallData.floor,
+        floorId: stallData.floor_id || stallData.floorId,
+        section: stallData.section_name || stallData.section,
+        sectionId: stallData.section_id || stallData.sectionId,
         size: stallData.size, // Only use size, no dimensions
         location: stallData.stall_location || stallData.location,
         description: stallData.description,
