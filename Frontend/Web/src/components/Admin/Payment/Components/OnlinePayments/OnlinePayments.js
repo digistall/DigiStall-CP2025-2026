@@ -1,7 +1,11 @@
 import '@/assets/css/scrollable-tables.css'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'OnlinePayments',
+  components: {
+    ToastNotification
+  },
   emits: ['accept-payment', 'decline-payment', 'count-updated'],
   data() {
     return {
@@ -15,9 +19,12 @@ export default {
       showDeclineDialog: false,
       pendingPayment: null,
       declineReason: '',
-      // Success snackbar
-      showSuccessSnackbar: false,
-      successMessage: '',
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       paymentMethods: [
         { id: 'gcash', name: 'GCash', color: '#007DFE', icon: 'mdi-cellphone' },
         { id: 'maya', name: 'Maya', color: '#00D4FF', icon: 'mdi-credit-card' },
@@ -268,8 +275,7 @@ export default {
       console.log('Approving payment:', this.pendingPayment.payment_id);
       this.$emit('payment-approved', this.pendingPayment);
 
-      this.successMessage = `Payment #${this.pendingPayment.id} has been accepted successfully!`;
-      this.showSuccessSnackbar = true;
+      this.showToast(`✅ Payment #${this.pendingPayment.id} has been accepted successfully!`, 'success');
 
       this.showAcceptDialog = false;
       this.pendingPayment = null;
@@ -290,8 +296,7 @@ export default {
         declineReason: this.declineReason
       });
 
-      this.successMessage = `Payment #${this.pendingPayment.id} has been declined.`;
-      this.showSuccessSnackbar = true;
+      this.showToast(`❌ Payment #${this.pendingPayment.id} has been declined.`, 'error');
 
       this.showDeclineDialog = false;
       this.pendingPayment = null;
@@ -307,6 +312,14 @@ export default {
       this.showDeclineDialog = false;
       this.pendingPayment = null;
       this.declineReason = '';
+    },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     }
   }
 };

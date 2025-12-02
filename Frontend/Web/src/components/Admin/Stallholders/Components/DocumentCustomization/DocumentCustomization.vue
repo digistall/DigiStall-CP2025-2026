@@ -232,27 +232,13 @@
       </v-card>
     </v-dialog>
 
-    <!-- Success Snackbar -->
-    <v-snackbar
-      v-model="showSuccess"
-      color="success"
-      timeout="3000"
-      bottom
-    >
-      <v-icon left>mdi-check-circle</v-icon>
-      {{ successMessage }}
-    </v-snackbar>
-
-    <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showError"
-      color="error"
-      timeout="5000"
-      bottom
-    >
-      <v-icon left>mdi-alert-circle</v-icon>
-      {{ errorMessage }}
-    </v-snackbar>
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </v-dialog>
 </template>
 

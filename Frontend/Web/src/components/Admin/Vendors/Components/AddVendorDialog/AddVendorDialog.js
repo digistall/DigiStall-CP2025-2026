@@ -1,13 +1,20 @@
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
+
 export default {
   name: 'AddVendorDialog',
+  components: {
+    ToastNotification
+  },
   data() {
     return {
       activeTab: 0,
       formValid: false,
       saving: false,
-      showSuccess: false,
-      showError: false,
-      errorMessage: '',
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       
       // Form fields
       form: {
@@ -88,13 +95,21 @@ export default {
 
         this.$emit('save', newRow)
         this.saving = false
-        this.showSuccess = true
+        this.showToast('✅ Vendor added successfully!', 'success')
         this.$emit('update:modelValue', false)
         if (this.isVisible !== undefined) {
           this.$emit('close')
         }
       }, 500)
     },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
+    }
   },
 
   props: {

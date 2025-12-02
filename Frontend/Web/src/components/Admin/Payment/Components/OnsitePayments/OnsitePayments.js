@@ -1,10 +1,12 @@
 import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'OnsitePayments',
   emits: ['payment-added', 'delete-payment', 'count-updated'],
   components: {
-    StallholderDropdown
+    StallholderDropdown,
+    ToastNotification
   },
   data() {
     return {
@@ -14,10 +16,12 @@ export default {
       formValid: false,
       selectedPayment: null,
       loading: false,
-      // Snackbar for notifications
-      showSuccessSnackbar: false,
-      successMessage: '',
-      snackbarColor: 'success',
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       form: {
         stallholderId: null,
         stallholderName: '',
@@ -298,20 +302,22 @@ export default {
           }));
         } else {
           console.error('❌ Failed to fetch onsite payments:', response.status);
-          this.showSnackbar('Failed to fetch onsite payments. Please try again.', 'error');
+          this.showToast('❌ Failed to fetch onsite payments. Please try again.', 'error');
         }
       } catch (error) {
         console.error('❌ Error fetching onsite payments:', error);
-        this.showSnackbar('An error occurred while fetching payments.', 'error');
+        this.showToast('❌ An error occurred while fetching payments.', 'error');
       } finally {
         this.loading = false;
       }
     },
 
-    showSnackbar(message, color = 'success') {
-      this.successMessage = message;
-      this.snackbarColor = color;
-      this.showSuccessSnackbar = true;
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     },
 
     loadSampleData() {
@@ -432,18 +438,15 @@ export default {
           // Emit event to parent
           this.$emit('payment-added', result);
           
-          // Show success message in snackbar
-          this.successMessage = result.lateFee > 0 
-            ? `Payment added successfully! (Including ₱${result.lateFee} late fee)`
-            : 'Payment added successfully!';
-          this.snackbarColor = 'success';
-          this.showSuccessSnackbar = true;
+          // Show success message with toast
+          const successMsg = result.lateFee > 0 
+            ? `✅ Payment added successfully! (Including ₱${result.lateFee} late fee)`
+            : '✅ Payment added successfully!';
+          this.showToast(successMsg, 'success');
         } else {
           console.error('❌ Failed to add payment:', result.message);
-          // Show error in snackbar instead of alert
-          this.successMessage = result.message || 'Failed to add payment';
-          this.snackbarColor = 'error';
-          this.showSuccessSnackbar = true;
+          // Show error with toast
+          this.showToast(`❌ ${result.message || 'Failed to add payment'}`, 'error');
         }
       } catch (error) {
         console.error('❌ Error adding payment:', error);
