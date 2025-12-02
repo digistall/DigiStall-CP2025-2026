@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 01, 2025 at 03:27 PM
+-- Generation Time: Dec 01, 2025 at 03:47 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -4628,7 +4628,6 @@ CREATE TABLE `raffle` (
 INSERT INTO `raffle` (`raffle_id`, `stall_id`, `application_deadline`, `first_application_time`, `start_time`, `end_time`, `raffle_status`, `total_participants`, `winner_selected`, `winner_applicant_id`, `winner_selection_date`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
 (6, 123, '2025-10-07 23:00:00', '2025-10-05 11:26:37', '2025-10-05 11:26:37', '2025-10-07 23:00:00', 'Active', 1, 0, NULL, NULL, 1, '2025-10-03 17:36:32', '2025-10-05 03:26:37'),
 (7, 124, NULL, NULL, NULL, NULL, 'Waiting for Participants', 0, 0, NULL, NULL, 1, '2025-10-15 06:03:28', '2025-10-15 06:03:28'),
-(11, 132, NULL, NULL, NULL, NULL, 'Waiting for Participants', 0, 0, NULL, NULL, 1, '2025-10-26 13:16:26', '2025-10-26 13:16:26'),
 (16, 140, NULL, NULL, NULL, NULL, 'Waiting for Participants', 0, 0, NULL, NULL, 16, '2025-11-05 15:52:01', '2025-11-05 15:52:01');
 
 --
@@ -4817,9 +4816,9 @@ INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_lo
 (116, 25, 7, 'STL-001', 'main', '3x5', 2501.00, 'Auction', 'Active', 'APPROVED', 'try', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-01 03:57:53', 0, 'Not Started', NULL, NULL, 3, '2025-09-30 18:57:53', '2025-09-30 19:00:25'),
 (123, 6, 2, 'NPM-003', 'main', '3x4', 2500.00, 'Raffle', 'Active', 'APPROVED', 'try', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-07 23:00:00', 1, 'Active', '2025-10-05 11:26:37', '2025-10-07 23:00:00', 1, '2025-10-03 17:36:32', '2025-10-07 08:47:01'),
 (124, 6, 2, 'NPM-005', 'Main Entrance', '3x4', 2750.00, 'Raffle', 'Active', 'APPROVED', 'try lang', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-25 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-10-15 06:03:28', '2025-10-24 08:04:13'),
-(132, 2, 1, 'NPM-001', 'Main', '3x4', 2500.00, 'Raffle', 'Active', 'APPROVED', 'test for live', NULL, 1, '2025-10-29 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-10-26 13:16:26', '2025-10-26 13:16:26'),
 (140, 35, 16, 'TEST-001', 'Main', '3x4', 2510.00, 'Raffle', 'Active', 'APPROVED', 'Test Data Stall', 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 1, '2025-11-08 23:00:00', 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:52:01', '2025-11-05 15:52:12'),
-(142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45');
+(142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45'),
+(143, 6, 2, 'NPM-001', 'Main', '3x4', 2550.00, 'Fixed Price', 'Active', 'APPROVED', 'Test Data', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-12-01 14:41:13', '2025-12-01 14:44:28');
 
 -- --------------------------------------------------------
 
@@ -6000,7 +5999,7 @@ ALTER TABLE `spouse`
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=143;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=144;
 
 --
 -- AUTO_INCREMENT for table `stallholder`
