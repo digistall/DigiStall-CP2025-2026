@@ -1,5 +1,10 @@
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
+
 export default {
   name: 'EditCollectorDialog',
+  components: {
+    ToastNotification
+  },
   props: {
     modelValue: {
       type: Boolean,
@@ -23,8 +28,11 @@ export default {
       activeTab: 0,
       formValid: false,
       saving: false,
-      showSuccess: false,
-      showError: false,
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       form: {
         id: null,
         lastName: '',
@@ -105,14 +113,22 @@ export default {
           raw: { ...this.form },
         })
 
-        this.showSuccess = true
+        this.showToast('📝 Collector updated successfully!', 'update')
         this.closeDialog()
       } catch (error) {
         console.error('Error updating collector:', error)
-        this.showError = true
+        this.showToast('❌ Error updating collector. Please try again.', 'error')
       } finally {
         this.saving = false
       }
     },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
+    }
   },
 }

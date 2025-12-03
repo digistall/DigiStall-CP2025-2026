@@ -36,13 +36,17 @@ export default {
     userType() {
       return sessionStorage.getItem('userType') || 'branch-manager'
     },
+    isSystemAdministrator() {
+      return this.userType === 'system_administrator'
+    },
     isAdmin() {
-      return this.userType === 'admin'
+      return this.userType === 'system_administrator' || this.userType === 'stall_business_owner'
     },
     isEmployee() {
-      return this.userType === 'employee'
+      return this.userType === 'business_employee'
     },
     currentUserData() {
+      if (this.isSystemAdministrator) return this.adminData
       if (this.isAdmin) return this.adminData
       if (this.isEmployee) return this.employeeData
       return this.branchManagerData
@@ -55,16 +59,19 @@ export default {
       // Show the full name and area/location designation
       if (this.currentUserData) {
         const fullName =
-          this.currentUserData.fullName || (this.isAdmin ? 'Administrator' : 'Branch Manager')
+          this.currentUserData.fullName || (this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Administrator' : 'Business Manager')
         const designation = this.currentUserData.designation || ''
         return designation ? `${fullName} - ${designation}` : fullName
       }
-      return this.isAdmin ? 'System Administrator' : 'Branch Manager'
+      return this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Stall Business Owner' : 'Business Manager'
     },
     displayLocation() {
       // Show area and location
-      if (this.isAdmin) {
+      if (this.isSystemAdministrator) {
         return 'System Administration'
+      }
+      if (this.isAdmin) {
+        return 'Business Owner Portal'
       }
       if (this.currentUserData?.area && this.currentUserData?.location) {
         return `${this.currentUserData.area}`
@@ -73,8 +80,12 @@ export default {
     },
     displayLocationText() {
       // Show formatted location text for the new design
-      if (this.isAdmin) {
+      if (this.isSystemAdministrator) {
         return 'System Administration'
+      }
+      
+      if (this.isAdmin) {
+        return 'Business Owner Portal'
       }
       
       // For employees, prioritize branch name
@@ -138,7 +149,14 @@ export default {
         })
         
         // Use the stored user data directly
-        if (this.isAdmin) {
+        if (this.isSystemAdministrator) {
+          this.adminData = {
+            username: currentUser.username || 'sysadmin',
+            fullName: currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'System Administrator',
+            email: currentUser.email || 'sysadmin@nagastall.com',
+            role: 'System Administrator'
+          }
+        } else if (this.isAdmin) {
           this.adminData = {
             username: currentUser.username || 'admin',
             fullName: currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Administrator',
@@ -287,7 +305,7 @@ export default {
         if (storedCurrentUser) {
           try {
             const userData = JSON.parse(storedCurrentUser)
-            if (userData.userType === 'employee') {
+            if (userData.userType === 'business_employee') {
               // Get branch name from various possible sources
               const branchName = userData.branchName || userData.branch_name || userData.branch?.branch_name || userData.branch?.name || null
               

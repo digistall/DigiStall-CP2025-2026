@@ -24,9 +24,9 @@ export const addStall = async (req, res) => {
     }
 
     // Authorization check based on user type
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      console.log("🔍 Authorizing branch manager for stall creation");
-    } else if (userType === "employee") {
+    if (userType === "business_manager") {
+      console.log("🔍 Authorizing business manager for stall creation");
+    } else if (userType === "business_employee") {
       // Employee authorization - check permissions
       const permissions = req.user?.permissions || [];
       const hasStallsPermission = Array.isArray(permissions)
@@ -180,31 +180,31 @@ export const addStall = async (req, res) => {
     let branchName;
     let actualManagerId = null; // Will be set based on user type
 
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // For branch managers, get their branch directly
-      const branchManagerId = req.user?.branchManagerId || userId;
+    if (userType === "business_manager") {
+      // For business managers, get their branch directly
+      const businessManagerId = req.user?.businessManagerId || userId;
       
-      const [branchManagerInfo] = await connection.execute(
-        `SELECT bm.branch_id, b.branch_name, b.area, bm.branch_manager_id
-         FROM branch_manager bm
+      const [businessManagerInfo] = await connection.execute(
+        `SELECT bm.branch_id, b.branch_name, b.area, bm.business_manager_id
+         FROM business_manager bm
          INNER JOIN branch b ON bm.branch_id = b.branch_id
-         WHERE bm.branch_manager_id = ?`,
-        [branchManagerId]
+         WHERE bm.business_manager_id = ?`,
+        [businessManagerId]
       );
 
-      if (!branchManagerInfo || branchManagerInfo.length === 0) {
+      if (!businessManagerInfo || businessManagerInfo.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Branch manager not found or not assigned to a branch",
+          message: "Business manager not found or not assigned to a branch",
         });
       }
 
-      branchInfo = branchManagerInfo[0];
+      branchInfo = businessManagerInfo[0];
       managerBranchId = branchInfo.branch_id;
       branchName = branchInfo.branch_name;
-      actualManagerId = branchInfo.branch_manager_id;
+      actualManagerId = branchInfo.business_manager_id;
       
-    } else if (userType === "employee") {
+    } else if (userType === "business_employee") {
       // 🔧 FIXED: For employees, get branch info differently
       console.log("🔍 Getting employee branch information...");
       
@@ -247,11 +247,11 @@ export const addStall = async (req, res) => {
         });
       }
 
-      // Get branch information (branch manager is optional for employees)
+      // Get branch information (business manager is optional for employees)
       const [employeeBranchInfo] = await connection.execute(
-        `SELECT b.branch_id, b.branch_name, b.area, bm.branch_manager_id
+        `SELECT b.branch_id, b.branch_name, b.area, bm.business_manager_id
          FROM branch b
-         LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
+         LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
          WHERE b.branch_id = ?`,
         [employeeBranchId]
       );
@@ -266,8 +266,8 @@ export const addStall = async (req, res) => {
       branchInfo = employeeBranchInfo[0];
       managerBranchId = branchInfo.branch_id;
       branchName = branchInfo.branch_name;
-      // For employees creating stalls, we can use the branch manager ID if available, or null
-      actualManagerId = branchInfo.branch_manager_id || null;
+      // For employees creating stalls, we can use the business manager ID if available, or null
+      actualManagerId = branchInfo.business_manager_id || null;
       
       console.log(`✅ Employee ${userId} authorized to create stalls in branch ${branchName} (ID: ${managerBranchId})`);
     }

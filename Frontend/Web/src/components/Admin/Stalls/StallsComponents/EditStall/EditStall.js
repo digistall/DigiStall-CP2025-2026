@@ -25,10 +25,6 @@ export default {
       showDeleteConfirm: false,
       valid: false,
       loading: false,
-      showSuccessPopup: false,
-      popupState: 'loading', // 'loading' or 'success'
-      successMessage: '',
-      popupTimeout: null,
       rules: {
         stallNumber: [
           (v) => !!v || 'Stall number is required',
@@ -73,6 +69,14 @@ export default {
       })(),
     }
   },
+  computed: {
+    // Check if user is a business owner (view-only access)
+    isBusinessOwner() {
+      const userType = sessionStorage.getItem('userType')
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      return userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner'
+    },
+  },
   watch: {
     stallData: {
       handler(newData, oldData) {
@@ -94,40 +98,6 @@ export default {
     },
   },
   methods: {
-    showSuccessAnimation(message) {
-      console.log('✅ Showing success popup:', message)
-      this.successMessage = message
-      this.popupState = 'loading'
-      this.showSuccessPopup = true
-
-      // Transition to success state after loading animation
-      setTimeout(() => {
-        this.popupState = 'success'
-
-        // Auto close after 2 seconds
-        this.popupTimeout = setTimeout(() => {
-          this.closeSuccessPopup()
-        }, 2000)
-      }, 1500)
-    },
-
-    closeSuccessPopup() {
-      if (this.popupTimeout) {
-        clearTimeout(this.popupTimeout)
-        this.popupTimeout = null
-      }
-      this.showSuccessPopup = false
-      this.popupState = 'loading'
-      this.successMessage = ''
-
-      // Don't automatically close the modal after success
-      // Let the user manually close it or continue editing
-      console.log('✅ Success popup closed, modal remains open for continued editing')
-
-      // No auto-refresh needed - parent component handles real-time updates
-      console.log('✅ Stall updated successfully - using real-time updates')
-    },
-
     closeModal() {
       this.resetForm()
       this.$emit('close')
@@ -139,7 +109,9 @@ export default {
         stallNumber: '',
         price: '',
         floor: '',
+        floorId: null, // Store floor ID separately
         section: '',
+        sectionId: null, // Store section ID separately
         size: '',
         location: '',
         description: '',
@@ -164,8 +136,10 @@ export default {
         id: extractedId,
         stallNumber: data.stall_no || data.stallNumber || '',
         price: this.extractNumericPrice(data.rental_price || data.price) || '',
-        floor: data.floor || '',
-        section: data.section || '',
+        floor: data.floor_name || data.floor || '',
+        floorId: data.floor_id || data.floorId || null,
+        section: data.section_name || data.section || '',
+        sectionId: data.section_id || data.sectionId || null,
         size: data.size || data.dimensions || '',
         location: data.stall_location || data.location || '',
         description: data.description || '',
@@ -274,11 +248,11 @@ export default {
         }
 
         const updateData = {
-          stallNumber: this.editForm.stallNumber.trim(),
+          stall_no: this.editForm.stallNumber.trim(), // Backend expects stall_no
           price: numericPrice,
-          floor: this.editForm.floor,
-          section: this.editForm.section,
-          size: this.editForm.size ? this.editForm.size.trim() : null, // Use size instead of dimensions
+          floor_id: this.editForm.floorId, // Send floor ID instead of name
+          section_id: this.editForm.sectionId, // Send section ID instead of name
+          size: this.editForm.size ? this.editForm.size.trim() : null,
           location: this.editForm.location,
           description: this.editForm.description.trim(),
           image: imageData,
@@ -324,7 +298,10 @@ export default {
         if (!response.ok) {
           if (response.status === 401) {
             console.error('Session expired')
-            this.$router.push('/login')
+            this.$emit('error', '🔒 Session Expired: Please login again to continue.')
+            setTimeout(() => {
+              this.$router.push('/login')
+            }, 2000)
             return
           } else if (response.status === 403) {
             throw new Error('Access denied - you do not have permission to update this stall')
@@ -334,31 +311,54 @@ export default {
           throw new Error(result.message || `Server error: ${response.status}`)
         }
 
-        if (result.success && result.data) {
-          console.log('🔄 Update successful - backend response data:', result.data)
+        if (result.success) {
+          console.log('🔄 Update successful - backend response:', result)
 
-          // Send the raw backend data to parent - let parent transform it consistently
-          console.log('🔄 Sending raw backend data to parent for transformation')
+          // If backend returned updated stall data, use it
+          if (result.data) {
+            console.log('🔄 Sending raw backend data to parent for transformation')
+            // Emit stall-updated event with raw backend data (parent will transform)
+            this.$emit('stall-updated', result.data)
+          } else {
+            // If no data returned, just emit a refresh signal
+            console.log('🔄 No data returned, emitting refresh signal')
+            this.$emit('stall-updated', { stall_id: this.editForm.id })
+          }
 
-          // Emit stall-updated event with raw backend data (parent will transform)
-          this.$emit('stall-updated', result.data)
-
-          // NEW: Emit global event for real-time sidebar update
+          // Emit global event for real-time sidebar update with toast notification
           eventBus.emit(EVENTS.STALL_UPDATED, {
-            stallData: result.data,
-            priceType: result.data?.priceType || result.data?.price_type,
+            stallData: result.data || { stall_id: this.editForm.id },
+            priceType: result.data?.priceType || result.data?.price_type || this.editForm.priceType,
             message: result.message || 'Stall updated successfully!',
           })
 
-          // Show success animation AFTER emitting the update event
-          const successMessage = result.message || 'Stall updated successfully!'
-          this.showSuccessAnimation(successMessage)
+          // Close the modal after successful update
+          this.closeModal()
         } else {
           throw new Error(result.message || 'Failed to update stall')
         }
       } catch (error) {
         console.error('Update stall error:', error)
-        // Only log errors, no user-facing messages
+        
+        // Format error message with appropriate icon
+        let errorMessage = '❌ Error: Failed to update stall'
+        
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = '❌ Network Error: Unable to connect to server. Please check your connection and try again.'
+        } else if (error.message.includes('already exists')) {
+          errorMessage = `⚠️ Duplicate Stall: ${error.message}`
+        } else if (error.message.includes('Access denied')) {
+          errorMessage = `🚫 Access Denied: ${error.message}`
+        } else if (error.message.includes('Stall not found')) {
+          errorMessage = `⚠️ Not Found: ${error.message}`
+        } else if (error.message.includes('Invalid section')) {
+          errorMessage = `⚠️ Invalid Section: ${error.message}`
+        } else if (error.message) {
+          errorMessage = `❌ Error: ${error.message}`
+        }
+        
+        // Emit error event to parent component
+        this.$emit('error', errorMessage)
       } finally {
         this.loading = false
       }
@@ -371,8 +371,10 @@ export default {
           stallData.rental_price || stallData.price,
           stallData.price_type || stallData.priceType,
         ),
-        floor: stallData.floor,
-        section: stallData.section,
+        floor: stallData.floor_name || stallData.floor,
+        floorId: stallData.floor_id || stallData.floorId,
+        section: stallData.section_name || stallData.section,
+        sectionId: stallData.section_id || stallData.sectionId,
         size: stallData.size, // Only use size, no dimensions
         location: stallData.stall_location || stallData.location,
         description: stallData.description,
@@ -413,7 +415,9 @@ export default {
 
     handleDeleteError(error) {
       console.error('❌ Delete error:', error)
-      this.$emit('stall-deleted-error', error)
+      // Emit error to parent component with the formatted message
+      const errorMessage = typeof error === 'object' ? error.message : error
+      this.$emit('error', errorMessage)
       this.showDeleteConfirm = false
     },
 

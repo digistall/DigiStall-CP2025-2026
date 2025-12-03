@@ -19,6 +19,7 @@ import DocumentController, {
   getAllDocumentTypes
 } from '../controllers/stallholders/documentController.js';
 import { authenticateToken } from '../middleware/enhancedAuth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 
 // Configure multer for Excel file uploads
 const storage = multer.diskStorage({
@@ -72,23 +73,23 @@ router.get('/:id', authenticateToken, StallholderController.getStallholderById);
 /**
  * @route POST /api/stallholders
  * @description Create new stallholder
- * @access Branch Manager
+ * @access Business Manager (view-only blocked for owners)
  */
-router.post('/', authenticateToken, StallholderController.createStallholder);
+router.post('/', authenticateToken, viewOnlyForOwners, StallholderController.createStallholder);
 
 /**
  * @route PUT /api/stallholders/:id
  * @description Update existing stallholder
- * @access Branch Manager
+ * @access Business Manager (view-only blocked for owners)
  */
-router.put('/:id', authenticateToken, StallholderController.updateStallholder);
+router.put('/:id', authenticateToken, viewOnlyForOwners, StallholderController.updateStallholder);
 
 /**
  * @route DELETE /api/stallholders/:id
  * @description Delete/Terminate stallholder contract
- * @access Branch Manager
+ * @access Business Manager (view-only blocked for owners)
  */
-router.delete('/:id', authenticateToken, StallholderController.deleteStallholder);
+router.delete('/:id', authenticateToken, viewOnlyForOwners, StallholderController.deleteStallholder);
 
 /**
  * @route GET /api/stallholders/data/available-stalls
@@ -146,7 +147,7 @@ router.get('/documents/types-with-status', authenticateToken, DocumentController
 /**
  * @route GET /api/stallholders/documents/requirements
  * @description Get document requirements for current branch
- * @access Branch Manager, Employee
+ * @access Branch Manager, Employee, Business Owner
  */
 router.get('/documents/requirements', authenticateToken, getBranchDocumentRequirements);
 

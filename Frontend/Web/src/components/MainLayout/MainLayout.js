@@ -10,20 +10,29 @@ export default {
       // Base menu items - will be updated based on user type
       menuItems: [],
       // Define menu items for different user types
-      adminMenuItems: [
+      systemAdministratorMenuItems: [
+        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/system-admin/dashboard' },
+        { id: 2, icon: 'mdi-account-multiple', name: 'Business Owners', route: '/system-admin/business-owners' },
+        { id: 3, icon: 'mdi-cash-multiple', name: 'Payments', route: '/system-admin/payments' },
+        { id: 4, icon: 'mdi-chart-box', name: 'Reports', route: '/system-admin/reports' },
+      ],
+      businessOwnerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         { id: 3, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
+        { id: 4, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
+        { id: 5, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
+        { id: 50, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
       ],
-      branchManagerMenuItems: [
+      businessManagerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
         { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
         { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
       ],
-      // Employee menu items based on permissions
-      employeeMenuItems: {
+      // Business Employee menu items based on permissions
+      businessEmployeeMenuItems: {
         dashboard: { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
         payments: { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         applicants: { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
@@ -56,6 +65,9 @@ export default {
         8: '/app/stallholders', // Stallholders
         9: '/app/stalls', // Stalls
         10: '/app/collectors', // Collectors
+        11: '/app/inspectors', // Inspectors
+        12: '/app/compliances', // Compliances (for Business Owner in More)
+        13: '/app/subscription', // My Subscription (for Business Owner in More)
         // Submenu items for Stalls
         91: '/app/stalls/raffles', // Raffles submenu
         92: '/app/stalls/auctions', // Auctions submenu
@@ -83,16 +95,19 @@ export default {
 
       console.log('🔧 Setting menu items for user type:', userType)
 
-      if (userType === 'admin' || currentUser.userType === 'admin') {
-        this.menuItems = [...this.adminMenuItems]
-        // Update routes for admin
-        this.allMenuRoutes[3] = '/app/branch'
-      } else if (userType === 'employee') {
-        // Employee: Show only features based on permissions
+      if (userType === 'system_administrator' || currentUser.userType === 'system_administrator') {
+        this.menuItems = [...this.systemAdministratorMenuItems]
+        console.log('🔧 System Administrator menu items loaded')
+      } else if (userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner') {
+        this.menuItems = [...this.businessOwnerMenuItems]
+        // Update routes for business owner - Branch is already at ID 3
+        console.log('🔧 Business Owner menu items loaded with features matching Business Manager')
+      } else if (userType === 'business_employee') {
+        // Business Employee: Show only features based on permissions
         let employeePermissions = JSON.parse(
           sessionStorage.getItem('employeePermissions') || '{}',
         )
-        console.log('🔧 Employee permissions:', employeePermissions)
+        console.log('🔧 Business Employee permissions:', employeePermissions)
 
         // Helper function to check permission (handles both array and object formats)
         const hasPermission = (perm) => {
@@ -106,44 +121,44 @@ export default {
         this.menuItems = []
         let menuId = 1
 
-        // Always show dashboard for employees
+        // Always show dashboard for business employees
         if (hasPermission('dashboard')) {
-          this.menuItems.push({ ...this.employeeMenuItems.dashboard, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.dashboard, id: menuId++ })
         }
 
         // Add menu items based on permissions
         if (hasPermission('payments')) {
-          this.menuItems.push({ ...this.employeeMenuItems.payments, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.payments, id: menuId++ })
         }
         if (hasPermission('applicants')) {
-          this.menuItems.push({ ...this.employeeMenuItems.applicants, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.applicants, id: menuId++ })
         }
         if (hasPermission('complaints')) {
-          this.menuItems.push({ ...this.employeeMenuItems.complaints, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.complaints, id: menuId++ })
         }
         if (hasPermission('compliances')) {
-          this.menuItems.push({ ...this.employeeMenuItems.compliances, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.compliances, id: menuId++ })
         }
         if (hasPermission('vendors')) {
-          this.menuItems.push({ ...this.employeeMenuItems.vendors, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.vendors, id: menuId++ })
         }
         if (hasPermission('stallholders')) {
-          this.menuItems.push({ ...this.employeeMenuItems.stallholders, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.stallholders, id: menuId++ })
         }
         if (hasPermission('collectors')) {
-          this.menuItems.push({ ...this.employeeMenuItems.collectors, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.collectors, id: menuId++ })
         }
-        // NOTE: Stalls menu is handled separately in AppSidebar.vue for employees
+        // NOTE: Stalls menu is handled separately in AppSidebar.vue for business employees
         // because it needs special submenu handling (Raffles/Auctions)
-        // Do NOT add stalls to menuItems here for employees
+        // Do NOT add stalls to menuItems here for business employees
 
         // If no permissions, show only dashboard
         if (this.menuItems.length === 0) {
-          this.menuItems.push({ ...this.employeeMenuItems.dashboard, id: 1 })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.dashboard, id: 1 })
         }
       } else {
-        // Default to branch manager menu
-        this.menuItems = [...this.branchManagerMenuItems]
+        // Default to business manager menu
+        this.menuItems = [...this.businessManagerMenuItems]
         this.allMenuRoutes[3] = '/app/applicants'
       }
     },

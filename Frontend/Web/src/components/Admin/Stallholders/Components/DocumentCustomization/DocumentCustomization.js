@@ -1,7 +1,12 @@
 import apiClient from '@/services/apiClient'
+import { useAuthStore } from '@/stores/authStore.js'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'DocumentCustomization',
+  components: {
+    ToastNotification
+  },
   props: {
     isVisible: {
       type: Boolean,
@@ -13,6 +18,7 @@ export default {
       // Document data
       availableDocumentTypes: [], // All predefined document types
       branchRequirements: [], // Currently required types for this branch
+      documentTypes: [], // Mapped document types for display
       userBranchId: null,
       
       // UI state
@@ -33,15 +39,30 @@ export default {
       showDeleteDialog: false,
       docTypeToDelete: null,
       
-      // Feedback
-      showSuccess: false,
-      successMessage: '',
-      showError: false,
-      errorMessage: '',
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       
       // Change tracking
       hasChanges: false,
       originalRequirements: []
+    }
+  },
+  computed: {
+    authStore() {
+      return useAuthStore()
+    },
+    isBusinessOwner() {
+      return this.authStore.isStallBusinessOwner
+    },
+    currentUser() {
+      return this.authStore.user.value || {}
+    },
+    userRole() {
+      return this.currentUser.role || this.currentUser.userType
     }
   },
   watch: {
@@ -56,7 +77,8 @@ export default {
     async loadBranchRequirements() {
       this.loading = true
       try {
-        // Load both the available document types and current branch requirements
+        // For business owners, don't pass branchId - they manage all branches
+        // For branch managers, backend will use their assigned branchId from token
         const [typesResponse, requirementsResponse] = await Promise.all([
           apiClient.get('/stallholders/documents/types'),
           apiClient.get('/stallholders/documents/requirements')
@@ -220,13 +242,19 @@ export default {
     },
 
     showSuccessMessage(message) {
-      this.successMessage = message
-      this.showSuccess = true
+      this.showToast(`✅ ${message}`, 'success')
     },
 
     showErrorMessage(message) {
-      this.errorMessage = message
-      this.showError = true
+      this.showToast(`❌ ${message}`, 'error')
+    },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     }
   }
 }

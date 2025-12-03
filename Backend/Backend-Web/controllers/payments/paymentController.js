@@ -1,5 +1,6 @@
 import { createConnection } from '../../config/database.js';
 import jwt from 'jsonwebtoken';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
 
 const PaymentController = {
   extractUserFromToken(req) {
@@ -52,7 +53,7 @@ const PaymentController = {
       console.log('🔍 Branch ID extracted:', branchId);
       
       // Security check: Ensure user has branchId
-      if (!branchId && userInfo.userType !== 'admin') {
+      if (!branchId && userInfo.userType !== 'system_administrator' && userInfo.userType !== 'stall_business_owner') {
         console.log('❌ Branch access denied - no branchId found');
         return res.status(403).json({
           success: false,
@@ -279,7 +280,7 @@ const PaymentController = {
       const branchId = userInfo.branchId;
       
       // Security check: Ensure user has branchId
-      if (!branchId && userInfo.userType !== 'admin') {
+      if (!branchId && userInfo.userType !== 'system_administrator' && userInfo.userType !== 'stall_business_owner') {
         return res.status(403).json({
           success: false,
           message: 'Access denied: No branch associated with user'
@@ -358,67 +359,115 @@ const PaymentController = {
       
       // Use validated user data from auth middleware
       const userInfo = req.user;
-      const branchId = userInfo.branchId;
       
-      // Security check: Ensure user has branchId
-      if (!branchId && userInfo.userType !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied: No branch associated with user'
-        });
-      }
+      // Get branch filter based on user role
+      const branchFilter = await getBranchFilter(req, connection);
+      
+      console.log('📊 Getting online payments with branchFilter:', branchFilter);
       
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
       const search = req.query.search || '';
       
-      console.log('📊 Getting online payments for branch:', branchId, { limit, offset, search });
+      let onlineQuery;
+      let queryParams;
       
-      // Direct query with branch filtering for online payments only
-      const onlineQuery = `
-        SELECT 
-          p.payment_id as id,
-          p.stallholder_id as stallholderId,
-          sh.stallholder_name as stallholderName,
-          COALESCE(st.stall_no, 'N/A') as stallNo,
-          p.amount as amountPaid,
-          p.payment_date as paymentDate,
-          p.payment_time as paymentTime,
-          p.payment_for_month as paymentForMonth,
-          p.payment_type as paymentType,
-          CASE 
-            WHEN p.payment_method = 'gcash' THEN 'GCash'
-            WHEN p.payment_method = 'maya' THEN 'Maya'
-            WHEN p.payment_method = 'paymaya' THEN 'PayMaya'
-            WHEN p.payment_method = 'bank_transfer' THEN 'Bank Transfer'
-            ELSE 'Online Payment'
-          END as paymentMethod,
-          p.reference_number as referenceNo,
-          p.notes,
-          p.payment_status as status,
-          p.created_at as createdAt,
-          COALESCE(b.branch_name, 'Unknown') as branchName
-        FROM payments p
-        INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-        LEFT JOIN stall st ON sh.stall_id = st.stall_id
-        LEFT JOIN branch b ON sh.branch_id = b.branch_id
-        WHERE (? IS NULL OR sh.branch_id = ?)
-        AND p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online')
-        AND (
-          ? = '' OR
-          p.reference_number LIKE CONCAT('%', ?, '%') OR
-          sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
-          st.stall_no LIKE CONCAT('%', ?, '%')
-        )
-        ORDER BY p.created_at DESC
-        LIMIT ? OFFSET ?
-      `;
+      if (branchFilter === null) {
+        // System administrator - see all
+        console.log('🔍 Admin user - fetching all online payments');
+        onlineQuery = `
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.stallholder_name as stallholderName,
+            COALESCE(st.stall_no, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            CASE 
+              WHEN p.payment_method = 'gcash' THEN 'GCash'
+              WHEN p.payment_method = 'maya' THEN 'Maya'
+              WHEN p.payment_method = 'paymaya' THEN 'PayMaya'
+              WHEN p.payment_method = 'bank_transfer' THEN 'Bank Transfer'
+              ELSE 'Online Payment'
+            END as paymentMethod,
+            p.reference_number as referenceNo,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online')
+          AND (
+            ? = '' OR
+            p.reference_number LIKE CONCAT('%', ?, '%') OR
+            sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
+            st.stall_no LIKE CONCAT('%', ?, '%')
+          )
+          ORDER BY p.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        queryParams = [search, search, search, search, limit, offset];
+      } else if (branchFilter.length === 0) {
+        // No access
+        console.log('⚠️ User has no branch access');
+        return res.status(200).json({
+          success: true,
+          data: [],
+          total: 0
+        });
+      } else {
+        // Filter by accessible branches
+        console.log(`🔍 Fetching online payments for branches: ${branchFilter.join(', ')}`);
+        onlineQuery = `
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.stallholder_name as stallholderName,
+            COALESCE(st.stall_no, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            CASE 
+              WHEN p.payment_method = 'gcash' THEN 'GCash'
+              WHEN p.payment_method = 'maya' THEN 'Maya'
+              WHEN p.payment_method = 'paymaya' THEN 'PayMaya'
+              WHEN p.payment_method = 'bank_transfer' THEN 'Bank Transfer'
+              ELSE 'Online Payment'
+            END as paymentMethod,
+            p.reference_number as referenceNo,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE sh.branch_id IN (${branchFilter.map(() => '?').join(',')})
+          AND p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online')
+          AND (
+            ? = '' OR
+            p.reference_number LIKE CONCAT('%', ?, '%') OR
+            sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
+            st.stall_no LIKE CONCAT('%', ?, '%')
+          )
+          ORDER BY p.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        queryParams = [...branchFilter, search, search, search, search, limit, offset];
+      }
       
-      const [onlinePayments] = await connection.execute(onlineQuery, [
-        branchId, branchId, search, search, search, search, limit, offset
-      ]);
+      const [onlinePayments] = await connection.execute(onlineQuery, queryParams);
       
-      console.log('📋 Online payments found for branch', branchId + ':', onlinePayments.length);
+      console.log('📋 Online payments found:', onlinePayments.length);
       
       res.status(200).json({
         success: true,
@@ -527,8 +576,8 @@ const PaymentController = {
       const userInfo = req.user;
       const branchId = userInfo.branchId;
       
-      // Security check: Ensure user has branchId (except for admin)
-      if (!branchId && userInfo.userType !== 'admin') {
+      // Security check: Ensure user has branchId (except for system admin/owner)
+      if (!branchId && userInfo.userType !== 'system_administrator' && userInfo.userType !== 'stall_business_owner') {
         return res.status(403).json({
           success: false,
           message: 'Access denied: No branch associated with user'

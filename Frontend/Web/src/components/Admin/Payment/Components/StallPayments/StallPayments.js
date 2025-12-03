@@ -1,21 +1,24 @@
 import OnlinePayments from '../OnlinePayments/OnlinePayments.vue'
 import OnsitePayments from '../OnsitePayments/OnsitePayments.vue'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'StallPayments',
   components: {
     OnlinePayments,
-    OnsitePayments
+    OnsitePayments,
+    ToastNotification
   },
   data() {
     return {
       activeTab: 'online',
       onlineCount: 0,
       onsiteCount: 0,
-      showSnackbar: false,
-      snackbarMessage: '',
-      snackbarColor: 'success',
-      snackbarIcon: 'mdi-check-circle'
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      }
     }
   },
   mounted() {
@@ -110,33 +113,34 @@ export default {
     },
     handleAcceptPayment(payment) {
       console.log('Accepting payment:', payment)
-      this.showNotification('Payment accepted successfully!', 'success', 'mdi-check-circle')
+      this.showToast('✅ Payment accepted successfully!', 'success')
       // Refresh online count after accepting payment
       setTimeout(() => this.fetchOnlinePaymentsCount(), 500);
     },
     handleDeclinePayment(payment) {
       console.log('Declining payment:', payment)
-      this.showNotification('Payment declined', 'error', 'mdi-close-circle')
+      this.showToast('❌ Payment declined', 'error')
       // Refresh online count after declining payment
       setTimeout(() => this.fetchOnlinePaymentsCount(), 500);
     },
     handlePaymentAdded(payment) {
       console.log('Payment added:', payment)
-      this.showNotification('Onsite payment added successfully!', 'success', 'mdi-check-circle')
+      this.showToast('✅ Onsite payment added successfully!', 'success')
       // Refresh onsite count after adding payment
       setTimeout(() => this.fetchOnsitePaymentsCount(), 500);
     },
     handleDeletePayment(payment) {
       console.log('Deleting payment:', payment)
-      this.showNotification('Payment deleted', 'info', 'mdi-information')
+      this.showToast('🗑️ Payment deleted', 'delete')
       // Refresh onsite count after deleting payment
       setTimeout(() => this.fetchOnsitePaymentsCount(), 500);
     },
-    showNotification(message, color, icon) {
-      this.snackbarMessage = message
-      this.snackbarColor = color
-      this.snackbarIcon = icon
-      this.showSnackbar = true
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     }
   }
 }
