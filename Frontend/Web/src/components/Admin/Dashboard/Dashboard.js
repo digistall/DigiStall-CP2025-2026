@@ -396,20 +396,23 @@ export default {
                   },
                   generateLabels: function (chart) {
                     const data = chart.data
-                    if (data.labels.length && data.datasets.length) {
+                    if (data.labels && data.labels.length && data.datasets && data.datasets.length) {
+                      const dataset = data.datasets[0]
+                      const total = dataset.data.reduce((a, b) => a + b, 0)
                       return data.labels.map((label, i) => {
-                        const value = data.datasets[0].data[i]
-                        const percentage = (
-                          (value / (occupiedStalls + vacantStalls)) *
-                          100
-                        ).toFixed(1)
+                        const value = dataset.data[i]
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0
+                        const meta = chart.getDatasetMeta(0)
+                        const hidden = meta.data[i] ? meta.data[i].hidden : false
                         return {
                           text: `${label}: ${value} (${percentage}%)`,
-                          fillStyle: data.datasets[0].backgroundColor[i],
-                          strokeStyle: data.datasets[0].borderColor[i],
+                          fillStyle: dataset.backgroundColor[i],
+                          strokeStyle: dataset.borderColor[i],
+                          lineWidth: dataset.borderWidth,
                           pointStyle: 'circle',
-                          hidden: false,
+                          hidden: hidden,
                           index: i,
+                          datasetIndex: 0,
                         }
                       })
                     }
