@@ -1,6 +1,6 @@
 ﻿import ActiveAuctions from '../ActiveAuctions/ActiveAuctions.vue'
 import StallParticipants from '../../StallsComponents/StallParticipants/StallParticipants.vue'
-import ToastNotification from '../../../Common/ToastNotification/ToastNotification.vue'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'AuctionsPage',

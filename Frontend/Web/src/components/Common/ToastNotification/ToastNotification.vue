@@ -110,7 +110,7 @@ export default {
 .toast-notification {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  left: 24px;
   z-index: 9999;
   background: white;
   border-radius: 8px;
@@ -162,7 +162,7 @@ export default {
   color: #2196f3;
 }
 
-/* Slide and fade animation */
+/* Slide and fade animation - from left side */
 .slide-fade-enter-active {
   transition: all 0.3s ease-out;
 }
@@ -172,12 +172,12 @@ export default {
 }
 
 .slide-fade-enter-from {
-  transform: translateX(100%);
+  transform: translateX(-100%);
   opacity: 0;
 }
 
 .slide-fade-leave-to {
-  transform: translateX(100%);
+  transform: translateX(-100%);
   opacity: 0;
 }
 
@@ -185,8 +185,8 @@ export default {
 @media (max-width: 600px) {
   .toast-notification {
     bottom: 16px;
-    right: 16px;
     left: 16px;
+    right: 16px;
     min-width: auto;
     max-width: none;
   }

@@ -132,11 +132,18 @@ const requireRole = (...roles) => {
       return
     }
 
+    const userData = sessionStorage.getItem('currentUser');
+    const user = userData ? JSON.parse(userData) : {};
+    console.log('🔐 Role check for route:', to.path)
+    console.log('🔐 Required roles:', roles)
+    console.log('🔐 User type:', user.userType)
+    console.log('🔐 Has role result:', hasRole(...roles))
+
     if (hasRole(...roles)) {
       console.log('✅ Role check passed')
       next()
     } else {
-      console.log('❌ Role check failed')
+      console.log('❌ Role check failed - redirecting to dashboard')
       next('/app/dashboard')
     }
   }

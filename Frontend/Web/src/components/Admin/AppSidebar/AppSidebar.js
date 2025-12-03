@@ -97,14 +97,6 @@ export default {
           roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
         },
         {
-          id: 12,
-          icon: 'mdi-shield-check',
-          name: 'Compliances',
-          route: '/app/compliances',
-          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
-          description: 'Manage compliance and violation records',
-        },
-        {
           id: 13,
           icon: 'mdi-credit-card-outline',
           name: 'My Subscription',

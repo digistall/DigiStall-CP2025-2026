@@ -6,8 +6,8 @@
         <v-card-title class="d-flex flex-column align-start justify-space-between">
           <div class="d-flex align-center w-100 justify-space-between">
             <div class="d-flex align-center">
-              <v-icon color="ffffff" class="me-3">mdi-pencil</v-icon>
-              <span class="text-h6">Modify Stall</span>
+              <v-icon color="ffffff" class="me-3">{{ isBusinessOwner ? 'mdi-eye' : 'mdi-pencil' }}</v-icon>
+              <span class="text-h6">{{ isBusinessOwner ? 'View Stall' : 'Modify Stall' }}</span>
             </div>
             <v-btn icon variant="text" @click="handleClose" size="small">
               <v-icon>mdi-close</v-icon>
@@ -16,7 +16,7 @@
 
           <!-- Subtitle / Description -->
           <span class="text-subtitle-2" style="color: white">
-            You can modify the current stall — edit details or delete it as needed.
+            {{ isBusinessOwner ? 'View stall details (read-only access).' : 'You can modify the current stall — edit details or delete it as needed.' }}
           </span>
         </v-card-title>
 
@@ -30,19 +30,19 @@
               <v-col cols="12" md="6">
                 <!-- Stall Number -->
                 <v-text-field v-model="editForm.stallNumber" label="Stall Number" :rules="rules.stallNumber" required
-                  variant="outlined" prepend-inner-icon="mdi-numeric"></v-text-field>
+                  variant="outlined" prepend-inner-icon="mdi-numeric" :readonly="isBusinessOwner"></v-text-field>
 
                 <!-- Price -->
-                <v-text-field v-model="editForm.price" label="Price" :rules="rules.price" required variant="outlined"
+                <v-text-field v-model="editForm.price" label="Price" :rules="rules.price" required variant="outlined" :readonly="isBusinessOwner"
                   prepend-inner-icon="mdi-currency-php" placeholder="1,500 Php / Raffle"></v-text-field>
 
                 <!-- Floor -->
                 <v-select v-model="editForm.floor" label="Floor" :items="getFloorOptions()" :rules="rules.floor"
-                  required variant="outlined" prepend-inner-icon="mdi-floor-plan"></v-select>
+                  required variant="outlined" prepend-inner-icon="mdi-stairs" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
 
                 <!-- Section -->
                 <v-select v-model="editForm.section" label="Section" :items="getSectionOptions()" :rules="rules.section"
-                  required variant="outlined" prepend-inner-icon="mdi-store"></v-select>
+                  required variant="outlined" prepend-inner-icon="mdi-map-marker" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
 
                 <!-- Size -->
                 <v-text-field v-model="editForm.size" label="Size" :rules="rules.size" required variant="outlined"
