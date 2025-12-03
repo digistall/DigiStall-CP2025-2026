@@ -95,6 +95,14 @@
               @close="closePermissionsDialog"
               @toggle-permission="togglePermission"
             />
+
+            <!-- Toast Notification -->
+            <ToastNotification
+              :show="toast.show"
+              :message="toast.message"
+              :type="toast.type"
+              @close="toast.show = false"
+            />
           </v-col>
         </v-row>
       </v-container>
