@@ -43,6 +43,14 @@
               <!-- Search and Filter Section -->
               <VendorSearchFilter @search="handleSearch" @filter="handleFilter" />
 
+              <!-- Toast Notification -->
+              <ToastNotification
+                :show="toast.show"
+                :message="toast.message"
+                :type="toast.type"
+                @close="toast.show = false"
+              />
+
               <!-- Loading State -->
               <div
                 v-if="loading && currentApplicantType === 'Stall Applicants'"

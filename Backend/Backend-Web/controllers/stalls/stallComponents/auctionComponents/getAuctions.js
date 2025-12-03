@@ -26,11 +26,11 @@ export const getActiveAuctions = async (req, res) => {
     let auctions = [];
 
     // Handle different user types
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager: Get all auctions in their branch
-      const branchManagerId = req.user?.branchManagerId || userId;
+    if (userType === "business_manager") {
+      // Business manager: Get all auctions in their branch
+      const businessManagerId = req.user?.businessManagerId || userId;
 
-      console.log(`Fetching auctions for branch manager ID: ${branchManagerId}`);
+      console.log(`Fetching auctions for business manager ID: ${businessManagerId}`);
 
       const [result] = await connection.execute(
         `SELECT 
@@ -54,14 +54,14 @@ export const getActiveAuctions = async (req, res) => {
         INNER JOIN section sec ON s.section_id = sec.section_id
         INNER JOIN floor f ON sec.floor_id = f.floor_id
         INNER JOIN branch b ON f.branch_id = b.branch_id
-        INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-        WHERE bm.branch_manager_id = ? AND s.price_type = 'Auction'
+        INNER JOIN business_manager bm ON b.branch_id = bm.branch_id
+        WHERE bm.business_manager_id = ? AND s.price_type = 'Auction'
         ORDER BY s.created_at DESC`,
-        [branchManagerId]
+        [businessManagerId]
       );
 
       auctions = result;
-    } else if (userType === "employee") {
+    } else if (userType === "business_employee") {
       // Employee: Check permissions first
       const permissions = req.user?.permissions || [];
 
@@ -126,9 +126,9 @@ export const getActiveAuctions = async (req, res) => {
       );
 
       auctions = result;
-    } else if (userType === "admin") {
-      // Admin: Get all auctions
-      console.log("Fetching all auctions for admin");
+    } else if (userType === "system_administrator" || userType === "stall_business_owner") {
+      // System admin or business owner: Get all auctions
+      console.log("Fetching all auctions for admin/owner");
 
       const [result] = await connection.execute(
         `SELECT 

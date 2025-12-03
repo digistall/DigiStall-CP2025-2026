@@ -331,13 +331,15 @@ class AuthService {
     const user = this.getUserData();
     if (!user) return false;
     
-    // Admins and managers have all permissions
-    if (user.userType === 'admin' || user.userType === 'branch_manager') {
+    // System administrators, stall business owners, and business managers have all permissions
+    if (user.userType === 'system_administrator' || 
+        user.userType === 'stall_business_owner' || 
+        user.userType === 'business_manager') {
       return true;
     }
     
-    // Check employee permissions
-    if (user.userType === 'employee' && user.permissions) {
+    // Check business employee permissions
+    if (user.userType === 'business_employee' && user.permissions) {
       return permissions.some(permission => 
         user.permissions[permission] === true || user.permissions[permission] === 1
       );

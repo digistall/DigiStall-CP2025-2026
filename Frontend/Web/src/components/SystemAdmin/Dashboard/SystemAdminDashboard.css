@@ -1,0 +1,14 @@
+/* Dashboard Page - Page-Level Styling Only */
+*{
+  font-family: 'Poppins', sans-serif;
+}
+
+.v-main {
+  padding-left: 0 !important;
+}
+
+.system-admin-dashboard {
+  background-color: #fafafa;
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+}

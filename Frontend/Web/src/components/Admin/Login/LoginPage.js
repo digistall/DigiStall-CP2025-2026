@@ -47,19 +47,35 @@ export default {
       // Determine user type from username pattern
       const username = this.username.toLowerCase()
       
-      if (username.includes('admin')) {
-        return 'admin'
+      if (username.includes('sysadmin') || username.includes('system')) {
+        return 'system_administrator'
+      } else if (username.includes('admin') || username.includes('owner')) {
+        return 'stall_business_owner'
       } else if (username.includes('manager')) {
-        return 'branch_manager'
+        return 'business_manager'
       } else {
-        return 'employee'
+        return 'business_employee'
       }
     },
   },
   async mounted() {
-    // Check if already authenticated
+    // Check if already authenticated and redirect to appropriate dashboard
     if (this.authStore.isAuthenticated) {
-      this.$router.push('/app/dashboard')
+      const userData = sessionStorage.getItem('currentUser')
+      let redirectPath = '/app/dashboard'
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          if (user.userType === 'system_administrator') {
+            redirectPath = '/system-admin/dashboard'
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+        }
+      }
+      
+      this.$router.push(redirectPath)
     }
   },
   methods: {
@@ -123,11 +139,20 @@ export default {
           this.showSuccessMessage = true
           this.showSuccessPopup = true
 
-          console.log('✅ Login successful, redirecting to dashboard')
+          // Determine redirect path based on user type from the result
+          let redirectPath = '/app/dashboard'
+          
+          if (result.user && result.user.userType === 'system_administrator') {
+            redirectPath = '/system-admin/dashboard'
+            console.log('✅ Login successful, redirecting system administrator to:', redirectPath)
+          } else {
+            console.log('✅ Login successful, redirecting to dashboard')
+          }
 
-          // Redirect to dashboard after a short delay
+          // Redirect to appropriate dashboard based on user type
           setTimeout(() => {
-            this.$router.push('/app/dashboard')
+            console.log('🔄 Executing redirect to:', redirectPath)
+            this.$router.push(redirectPath)
           }, 1500)
         } else {
           // Login failed - show error message

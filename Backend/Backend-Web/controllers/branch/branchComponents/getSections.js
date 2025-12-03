@@ -1,6 +1,7 @@
 import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
 
-// Get all sections for authenticated user (branch manager or employee)
+// Get all sections for authenticated user (branch manager, employee, or business owner)
 export const getSections = async (req, res) => {
   const userType = req.user?.userType || req.user?.role;
   const userId = req.user?.userId;
@@ -19,44 +20,38 @@ export const getSections = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
+    
+    // Get branch filter based on user role
+    const branchFilter = await getBranchFilter(req, connection);
+    
     let sections = [];
 
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager: Get sections for their branch
-      const branch_manager_id = req.user?.branchManagerId || userId;
-      
-      const [result] = await connection.execute(
-        `SELECT s.* FROM section s
-         INNER JOIN floor f ON s.floor_id = f.floor_id
-         INNER JOIN branch b ON f.branch_id = b.branch_id
-         INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-         WHERE bm.branch_manager_id = ?`,
-        [branch_manager_id]
-      );
+    if (branchFilter === null) {
+      // System administrator: Get all sections
+      const [result] = await connection.execute(`SELECT s.* FROM section s`);
       sections = result;
-    } else if (userType === "employee") {
-      // Employee: Get sections for their branch
-      const branchId = req.user?.branchId;
-      
-      if (!branchId) {
-        return res.status(400).json({
-          success: false,
-          message: "Branch ID not found for employee",
-        });
-      }
-
+    } else if (branchFilter.length === 0) {
+      // No branches accessible
+      sections = [];
+    } else if (branchFilter.length === 1) {
+      // Single branch (business manager or employee)
       const [result] = await connection.execute(
         `SELECT s.* FROM section s
          INNER JOIN floor f ON s.floor_id = f.floor_id
          WHERE f.branch_id = ?`,
-        [branchId]
+        [branchFilter[0]]
       );
       sections = result;
     } else {
-      return res.status(403).json({
-        success: false,
-        message: `Access denied. User type '${userType}' cannot access sections.`,
-      });
+      // Multiple branches (business owner)
+      const placeholders = branchFilter.map(() => '?').join(',');
+      const [result] = await connection.execute(
+        `SELECT s.* FROM section s
+         INNER JOIN floor f ON s.floor_id = f.floor_id
+         WHERE f.branch_id IN (${placeholders})`,
+        branchFilter
+      );
+      sections = result;
     }
 
     console.log(`✅ Found ${sections.length} sections for ${userType} (ID: ${userId})`);

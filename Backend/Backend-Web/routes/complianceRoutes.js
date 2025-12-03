@@ -5,6 +5,7 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import { authorizePermission } from '../middleware/enhancedAuth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import complianceController from '../controllers/compliances/complianceController.js';
 
 const router = express.Router();
@@ -57,7 +58,7 @@ router.get('/:id', complianceController.getComplianceRecordById);
  *            penalty_id: number (optional)
  *          }
  */
-router.post('/', complianceController.createComplianceRecord);
+router.post('/', viewOnlyForOwners, complianceController.createComplianceRecord);
 
 /**
  * @route   PUT /api/compliances/:id
@@ -68,14 +69,14 @@ router.post('/', complianceController.createComplianceRecord);
  *            remarks: string (optional)
  *          }
  */
-router.put('/:id', complianceController.updateComplianceRecord);
+router.put('/:id', viewOnlyForOwners, complianceController.updateComplianceRecord);
 
 /**
  * @route   DELETE /api/compliances/:id
  * @desc    Delete compliance record
  * @access  Protected - Admin and Branch Manager only
  */
-router.delete('/:id', complianceController.deleteComplianceRecord);
+router.delete('/:id', viewOnlyForOwners, complianceController.deleteComplianceRecord);
 
 // ===== HELPER/LOOKUP ROUTES =====
 

@@ -9,17 +9,6 @@
 
     <!-- Main Content -->
     <div v-if="!loading">
-      <!-- Header Section -->
-      <v-card class="header-card mb-6" elevation="2">
-        <v-card-text>
-          <div>
-            <h2 class="text-h4 font-weight-bold primary--text">Branch Management</h2>
-            <p class="text-subtitle-1 text--secondary mt-2">
-              Manage branches and assign branch managers across locations
-            </p>
-          </div>
-        </v-card-text>
-      </v-card>
 
       <!-- Stats Cards -->
       <v-row class="mb-6">

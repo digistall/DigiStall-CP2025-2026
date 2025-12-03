@@ -1,7 +1,12 @@
 <template>
   <div>
     <!-- Choice Modal -->
-    <v-dialog v-model="showModal" max-width="1200px" width="95vw" persistent>
+    <v-dialog 
+      v-model="showModal" 
+      :max-width="isStallBusinessOwner ? '1200px' : '800px'" 
+      width="95vw" 
+      persistent
+    >
       <v-card class="choice-modal-card">
         <v-card-title class="choice-modal-header">
           <span>How would you like to add stallholders?</span>
@@ -11,9 +16,9 @@
         </v-card-title>
 
         <v-card-text class="pa-8">
-          <v-row dense>
+          <v-row dense justify="center">
             <!-- Add Individual Stallholder Card -->
-            <v-col cols="12" sm="6" md="4">
+            <v-col cols="12" sm="6" :md="isStallBusinessOwner ? 4 : 6">
               <v-card
                 class="choice-card stallholder-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -65,7 +70,7 @@
             </v-col>
 
             <!-- Import Excel Card -->
-            <v-col cols="12" sm="6" md="4">
+            <v-col cols="12" sm="6" :md="isStallBusinessOwner ? 4 : 6">
               <v-card
                 class="choice-card excel-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -116,8 +121,8 @@
               </v-card>
             </v-col>
 
-            <!-- Document Settings Card -->
-            <v-col cols="12" sm="6" md="4">
+            <!-- Document Settings Card - Only visible to stall_business_owner -->
+            <v-col cols="12" sm="6" md="4" v-if="isStallBusinessOwner">
               <v-card
                 class="choice-card document-card"
                 :class="{ 'choice-card-hover': !loading }"

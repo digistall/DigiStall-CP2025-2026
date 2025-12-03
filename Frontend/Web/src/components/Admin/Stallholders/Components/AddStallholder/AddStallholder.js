@@ -1,7 +1,11 @@
 import apiClient from '@/services/apiClient'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'AddStallholder',
+  components: {
+    ToastNotification
+  },
   props: {
     isVisible: {
       type: Boolean,
@@ -73,10 +77,12 @@ export default {
         v => /.+@.+\..+/.test(v) || 'Email must be valid'
       ],
       
-      // Feedback
-      showSuccess: false,
-      showError: false,
-      errorMessage: ''
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      }
     }
   },
   computed: {
@@ -118,7 +124,7 @@ export default {
         this.stalls = stallResponse.data || []
       } catch (error) {
         console.error('Error loading initial data:', error)
-        this.showErrorMessage('Failed to load form data')
+        this.showToast('❌ Failed to load form data', 'error')
       }
     },
 
@@ -168,7 +174,7 @@ export default {
 
         await apiClient.post('/stallholders', stallholderData)
         
-        this.showSuccess = true
+        this.showToast('✅ Stallholder added successfully!', 'success')
         this.$emit('stallholder-added')
         
         // Close dialog after a short delay
@@ -177,9 +183,9 @@ export default {
         }, 1500)
       } catch (error) {
         console.error('Error saving stallholder:', error)
-        this.showErrorMessage(
-          error.response?.data?.error || 
-          'Failed to add stallholder. Please try again.'
+        this.showToast(
+          `❌ ${error.response?.data?.error || 'Failed to add stallholder. Please try again.'}`,
+          'error'
         )
       } finally {
         this.saving = false
@@ -222,9 +228,12 @@ export default {
       this.resetForm()
     },
 
-    showErrorMessage(message) {
-      this.errorMessage = message
-      this.showError = true
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     }
   }
 }

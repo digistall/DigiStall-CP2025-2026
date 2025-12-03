@@ -2,7 +2,7 @@ import CardStallsComponent from '../Stalls/StallsComponents/CardStallsComponent/
 import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFilter.vue'
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
-import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
 import dataCacheService from '../../../services/dataCacheService.js'
 
@@ -13,7 +13,7 @@ export default {
     SearchFilter,
     AddChoiceModal,
     EditStall,
-    UniversalPopup,
+    ToastNotification,
   },
   data() {
     return {
@@ -38,13 +38,11 @@ export default {
         message: '',
         type: 'primary'
       },
-      // Custom popup for notifications
-      popup: {
+      // Toast notification for add, update, delete operations
+      toast: {
         show: false,
         message: '',
-        type: 'error', // error, success, warning, info, loading
-        operation: '', // add, update, delete
-        operationType: 'stall', // stall, employee, stallholder, etc.
+        type: 'success', // success, update, delete, error, warning, info
       },
       
       // Flag to track when we're in the middle of updating a stall
@@ -92,7 +90,7 @@ export default {
       console.log('🔄 Event bus update received:', data)
       
       // Re-check floors and sections availability
-      if (this.currentUser?.userType === 'branch_manager') {
+      if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Re-checking floors and sections after event bus update...')
         this.hasFloorsSections = await this.checkFloorsAndSections()
         
@@ -129,6 +127,13 @@ export default {
           // Close modal if it's open
           this.closeAddStallModal()
           
+          // Show success toast notification
+          this.toast = {
+            show: true,
+            message: data.message || 'Stall added successfully!',
+            type: 'success',
+          }
+          
           console.log('✅ EventBus: Stall added successfully via real-time update')
         }
       } catch (error) {
@@ -144,6 +149,14 @@ export default {
         if (data.stallData) {
           // Use the existing handleStallUpdated method which already has the logic
           await this.handleStallUpdated(data.stallData)
+          
+          // Show update toast notification
+          this.toast = {
+            show: true,
+            message: data.message || 'Stall updated successfully!',
+            type: 'update',
+          }
+          
           console.log('✅ EventBus: Stall updated successfully via real-time update')
         }
       } catch (error) {
@@ -159,6 +172,14 @@ export default {
         if (data.stallId) {
           // Use the existing handleStallDeleted method which already has the logic
           await this.handleStallDeleted(data.stallId)
+          
+          // Show delete toast notification
+          this.toast = {
+            show: true,
+            message: data.message || 'Stall deleted successfully!',
+            type: 'delete',
+          }
+          
           console.log('✅ EventBus: Stall deleted successfully via real-time update')
         }
       } catch (error) {
@@ -204,9 +225,9 @@ export default {
         // Load stalls first - always allow viewing existing stalls
         await this.fetchStalls()
 
-        // For branch managers, check floors and sections availability for adding new stalls
+        // For business managers, check floors and sections availability for adding new stalls
         // But don't block access to viewing existing stalls
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           this.hasFloorsSections = await this.checkFloorsAndSections()
           if (!this.hasFloorsSections) {
             console.log('⚠️ No floors/sections available - will show warning when trying to add stalls')
@@ -353,18 +374,34 @@ export default {
         'extractedId': extractedId,
         'extractedId type': typeof extractedId
       })
+      
+      console.log('🏢 Floor/Section extraction debug:', {
+        'stall.floor_name': stall.floor_name,
+        'stall.floor_number': stall.floor_number,
+        'stall.floor_id': stall.floor_id,
+        'stall.section_name': stall.section_name,
+        'stall.section_id': stall.section_id
+      })
 
       if (!extractedId) {
         console.error('❌ No valid ID found in stall data:', stall)
         throw new Error('Stall data is missing required ID field')
       }
 
+      // Log price data for debugging
+      console.log('💰 Price data:', {
+        rental_price: stall.rental_price,
+        price: stall.price,
+        typeof_rental: typeof stall.rental_price,
+        typeof_price: typeof stall.price
+      })
+
       const transformed = {
         // Basic stall info - ensure ID is consistent
         id: Number(extractedId),
         stallNumber: stall.stall_no || stall.stallNumber,
-        price: this.formatPrice(stall.rental_price || stall.price),
-        location: stall.stall_location,
+        price: this.formatPrice(stall.rental_price || stall.price || 0),
+        location: stall.stall_location || stall.location,
         size: stall.size,
         dimensions: stall.size || stall.dimensions, // Use size as primary, dimensions as fallback
         description: stall.description,
@@ -418,7 +455,13 @@ export default {
 
     // Format price display
     formatPrice(price) {
-      return `₱${parseFloat(price).toLocaleString()}`
+      // Handle null, undefined, or invalid price values
+      const numericPrice = parseFloat(price)
+      if (isNaN(numericPrice)) {
+        console.warn('Invalid price value:', price)
+        return '₱0'
+      }
+      return `₱${numericPrice.toLocaleString()}`
     },
 
     // Get default image based on section from database
@@ -444,13 +487,13 @@ export default {
     checkStallsPermission() {
       const userType = sessionStorage.getItem('userType')
 
-      // Admins and branch managers always have access (check both formats)
-      if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
+      // Admins and business managers always have access
+      if (userType === 'system_administrator' || userType === 'stall_business_owner' || userType === 'business_manager') {
         return true
       }
 
       // For employees, check specific permissions - NEW FORMAT (object)
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try new format first (object with permissions)
         const permissions = JSON.parse(sessionStorage.getItem('permissions') || '{}')
         if (permissions.stalls === true) {
@@ -518,9 +561,29 @@ export default {
     async handleStallUpdated(updatedStallData) {
       try {
         console.log('📝 Handling stall update:', updatedStallData)
+        console.log('📊 Update data fields:', {
+          stall_id: updatedStallData.stall_id,
+          rental_price: updatedStallData.rental_price,
+          price: updatedStallData.price,
+          stall_no: updatedStallData.stall_no,
+          section_name: updatedStallData.section_name,
+          floor_name: updatedStallData.floor_name
+        })
         
         // Set flag to prevent filter interference
         this.isUpdatingStall = true
+        
+        // Check if updated data is complete (has essential fields)
+        const hasCompleteData = updatedStallData.stall_no && 
+                               (updatedStallData.rental_price !== undefined) && 
+                               updatedStallData.section_name
+        
+        if (!hasCompleteData) {
+          console.warn('⚠️ Incomplete stall data received, refetching all stalls...')
+          // Refetch all stalls to get complete data
+          await this.fetchStalls()
+          return
+        }
         
         // Find and update the stall in stallsData
         const stallIndex = this.stallsData.findIndex(stall => 
@@ -531,6 +594,7 @@ export default {
         if (stallIndex !== -1) {
           // Transform the updated data to match our format
           const transformedStall = this.transformStallData(updatedStallData)
+          console.log('✨ Transformed stall:', transformedStall)
           
           // Update stallsData
           this.stallsData.splice(stallIndex, 1, transformedStall)
@@ -548,10 +612,13 @@ export default {
           
           console.log('✅ Stall updated successfully - using real-time updates')
         } else {
-          console.warn('⚠️ Stall not found for update')
+          console.warn('⚠️ Stall not found for update, refetching all stalls...')
+          await this.fetchStalls()
         }
       } catch (error) {
         console.error('❌ Error updating stall:', error)
+        // Fallback: refetch all stalls
+        await this.fetchStalls()
       } finally {
         // Always clear the flag after update
         this.isUpdatingStall = false
@@ -603,8 +670,8 @@ export default {
       console.log('🎯 FAB clicked - checking floors and sections availability')
       console.log('🎯 Current user type:', this.currentUser?.userType)
       
-      // For branch managers, always re-check floors and sections in real-time
-      if (this.currentUser?.userType === 'branch_manager') {
+      // For business managers, always re-check floors and sections in real-time
+      if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Re-checking floors and sections availability in real-time...')
         this.hasFloorsSections = await this.checkFloorsAndSections()
         console.log('🎯 Real-time check - Has floors and sections:', this.hasFloorsSections)
@@ -622,8 +689,8 @@ export default {
 
     // Add stall functions
     async openAddStallModal() {
-      // For branch managers, check if floors and sections are available before allowing stall creation
-      if (this.currentUser?.userType === 'branch_manager') {
+      // For business managers, check if floors and sections are available before allowing stall creation
+      if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Checking floors and sections availability before opening stall modal...')
         this.hasFloorsSections = await this.checkFloorsAndSections()
         
@@ -661,7 +728,7 @@ export default {
         console.log('Handling new floor data:', newFloorData)
         
         // Re-check floors and sections availability after adding a floor
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           console.log('🔄 Re-checking floors and sections availability after floor addition...')
           this.hasFloorsSections = await this.checkFloorsAndSections()
           
@@ -685,7 +752,7 @@ export default {
         console.log('Handling new section data:', newSectionData)
         
         // Re-check floors and sections availability after adding a section
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           console.log('🔄 Re-checking floors and sections availability after section addition...')
           this.hasFloorsSections = await this.checkFloorsAndSections()
           
@@ -714,7 +781,7 @@ export default {
         console.log('🔄 Handling refresh data request - re-checking floors and sections...')
         
         // Re-check floors and sections availability
-        if (this.currentUser.userType === 'branch_manager') {
+        if (this.currentUser.userType === 'business_manager') {
           this.hasFloorsSections = await this.checkFloorsAndSections()
           
           if (this.hasFloorsSections) {
@@ -728,30 +795,32 @@ export default {
       }
     },
 
-    // Message handling with enhanced display options
+    // Message handling with toast notifications for add/update/delete operations
     showMessage(text, color = 'success', operation = '', operationType = 'stall') {
       // Handle case where an object is passed instead of string
       const messageText = typeof text === 'string' ? text : JSON.stringify(text)
 
-      // Map old color values to new popup types
-      const typeMapping = {
-        success: 'success',
-        error: 'error',
-        warning: 'warning',
-        info: 'info',
-        primary: 'info',
-        red: 'error',
-        green: 'success',
-        orange: 'warning',
-        blue: 'info',
-      }
+      // Determine if this is an add, update, or delete operation that should show toast
+      const isOperationNotification = ['add', 'added', 'update', 'updated', 'delete', 'deleted'].includes(operation.toLowerCase())
+      
+      if (isOperationNotification && operationType === 'stall') {
+        // Map operation to toast type
+        let toastType = 'success'
+        if (color === 'error') {
+          toastType = 'error'
+        } else if (operation.toLowerCase().includes('delete')) {
+          toastType = 'delete'
+        } else if (operation.toLowerCase().includes('update')) {
+          toastType = 'update'
+        } else if (operation.toLowerCase().includes('add')) {
+          toastType = 'success'
+        }
 
-      this.popup = {
-        show: true,
-        message: messageText,
-        type: typeMapping[color] || 'error',
-        operation: operation,
-        operationType: operationType,
+        this.toast = {
+          show: true,
+          message: messageText,
+          type: toastType,
+        }
       }
 
       console.log(`Message (${color}): ${messageText}`)
