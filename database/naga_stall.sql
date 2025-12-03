@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 02, 2025 at 04:11 PM
+-- Generation Time: Dec 03, 2025 at 08:59 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -3192,7 +3192,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
 
     START TRANSACTION;
 
-    
+    -- Check if stall exists first
     SELECT s.stall_no, s.section_id INTO v_stall_no, v_floor_id
     FROM stall s
     WHERE s.stall_id = p_stall_id;
@@ -3204,7 +3204,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Get branch_id from section and floor
     SELECT f.branch_id INTO v_existing_branch_id
     FROM section sec
     INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -3217,9 +3217,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Verify user has permission to delete this stall
     IF p_user_type = 'business_manager' THEN
-        
+        -- Verify manager owns this branch
         IF NOT EXISTS (
             SELECT 1 FROM business_manager 
             WHERE business_manager_id = p_user_id AND branch_id = v_existing_branch_id
@@ -3231,7 +3231,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         END IF;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
+        -- Verify employee's branch matches stall's branch
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -3245,7 +3245,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for any applications (not just pending)
     SELECT COUNT(*) INTO v_has_applications
     FROM application
     WHERE stall_id = p_stall_id;
@@ -3257,7 +3257,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for stallholders
     IF EXISTS (SELECT 1 FROM stallholder WHERE stall_id = p_stall_id) THEN
         SET p_success = FALSE;
         SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Stallholder records exist. Archive stall instead of deleting');
@@ -3265,7 +3265,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for auction records
     IF EXISTS (SELECT 1 FROM auction WHERE stall_id = p_stall_id) THEN
         SET p_success = FALSE;
         SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Auction records exist. Archive stall instead of deleting');
@@ -3273,7 +3273,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for raffle records
     IF EXISTS (SELECT 1 FROM raffle WHERE stall_id = p_stall_id) THEN
         SET p_success = FALSE;
         SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Raffle records exist. Archive stall instead of deleting');
@@ -3281,7 +3281,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for violation reports
     IF EXISTS (SELECT 1 FROM violation_report WHERE stall_id = p_stall_id) THEN
         SET p_success = FALSE;
         SET p_message = CONCAT('Cannot delete stall ', v_stall_no, '. Violation reports exist. Archive stall instead of deleting');
@@ -3289,7 +3289,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- If no related records exist, safe to delete
     DELETE FROM stall WHERE stall_id = p_stall_id;
 
     SET p_success = TRUE;
@@ -3416,40 +3416,52 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByManager` (IN `p_bu
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStalls_complete` (IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT)   BEGIN
-    IF p_user_type = 'business_manager' THEN
-        
-        SELECT 
-            s.stall_id,
-            s.stall_no,
-            s.stall_location,
-            s.size,
-            s.floor_id,
-            f.floor_name,
-            s.section_id,
-            sec.section_name,
-            s.rental_price,
-            s.price_type,
-            s.status,
-            s.stamp,
-            s.description,
-            s.stall_image,
-            s.is_available,
-            s.raffle_auction_deadline,
-            s.deadline_active,
-            s.raffle_auction_status,
-            s.created_by_business_manager,
-            s.created_at,
-            s.updated_at,
-            b.branch_id,
-            b.branch_name,
-            b.area,
-            CASE 
-                WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
-                WHEN s.is_available = 1 THEN 'Available'
-                ELSE 'Unavailable'
-            END as availability_status,
-            sh.stallholder_id,
-            sh.stallholder_name
+    IF p_user_type = 'stall_business_owner' THEN
+        SELECT s.stall_id, s.stall_no, s.stall_location, s.size, s.floor_id, f.floor_name,
+            s.section_id, sec.section_name, s.rental_price, s.price_type, s.status, s.stamp,
+            s.description, s.stall_image, s.is_available, s.raffle_auction_deadline,
+            s.deadline_active, s.raffle_auction_status, s.created_by_business_manager,
+            s.created_at, s.updated_at, b.branch_id, b.branch_name, b.area,
+            CASE WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+                 WHEN s.is_available = 1 THEN 'Available' ELSE 'Unavailable' END as availability_status,
+            sh.stallholder_id, sh.stallholder_name
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON s.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+        WHERE b.branch_id IN (
+            SELECT DISTINCT bm.branch_id FROM business_owner_managers bom
+            INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+            WHERE bom.business_owner_id = p_user_id AND bom.status = 'Active'
+        )
+        ORDER BY b.branch_name, s.created_at DESC;
+
+    ELSEIF p_user_type = 'system_administrator' THEN
+        SELECT s.stall_id, s.stall_no, s.stall_location, s.size, s.floor_id, f.floor_name,
+            s.section_id, sec.section_name, s.rental_price, s.price_type, s.status, s.stamp,
+            s.description, s.stall_image, s.is_available, s.raffle_auction_deadline,
+            s.deadline_active, s.raffle_auction_status, s.created_by_business_manager,
+            s.created_at, s.updated_at, b.branch_id, b.branch_name, b.area,
+            CASE WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+                 WHEN s.is_available = 1 THEN 'Available' ELSE 'Unavailable' END as availability_status,
+            sh.stallholder_id, sh.stallholder_name
+        FROM stall s
+        INNER JOIN section sec ON s.section_id = sec.section_id
+        INNER JOIN floor f ON s.floor_id = f.floor_id
+        INNER JOIN branch b ON f.branch_id = b.branch_id
+        LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+        ORDER BY b.branch_name, s.created_at DESC;
+
+    ELSEIF p_user_type = 'business_manager' THEN
+        SELECT s.stall_id, s.stall_no, s.stall_location, s.size, s.floor_id, f.floor_name,
+            s.section_id, sec.section_name, s.rental_price, s.price_type, s.status, s.stamp,
+            s.description, s.stall_image, s.is_available, s.raffle_auction_deadline,
+            s.deadline_active, s.raffle_auction_status, s.created_by_business_manager,
+            s.created_at, s.updated_at, b.branch_id, b.branch_name, b.area,
+            CASE WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+                 WHEN s.is_available = 1 THEN 'Available' ELSE 'Unavailable' END as availability_status,
+            sh.stallholder_id, sh.stallholder_name
         FROM stall s
         INNER JOIN section sec ON s.section_id = sec.section_id
         INNER JOIN floor f ON s.floor_id = f.floor_id
@@ -3460,39 +3472,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStalls_complete` (IN `p_us
         ORDER BY s.created_at DESC;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
-        SELECT 
-            s.stall_id,
-            s.stall_no,
-            s.stall_location,
-            s.size,
-            s.floor_id,
-            f.floor_name,
-            s.section_id,
-            sec.section_name,
-            s.rental_price,
-            s.price_type,
-            s.status,
-            s.stamp,
-            s.description,
-            s.stall_image,
-            s.is_available,
-            s.raffle_auction_deadline,
-            s.deadline_active,
-            s.raffle_auction_status,
-            s.created_by_business_manager,
-            s.created_at,
-            s.updated_at,
-            b.branch_id,
-            b.branch_name,
-            b.area,
-            CASE 
-                WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
-                WHEN s.is_available = 1 THEN 'Available'
-                ELSE 'Unavailable'
-            END as availability_status,
-            sh.stallholder_id,
-            sh.stallholder_name
+        SELECT s.stall_id, s.stall_no, s.stall_location, s.size, s.floor_id, f.floor_name,
+            s.section_id, sec.section_name, s.rental_price, s.price_type, s.status, s.stamp,
+            s.description, s.stall_image, s.is_available, s.raffle_auction_deadline,
+            s.deadline_active, s.raffle_auction_status, s.created_by_business_manager,
+            s.created_at, s.updated_at, b.branch_id, b.branch_name, b.area,
+            CASE WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+                 WHEN s.is_available = 1 THEN 'Available' ELSE 'Unavailable' END as availability_status,
+            sh.stallholder_id, sh.stallholder_name
         FROM stall s
         INNER JOIN section sec ON s.section_id = sec.section_id
         INNER JOIN floor f ON s.floor_id = f.floor_id
@@ -3502,7 +3489,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStalls_complete` (IN `p_us
         ORDER BY s.created_at DESC;
         
     ELSE
-        
         SELECT NULL LIMIT 0;
     END IF;
 END$$
@@ -3801,6 +3787,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_duplicate_stall INT DEFAULT 0;
     DECLARE v_business_manager_id INT;
+    DECLARE v_correct_floor_id INT;
     
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -3811,7 +3798,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
 
     START TRANSACTION;
 
-    
+    -- Check if stall exists and get its branch
     SELECT f.branch_id INTO v_existing_branch_id
     FROM stall s
     INNER JOIN section sec ON s.section_id = sec.section_id
@@ -3825,14 +3812,22 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Verify user has permission to update this stall
     IF p_user_type = 'business_manager' THEN
-        
+        -- Verify manager owns this branch
         SELECT COUNT(*) INTO v_floor_section_valid
         FROM business_manager
-        WHERE business_manager_id = p_user_id AND branch_id = v_existing_branch_id;
+        WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
         
         IF v_floor_section_valid = 0 THEN
+            SET p_success = FALSE;
+            SET p_message = 'Access denied. You do not manage this branch';
+            ROLLBACK;
+            LEAVE proc_label;
+        END IF;
+        
+        -- Verify the stall belongs to the manager's branch
+        IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
             ROLLBACK;
@@ -3842,7 +3837,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         SET v_business_manager_id = p_user_id;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
+        -- Verify employee's branch matches stall's branch
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -3850,7 +3845,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        
+        -- Get the manager ID for the branch
         SELECT business_manager_id INTO v_business_manager_id
         FROM business_manager
         WHERE branch_id = p_branch_id
@@ -3863,22 +3858,25 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
-    SELECT COUNT(*) INTO v_floor_section_valid
+    -- Validate section exists and belongs to the user's branch
+    -- Also get the correct floor_id from the section
+    SELECT f.floor_id INTO v_correct_floor_id
     FROM section sec
     INNER JOIN floor f ON sec.floor_id = f.floor_id
     WHERE sec.section_id = p_section_id 
-      AND f.floor_id = p_floor_id 
-      AND f.branch_id = v_existing_branch_id;
+      AND f.branch_id = p_branch_id;
 
-    IF v_floor_section_valid = 0 THEN
+    IF v_correct_floor_id IS NULL THEN
         SET p_success = FALSE;
-        SET p_message = 'Invalid floor or section for this stall';
+        SET p_message = 'Invalid section for this branch';
         ROLLBACK;
         LEAVE proc_label;
     END IF;
-
     
+    -- Override the provided floor_id with the section's floor_id
+    SET p_floor_id = v_correct_floor_id;
+
+    -- Check for duplicate stall number (excluding current stall)
     SELECT COUNT(*) INTO v_duplicate_stall
     FROM stall
     WHERE stall_no = p_stall_no 
@@ -3892,7 +3890,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Update the stall
     UPDATE stall SET
         stall_no = p_stall_no,
         stall_location = p_stall_location,
@@ -4397,7 +4395,7 @@ CREATE TABLE `application` (
 --
 
 INSERT INTO `application` (`application_id`, `stall_id`, `applicant_id`, `application_date`, `application_status`, `created_at`, `updated_at`) VALUES
-(12, 123, 12, '2025-10-05', 'Approved', '2025-10-05 09:11:25', '2025-11-07 05:30:28'),
+(12, 123, 12, '2025-10-05', 'Approved', '2025-10-05 09:11:25', '2025-12-03 06:32:43'),
 (17, 58, 33, '2025-11-06', 'Approved', '2025-11-06 05:30:18', '2025-11-27 08:26:41'),
 (18, 142, 34, '2025-11-06', 'Approved', '2025-11-06 05:32:16', '2025-11-06 05:32:54');
 
@@ -4614,8 +4612,8 @@ CREATE TABLE `business_employee` (
 --
 
 INSERT INTO `business_employee` (`business_employee_id`, `employee_username`, `employee_password_hash`, `first_name`, `last_name`, `email`, `phone_number`, `branch_id`, `created_by_manager`, `permissions`, `status`, `last_login`, `password_reset_required`, `created_at`, `updated_at`) VALUES
-(32, 'EMP3920', '$2a$12$2NnpRhDuRB1FAdTHB2D36ORZWsN4Z6CWCdeipi4xIb0XRUgTNIUAC', 'Jonas', 'Laurente', 'laurentejeno73@gmail.com', '09473430196', 1, 1, '[\"dashboard\",\"applicants\",\"stallholders\",\"payments\"]', 'Active', NULL, 1, '2025-11-05 13:20:59', '2025-11-06 09:17:17'),
-(33, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 23, 16, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11');
+(33, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 23, 16, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11'),
+(35, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'test', 'Employee', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', NULL, 1, '2025-12-03 04:03:26', '2025-12-03 04:03:26');
 
 -- --------------------------------------------------------
 
@@ -4750,7 +4748,7 @@ CREATE TABLE `credential` (
 --
 
 INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
-(9, 12, '25-72198', '$2b$10$ybs4aIFL9OlkD55HerFTPO3xIVDl.1mP2aCVTEGG2Z8FnKSkjCts.', '2025-10-09 00:49:20', '2025-12-01 04:15:28', 1),
+(9, 12, '25-59663', '$2b$10$lYLaIa3klQd0ifKyV8mUa.D1RSTqj/BMfpvFs69pGixHTwozNjg1.', '2025-10-09 00:49:20', '2025-12-01 04:15:28', 1),
 (12, 34, '25-24154', '$2b$10$2XDnKyjqkHcah78ERX8xmuHwuXpMvnKwuMapqhNmvb5YQIC8tCvCi', '2025-11-06 05:32:54', NULL, 1),
 (13, 33, '25-13962', '$2b$10$nqLfFP3TgPE9Ar/y5D37dOe.iD.Ot0mX5.uzJew/g3BuCJv6foGXy', '2025-11-14 07:16:54', NULL, 1);
 
@@ -5092,7 +5090,8 @@ INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amoun
 (34, 13, 'onsite', 3500.00, '2025-11-03', '11:00:00', '2025-11', 'rental', 'RCP-20251103-001', 'Juan Dela Cruz', 'completed', 'Cash payment at office', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:19:40'),
 (37, 13, 'gcash', 3200.00, '2025-11-06', '16:30:00', '2025-11', 'rental', 'TXN-20251106-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - BPI', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
 (42, 13, 'maya', 3500.00, '2025-11-13', '11:15:00', '2025-11', 'rental', 'BT-20251113-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - UnionBank', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
-(54, 13, 'onsite', 2400.00, '2025-11-18', '15:21:00', '2025-11', 'rental', 'RCP-20251118-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-11-18 07:22:03', '2025-11-18 07:22:03');
+(54, 13, 'onsite', 2400.00, '2025-11-18', '15:21:00', '2025-11', 'rental', 'RCP-20251118-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-11-18 07:22:03', '2025-11-18 07:22:03'),
+(65, 16, 'onsite', 2800.00, '2025-12-02', '00:48:00', '2025-12', 'rental', 'RCP-20251203-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-12-02 16:48:49', '2025-12-02 16:48:49');
 
 -- --------------------------------------------------------
 
@@ -5322,7 +5321,7 @@ CREATE TABLE `stall` (
 --
 
 INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `rental_price`, `price_type`, `status`, `stamp`, `description`, `stall_image`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
-(50, 1, 1, 'NPM-001', 'Main Entrance Area', '3x3', 2900.00, 'Fixed Price', 'Inactive', 'APPROVED', 'Prime location electronics store near main entrance with high foot traffic', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 0, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 06:00:00', '2025-10-24 08:15:49'),
+(50, 1, 1, 'NPM-001', 'Main Entrance Area', '3x3', 2520.00, 'Fixed Price', 'Active', 'APPROVED', 'Prime location electronics store near main entrance with high foot traffic', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 06:00:00', '2025-12-02 15:48:47'),
 (54, 4, 1, 'NPM-005', 'Corner Market Area', '2x2', 2400.00, 'Fixed Price', 'Active', 'APPROVED', 'Meat section stall with proper refrigeration and ventilation systems', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 07:00:00', '2025-09-07 07:00:00'),
 (55, 5, 2, 'NPM-006', 'Food Court Central', '2x2', 2800.00, 'Fixed Price', 'Active', 'APPROVED', 'Compact food stall in busy food court, perfect for specialty snacks or beverages', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 07:15:00', '2025-11-05 13:26:05'),
 (57, 6, 2, 'NPM-008', 'South Plaza', '4x2', 2610.00, 'Fixed Price', 'Active', 'APPROVED', 'Long narrow stall perfect for electronics repair shop or computer accessories', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 07:45:00', '2025-10-27 03:50:36'),
@@ -5335,7 +5334,8 @@ INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_lo
 (123, 6, 2, 'NPM-003', 'main', '3x4', 2500.00, 'Raffle', 'Active', 'APPROVED', 'try', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-07 23:00:00', 1, 'Active', '2025-10-05 11:26:37', '2025-10-07 23:00:00', 1, '2025-10-03 17:36:32', '2025-10-07 08:47:01'),
 (124, 6, 2, 'NPM-005', 'Main Entrance', '3x4', 2750.00, 'Raffle', 'Active', 'APPROVED', 'try lang', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, '2025-10-25 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-10-15 06:03:28', '2025-10-24 08:04:13'),
 (140, 35, 16, 'TEST-001', 'Main', '3x4', 2510.00, 'Raffle', 'Active', 'APPROVED', 'Test Data Stall', 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 1, '2025-11-08 23:00:00', 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:52:01', '2025-11-05 15:52:12'),
-(142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45');
+(142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45'),
+(149, 6, 2, 'NPM-001', 'Main', '3x4', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test data', NULL, 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-03 07:30:08', '2025-12-03 07:30:08');
 
 -- --------------------------------------------------------
 
@@ -5377,7 +5377,7 @@ INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`,
 (13, 12, 'Maria Santos', '09171234567', 'maria.santos@email.com', 'Barangay Carolina, Naga City', 'Santos General Merchandise', 'General Merchandise', 1, 54, '2024-01-15', '2024-12-31', 'Active', 28800.00, 2400.00, 'paid', '2025-11-18', 'Reliable tenant, always pays on time', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-18 07:22:03', NULL),
 (14, 33, 'Roberto Cruz', '09181234567', 'roberto.cruz@email.com', 'Barangay Triangulo, Naga City', 'Cruz Electronics Repair', 'Electronics', 1, 57, '2024-03-01', '2025-02-28', 'Active', 31200.00, 2600.00, 'pending', '2025-11-18', 'Electronics repair specialist', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-18 07:21:10', NULL),
 (15, 34, 'Elena Reyes', '09191234567', 'elena.reyes@email.com', 'Barangay San Francisco, Naga City', 'Elena\'s Fashion Corner', 'Clothing', 1, 58, '2023-06-01', '2024-05-31', 'Active', 25200.00, 2100.00, 'pending', '2025-11-18', 'Payment overdue by 15 days. Last violation: improper display', 1, 'Non-Compliant', '2025-11-12 03:33:36', '2025-11-19 08:02:06', '2025-11-02'),
-(16, 35, 'Carlos Mendoza', '09201234567', 'carlos.mendoza@email.com', 'Barangay Concepcion Grande, Naga City', 'Mendoza Food Corner', 'Food Service', 1, 55, '2024-02-15', '2025-01-31', 'Active', 33600.00, 2800.00, 'pending', '2025-11-18', 'Popular food stall, excellent customer ratings', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-18 07:21:25', NULL),
+(16, 35, 'Carlos Mendoza', '09201234567', 'carlos.mendoza@email.com', 'Barangay Concepcion Grande, Naga City', 'Mendoza Food Corner', 'Food Service', 1, 55, '2024-02-15', '2025-01-31', 'Active', 33600.00, 2800.00, 'paid', '2025-12-02', 'Popular food stall, excellent customer ratings', 1, 'Compliant', '2025-11-12 03:34:59', '2025-12-02 16:48:49', NULL),
 (17, 36, 'Ana Villanueva', '09211234567', 'ana.villanueva@email.com', 'Barangay Pacol, Naga City', 'Villanueva Meat Shop', 'Meat Products', 3, 91, '2024-01-01', '2024-12-31', 'Active', 30000.00, 2500.00, 'current', '2025-10-29', 'Fresh meat supplier, good hygiene practices', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL),
 (18, 37, 'Fernando Garcia', '09221234567', 'fernando.garcia@email.com', 'Barangay Balatas, Naga City', 'Garcia Fresh Produce', 'Vegetables & Fruits', 3, 93, '2023-09-01', '2024-08-31', 'Active', 21600.00, 1800.00, 'grace_period', '2025-10-08', 'Seasonal produce vendor, payment due in 5 days', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL);
 
@@ -6360,7 +6360,7 @@ ALTER TABLE `branch_document_requirements`
 -- AUTO_INCREMENT for table `business_employee`
 --
 ALTER TABLE `business_employee`
-  MODIFY `business_employee_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `business_employee_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `business_information`
@@ -6468,7 +6468,7 @@ ALTER TABLE `other_information`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `payment_status_log`
@@ -6516,7 +6516,7 @@ ALTER TABLE `spouse`
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=145;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=150;
 
 --
 -- AUTO_INCREMENT for table `stallholder`

@@ -23,6 +23,19 @@ export default {
       showViewFloorsSectionsModal: false,
     }
   },
+  computed: {
+    // Check if user is a business owner (view-only access)
+    isBusinessOwner() {
+      const userType = sessionStorage.getItem('userType')
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      console.log('🔐 isBusinessOwner check - userType:', userType, 'currentUser.userType:', currentUser.userType)
+      return userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner'
+    },
+  },
+  mounted() {
+    console.log('🔐 AddChoiceModal mounted - isBusinessOwner:', this.isBusinessOwner)
+    console.log('🔐 sessionStorage userType:', sessionStorage.getItem('userType'))
+  },
   methods: {
     // Handle Floating Action Button click with smart logic
     async handleFabClick() {

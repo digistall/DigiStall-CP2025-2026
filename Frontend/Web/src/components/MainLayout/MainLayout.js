@@ -22,6 +22,7 @@ export default {
         { id: 3, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
         { id: 4, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
         { id: 5, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
+        { id: 50, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
       ],
       businessManagerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },

@@ -55,16 +55,16 @@
               />
             </div>
 
-            <!-- Floating Button Container (matching Stalls design) -->
-            <div class="floating-button-container">
+            <!-- Floating Button Container (Hidden for business owners - view only) -->
+            <div class="floating-button-container" v-if="!isBusinessOwner">
               <button class="floating-btn" @click="openAddEmployeeDialog">
                 <v-icon size="24">mdi-plus</v-icon>
                 <div class="ripple-overlay"></div>
               </button>
             </div>
 
-            <!-- Pulse Rings Animation -->
-            <div class="pulse-rings">
+            <!-- Pulse Rings Animation (Hidden for business owners) -->
+            <div class="pulse-rings" v-if="!isBusinessOwner">
               <div class="pulse-ring pulse-ring-1"></div>
               <div class="pulse-ring pulse-ring-2"></div>
               <div class="pulse-ring pulse-ring-3"></div>

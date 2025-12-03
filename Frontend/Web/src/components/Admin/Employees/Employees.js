@@ -175,6 +175,13 @@ export default {
 
       return filtered;
     },
+
+    // Check if user is a business owner (view-only access)
+    isBusinessOwner() {
+      const userType = sessionStorage.getItem('userType');
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+      return userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner';
+    },
   },
 
   methods: {
