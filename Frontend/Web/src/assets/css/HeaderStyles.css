@@ -1,12 +1,28 @@
 .header-wrapper {
   width: 100%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 33, 129, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: white;
 }
 
 .main-header {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 12px 0;
-  border-bottom: 1px solid #dee2e6;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 16px 0;
+  border-bottom: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.main-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #002181, #1976d2, #4FC3F7);
 }
 
 .header-container {
@@ -15,7 +31,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 40px;
 }
 
 .header-left {
@@ -26,19 +42,20 @@
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
 }
 
 .logo {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
-  transition: transform 0.3s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 33, 129, 0.15));
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .logo:hover {
-  transform: scale(1.05);
+  transform: scale(1.08) rotate(-2deg);
+  filter: drop-shadow(0 6px 12px rgba(0, 33, 129, 0.25));
 }
 
 .header-text {
@@ -47,26 +64,31 @@
   gap: 2px;
 }
 
-.republic-text {
-  font-size: 15px;
-  color: #6c757d;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+.city-text {
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
   margin: 0;
 }
 
 .text-divider {
   width: 100%;
-  height: 1px;
-  background: linear-gradient(to right, #dee2e6, transparent);
-  margin: 3px 0;
+  height: 2px;
+  background: linear-gradient(to right, #002181, #1976d2, transparent);
+  margin: 4px 0;
+  border-radius: 1px;
 }
 
-.city-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: #343a40;
-  letter-spacing: 0.2px;
+.republic-text {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   margin: 0;
 }
 
@@ -77,80 +99,117 @@
 
 .nav-menu {
   display: flex;
-  gap: 35px;
+  gap: 8px;
   align-items: center;
 }
 
 .nav-link {
-  font-family: "Inter", Sans-serif;
-  text-transform: uppercase;
+  font-family: "Inter", "Poppins", Sans-serif;
   text-decoration: none;
-  color: #495057;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  color: #475569;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-link i {
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.nav-link span {
   position: relative;
 }
 
 .nav-link:hover {
-  color: #007bff;
-  background: rgba(0, 123, 255, 0.08);
-  transform: translateY(-1px);
+  color: #002181;
+  background: linear-gradient(135deg, rgba(0, 33, 129, 0.06) 0%, rgba(25, 118, 210, 0.06) 100%);
+  transform: translateY(-2px);
+}
+
+.nav-link:hover i {
+  transform: scale(1.1);
 }
 
 .nav-link::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: 4px;
   left: 50%;
   width: 0;
   height: 2px;
-  background: #007bff;
+  background: linear-gradient(90deg, #002181, #1976d2);
   transition: all 0.3s ease;
   transform: translateX(-50%);
+  border-radius: 1px;
 }
 
 .nav-link:hover::after {
-  width: 80%;
+  width: 60%;
 }
 
 .login-btn {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: linear-gradient(135deg, #002181 0%, #1565c0 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-family: "Inter", Sans-serif;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-family: "Inter", "Poppins", Sans-serif;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 33, 129, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.login-btn:hover::before {
+  left: 100%;
 }
 
 .login-btn:hover {
-  background: linear-gradient(135deg, #0056b3, #004494);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  background: linear-gradient(135deg, #001a66 0%, #0d47a1 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 33, 129, 0.35);
+}
+
+.login-btn i {
+  font-size: 18px;
 }
 
 /* Logged-in state styles */
 .login-btn.logged-in {
-  background: linear-gradient(135deg, #28a745, #1e7e34);
+  background: linear-gradient(135deg, #059669, #047857);
   color: white;
   min-width: 140px;
-  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.25);
 }
 
 .login-btn.logged-in:hover {
-  background: linear-gradient(135deg, #1e7e34, #155724);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.35);
 }
 
 .username-display {
@@ -162,7 +221,7 @@
 }
 
 .login-btn .mdi-account-circle {
-  font-size: 16px;
+  font-size: 18px;
   color: #fff;
 }
 
@@ -173,7 +232,16 @@
   }
 
   .nav-menu {
-    gap: 25px;
+    gap: 4px;
+  }
+  
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .nav-link i {
+    display: none;
   }
 }
 
@@ -188,37 +256,38 @@
     gap: 12px;
   }
 
-  .logo-placeholder {
-    width: 50px;
-    height: 50px;
-  }
-
-  .logo-circle {
-    width: 45px;
-    height: 45px;
-  }
-
-  .republic-text {
-    font-size: 12px;
+  .logo {
+    width: 48px;
+    height: 48px;
   }
 
   .city-text {
-    font-size: 16px;
+    font-size: 20px;
+  }
+
+  .republic-text {
+    font-size: 10px;
   }
 
   .nav-menu {
-    gap: 20px;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .nav-link {
-    font-size: 14px;
-    padding: 6px 12px;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  
+  .nav-link i {
+    display: none;
   }
 }
 
 @media (max-width: 480px) {
   .main-header {
-    padding: 8px 0;
+    padding: 12px 0;
   }
 
   .header-container {
@@ -230,16 +299,16 @@
   }
 
   .nav-menu {
-    gap: 15px;
+    gap: 4px;
   }
 
   .nav-link {
-    font-size: 13px;
-    padding: 5px 10px;
+    font-size: 11px;
+    padding: 6px 8px;
   }
 
   .login-btn {
-    font-size: 13px;
-    padding: 8px 16px;
+    font-size: 12px;
+    padding: 10px 16px;
   }
 }
