@@ -38,7 +38,7 @@
             <div class="plan-price-section">
               <div class="price-display">
                 <span class="currency">₱</span>
-                <span class="price-amount">5,000</span>
+                <span class="price-amount">400</span>
                 <span class="price-period">/month</span>
               </div>
             </div>
@@ -84,7 +84,7 @@
             <div class="plan-price-section">
               <div class="price-display">
                 <span class="currency">₱</span>
-                <span class="price-amount">10,000</span>
+                <span class="price-amount">800</span>
                 <span class="price-period">/month</span>
               </div>
             </div>
@@ -133,7 +133,7 @@
             <div class="plan-price-section">
               <div class="price-display">
                 <span class="currency">₱</span>
-                <span class="price-amount">20,000</span>
+                <span class="price-amount">1,000</span>
                 <span class="price-period">/month</span>
               </div>
             </div>
