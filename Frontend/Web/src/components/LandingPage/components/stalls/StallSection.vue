@@ -12,7 +12,7 @@
     <div class="hero-content">
       <div class="hero-badge animate-on-scroll">
         <i class="mdi mdi-storefront"></i>
-        <span>#1 Stall Management Platform</span>
+        <span>Stall Management Platform</span>
       </div>
       
       <div class="hero-text">

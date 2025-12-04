@@ -1,34 +1,37 @@
+<style scoped src="../../assets/css/Global.css"></style>
+
 <template>
   <div id="app" class="landing-page">
-    <!-- Scroll Progress Line - Full Height -->
-    <div class="scroll-progress-container" :class="{ 'white-mode': isInDarkSection }">
-      <div class="scroll-progress-track">
-        <div class="scroll-progress-line" :style="{ height: scrollProgress + '%' }"></div>
-      </div>
-      <div class="scroll-sections">
-        <div 
-          v-for="(section, index) in sections" 
-          :key="index" 
-          class="section-marker"
-          :class="{ active: currentSection === index, passed: currentSection > index }"
-          :style="{ top: section.position + '%' }"
-          @click="scrollToSection(section.id)"
-        >
-          <div class="marker-dot">
-            <div class="dot-pulse" v-if="currentSection === index"></div>
-          </div>
-          <transition name="label-fade">
+    <HeaderSection />
+    
+    <!-- Wrapper for sections with scroll line - line is merged with content -->
+    <div class="scroll-line-wrapper">
+      <!-- Scroll Progress Line - Absolute within wrapper, scrolls with page -->
+      <div class="scroll-progress-container">
+        <div class="scroll-progress-track" :class="{ 'in-trial-section': isInTrialSection }">
+          <div class="scroll-progress-line" :class="{ 'white-line': isInTrialSection }" :style="{ height: scrollProgress + '%' }"></div>
+        </div>
+        <div class="scroll-sections">
+          <div 
+            v-for="(section, index) in sections" 
+            :key="index" 
+            class="section-marker"
+            :class="{ active: currentSection === index, passed: currentSection > index }"
+            :style="{ top: section.position + '%' }"
+            @click="scrollToSection(section.id)"
+          >
+            <div class="marker-dot"></div>
             <span class="marker-label" v-if="currentSection === index">{{ section.label }}</span>
-          </transition>
+          </div>
         </div>
       </div>
-    </div>
 
-    <HeaderSection />
-    <StallSection />
-    <VendorSection />
-    <ComplianceSection />
-    <FreeTrialSection />
+      <StallSection />
+      <VendorSection />
+      <ComplianceSection />
+      <FreeTrialSection />
+    </div>
+    
     <FooterSection />
   </div>
 </template>
@@ -55,12 +58,12 @@ export default {
     return {
       scrollProgress: 0,
       currentSection: 0,
-      isInDarkSection: false,
+      isInTrialSection: false,
       sections: [
-        { id: 'stalls', label: 'HOME', position: 10 },
-        { id: 'vendor', label: 'VENDOR', position: 35 },
+        { id: 'home', label: 'STALLS', position: 3 },
+        { id: 'vendor', label: 'VENDOR', position: 30 },
         { id: 'about', label: 'REPORT', position: 60 },
-        { id: 'free-trial', label: 'TRIAL', position: 85 }
+        { id: 'free-trial', label: 'TRIAL', position: 97 }
       ]
     }
   },
@@ -69,6 +72,10 @@ export default {
     this.initScrollAnimations();
     this.init3DEffects();
     window.addEventListener('scroll', this.handleScroll);
+    // Call handleScroll on mount to initialize scroll progress
+    this.$nextTick(() => {
+      this.handleScroll();
+    });
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
@@ -124,11 +131,36 @@ export default {
     },
     handleScroll() {
       const scrolled = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      this.scrollProgress = Math.min((scrolled / docHeight) * 100, 100);
       
-      // Determine current section
-      const sectionIds = ['stalls', 'vendor', 'about', 'free-trial'];
+      // If user hasn't scrolled at all, keep progress at 0
+      if (scrolled <= 0) {
+        this.scrollProgress = 0;
+        this.currentSection = 0;
+        this.isInTrialSection = false;
+        return;
+      }
+      
+      // Get section elements
+      const homeSection = document.getElementById('home');
+      const trialSection = document.getElementById('free-trial');
+      
+      if (homeSection && trialSection) {
+        // The line spans from home to trial within the wrapper
+        const wrapperStart = homeSection.offsetTop;
+        const wrapperEnd = trialSection.offsetTop + trialSection.offsetHeight;
+        const wrapperHeight = wrapperEnd - wrapperStart;
+        
+        // Calculate progress based on actual scroll position, not viewport center
+        // Only start showing progress after user scrolls past the start
+        const scrollProgress = Math.max(scrolled - wrapperStart + 200, 0);
+        const progress = Math.min(scrollProgress / wrapperHeight, 1);
+        
+        // Set scroll progress as percentage (0-100)
+        this.scrollProgress = progress * 100;
+      }
+      
+      // Determine current section (home, vendor, about, free-trial)
+      const sectionIds = ['home', 'vendor', 'about', 'free-trial'];
       for (let i = sectionIds.length - 1; i >= 0; i--) {
         const section = document.getElementById(sectionIds[i]);
         if (section && scrolled >= section.offsetTop - 200) {
@@ -137,20 +169,12 @@ export default {
         }
       }
       
-      // Check if in dark section (free-trial has dark background)
-      const trialSection = document.getElementById('free-trial');
-      if (trialSection) {
-        const trialTop = trialSection.offsetTop;
-        const trialBottom = trialTop + trialSection.offsetHeight;
-        this.isInDarkSection = scrolled >= trialTop - 300 && scrolled < trialBottom - 100;
+      // Check if user is in the Free Trial section
+      const freeTrialSection = document.getElementById('free-trial');
+      if (freeTrialSection) {
+        const trialTop = freeTrialSection.offsetTop;
+        this.isInTrialSection = scrolled >= trialTop - 300;
       }
-
-      // Parallax effect
-      const parallaxElements = document.querySelectorAll('.parallax');
-      parallaxElements.forEach(el => {
-        const speed = el.dataset.speed || 0.5;
-        el.style.transform = `translateY(${scrolled * speed}px)`;
-      });
     },
     scrollToSection(id) {
       const section = document.getElementById(id);
@@ -162,19 +186,21 @@ export default {
 };
 </script>
 
-<style scoped src="../../assets/css/Global.css"></style>
 <style>
-/* Scroll Progress Line - Full Height Fixed */
+/* Scroll Line Wrapper - contains sections and the progress line */
+.scroll-line-wrapper {
+  position: relative;
+}
+
+/* Scroll Progress Line - Absolute within wrapper, scrolls with page */
 .scroll-progress-container {
-  position: fixed;
+  position: absolute;
   left: 30px;
-  top: 220px;
+  top: 100px;
   bottom: 100px;
-  z-index: 99999;
+  z-index: 50;
   display: flex;
   align-items: stretch;
-  gap: 0;
-  padding: 0;
   pointer-events: none;
 }
 
@@ -186,11 +212,10 @@ export default {
 .scroll-progress-track {
   width: 3px;
   height: 100%;
-  background: rgba(0, 33, 129, 0.12);
+  background: rgba(0, 33, 129, 0.15);
   border-radius: 3px;
   position: relative;
-  overflow: visible;
-  transition: background 0.5s ease;
+  overflow: hidden;
 }
 
 .scroll-progress-line {
@@ -198,10 +223,20 @@ export default {
   top: 0;
   left: 0;
   width: 100%;
-  background: linear-gradient(180deg, #002181 0%, #1976d2 50%, #4FC3F7 100%);
+  height: 0%;
+  background: linear-gradient(180deg, transparent 0%, #002181 5%, #1976d2 50%, #002181 100%);
   border-radius: 3px;
-  transition: height 0.15s ease-out, background 0.5s ease, box-shadow 0.5s ease;
-  box-shadow: 0 0 12px rgba(0, 33, 129, 0.3);
+  box-shadow: 0 0 10px rgba(0, 33, 129, 0.3);
+  transition: height 0.1s ease-out, background 0.3s ease;
+}
+
+.scroll-progress-line.white-line {
+  background: linear-gradient(180deg, transparent 0%, #002181 5%, #1976d2 40%, #ffffff 100%);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.scroll-progress-track.in-trial-section {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .scroll-sections {
@@ -228,14 +263,11 @@ export default {
   height: 12px;
   background: rgba(0, 33, 129, 0.25);
   border-radius: 50%;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
   border: 2px solid transparent;
 }
 
 .section-marker:hover .marker-dot {
   background: rgba(0, 33, 129, 0.5);
-  transform: scale(1.2);
 }
 
 .section-marker.passed .marker-dot {
@@ -247,24 +279,7 @@ export default {
   height: 14px;
   background: linear-gradient(135deg, #002181, #1976d2);
   border: 2px solid white;
-  box-shadow: 0 0 15px rgba(0, 33, 129, 0.5);
-}
-
-.dot-pulse {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 33, 129, 0.3);
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+  box-shadow: 0 0 10px rgba(0, 33, 129, 0.4);
 }
 
 .marker-label {
@@ -292,60 +307,6 @@ export default {
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
   border-right: 6px solid white;
-}
-
-/* Label Fade Transition */
-.label-fade-enter-active,
-.label-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.label-fade-enter-from,
-.label-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-10px);
-}
-
-/* White Mode for Dark Sections */
-.scroll-progress-container.white-mode .scroll-progress-track {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.scroll-progress-container.white-mode .scroll-progress-line {
-  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0.7) 100%);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-}
-
-.scroll-progress-container.white-mode .marker-dot {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.scroll-progress-container.white-mode .section-marker:hover .marker-dot {
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.scroll-progress-container.white-mode .section-marker.passed .marker-dot {
-  background: white;
-}
-
-.scroll-progress-container.white-mode .section-marker.active .marker-dot {
-  background: linear-gradient(135deg, #ffffff, #e0e0e0);
-  border-color: rgba(0, 33, 129, 0.3);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-}
-
-.scroll-progress-container.white-mode .dot-pulse {
-  background: rgba(255, 255, 255, 0.4);
-}
-
-.scroll-progress-container.white-mode .marker-label {
-  background: rgba(255, 255, 255, 0.95);
-  color: #002181;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
-}
-
-.scroll-progress-container.white-mode .marker-label::before {
-  border-right-color: rgba(255, 255, 255, 0.95);
 }
 
 /* Global Scroll Animations - Reversible */
