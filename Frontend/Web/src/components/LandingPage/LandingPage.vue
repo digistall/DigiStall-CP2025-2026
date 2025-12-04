@@ -2,7 +2,7 @@
 
 <template>
   <div id="app" class="landing-page">
-    <HeaderSection />
+    <HeaderSection :isVisible="isHeaderVisible" />
     
     <!-- Wrapper for sections with scroll line - line is merged with content -->
     <div class="scroll-line-wrapper">
@@ -59,6 +59,8 @@ export default {
       scrollProgress: 0,
       currentSection: 0,
       isInTrialSection: false,
+      isHeaderVisible: true,
+      lastScrollY: 0,
       sections: [
         { id: 'home', label: 'STALLS', position: 3 },
         { id: 'vendor', label: 'VENDOR', position: 30 },
@@ -132,6 +134,16 @@ export default {
     handleScroll() {
       const scrolled = window.scrollY;
       
+      // Header show/hide logic
+      if (scrolled > this.lastScrollY && scrolled > 100) {
+        // Scrolling down & past threshold - hide header
+        this.isHeaderVisible = false;
+      } else {
+        // Scrolling up - show header
+        this.isHeaderVisible = true;
+      }
+      this.lastScrollY = scrolled;
+      
       // If user hasn't scrolled at all, keep progress at 0
       if (scrolled <= 0) {
         this.scrollProgress = 0;
@@ -148,12 +160,16 @@ export default {
         // The line spans from home to trial within the wrapper
         const wrapperStart = homeSection.offsetTop;
         const wrapperEnd = trialSection.offsetTop + trialSection.offsetHeight;
-        const wrapperHeight = wrapperEnd - wrapperStart;
         
-        // Calculate progress based on actual scroll position, not viewport center
-        // Only start showing progress after user scrolls past the start
-        const scrollProgress = Math.max(scrolled - wrapperStart + 200, 0);
-        const progress = Math.min(scrollProgress / wrapperHeight, 1);
+        // Calculate total scrollable distance (from start to when bottom of viewport reaches end)
+        const totalScrollDistance = wrapperEnd - window.innerHeight;
+        
+        // Calculate how far we've scrolled from the start
+        const scrolledFromStart = scrolled - wrapperStart;
+        const scrollRange = totalScrollDistance - wrapperStart;
+        
+        // Calculate progress (0 to 1)
+        const progress = Math.min(Math.max(scrolledFromStart / scrollRange, 0), 1);
         
         // Set scroll progress as percentage (0-100)
         this.scrollProgress = progress * 100;

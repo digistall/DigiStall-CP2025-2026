@@ -5,6 +5,13 @@
   top: 0;
   z-index: 9000;
   background: white;
+  transform: translateY(0);
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease;
+}
+
+.header-wrapper.header-hidden {
+  transform: translateY(-100%);
+  box-shadow: none;
 }
 
 .main-header {

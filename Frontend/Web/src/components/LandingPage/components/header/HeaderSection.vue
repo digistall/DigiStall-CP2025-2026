@@ -1,5 +1,5 @@
 <template>
-  <div class="header-wrapper">
+  <div class="header-wrapper" :class="{ 'header-hidden': !isVisible }">
     <!-- Main Header -->
     <header class="main-header">
       <div class="header-container">
@@ -69,6 +69,12 @@ export default {
   components: {
     SubNavigation,
     OrdinanceSection,
+  },
+  props: {
+    isVisible: {
+      type: Boolean,
+      default: true
+    }
   },
   data() {
     return {
