@@ -21,6 +21,10 @@ import {
   getStallsByArea,
   getStallsByLocation,
   getFilteredStalls,
+  getLandingPageStats,
+  getLandingPageStallholders,
+  getLandingPageStallsList,
+  getLandingPageFilterOptions,
   
   // Raffle management
   createRaffle,
@@ -47,6 +51,10 @@ const router = express.Router()
 
 // ===== PUBLIC ROUTES (No Authentication) =====
 // Landing page stall browsing
+router.get('/stats', getLandingPageStats)               // GET /api/stalls/stats - Get landing page statistics (public)
+router.get('/public/stallholders', getLandingPageStallholders)  // GET /api/stalls/public/stallholders - Get stallholders list (public)
+router.get('/public/list', getLandingPageStallsList)    // GET /api/stalls/public/list - Get stalls list (public)
+router.get('/public/filter-options', getLandingPageFilterOptions)  // GET /api/stalls/public/filter-options - Get filter options (public)
 router.get('/branches', getBranches)                    // GET /api/stalls/branches - Get all branches (public)
 router.get('/areas', getAvailableAreas)                 // GET /api/stalls/areas - Get available areas (public)
 router.get('/markets', getAvailableMarkets)             // GET /api/stalls/markets - Get available markets (public)
