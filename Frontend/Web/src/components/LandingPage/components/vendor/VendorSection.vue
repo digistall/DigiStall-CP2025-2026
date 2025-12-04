@@ -125,7 +125,7 @@ export default {
   display: flex;
   align-items: center;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .container {
@@ -134,6 +134,7 @@ export default {
   width: 100%;
   position: relative;
   z-index: 2;
+  overflow: visible;
 }
 
 /* Background Decorations */
@@ -352,10 +353,12 @@ export default {
   align-items: center;
   position: relative;
   z-index: 1;
+  overflow: visible;
 }
 
 .image-container {
   position: relative;
+  overflow: visible;
 }
 
 .image-container::before {
@@ -364,8 +367,10 @@ export default {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 90%;
-  height: 90%;
+  width: 100%;
+  height: 100%;
+  min-width: 520px;
+  min-height: 520px;
   background: linear-gradient(135deg, rgba(0, 33, 129, 0.08) 0%, rgba(25, 118, 210, 0.08) 100%);
   border-radius: 50%;
   z-index: -1;
@@ -420,6 +425,11 @@ export default {
   .vendor-image {
     max-width: 420px;
   }
+
+  .image-container::before {
+    min-width: 450px;
+    min-height: 450px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -471,6 +481,11 @@ export default {
   .vendor-image {
     max-width: 380px;
   }
+
+  .image-container::before {
+    min-width: 400px;
+    min-height: 400px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -502,6 +517,11 @@ export default {
   
   .vendor-image {
     max-width: 300px;
+  }
+
+  .image-container::before {
+    min-width: 320px;
+    min-height: 320px;
   }
 }
 </style>

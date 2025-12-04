@@ -23,53 +23,183 @@
       </div>
 
       <div class="pricing-container">
+        <!-- Pricing Plans Grid -->
+        <div class="pricing-plans-grid animate-on-scroll animate-delay-1">
+          <!-- Basic Plan -->
+          <div class="plan-card plan-basic">
+            <div class="plan-header-section">
+              <div class="plan-icon-wrapper basic">
+                <i class="mdi mdi-storefront"></i>
+              </div>
+              <h3 class="plan-title">Basic Plan</h3>
+              <p class="plan-description">Perfect for small business with 1-2 branches</p>
+            </div>
+
+            <div class="plan-price-section">
+              <div class="price-display">
+                <span class="currency">₱</span>
+                <span class="price-amount">5,000</span>
+                <span class="price-period">/month</span>
+              </div>
+            </div>
+
+            <div class="plan-features">
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>2</strong> Branches</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>10</strong> Employees</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>50</strong> Stalls</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span>Basic Reports</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span>Email Support</span>
+              </div>
+            </div>
+
+            <button class="plan-cta-button basic" @click="selectPlan('basic')">
+              Get Started
+            </button>
+          </div>
+
+          <!-- Standard Plan -->
+          <div class="plan-card plan-standard">
+            <div class="plan-header-section">
+              <div class="plan-icon-wrapper standard">
+                <i class="mdi mdi-briefcase"></i>
+              </div>
+              <h3 class="plan-title">Standard Plan</h3>
+              <p class="plan-description">Ideal for growing businesses</p>
+            </div>
+
+            <div class="plan-price-section">
+              <div class="price-display">
+                <span class="currency">₱</span>
+                <span class="price-amount">10,000</span>
+                <span class="price-period">/month</span>
+              </div>
+            </div>
+
+            <div class="plan-features">
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>5</strong> Branches</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>25</strong> Employees</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>150</strong> Stalls</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span>Advanced Reports</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span>Email & Phone Support</span>
+              </div>
+            </div>
+
+            <button class="plan-cta-button standard" @click="selectPlan('standard')">
+              Get Started
+            </button>
+          </div>
+
+          <!-- Premium Plan -->
+          <div class="plan-card plan-premium">
+            <div class="popular-badge">
+              <i class="mdi mdi-star"></i> MOST POPULAR
+            </div>
+            <div class="plan-header-section">
+              <div class="plan-icon-wrapper premium">
+                <i class="mdi mdi-crown"></i>
+              </div>
+              <h3 class="plan-title">Premium Plan</h3>
+              <p class="plan-description">For enterprises with unlimited potential</p>
+            </div>
+
+            <div class="plan-price-section">
+              <div class="price-display">
+                <span class="currency">₱</span>
+                <span class="price-amount">20,000</span>
+                <span class="price-period">/month</span>
+              </div>
+            </div>
+
+            <div class="plan-features">
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>10</strong> Branches</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>100</strong> Employees</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span><strong>Unlimited</strong> Stalls</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span>Advanced Analytics</span>
+              </div>
+              <div class="feature-item">
+                <i class="mdi mdi-check-circle"></i>
+                <span>Priority 24/7 Support</span>
+              </div>
+              <div class="feature-item ai-feature">
+                <i class="mdi mdi-robot"></i>
+                <span><strong>AI Business Assistant</strong></span>
+              </div>
+            </div>
+
+            <!-- AI Highlight Box -->
+            <div class="ai-highlight-box">
+              <div class="ai-icon">
+                <i class="mdi mdi-brain"></i>
+              </div>
+              <div class="ai-content">
+                <h4>AI-Powered Insights</h4>
+                <p>Get intelligent recommendations to optimize occupancy, predict revenue, and grow your stall business with our AI assistant.</p>
+              </div>
+            </div>
+
+            <button class="plan-cta-button premium" @click="selectPlan('premium')">
+              Get Premium
+            </button>
+          </div>
+        </div>
+
         <!-- Free Trial Card - Compact Design -->
-        <div class="pricing-card animate-on-scroll animate-delay-1">
-          <div class="card-ribbon">FREE 30 DAYS</div>
-          
-          <div class="card-header">
-            <div class="plan-icon">
-              <i class="mdi mdi-rocket-launch"></i>
+        <div class="free-trial-banner animate-on-scroll animate-delay-2">
+          <div class="trial-content">
+            <div class="trial-badge">
+              <i class="mdi mdi-gift"></i>
+              FREE 30 DAYS
             </div>
-            <h3 class="plan-name">Starter Trial</h3>
-            <p class="plan-tagline">For stall rental business owners</p>
+            <h3>Not ready to commit? Try DigiStall Free!</h3>
+            <p>Start with our Starter Trial — 1 Branch, 20 Stalls, 30 Days Free. No credit card required.</p>
           </div>
-
-          <div class="price-section">
-            <div class="price-display">
-              <span class="currency">₱</span>
-              <span class="price-amount">0</span>
-              <span class="price-period">/month</span>
-            </div>
-            <div class="original-price">
-              <span class="strikethrough">₱999</span>
-              <span class="save-badge">SAVE 100%</span>
-            </div>
-          </div>
-
-          <div class="features-section">
-            <p class="features-title">What's Included:</p>
-            <ul class="features-list">
-              <li><i class="mdi mdi-check-circle"></i> <strong>1</strong> Branch</li>
-              <li><i class="mdi mdi-check-circle"></i> <strong>20</strong> Stalls</li>
-              <li><i class="mdi mdi-check-circle"></i> <strong>30</strong> Days Free</li>
-              <li><i class="mdi mdi-check-circle"></i> Email Support</li>
-            </ul>
-          </div>
-
-          <button class="cta-button" @click="startFreeTrial">
+          <button class="trial-cta-button" @click="startFreeTrial">
             <i class="mdi mdi-rocket-launch-outline"></i>
             Start Free Trial
           </button>
-
-          <p class="no-credit-card">
-            <i class="mdi mdi-shield-check"></i>
-            No credit card required
-          </p>
         </div>
 
         <!-- Why Choose Section -->
-        <div class="comparison-section animate-on-scroll animate-delay-2">
+        <div class="comparison-section animate-on-scroll animate-delay-3">
           <h3 class="comparison-title">Why Choose DigiStall?</h3>
           
           <div class="benefit-cards">
@@ -267,6 +397,14 @@ export default {
       this.showTrialModal = true
       document.body.style.overflow = 'hidden'
     },
+    selectPlan(planType) {
+      // Redirect to login page or show contact info
+      // For now, we'll redirect to login with plan info
+      this.$router.push({
+        path: '/login',
+        query: { plan: planType }
+      })
+    },
     closeTrialModal() {
       this.showTrialModal = false
       document.body.style.overflow = ''
@@ -401,13 +539,325 @@ export default {
 
 /* Pricing Container */
 .pricing-container {
-  display: grid;
-  grid-template-columns: 340px 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 40px;
-  align-items: start;
 }
 
-/* Pricing Card - 3D Effect */
+/* Pricing Plans Grid - 3 columns */
+.pricing-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* Plan Card Base Styles */
+.plan-card {
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  position: relative;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.05),
+    0 10px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 
+    0 8px 12px rgba(0, 0, 0, 0.08),
+    0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Premium Card Special Styling */
+.plan-card.plan-premium {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+  border: 2px solid #fbbf24;
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.plan-card.plan-premium:hover {
+  transform: scale(1.05) translateY(-8px);
+}
+
+.popular-badge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #1a1a1a;
+  padding: 8px 24px;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 1px;
+}
+
+.plan-header-section {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-top: 20px;
+}
+
+.plan-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.plan-icon-wrapper.basic {
+  background: linear-gradient(135deg, #78909c 0%, #90a4ae 100%);
+}
+
+.plan-icon-wrapper.standard {
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+}
+
+.plan-icon-wrapper.premium {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+.plan-icon-wrapper i {
+  font-size: 32px;
+  color: white;
+}
+
+.plan-icon-wrapper.premium i {
+  color: #1a1a1a;
+}
+
+.plan-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #002181;
+  margin-bottom: 8px;
+}
+
+.plan-description {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Plan Price Section */
+.plan-price-section {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 16px;
+}
+
+.plan-card.plan-premium .plan-price-section {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+}
+
+/* Plan Features */
+.plan-features {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.feature-item i {
+  font-size: 20px;
+  color: #10b981;
+}
+
+.feature-item.ai-feature {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #93c5fd;
+}
+
+.feature-item.ai-feature i {
+  color: #3b82f6;
+}
+
+.feature-item.ai-feature span {
+  color: #1e40af;
+}
+
+/* AI Highlight Box */
+.ai-highlight-box {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ai-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-icon i {
+  font-size: 24px;
+  color: #1a1a1a;
+}
+
+.ai-content h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 6px 0;
+}
+
+.ai-content p {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Plan CTA Buttons */
+.plan-cta-button {
+  width: 100%;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.plan-cta-button.basic {
+  background: linear-gradient(135deg, #78909c 0%, #90a4ae 100%);
+  color: white;
+}
+
+.plan-cta-button.basic:hover {
+  background: linear-gradient(135deg, #607d8b 0%, #78909c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(120, 144, 156, 0.4);
+}
+
+.plan-cta-button.standard {
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  color: white;
+}
+
+.plan-cta-button.standard:hover {
+  background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(25, 118, 210, 0.4);
+}
+
+.plan-cta-button.premium {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #1a1a1a;
+}
+
+.plan-cta-button.premium:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.5);
+}
+
+/* Free Trial Banner */
+.free-trial-banner {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.trial-content {
+  flex: 1;
+}
+
+.trial-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.trial-content h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 8px 0;
+}
+
+.trial-content p {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.trial-cta-button {
+  background: white;
+  color: #002181;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.trial-cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.3);
+}
+
+/* Original Pricing Card - keeping for reference */
 .pricing-card {
   background: white;
   border-radius: 24px;
@@ -1114,6 +1564,25 @@ export default {
   .comparison-section {
     margin-top: 40px;
   }
+
+  /* Pricing Plans Grid Responsive */
+  .pricing-plans-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .plan-card.plan-premium {
+    transform: scale(1);
+    grid-column: span 2;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .free-trial-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1145,6 +1614,28 @@ export default {
   .form-row {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  /* Pricing Plans Grid Responsive */
+  .pricing-plans-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .plan-card.plan-premium {
+    grid-column: span 1;
+  }
+
+  .plan-card {
+    padding: 28px 24px;
+  }
+
+  .plan-price {
+    font-size: 2rem;
+  }
+
+  .ai-highlight-box {
+    padding: 16px;
   }
 }
 
@@ -1190,6 +1681,44 @@ export default {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Pricing Plans Grid Responsive */
+  .plans-section-title {
+    font-size: 1.6rem;
+  }
+
+  .plan-card {
+    padding: 24px 20px;
+  }
+
+  .plan-price {
+    font-size: 1.75rem;
+  }
+
+  .plan-feature-item {
+    font-size: 0.85rem;
+  }
+
+  .ai-highlight-box h4 {
+    font-size: 0.9rem;
+  }
+
+  .ai-highlight-box p {
+    font-size: 0.8rem;
+  }
+
+  .free-trial-banner {
+    padding: 20px;
+  }
+
+  .free-trial-banner h3 {
+    font-size: 1.2rem;
+  }
+
+  .free-trial-btn {
+    width: 100%;
+    text-align: center;
   }
 }
 </style>
