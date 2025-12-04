@@ -108,9 +108,17 @@
           </div>
 
           <div class="modal-content" v-if="selectedStallDetails">
-            <div class="modal-image-section">
+            <div class="modal-image-section" @click="openImageGallery" title="Click to view more images">
               <img :src="selectedStallDetails.imageUrl" :alt="`Stall ${selectedStallDetails.stallNumber}`"
                 @error="handleImageError" />
+              <div class="image-gallery-hint">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                Click to view more images
+              </div>
             </div>
 
             <div class="modal-info-section">
@@ -172,7 +180,6 @@
                 <button v-else-if="!selectedStallDetails.isAvailable" class="modal-apply-btn occupied" disabled>
                   OCCUPIED
                 </button>
-                <button class="modal-close-btn" @click="closeStallDetails">Close</button>
               </div>
             </div>
           </div>
@@ -212,7 +219,7 @@ export default {
       showStallDetails: false,
       selectedStallDetails: null,
       currentPage: 1,
-      stallsPerPage: 6,
+      stallsPerPage: 8,
     }
   },
   computed: {
@@ -249,6 +256,14 @@ export default {
     closeStallDetails() {
       this.showStallDetails = false
       this.selectedStallDetails = null
+    },
+
+    openImageGallery() {
+      // TODO: Implement image gallery modal with multiple stall images
+      // For now, this will be a placeholder for future gallery implementation
+      console.log('📷 Opening image gallery for stall:', this.selectedStallDetails?.stallNumber)
+      // You can emit an event or open a new gallery modal here
+      // this.$emit('openGallery', this.selectedStallDetails)
     },
 
     applyFromModal() {

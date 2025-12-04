@@ -5,12 +5,22 @@
       <!-- Main Content -->
       <v-main>
         <v-container fluid class="main-content">
+          <!-- Loading Overlay -->
+          <div v-if="loading" class="loading-overlay">
+            <v-progress-circular
+              indeterminate
+              color="primary"
+              size="64"
+            ></v-progress-circular>
+            <p class="mt-4 text-grey-600">Loading dashboard data...</p>
+          </div>
+          
           <v-row>
             <v-col cols="12">
               <!-- Key Metrics Cards -->
               <v-row class="mb-6">
                 <v-col cols="12" sm="6" md="3">
-                  <v-card class="metric-card" elevation="2">
+                  <v-card class="metric-card" elevation="2" :loading="loading">
                     <v-card-text class="metric-content">
                       <div class="metric-title">Total Stalls</div>
                       <div class="metric-body">
@@ -23,7 +33,7 @@
                   </v-card>
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
-                  <v-card class="metric-card" elevation="2">
+                  <v-card class="metric-card" elevation="2" :loading="loading">
                     <v-card-text class="metric-content">
                       <div class="metric-title">Active Stallholders</div>
                       <div class="metric-body">
@@ -36,7 +46,7 @@
                   </v-card>
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
-                  <v-card class="metric-card" elevation="2">
+                  <v-card class="metric-card" elevation="2" :loading="loading">
                     <v-card-text class="metric-content">
                       <div class="metric-title">Total Payments</div>
                       <div class="metric-body">
@@ -51,9 +61,9 @@
                   </v-card>
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
-                  <v-card class="metric-card" elevation="2">
+                  <v-card class="metric-card" elevation="2" :loading="loading">
                     <v-card-text class="metric-content">
-                      <div class="metric-title">Active Collectors</div>
+                      <div class="metric-title">Active Employees</div>
                       <div class="metric-body">
                         <v-icon size="48" color="info" class="metric-icon"
                           >mdi-account-tie</v-icon
@@ -149,13 +159,13 @@
               <v-row>
                 <!-- Recent Payments -->
                 <v-col cols="12" lg="6">
-                  <v-card elevation="2" class="data-table-card">
+                  <v-card elevation="2" class="data-table-card" :loading="loading">
                     <v-card-title class="table-header">
                       <v-icon left color="warning">mdi-credit-card</v-icon>
                       Recent Payments
                     </v-card-title>
                     <v-card-text class="pa-0">
-                      <v-table class="custom-table">
+                      <v-table class="custom-table" v-if="recentPayments.length > 0">
                         <thead>
                           <tr>
                             <th>Stallholder</th>
@@ -183,19 +193,23 @@
                           </tr>
                         </tbody>
                       </v-table>
+                      <div v-else class="empty-state pa-6 text-center">
+                        <v-icon size="48" color="grey-lighten-1">mdi-credit-card-off</v-icon>
+                        <p class="text-grey-600 mt-2">No recent payments found</p>
+                      </div>
                     </v-card-text>
                   </v-card>
                 </v-col>
 
-                <!-- Active Collectors -->
+                <!-- Active Employees -->
                 <v-col cols="12" lg="6">
-                  <v-card elevation="2" class="data-table-card">
+                  <v-card elevation="2" class="data-table-card" :loading="loading">
                     <v-card-title class="table-header">
                       <v-icon left color="info">mdi-account-tie</v-icon>
-                      Active Collectors
+                      Active Employees
                     </v-card-title>
                     <v-card-text class="pa-0">
-                      <v-table class="custom-table">
+                      <v-table class="custom-table" v-if="activeCollectors.length > 0">
                         <thead>
                           <tr>
                             <th>Name</th>
@@ -225,6 +239,10 @@
                           </tr>
                         </tbody>
                       </v-table>
+                      <div v-else class="empty-state pa-6 text-center">
+                        <v-icon size="48" color="grey-lighten-1">mdi-account-off</v-icon>
+                        <p class="text-grey-600 mt-2">No active employees found</p>
+                      </div>
                     </v-card-text>
                   </v-card>
                 </v-col>
@@ -233,13 +251,13 @@
               <!-- Stall Overview Row -->
               <v-row class="mt-6">
                 <v-col cols="12">
-                  <v-card elevation="2" class="data-table-card">
+                  <v-card elevation="2" class="data-table-card" :loading="loading">
                     <v-card-title class="table-header">
                       <v-icon left color="primary">mdi-store</v-icon>
                       Stall Overview
                     </v-card-title>
                     <v-card-text class="pa-0">
-                      <v-table class="custom-table">
+                      <v-table class="custom-table" v-if="stallOverview.length > 0">
                         <thead>
                           <tr>
                             <th>Stall ID</th>
@@ -273,6 +291,10 @@
                           </tr>
                         </tbody>
                       </v-table>
+                      <div v-else class="empty-state pa-6 text-center">
+                        <v-icon size="48" color="grey-lighten-1">mdi-store-off</v-icon>
+                        <p class="text-grey-600 mt-2">No stalls found</p>
+                      </div>
                     </v-card-text>
                   </v-card>
                 </v-col>

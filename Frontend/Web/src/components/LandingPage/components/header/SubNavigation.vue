@@ -1,5 +1,5 @@
 <template>
-  <div class="sub-navigation">
+  <div class="sub-navigation" :class="{ 'expanded': showStallsContainer && selectedBranch }">
     <!-- Loading State -->
     <div v-if="loading" class="loading-branches">
       <p>Loading branches...</p>
@@ -31,8 +31,18 @@
     </div>
 
     <!-- Stalls Container with Filter -->
-    <transition name="fade" mode="out-in">
+    <transition name="stalls-slide" mode="out-in">
       <div v-if="showStallsContainer && selectedBranch" class="stalls-container">
+        <div class="stalls-header">
+          <h3 class="stalls-title">
+            <i class="mdi mdi-store"></i>
+            Available Stalls in <span>{{ selectedBranch }}</span>
+          </h3>
+          <button class="close-stalls-btn" @click="closeStallsContainer">
+            <i class="mdi mdi-close"></i>
+          </button>
+        </div>
+        
         <!-- Filter Container -->
         <StallFilter
           :selectedBranch="selectedBranch"
@@ -43,12 +53,14 @@
         />
 
         <!-- Available Stalls -->
-        <AvailableStalls
-          :filteredStalls="filteredStalls"
-          :loading="stallsLoading"
-          :error="stallsError"
-          :key="filterKey"
-        />
+        <div class="stalls-list-wrapper">
+          <AvailableStalls
+            :filteredStalls="filteredStalls"
+            :loading="stallsLoading"
+            :error="stallsError"
+            :key="filterKey"
+          />
+        </div>
       </div>
     </transition>
   </div>
@@ -236,6 +248,12 @@ export default {
       this.filteredStalls = [];
       this.availableLocations = [];
       this.filterKey = UIHelperService.generateNewKey(this.filterKey);
+    },
+    
+    closeStallsContainer() {
+      this.showStallsContainer = false;
+      this.selectedBranch = null;
+      this.resetFilters();
     },
   },
 };

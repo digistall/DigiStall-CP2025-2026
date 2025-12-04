@@ -1,5 +1,5 @@
 <template>
-  <div class="header-wrapper">
+  <div class="header-wrapper" :class="{ 'header-hidden': !isVisible }">
     <!-- Main Header -->
     <header class="main-header">
       <div class="header-container">
@@ -12,9 +12,9 @@
               class="logo"
             />
             <div class="header-text">
-              <div class="republic-text">City Government Of Naga</div>
+              <div class="city-text">DigiStall</div>
               <div class="text-divider"></div>
-              <div class="city-text">Power by DigiStall</div>
+              <div class="republic-text">Stall Management System</div>
             </div>
           </div>
         </div>
@@ -22,10 +22,22 @@
         <!-- Right side: Navigation -->
         <div class="header-right">
           <nav class="nav-menu">
-            <a href="#" class="nav-link">Home</a>
-            <a href="#" @click.prevent="showOrdinanceModal" class="nav-link">Ordinance</a>
-            <a href="#" class="nav-link">About Us</a>
-            <a href="#" class="nav-link">Contact</a>
+            <a href="#home" class="nav-link">
+              <i class="mdi mdi-home-outline"></i>
+              <span>Home</span>
+            </a>
+            <a href="#" @click.prevent="showOrdinanceModal" class="nav-link">
+              <i class="mdi mdi-file-document-outline"></i>
+              <span>Ordinance</span>
+            </a>
+            <a href="#about" class="nav-link">
+              <i class="mdi mdi-information-outline"></i>
+              <span>About Us</span>
+            </a>
+            <a href="#contact" class="nav-link">
+              <i class="mdi mdi-phone-outline"></i>
+              <span>Contact</span>
+            </a>
             <button @click="handleLoginButtonClick" class="login-btn" :class="{ 'logged-in': isLoggedIn }">
               <i :class="isLoggedIn ? 'mdi mdi-account-circle' : 'mdi mdi-login'"></i>
               <span v-if="isLoggedIn" class="username-display">{{ currentUsername }}</span>
@@ -57,6 +69,12 @@ export default {
   components: {
     SubNavigation,
     OrdinanceSection,
+  },
+  props: {
+    isVisible: {
+      type: Boolean,
+      default: true
+    }
   },
   data() {
     return {
