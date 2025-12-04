@@ -37,5 +37,19 @@ export default {
       console.log('Closing general application form')
       this.showApplyForm = false
     },
+    scrollToFreeTrial() {
+      const freeTrialSection = document.getElementById('free-trial')
+      if (freeTrialSection) {
+        freeTrialSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    },
+    animateStat(event) {
+      const card = event.currentTarget
+      card.style.transform = 'translateY(-10px) scale(1.02)'
+    },
+    resetStat(event) {
+      const card = event.currentTarget
+      card.style.transform = ''
+    }
   },
 }
