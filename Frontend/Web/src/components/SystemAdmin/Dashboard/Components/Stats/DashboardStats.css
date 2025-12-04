@@ -1,84 +1,80 @@
-/* Statistics Cards - Enhanced Professional Design */
+/* Statistics Cards - Modern Clean Design */
 .stat-card {
-  border-radius: 12px !important;
+  border-radius: 16px !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-left: 4px solid transparent;
   overflow: hidden;
   position: relative;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
 .stat-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(0, 33, 129, 0.15) !important;
-}
-
-.stat-card:hover::before {
-  opacity: 1;
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 33, 129, 0.12) !important;
+  border-color: transparent !important;
 }
 
 .stat-content {
   display: flex;
   align-items: center;
-  padding: 24px !important;
-  gap: 20px;
+  padding: 20px 24px !important;
+  gap: 18px;
 }
 
-/* Gradient Icon Wrappers */
+/* Modern Icon Wrappers with subtle backgrounds */
 .stat-icon-wrapper {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+.stat-icon-wrapper .v-icon {
+  font-size: 28px !important;
 }
 
 .stat-card:hover .stat-icon-wrapper {
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
-/* Gradient Backgrounds */
+/* Modern Gradient Backgrounds */
 .primary-gradient {
-  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  background: linear-gradient(135deg, #002181 0%, #1565c0 100%);
+  box-shadow: 0 8px 20px rgba(0, 33, 129, 0.3);
 }
 
 .success-gradient {
-  background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
 }
 
 .warning-gradient {
-  background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%);
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.3);
 }
 
 .error-gradient {
-  background: linear-gradient(135deg, #c62828 0%, #e53935 100%);
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
 }
 
 .info-gradient {
-  background: linear-gradient(135deg, #00695c 0%, #00897b 100%);
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  box-shadow: 0 8px 20px rgba(8, 145, 178, 0.3);
 }
 
 .purple-gradient {
-  background: linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
 }
 
 .amber-gradient {
-  background: linear-gradient(135deg, #ef6c00 0%, #ffa726 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.3);
 }
 
 /* Stat Info */
@@ -88,54 +84,75 @@
 }
 
 .stat-value {
-  font-size: 32px;
-  font-weight: 800;
-  color: #1a1a1a;
-  margin-bottom: 4px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
   line-height: 1.2;
   letter-spacing: -0.5px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .stat-label {
-  font-size: 13px;
-  color: #666;
+  font-size: 12px;
+  color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   font-weight: 600;
 }
 
-/* Stat color variants */
-.primary-stat {
-  --gradient-start: #002181;
-  --gradient-end: #1976d2;
-}
-
-.success-stat {
-  --gradient-start: #2e7d32;
-  --gradient-end: #43a047;
-}
-
-.warning-stat {
-  --gradient-start: #e65100;
-  --gradient-end: #fb8c00;
-}
-
-.error-stat {
-  --gradient-start: #c62828;
-  --gradient-end: #e53935;
-}
-
-.info-stat {
-  --gradient-start: #00695c;
-  --gradient-end: #00897b;
-}
-
-.purple-stat {
-  --gradient-start: #6a1b9a;
-  --gradient-end: #8e24aa;
-}
-
+/* Remove old stat variants - no longer needed */
+.primary-stat,
+.success-stat,
+.warning-stat,
+.error-stat,
+.info-stat,
+.purple-stat,
 .amber-stat {
-  --gradient-start: #ef6c00;
-  --gradient-end: #ffa726;
+  /* Clean white background for all cards */
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .stat-content {
+    padding: 18px 20px !important;
+  }
+  
+  .stat-icon-wrapper {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .stat-icon-wrapper .v-icon {
+    font-size: 24px !important;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stat-content {
+    padding: 16px !important;
+    gap: 14px;
+  }
+  
+  .stat-icon-wrapper {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+  
+  .stat-icon-wrapper .v-icon {
+    font-size: 22px !important;
+  }
+  
+  .stat-value {
+    font-size: 22px;
+  }
 }
