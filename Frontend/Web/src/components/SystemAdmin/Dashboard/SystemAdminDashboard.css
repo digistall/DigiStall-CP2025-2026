@@ -1,5 +1,5 @@
-/* Dashboard Page - Page-Level Styling Only */
-*{
+/* Dashboard Page - Modern Professional Design */
+* {
   font-family: 'Poppins', sans-serif;
 }
 
@@ -8,7 +8,81 @@
 }
 
 .system-admin-dashboard {
-  background-color: #fafafa;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   min-height: calc(100vh - 64px);
-  padding: 24px;
+  padding: 28px 32px;
+}
+
+/* Dashboard Header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.dashboard-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.dashboard-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.refresh-btn {
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: 0;
+  border-radius: 10px;
+  padding: 0 20px;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .system-admin-dashboard {
+    padding: 20px;
+  }
+  
+  .dashboard-title {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .system-admin-dashboard {
+    padding: 16px;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .dashboard-title {
+    font-size: 22px;
+  }
+  
+  .header-actions {
+    width: 100%;
+  }
+  
+  .refresh-btn {
+    width: 100%;
+  }
 }

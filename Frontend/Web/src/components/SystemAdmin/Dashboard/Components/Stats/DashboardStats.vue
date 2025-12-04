@@ -1,10 +1,10 @@
 <template>
   <v-row class="mb-6">
     <v-col cols="12" sm="6" md="4" lg="3">
-      <v-card class="stat-card primary-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper primary-gradient">
-            <v-icon size="40" color="white">mdi-account-multiple</v-icon>
+            <v-icon color="white">mdi-account-group</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ dashboardStats.totalBusinessOwners || 0 }}</div>
@@ -15,10 +15,10 @@
     </v-col>
 
     <v-col cols="12" sm="6" md="4" lg="3">
-      <v-card class="stat-card success-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper success-gradient">
-            <v-icon size="40" color="white">mdi-check-circle</v-icon>
+            <v-icon color="white">mdi-check-decagram</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ dashboardStats.activeSubscriptions || 0 }}</div>
@@ -29,10 +29,10 @@
     </v-col>
 
     <v-col cols="12" sm="6" md="4" lg="3">
-      <v-card class="stat-card warning-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper warning-gradient">
-            <v-icon size="40" color="white">mdi-alert-circle</v-icon>
+            <v-icon color="white">mdi-clock-alert-outline</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ dashboardStats.expiringSoon || 0 }}</div>
@@ -43,10 +43,10 @@
     </v-col>
 
     <v-col cols="12" sm="6" md="4" lg="3">
-      <v-card class="stat-card error-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper error-gradient">
-            <v-icon size="40" color="white">mdi-close-circle</v-icon>
+            <v-icon color="white">mdi-cancel</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ dashboardStats.expiredSubscriptions || 0 }}</div>
@@ -57,10 +57,10 @@
     </v-col>
 
     <v-col cols="12" sm="6" md="4">
-      <v-card class="stat-card info-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper info-gradient">
-            <v-icon size="40" color="white">mdi-cash-multiple</v-icon>
+            <v-icon color="white">mdi-chart-line-variant</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">₱{{ formatCurrency(dashboardStats.revenueThisMonth || 0) }}</div>
@@ -71,10 +71,10 @@
     </v-col>
 
     <v-col cols="12" sm="6" md="4">
-      <v-card class="stat-card purple-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper purple-gradient">
-            <v-icon size="40" color="white">mdi-currency-php</v-icon>
+            <v-icon color="white">mdi-cash-multiple</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">₱{{ formatCurrency(dashboardStats.totalRevenue || 0) }}</div>
@@ -85,10 +85,10 @@
     </v-col>
 
     <v-col cols="12" sm="6" md="4">
-      <v-card class="stat-card amber-stat" elevation="3">
+      <v-card class="stat-card" elevation="0">
         <v-card-text class="stat-content">
           <div class="stat-icon-wrapper amber-gradient">
-            <v-icon size="40" color="white">mdi-clock-alert</v-icon>
+            <v-icon color="white">mdi-timer-sand</v-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ dashboardStats.pendingPayments || 0 }}</div>
