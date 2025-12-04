@@ -162,69 +162,129 @@
       <!-- Payment History Table -->
       <div class="payment-history-section">
         <h2 class="section-heading">Payment History</h2>
-        <v-card elevation="2">
-          <v-card-text class="pa-0">
-            <v-data-table
-              :headers="headers"
-              :items="payments"
-              :loading="loadingPayments"
-              :items-per-page="10"
-              class="payment-table"
-            >
-              <!-- Amount Column -->
-              <template #[`item.amount`]="{ item }">
-                <span class="amount-text">₱{{ formatCurrency(item.amount) }}</span>
-              </template>
+        <v-card elevation="1" class="payment-table-card">
+          <!-- Loading State -->
+          <div v-if="loadingPayments" class="loading-state">
+            <v-progress-circular indeterminate color="primary"></v-progress-circular>
+            <p class="mt-4 text-grey">Loading payment history...</p>
+          </div>
 
-              <!-- Payment Status Column -->
-              <template #[`item.payment_status`]="{ item }">
-                <v-chip
-                  :color="getPaymentStatusColor(item.payment_status)"
-                  text-color="white"
-                  size="small"
-                >
-                  {{ item.payment_status }}
-                </v-chip>
-              </template>
+          <!-- Empty State -->
+          <div v-else-if="payments.length === 0" class="empty-state">
+            <v-icon size="64" color="grey-lighten-2">mdi-receipt-text-outline</v-icon>
+            <p class="text-grey mt-4">No payment history available</p>
+          </div>
 
-              <!-- Receipt Number Column -->
-              <template #[`item.receipt_number`]="{ item }">
-                <v-chip size="small" color="primary" variant="outlined">
-                  {{ item.receipt_number }}
-                </v-chip>
-              </template>
+          <!-- Custom Table -->
+          <template v-else>
+            <!-- Table Header -->
+            <div class="payment-table-header">
+              <div class="payment-header-row">
+                <div class="header-cell payment-id-col">Payment ID</div>
+                <div class="header-cell receipt-col">Receipt #</div>
+                <div class="header-cell amount-col">Amount</div>
+                <div class="header-cell date-col">Payment Date</div>
+                <div class="header-cell method-col">Method</div>
+                <div class="header-cell status-col">Status</div>
+                <div class="header-cell period-col">Period</div>
+              </div>
+            </div>
 
-              <!-- Payment Date Column -->
-              <template #[`item.payment_date`]="{ item }">
-                <span class="date-text">{{ item.payment_date }}</span>
-              </template>
-
-              <!-- Payment Method Column -->
-              <template #[`item.payment_method`]="{ item }">
-                <v-chip size="small" variant="tonal" color="primary">
-                  {{ item.payment_method }}
-                </v-chip>
-              </template>
-
-              <!-- Empty State -->
-              <template #no-data>
-                <div class="text-center py-8">
-                  <v-icon size="64" color="grey-lighten-2">mdi-receipt-text-outline</v-icon>
-                  <p class="text-grey mt-4">No payment history available</p>
+            <!-- Table Body -->
+            <div class="payment-table-body">
+              <div
+                v-for="payment in payments"
+                :key="payment.payment_id"
+                class="payment-table-row clickable-row"
+                @click="viewPaymentDetails(payment)"
+              >
+                <div class="table-cell payment-id-col">
+                  {{ payment.payment_id }}
                 </div>
-              </template>
-
-              <!-- Loading State -->
-              <template #loading>
-                <div class="text-center py-8">
-                  <v-progress-circular indeterminate color="primary"></v-progress-circular>
-                  <p class="mt-4 text-grey">Loading payment history...</p>
+                <div class="table-cell receipt-col">
+                  <span class="receipt-badge">{{ payment.receipt_number }}</span>
                 </div>
-              </template>
-            </v-data-table>
-          </v-card-text>
+                <div class="table-cell amount-col">
+                  <span class="amount-text">₱{{ formatCurrency(payment.amount) }}</span>
+                </div>
+                <div class="table-cell date-col">
+                  <span class="date-text">{{ payment.payment_date }}</span>
+                </div>
+                <div class="table-cell method-col">
+                  <span class="method-badge">{{ payment.payment_method }}</span>
+                </div>
+                <div class="table-cell status-col">
+                  <span 
+                    class="status-badge"
+                    :class="getPaymentStatusClass(payment.payment_status)"
+                  >
+                    {{ payment.payment_status }}
+                  </span>
+                </div>
+                <div class="table-cell period-col">
+                  <span class="period-text">{{ payment.payment_period }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
         </v-card>
       </div>
+
+      <!-- Payment Details Dialog -->
+      <v-dialog v-model="showPaymentDialog" max-width="600">
+        <v-card class="payment-details-dialog">
+          <div class="dialog-header-payment">
+            <v-icon size="48" color="white" class="mb-2">mdi-receipt-text</v-icon>
+            <h2 class="dialog-title">Payment Details</h2>
+            <p class="dialog-subtitle">Receipt #{{ selectedPayment?.receipt_number }}</p>
+          </div>
+          
+          <v-card-text class="pa-6">
+            <div class="payment-detail-grid">
+              <div class="detail-item">
+                <span class="detail-label">Payment ID</span>
+                <span class="detail-value">{{ selectedPayment?.payment_id }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Amount</span>
+                <span class="detail-value amount-highlight">₱{{ formatCurrency(selectedPayment?.amount || 0) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Payment Date</span>
+                <span class="detail-value">{{ selectedPayment?.payment_date }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Payment Method</span>
+                <span class="detail-value">{{ selectedPayment?.payment_method }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Status</span>
+                <span 
+                  class="status-badge"
+                  :class="getPaymentStatusClass(selectedPayment?.payment_status)"
+                >
+                  {{ selectedPayment?.payment_status }}
+                </span>
+              </div>
+              <div class="detail-item full-width">
+                <span class="detail-label">Payment Period</span>
+                <span class="detail-value">{{ selectedPayment?.payment_period }}</span>
+              </div>
+            </div>
+          </v-card-text>
+
+          <v-card-actions class="pa-6 pt-0">
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              variant="flat"
+              @click="showPaymentDialog = false"
+            >
+              Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </div>
 
     <!-- Professional Confirmation Dialog -->
