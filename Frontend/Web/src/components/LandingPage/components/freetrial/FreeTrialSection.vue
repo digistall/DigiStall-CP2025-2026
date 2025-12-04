@@ -329,10 +329,7 @@ export default {
 }
 
 .decoration-blob {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  filter: blur(60px);
+  display: none;
 }
 
 .blob-1 {
@@ -350,15 +347,7 @@ export default {
 }
 
 .decoration-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 60px 60px;
+  display: none;
 }
 
 /* Section Header */
@@ -486,7 +475,7 @@ export default {
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(0, 33, 129, 0.1) 0%, rgba(25, 118, 210, 0.1) 100%);
+  background: linear-gradient(135deg, #002181, #1976d2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -495,13 +484,13 @@ export default {
 
 .plan-icon i {
   font-size: 28px;
-  color: #002181;
+  color: #fbbf24;
 }
 
 .plan-name {
   font-size: 1.4rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #002181;
   margin-bottom: 4px;
 }
 
@@ -516,7 +505,7 @@ export default {
   text-align: center;
   margin-bottom: 20px;
   padding: 18px;
-  background: linear-gradient(135deg, rgba(0, 33, 129, 0.05) 0%, rgba(25, 118, 210, 0.05) 100%);
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
   border-radius: 12px;
 }
 
@@ -602,12 +591,12 @@ export default {
 
 .features-list li i {
   font-size: 16px;
-  color: #059669;
+  color: #4ade80;
 }
 
 .features-list li strong {
   font-weight: 700;
-  color: #0f172a;
+  color: #002181;
 }
 
 /* CTA Button */
@@ -690,7 +679,7 @@ export default {
 }
 
 .no-credit-card i {
-  color: #059669;
+  color: #4ade80;
   font-size: 18px;
 }
 
