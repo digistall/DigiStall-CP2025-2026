@@ -15,6 +15,8 @@ export default {
       selectingPlanId: null,
       showConfirmDialog: false,
       selectedPlanForConfirm: null,
+      showPaymentDialog: false,
+      selectedPayment: null,
       headers: [
         { title: 'Payment ID', value: 'payment_id', sortable: true },
         { title: 'Receipt #', value: 'receipt_number', sortable: true },
@@ -173,6 +175,19 @@ export default {
         Refunded: 'grey'
       }
       return colors[status] || 'grey'
+    },
+    getPaymentStatusClass(status) {
+      const classes = {
+        Completed: 'status-completed',
+        Pending: 'status-pending',
+        Failed: 'status-failed',
+        Refunded: 'status-refunded'
+      }
+      return classes[status] || ''
+    },
+    viewPaymentDetails(payment) {
+      this.selectedPayment = payment
+      this.showPaymentDialog = true
     }
   }
 }
