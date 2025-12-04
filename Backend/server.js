@@ -21,6 +21,7 @@ import webEmployeeRoutes from './Backend-Web/routes/employeeRoutes.js';
 import stallholderRoutes from './Backend-Web/routes/stallholderRoutes.js';
 import paymentRoutes from './Backend-Web/routes/paymentRoutes.js';
 import complianceRoutes from './Backend-Web/routes/complianceRoutes.js';
+import complaintRoutes from './Backend-Web/routes/complaintRoutes.js';
 import subscriptionRoutes from './Backend-Web/routes/subscriptionRoutes.js';
 
 // Import Mobile routes (from Backend-Mobile)
@@ -51,6 +52,7 @@ app.use('/api/branches', authMiddleware.authenticateToken, webBranchRoutes);
 app.use('/api/stallholders', authMiddleware.authenticateToken, stallholderRoutes);
 app.use('/api/payments', authMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/compliances', authMiddleware.authenticateToken, complianceRoutes);
+app.use('/api/complaints', authMiddleware.authenticateToken, complaintRoutes);
 app.use('/api/subscriptions', subscriptionRoutes); // Subscription management (System Admin only - auth handled internally)
 
 // ===== MOBILE ROUTES (Backend-Mobile functionality) =====
