@@ -31,7 +31,7 @@ export const getStallsByLocation = async (req, res) => {
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
       WHERE b.location = ? AND s.status = 'Active' AND s.is_available = 1
       ORDER BY s.stall_no, s.created_at DESC
     `,

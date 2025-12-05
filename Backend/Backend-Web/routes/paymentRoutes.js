@@ -1,6 +1,7 @@
 import express from 'express';
 import PaymentController from '../controllers/payments/paymentController.js';
 import authMiddleware from '../middleware/auth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import { authorizePermission } from '../middleware/enhancedAuth.js';
 
 const router = express.Router();
@@ -16,22 +17,28 @@ const router = express.Router();
 
 /**
  * @route GET /api/payments
- * @description Get all payments with filtering options
+ * @description Get all onsite payments (redirects to /onsite)
  */
-router.get('/', PaymentController.getAllPayments);
+router.get('/', 
+  authMiddleware.authenticateToken,
+  PaymentController.getOnsitePayments
+);
 
 /**
  * @route GET /api/payments/stats
  * @description Get payment statistics
  */
-router.get('/stats', PaymentController.getPaymentStats);
+router.get('/stats', 
+  authMiddleware.authenticateToken,
+  PaymentController.getPaymentStats
+);
 
 /**
  * @route GET /api/payments/stallholders
  * @description Get stallholders list for payment dropdown (branch-filtered)
  */
 router.get('/stallholders', 
-  authorizePermission('payment'), 
+  authMiddleware.authenticateToken,
   PaymentController.getStallholdersByBranch
 );
 
@@ -39,19 +46,37 @@ router.get('/stallholders',
  * @route GET /api/payments/stallholders/:stallholderId
  * @description Get stallholder details for auto-population
  */
-router.get('/stallholders/:stallholderId', PaymentController.getStallholderDetails);
+router.get('/stallholders/:stallholderId', 
+  authMiddleware.authenticateToken,
+  PaymentController.getStallholderDetails
+);
 
 /**
  * @route GET /api/payments/online
  * @description Get online payments
  */
-router.get('/online', PaymentController.getOnlinePayments);
+router.get('/online', 
+  authMiddleware.authenticateToken,
+  PaymentController.getOnlinePayments
+);
 
 /**
  * @route GET /api/payments/onsite
  * @description Get onsite payments with filtering
  */
-router.get('/onsite', PaymentController.getOnsitePayments);
+router.get('/onsite', 
+  authMiddleware.authenticateToken,
+  PaymentController.getOnsitePayments
+);
+
+/**
+ * @route GET /api/payments/generate-receipt-number
+ * @description Generate new receipt number for onsite payment
+ */
+router.get('/generate-receipt-number', 
+  authMiddleware.authenticateToken,
+  PaymentController.generateReceiptNumber
+);
 
 // ============================================================================
 // POST ROUTES
@@ -62,7 +87,8 @@ router.get('/onsite', PaymentController.getOnsitePayments);
  * @description Create new onsite payment record
  */
 router.post('/onsite', 
-  authorizePermission('payments'),
+  authMiddleware.authenticateToken,
+  viewOnlyForOwners,
   PaymentController.addOnsitePayment
 );
 

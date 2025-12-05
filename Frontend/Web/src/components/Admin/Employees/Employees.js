@@ -2,6 +2,7 @@ import EmployeeSearch from "./Components/EmployeeSearch/EmployeeSearch.vue";
 import EmployeeTable from "./Components/EmployeeTable/EmployeeTable.vue";
 import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
@@ -16,6 +17,7 @@ export default {
     EmployeeTable,
     AddEmployee,
     ManagePermissions,
+    ToastNotification,
   },
   data() {
     return {
@@ -23,6 +25,12 @@ export default {
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success',
+      },
 
       // API Configuration
       apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:3001/api",
@@ -167,6 +175,13 @@ export default {
 
       return filtered;
     },
+
+    // Check if user is a business owner (view-only access)
+    isBusinessOwner() {
+      const userType = sessionStorage.getItem('userType');
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+      return userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner';
+    },
   },
 
   methods: {
@@ -223,15 +238,15 @@ export default {
 
           // Provide user feedback based on role
           if (this.employees.length === 0) {
-            if (currentUser.userType === "branch_manager") {
+            if (currentUser.userType === "business_manager") {
               console.log(
-                "ℹ️  No employees found - Branch manager has not created any employees yet"
+                "ℹ️  No employees found - Business manager has not created any employees yet"
               );
             } else {
               console.log("ℹ️  No employees found");
             }
           } else {
-            if (currentUser.userType === "branch_manager") {
+            if (currentUser.userType === "business_manager") {
               console.log(
                 `ℹ️  Showing ${this.employees.length} employees for branch ${userBranchId}`
               );
@@ -249,15 +264,13 @@ export default {
           dataCacheService.invalidatePattern("employees");
           
           // Don't retry to avoid infinite loops
-          this.$emit(
-            "show-snackbar",
-            "Authentication expired. Please login again.",
+          this.showToast(
+            "❌ Authentication expired. Please login again.",
             "error"
           );
         } else {
-          this.$emit(
-            "show-snackbar",
-            `Failed to load employees: ${error.message}`,
+          this.showToast(
+            `❌ Failed to load employees: ${error.message}`,
             "error"
           );
         }
@@ -436,34 +449,27 @@ export default {
               
               if (emailResult.success) {
                 console.log("📧 Welcome email sent successfully via EmailJS");
-                this.$emit(
-                  "show-snackbar",
-                  `Employee created successfully! Welcome email with credentials sent to ${employeeData.email}`,
-                  "success",
-                  10000
+                this.showToast(
+                  `✅ Employee created successfully! Welcome email with credentials sent to ${employeeData.email}`,
+                  "success"
                 );
               } else {
                 console.warn("⚠️ Email sending failed:", emailResult.message);
-                this.$emit(
-                  "show-snackbar",
-                  `Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed: ${emailResult.message})`,
-                  "warning",
-                  15000
+                this.showToast(
+                  `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed: ${emailResult.message})`,
+                  "warning"
                 );
               }
             } catch (emailError) {
               console.error("❌ Error sending email:", emailError);
-              this.$emit(
-                "show-snackbar",
-                `Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send credentials manually to ${employeeData.email}`,
-                "warning",
-                15000
+              this.showToast(
+                `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send credentials manually to ${employeeData.email}`,
+                "warning"
               );
             }
           } else {
-            this.$emit(
-              "show-snackbar",
-              "Employee updated successfully!",
+            this.showToast(
+              "✅ Employee updated successfully!",
               "success"
             );
           }
@@ -491,7 +497,7 @@ export default {
           errorMessage = "Please fill in all required fields (First Name, Last Name, Email).";
         }
         
-        this.$emit("show-snackbar", errorMessage, "error", 10000);
+        this.showToast(`❌ ${errorMessage}`, "error");
       } finally {
         this.saving = false;
       }
@@ -548,7 +554,7 @@ export default {
         const data = await response.json();
 
         if (data.success) {
-          this.$emit("show-snackbar", "Permissions updated successfully!", "success");
+          this.showToast("✅ Permissions updated successfully!", "success");
           this.closePermissionsDialog();
           
           // Clear cache and refresh data
@@ -559,9 +565,8 @@ export default {
         }
       } catch (error) {
         console.error("Error updating permissions:", error);
-        this.$emit(
-          "show-snackbar",
-          `Failed to update permissions: ${error.message}`,
+        this.showToast(
+          `❌ Failed to update permissions: ${error.message}`,
           "error"
         );
       } finally {
@@ -611,7 +616,7 @@ export default {
 
         if (data.success) {
           const action = newStatus === "active" ? "activated" : "deactivated";
-          this.$emit("show-snackbar", `Employee ${action} successfully!`, "success");
+          this.showToast(`✅ Employee ${action} successfully!`, "success");
           
           // Clear cache and refresh data
           dataCacheService.invalidatePattern('employees');
@@ -621,7 +626,7 @@ export default {
         }
       } catch (error) {
         console.error("Error updating employee status:", error);
-        this.$emit("show-snackbar", `Failed to update status: ${error.message}`, "error");
+        this.showToast(`❌ Failed to update status: ${error.message}`, "error");
       }
     },
 
@@ -683,18 +688,14 @@ export default {
           );
 
           if (emailResult.success) {
-            this.$emit(
-              "show-snackbar",
-              `Password reset successfully! New password: ${newPassword}. Reset notification sent to ${employee.email}`,
-              "success",
-              8000
+            this.showToast(
+              `✅ Password reset successfully! New password: ${newPassword}. Reset notification sent to ${employee.email}`,
+              "success"
             );
           } else {
-            this.$emit(
-              "show-snackbar",
-              `Password reset! New password: ${newPassword}. Warning: Email failed to send - ${emailResult.message}`,
-              "warning",
-              10000
+            this.showToast(
+              `⚠️ Password reset! New password: ${newPassword}. Warning: Email failed to send - ${emailResult.message}`,
+              "warning"
             );
           }
         } else {
@@ -702,12 +703,18 @@ export default {
         }
       } catch (error) {
         console.error("Error resetting password:", error);
-        this.$emit(
-          "show-snackbar",
-          `Failed to reset password: ${error.message}`,
+        this.showToast(
+          `❌ Failed to reset password: ${error.message}`,
           "error"
         );
       }
+    },
+
+    // Toast notification helper
+    showToast(message, type = 'success') {
+      this.toast.show = true;
+      this.toast.message = message;
+      this.toast.type = type;
     },
 
     // Utility Methods
@@ -732,5 +739,32 @@ export default {
   mounted() {
     // Load employees when component is mounted
     this.fetchEmployees();
+    // Opt-in: use table scrolling inside page instead of page scrollbar
+    try {
+      document.body.classList.add('no-page-scroll')
+      document.documentElement.classList.add('no-page-scroll')
+      try {
+        const prevHtmlOverflow = document.documentElement.style.overflow
+        const prevBodyOverflow = document.body.style.overflow
+        document.documentElement.dataset._prevOverflow = prevHtmlOverflow || ''
+        document.body.dataset._prevOverflow = prevBodyOverflow || ''
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+      } catch (e) {}
+    } catch (e) {}
+  },
+  beforeUnmount() {
+    try {
+      document.body.classList.remove('no-page-scroll')
+      document.documentElement.classList.remove('no-page-scroll')
+      try {
+        const prevHtml = document.documentElement.dataset._prevOverflow || ''
+        const prevBody = document.body.dataset._prevOverflow || ''
+        document.documentElement.style.overflow = prevHtml
+        document.body.style.overflow = prevBody
+        delete document.documentElement.dataset._prevOverflow
+        delete document.body.dataset._prevOverflow
+      } catch (e) {}
+    } catch (e) {}
   },
 };

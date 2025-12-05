@@ -40,28 +40,34 @@ export const login = async (req, res) => {
     
     // Determine which table to query based on user type
     switch (userType.toLowerCase()) {
-      case 'admin':
-        tableName = 'admin';
-        userIdField = 'admin_id';
-        usernameField = 'admin_username';
-        passwordField = 'admin_password_hash';
+      case 'system_administrator':
+        tableName = 'system_administrator';
+        userIdField = 'system_admin_id';
+        usernameField = 'username';
+        passwordField = 'password_hash';
         break;
-      case 'branch_manager':
-        tableName = 'branch_manager';
-        userIdField = 'branch_manager_id';
+      case 'stall_business_owner':
+        tableName = 'stall_business_owner';
+        userIdField = 'business_owner_id';
+        usernameField = 'owner_username';
+        passwordField = 'owner_password_hash';
+        break;
+      case 'business_manager':
+        tableName = 'business_manager';
+        userIdField = 'business_manager_id';
         usernameField = 'manager_username';
         passwordField = 'manager_password_hash';
         break;
-      case 'employee':
-        tableName = 'employee';
-        userIdField = 'employee_id';
+      case 'business_employee':
+        tableName = 'business_employee';
+        userIdField = 'business_employee_id';
         usernameField = 'employee_username';
         passwordField = 'employee_password_hash';
         break;
       default:
         return res.status(400).json({
           success: false,
-          message: 'Invalid user type. Must be admin, branch_manager, or employee'
+          message: 'Invalid user type. Must be system_administrator, stall_business_owner, business_manager, or business_employee'
         });
     }
     
@@ -111,7 +117,7 @@ export const login = async (req, res) => {
     // Get additional user information based on type
     let additionalUserInfo = {};
     
-    if (userType.toLowerCase() === 'branch_manager' || userType.toLowerCase() === 'employee') {
+    if (userType.toLowerCase() === 'business_manager' || userType.toLowerCase() === 'business_employee') {
       // Get branch information with branch name
       const [branchRows] = await connection.execute(
         'SELECT branch_id, branch_name FROM branch WHERE branch_id = ?',
@@ -123,8 +129,8 @@ export const login = async (req, res) => {
         additionalUserInfo.branchName = branchRows[0].branch_name; // Add branch name directly
       }
       
-      // Get employee permissions if user is employee
-      if (userType.toLowerCase() === 'employee') {
+      // Get employee permissions if user is business employee
+      if (userType.toLowerCase() === 'business_employee') {
         // Parse permissions from JSON if stored as JSON string
         let permissions = {};
         if (user.permissions) {
@@ -177,6 +183,8 @@ export const login = async (req, res) => {
       userType: userType.toLowerCase(),
       username: userUsername,
       email: user.email || null,
+      firstName: user.first_name || null,
+      lastName: user.last_name || null,
       branchId: user.branch_id || null,
       permissions: additionalUserInfo.permissions || null
     };
@@ -287,17 +295,21 @@ export const getCurrentUser = async (req, res) => {
     let userIdField = '';
     
     switch (userType) {
-      case 'admin':
-        tableName = 'admin';
-        userIdField = 'admin_id';
+      case 'system_administrator':
+        tableName = 'system_administrator';
+        userIdField = 'system_admin_id';
         break;
-      case 'branch_manager':
-        tableName = 'branch_manager';
-        userIdField = 'branch_manager_id';
+      case 'stall_business_owner':
+        tableName = 'stall_business_owner';
+        userIdField = 'business_owner_id';
         break;
-      case 'employee':
-        tableName = 'employee';
-        userIdField = 'employee_id';
+      case 'business_manager':
+        tableName = 'business_manager';
+        userIdField = 'business_manager_id';
+        break;
+      case 'business_employee':
+        tableName = 'business_employee';
+        userIdField = 'business_employee_id';
         break;
       default:
         console.error('❌ Invalid userType:', userType);
@@ -307,12 +319,12 @@ export const getCurrentUser = async (req, res) => {
         });
     }
     
-    // Build query with JOIN to get branch information for employees and branch managers
+    // Build query with JOIN to get branch information for business employees and business managers
     let query = `SELECT * FROM ${tableName} WHERE ${userIdField} = ?`;
     let queryParams = [userId];
     
-    // For employees and branch managers, join with branch table to get branch name
-    if (userType === 'employee' || userType === 'branch_manager') {
+    // For business employees and business managers, join with branch table to get branch name
+    if (userType === 'business_employee' || userType === 'business_manager') {
       query = `
         SELECT u.*, b.branch_name 
         FROM ${tableName} u
@@ -344,12 +356,14 @@ export const getCurrentUser = async (req, res) => {
     };
     
     // Add user-type specific keys for backward compatibility
-    if (userType === 'branch_manager') {
-      responseData.branchManager = user;
-    } else if (userType === 'admin') {
-      responseData.admin = user;
-    } else if (userType === 'employee') {
-      responseData.employee = user;
+    if (userType === 'business_manager') {
+      responseData.businessManager = user;
+    } else if (userType === 'stall_business_owner') {
+      responseData.businessOwner = user;
+    } else if (userType === 'business_employee') {
+      responseData.businessEmployee = user;
+    } else if (userType === 'system_administrator') {
+      responseData.systemAdministrator = user;
     }
     
     res.status(200).json(responseData);

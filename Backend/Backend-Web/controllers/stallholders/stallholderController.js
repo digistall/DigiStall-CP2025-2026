@@ -1,4 +1,5 @@
 import { createConnection } from '../../config/database.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
 
 /**
  * Stallholder Controller
@@ -8,29 +9,69 @@ const StallholderController = {
   
   /**
    * Get all stallholders for a branch with detailed information
+   * Supports multi-branch filtering for business owners
    */
   getAllStallholders: async (req, res) => {
     let connection;
     try {
       const { branchId } = req.query;
-      const managerBranchId = req.user?.branchId;
+      const userType = req.user?.userType;
       
-      // If user is branch manager, filter by their branch
-      const targetBranchId = managerBranchId || branchId || null;
+      console.log('📋 Fetching stallholders:', { userType, queryBranchId: branchId });
       
       connection = await createConnection();
-      const [rows] = await connection.execute(
-        'CALL getAllStallholdersDetailed(?)',
-        [targetBranchId]
-      );
       
+      // Get branch filter based on user role
+      const branchFilter = await getBranchFilter(req, connection);
+      
+      console.log('🔍 Stallholder branchFilter:', branchFilter);
+      
+      let query;
+      let params = [];
+      
+      if (branchFilter === null) {
+        // System administrator - see all stallholders
+        console.log('✅ System admin - fetching all stallholders');
+        query = `
+          SELECT sh.*, b.branch_name, st.stall_no
+          FROM stallholder sh
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          ORDER BY sh.date_created DESC
+        `;
+      } else if (branchFilter.length === 0) {
+        // No branches accessible
+        console.log('⚠️ No branches accessible');
+        return res.json({
+          success: true,
+          data: [],
+          total: 0
+        });
+      } else {
+        // Filter by accessible branches
+        console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
+        query = `
+          SELECT sh.*, b.branch_name, st.stall_no
+          FROM stallholder sh
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          WHERE sh.branch_id IN (${branchFilter.map(() => '?').join(',')})
+          ORDER BY sh.date_created DESC
+        `;
+        params = branchFilter;
+      }
+      
+      console.log('📝 Executing query with params:', params);
+      const [rows] = await connection.execute(query, params);
+      
+      console.log(`✅ Found ${rows.length} stallholders`);
       res.json({
         success: true,
-        data: rows[0],
-        total: rows[0].length
+        data: rows,
+        total: rows.length
       });
     } catch (error) {
-      console.error('Error fetching stallholders:', error);
+      console.error('❌ Error fetching stallholders:', error);
       res.status(500).json({
         success: false,
         message: 'Error fetching stallholders',

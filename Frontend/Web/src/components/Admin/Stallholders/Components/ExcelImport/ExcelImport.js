@@ -1,7 +1,11 @@
 import apiClient from '@/services/apiClient'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'ExcelImport',
+  components: {
+    ToastNotification
+  },
   props: {
     isVisible: {
       type: Boolean,
@@ -23,9 +27,12 @@ export default {
       importSuccess: false,
       importMessage: '',
       
-      // Feedback
-      showError: false,
-      errorMessage: '',
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'error'
+      },
       
       // File validation rules
       fileRules: [
@@ -183,8 +190,15 @@ export default {
     },
 
     showErrorMessage(message) {
-      this.errorMessage = message
-      this.showError = true
+      this.showToast(`❌ ${message}`, 'error')
+    },
+
+    showToast(message, type = 'error') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     }
   }
 }

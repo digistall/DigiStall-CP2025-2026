@@ -311,27 +311,13 @@
       </v-card-actions>
     </v-card>
 
-    <!-- Success Snackbar -->
-    <v-snackbar
-      v-model="showSuccess"
-      color="success"
-      timeout="3000"
-      bottom
-    >
-      <v-icon left>mdi-check-circle</v-icon>
-      Stallholder added successfully!
-    </v-snackbar>
-
-    <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showError"
-      color="error"
-      timeout="5000"
-      bottom
-    >
-      <v-icon left>mdi-alert-circle</v-icon>
-      {{ errorMessage }}
-    </v-snackbar>
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </v-dialog>
 </template>
 

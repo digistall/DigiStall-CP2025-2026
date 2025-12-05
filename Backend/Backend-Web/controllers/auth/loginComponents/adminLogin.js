@@ -6,14 +6,14 @@ import { createConnection } from '../../../config/database.js'
 const { compare } = bcrypt
 const { sign } = jwt
 
-// Admin Login controller
+// Stall Business Owner Login controller
 export const adminLogin = async (req, res) => {
   let connection;
 
   try {
     const { username, password } = req.body;
 
-    console.log('🔐 Admin login attempt for username:', username);
+    console.log('🔐 Stall Business Owner login attempt for username:', username);
 
     // Validation
     if (!username || !password) {
@@ -26,16 +26,16 @@ export const adminLogin = async (req, res) => {
 
     connection = await createConnection();
 
-    // Query admin table using stored procedure
-    const [[admin]] = await connection.execute(
-      'CALL getAdminByUsernameLogin(?)',
+    // Query stall_business_owner table using stored procedure
+    const [[businessOwner]] = await connection.execute(
+      'CALL getStallBusinessOwnerByUsernameLogin(?)',
       [username]
     );  
 
-    console.log('🔍 Found admins:', admin ? 1 : 0);
+    console.log('🔍 Found business owners:', businessOwner ? 1 : 0);
 
-    if (!admin) {
-      console.log('❌ No admin found with username:', username);
+    if (!businessOwner) {
+      console.log('❌ No business owner found with username:', username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
@@ -43,10 +43,10 @@ export const adminLogin = async (req, res) => {
     }
 
     // Verify password
-    const isPasswordValid = await compare(password, admin.admin_password_hash);
+    const isPasswordValid = await compare(password, businessOwner.business_owner_password_hash);
 
     if (!isPasswordValid) {
-      console.log('❌ Invalid password for admin:', username);
+      console.log('❌ Invalid password for business owner:', username);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
@@ -56,36 +56,36 @@ export const adminLogin = async (req, res) => {
     // Generate JWT token
     const token = sign(
       {
-        userId: admin.admin_id,
-        username: admin.admin_username,
-        email: admin.email,
-        role: 'admin',
-        type: 'admin',
-        userType: 'admin'  // Add this field for consistency
+        userId: businessOwner.business_owner_id,
+        username: businessOwner.business_owner_username,
+        email: businessOwner.email,
+        role: 'stall_business_owner',
+        type: 'stall_business_owner',
+        userType: 'stall_business_owner'  // Add this field for consistency
       },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
-    console.log('✅ Admin login successful for:', username);
+    console.log('✅ Stall Business Owner login successful for:', username);
     console.log('🎯 Token payload:', { 
-      userId: admin.admin_id, 
-      role: 'admin', 
-      type: 'admin',
-      userType: 'admin' 
+      userId: businessOwner.business_owner_id, 
+      role: 'stall_business_owner', 
+      type: 'stall_business_owner',
+      userType: 'stall_business_owner' 
     });
 
     res.json({
       success: true,
-      message: 'Admin login successful',
+      message: 'Stall Business Owner login successful',
       token,
       user: {
-        id: admin.admin_id,
-        username: admin.admin_username,
-        email: admin.email,
-        role: 'admin',
-        type: 'admin',
-        userType: 'admin'  // Add this field for frontend consistency
+        id: businessOwner.business_owner_id,
+        username: businessOwner.business_owner_username,
+        email: businessOwner.email,
+        role: 'stall_business_owner',
+        type: 'stall_business_owner',
+        userType: 'stall_business_owner'  // Add this field for frontend consistency
       }
     });
 

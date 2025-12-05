@@ -3,12 +3,16 @@
 
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+
+// Load environment variables
+dotenv.config();
 
 // Import route files
 import authRoutes from './routes/authRoutes.js';
@@ -21,9 +25,13 @@ import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import auctionRoutes from './routes/auctionRoutes.js';
+import complianceRoutes from './routes/complianceRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.WEB_PORT || 3001;
 
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '50mb' }));
@@ -56,6 +64,10 @@ app.use('/api/mobile/auction', auctionRoutes);  // Auction pre-registration for 
 app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
 app.use('/api/stallholders', enhancedAuthMiddleware.authenticateToken, stallholderRoutes);
+app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
+app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
+app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
+app.use('/api/subscriptions', subscriptionRoutes); // Has its own auth middleware
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {
@@ -107,6 +119,10 @@ app.get('/', (req, res) => {
       branches: '/api/branches',
       employees: '/api/employees',
       stallholders: '/api/stallholders',
+      compliances: '/api/compliances',
+      complaints: '/api/complaints',
+      payments: '/api/payments',
+      subscriptions: '/api/subscriptions',
       health: '/api/health'
     }
   });
@@ -129,6 +145,10 @@ app.use('*', (req, res) => {
       '/api/branches',
       '/api/employees',
       '/api/stallholders',
+      '/api/compliances',
+      '/api/complaints',
+      '/api/payments',
+      '/api/subscriptions',
       '/api/health'
     ]
   });

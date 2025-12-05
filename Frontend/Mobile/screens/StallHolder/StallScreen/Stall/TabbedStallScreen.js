@@ -43,17 +43,14 @@ const TabbedStallScreen = () => {
     { 
       id: 'Fixed Price', 
       label: 'Fixed Price', 
-      icon: require('../../../../assets/Home-Image/Fixed.png')
     },
     { 
       id: 'Auction', 
       label: 'Auction', 
-      icon: require('../../../../assets/Home-Image/Auction.png')
     },
     { 
       id: 'Raffle', 
       label: 'Raffle', 
-      icon: require('../../../../assets/Home-Image/Raffle.png')
     },
   ];
 
@@ -441,12 +438,6 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: '#007bff',
-  },
-  tabIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 6,
-    tintColor: '#6b7280',
   },
   activeTabIcon: {
     tintColor: '#ffffff',
