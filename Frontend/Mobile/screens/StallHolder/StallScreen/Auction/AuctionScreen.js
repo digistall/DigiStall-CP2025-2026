@@ -25,6 +25,11 @@ const AuctionScreen = () => {
   const [preRegisteredStalls, setPreRegisteredStalls] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
+  // Reset reminder when component mounts or comes into view
+  useEffect(() => {
+    setShowReminder(true);
+  }, []);
+
   // Load auction stalls on component mount
   useEffect(() => {
     loadAuctionStalls();

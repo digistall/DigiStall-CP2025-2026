@@ -14,6 +14,8 @@ import {
 // Import components
 import SearchFilterBar from './components/SearchFilter/SearchFilterBar';
 import StallCard from './components/StallCard';
+import AuctionReminderModal from '../Auction/Components/AuctionReminderComponent/AuctionReminderModal';
+import RaffleReminderModal from '../Raffle/Components/RaffleReminderComponent/RaffleReminderModal';
 
 // Import services
 import ApiService from '../../../../services/ApiService';
@@ -22,7 +24,7 @@ import UserStorageService from '../../../../services/UserStorageService';
 const { width } = Dimensions.get('window');
 
 const TabbedStallScreen = () => {
-  const [activeTab, setActiveTab] = useState('Fixed Price'); // Default to Fixed Price
+  const [activeTab, setActiveTab] = useState('Fixed Price');
   const [stallsData, setStallsData] = useState([]);
   const [filteredStalls, setFilteredStalls] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('ALL');
@@ -33,6 +35,8 @@ const TabbedStallScreen = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null);
   const [availableFilters, setAvailableFilters] = useState(['ALL']);
+  const [showAuctionReminder, setShowAuctionReminder] = useState(false);
+  const [showRaffleReminder, setShowRaffleReminder] = useState(false);
 
   // Tab configuration
   const tabs = [
@@ -53,6 +57,15 @@ const TabbedStallScreen = () => {
   // Load user data and stalls when component mounts or tab changes
   useEffect(() => {
     loadUserDataAndStalls();
+  }, [activeTab]);
+
+  // Show auction reminder every time user switches to Auction tab
+  useEffect(() => {
+    if (activeTab === 'Auction') {
+      setShowAuctionReminder(true);
+    } else if (activeTab === 'Raffle') {
+      setShowRaffleReminder(true);
+    }
   }, [activeTab]);
 
   // Filter and sort stalls when data or filters change
@@ -215,7 +228,33 @@ const TabbedStallScreen = () => {
     try {
       setApplying(stallId);
 
-      // Simple application data
+      // Check if this is an auction stall and handle differently
+      if (activeTab === 'Auction') {
+        console.log('Processing auction pre-registration for stall:', stallId);
+        
+        const response = await ApiService.preRegisterForAuction(applicantId, stallId);
+
+        if (response.success) {
+          Alert.alert(
+            'Pre-Registration Successful!',
+            `You have successfully pre-registered for the auction.\n\nStall: ${response.data.stall_no}\nBranch: ${response.data.branch_name}\n\nYou can now participate when the auction starts!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Refresh stalls to show updated status
+                  loadUserDataAndStalls();
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Pre-Registration Failed', response.message || 'Failed to pre-register for auction. Please try again.');
+        }
+        return;
+      }
+
+      // Handle regular stall applications (Fixed Price, Raffle)
       const applicationData = {
         applicantId: applicantId,
         stallId: stallId,
@@ -223,7 +262,7 @@ const TabbedStallScreen = () => {
         businessType: 'General Trade'
       };
 
-      console.log('📝 Submitting application:', applicationData);
+      console.log('Submitting application:', applicationData);
 
       const response = await ApiService.submitApplication(applicationData);
 
@@ -245,7 +284,7 @@ const TabbedStallScreen = () => {
         Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
       }
     } catch (error) {
-      console.error('❌ Application error:', error);
+      console.error('Application error:', error);
       Alert.alert('Error', 'Failed to submit application. Please check your connection and try again.');
     } finally {
       setApplying(null);
@@ -263,6 +302,18 @@ const TabbedStallScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Auction Reminder Modal */}
+      <AuctionReminderModal 
+        visible={showAuctionReminder}
+        onClose={() => setShowAuctionReminder(false)}
+      />
+
+      {/* Raffle Reminder Modal */}
+      <RaffleReminderModal 
+        visible={showRaffleReminder}
+        onClose={() => setShowRaffleReminder(false)}
+      />
+
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         {tabs.map((tab) => (
@@ -292,19 +343,22 @@ const TabbedStallScreen = () => {
         ))}
       </View>
 
-      {/* Search and Filter Bar */}
-      <SearchFilterBar
-        selectedFilter={selectedFilter}
-        onFilterChange={setSelectedFilter}
-        selectedSort={selectedSort}
-        onSortChange={setSelectedSort}
-        searchText={searchText}
-        onSearchChange={setSearchText}
-        availableFilters={availableFilters}
-      />
+      {/* Only show content if not showing auction or raffle reminder */}
+      {!((activeTab === 'Auction' && showAuctionReminder) || (activeTab === 'Raffle' && showRaffleReminder)) && (
+        <>
+          {/* Search and Filter Bar */}
+          <SearchFilterBar
+            selectedFilter={selectedFilter}
+            onFilterChange={setSelectedFilter}
+            selectedSort={selectedSort}
+            onSortChange={setSelectedSort}
+            searchText={searchText}
+            onSearchChange={setSearchText}
+            availableFilters={availableFilters}
+          />
 
-      {/* Stalls List */}
-      {loading ? (
+          {/* Stalls List */}
+          {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
           <Text style={styles.loadingText}>Loading {activeTab} stalls...</Text>
@@ -350,6 +404,8 @@ const TabbedStallScreen = () => {
             </View>
           )}
         </ScrollView>
+      )}
+        </>
       )}
     </View>
   );

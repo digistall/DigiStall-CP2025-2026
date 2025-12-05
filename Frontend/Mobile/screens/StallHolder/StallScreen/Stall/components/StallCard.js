@@ -34,7 +34,7 @@ const StallCard = ({ stall, onApply, applying }) => {
             {applying ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={[styles.statusButtonText, styles.availableButtonText]}>APPLY NOW!</Text>
+              <Text style={[styles.statusButtonText, styles.availableButtonText]}>APPLY NOW</Text>
             )}
           </TouchableOpacity>
         );
@@ -48,7 +48,7 @@ const StallCard = ({ stall, onApply, applying }) => {
             {applying ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={[styles.statusButtonText, styles.raffleButtonText]}>JOIN RAFFLE</Text>
+              <Text style={[styles.statusButtonText, styles.raffleButtonText]}>PRE-REGISTER FOR RAFFLE</Text>
             )}
           </TouchableOpacity>
         );
@@ -62,14 +62,14 @@ const StallCard = ({ stall, onApply, applying }) => {
             {applying ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={[styles.statusButtonText, styles.auctionButtonText]}>JOIN AUCTION</Text>
+              <Text style={[styles.statusButtonText, styles.auctionButtonText]}>PRE-REGISTER FOR AUCTION</Text>
             )}
           </TouchableOpacity>
         );
       default:
         return (
           <TouchableOpacity style={[styles.statusButton, styles.lockedButton]} disabled>
-            <Text style={[styles.statusButtonText, styles.lockedButtonText]}>🔒 NOT AVAILABLE</Text>
+            <Text style={[styles.statusButtonText, styles.lockedButtonText]}>NOT AVAILABLE</Text>
           </TouchableOpacity>
         );
     }
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   auctionButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#00D632',
   },
   auctionButtonText: {
     color: '#FFFFFF',

@@ -1,8 +1,8 @@
 import { StyleSheet, Dimensions } from "react-native";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-export const AuctionReminderStyles = StyleSheet.create({
+export const RaffleReminderStyles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "center",
