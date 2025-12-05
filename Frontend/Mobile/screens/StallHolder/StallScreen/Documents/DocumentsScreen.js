@@ -37,8 +37,13 @@ const DocumentsScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (userData?.user?.applicant_id) {
+    const applicantId = userData?.user?.applicant_id || userData?.user?.id;
+    console.log('📋 Documents useEffect triggered - applicantId:', applicantId);
+    if (applicantId) {
+      console.log('📋 Calling loadStallholderDocuments for applicantId:', applicantId);
       loadStallholderDocuments();
+    } else {
+      console.log('📋 No applicantId found, skipping loadStallholderDocuments');
     }
   }, [userData]);
 
@@ -47,12 +52,18 @@ const DocumentsScreen = () => {
       const userToken = await AsyncStorage.getItem('userToken');
       const storedUserData = await UserStorageService.getUserData();
       
+      console.log('📱 Loaded user data:', JSON.stringify(storedUserData, null, 2));
+      
       if (userToken && storedUserData) {
         setToken(userToken);
         setUserData(storedUserData);
+      } else {
+        // No user data found, stop loading
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      setLoading(false);
     }
   };
 
@@ -60,9 +71,9 @@ const DocumentsScreen = () => {
     try {
       setLoading(true);
       
-      const applicantId = userData?.user?.applicant_id;
+      const applicantId = userData?.user?.applicant_id || userData?.user?.id;
       if (!applicantId) {
-        console.log('No applicant ID found');
+        console.log('❌ No applicant ID found in userData:', userData);
         setLoading(false);
         return;
       }
@@ -70,6 +81,8 @@ const DocumentsScreen = () => {
       console.log('📄 Loading stallholder documents for applicant:', applicantId);
       
       const response = await ApiService.getStallholderStallsWithDocuments(applicantId);
+      
+      console.log('📄 API Response:', JSON.stringify(response, null, 2));
       
       if (response.success && response.data) {
         const { grouped_by_branch } = response.data;

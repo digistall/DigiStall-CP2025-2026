@@ -98,14 +98,18 @@ export const mobileLogin = async (req, res) => {
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user.applicant_id,
-        username: user.user_name,
-        email: user.applicant_email,
-        fullName: user.applicant_full_name,
-        contactNumber: user.applicant_contact_number,
-        registrationId: user.registrationid,
-        userType: 'mobile_user'
+      data: {
+        user: {
+          id: user.applicant_id,
+          applicant_id: user.applicant_id,
+          username: user.user_name,
+          email: user.applicant_email,
+          full_name: user.applicant_full_name,
+          fullName: user.applicant_full_name,
+          contactNumber: user.applicant_contact_number,
+          registrationId: user.registrationid,
+          userType: 'mobile_user'
+        }
       }
     });
     

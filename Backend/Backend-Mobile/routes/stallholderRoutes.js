@@ -9,10 +9,16 @@ import {
 
 const router = express.Router();
 
+// Get directory path for uploads
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'documents');
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/documents/');
+    cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -38,19 +44,19 @@ const upload = multer({
 // ===== STALLHOLDER DOCUMENT ROUTES =====
 
 /**
- * @route GET /api/mobile/stallholder/documents/:applicantId
- * @desc Get all stalls owned by stallholder with document requirements grouped by branch
- * @access Public (should be protected in production)
- */
-router.get('/documents/:applicantId', getStallholderStallsWithDocuments);
-
-/**
  * @route GET /api/mobile/stallholder/documents/branch/:branchId
  * @desc Get document requirements for a specific branch
  * @query stallholder_id - Optional: Include upload status for this stallholder
  * @access Public (should be protected in production)
  */
 router.get('/documents/branch/:branchId', getBranchDocumentRequirements);
+
+/**
+ * @route GET /api/mobile/stallholder/documents/:applicantId
+ * @desc Get all stalls owned by stallholder with document requirements grouped by branch
+ * @access Public (should be protected in production)
+ */
+router.get('/documents/:applicantId', getStallholderStallsWithDocuments);
 
 /**
  * @route POST /api/mobile/stallholder/documents/upload

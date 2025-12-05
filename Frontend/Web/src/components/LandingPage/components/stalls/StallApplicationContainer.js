@@ -337,7 +337,12 @@ export default {
 
     goToPreviousStep() {
       if (this.currentStep > 1) {
-        this.currentStep--
+        // If going back from step 3 and user is single, skip step 2
+        if (this.currentStep === 3 && this.personalInfo?.civilStatus === 'Single') {
+          this.currentStep = 1
+        } else {
+          this.currentStep--
+        }
       }
     },
 
