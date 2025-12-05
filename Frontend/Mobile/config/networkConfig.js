@@ -60,6 +60,11 @@ export const API_CONFIG = {
     GET_MY_APPLICATIONS: '/mobile/api/applications/my',
     GET_APPLICATION_STATUS: '/mobile/api/applications',
     UPDATE_APPLICATION: '/mobile/api/applications',
+
+    // Stallholder document endpoints
+    GET_STALLHOLDER_STALLS_DOCUMENTS: '/api/mobile/stallholder/documents',
+    GET_BRANCH_DOCUMENT_REQUIREMENTS: '/api/mobile/stallholder/documents/branch',
+    UPLOAD_STALLHOLDER_DOCUMENT: '/api/mobile/stallholder/documents/upload',
     
     // Health check
     HEALTH: '/api/health'  // Main health endpoint

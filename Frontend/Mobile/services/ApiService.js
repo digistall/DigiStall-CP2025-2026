@@ -642,6 +642,142 @@ class ApiService {
     }
   }
 
+  // ===== STALLHOLDER DOCUMENT METHODS =====
+
+  /**
+   * Get stallholder's owned stalls with document requirements grouped by branch/owner
+   * @param {string} applicantId - The applicant's ID
+   * @returns {Promise} - Response with stalls grouped by branch
+   */
+  static async getStallholderStallsWithDocuments(applicantId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALLHOLDER_STALLS_DOCUMENTS}/${applicantId}`;
+      
+      console.log('🔄 Fetching stallholder stalls with documents from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: API_CONFIG.HEADERS,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholder documents');
+      }
+
+      console.log('✅ Stallholder stalls with documents fetched:', data.data?.total_stalls || 0, 'stalls');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Stallholder Stalls Documents API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: { stalls: [], grouped_by_branch: [] }
+      };
+    }
+  }
+
+  /**
+   * Get document requirements for a specific branch
+   * @param {string} branchId - The branch ID
+   * @param {string} stallholderId - Optional stallholder ID to include upload status
+   * @returns {Promise} - Response with document requirements
+   */
+  static async getBranchDocumentRequirements(branchId, stallholderId = null) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      let url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_BRANCH_DOCUMENT_REQUIREMENTS}/${branchId}`;
+      
+      if (stallholderId) {
+        url += `?stallholder_id=${stallholderId}`;
+      }
+      
+      console.log('🔄 Fetching branch document requirements from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: API_CONFIG.HEADERS,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch branch document requirements');
+      }
+
+      console.log('✅ Branch document requirements fetched:', data.data?.length || 0);
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Branch Document Requirements API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Upload a document for stallholder
+   * @param {object} documentData - { stallholder_id, document_type_id, file }
+   * @param {string} token - Auth token
+   * @returns {Promise} - Upload response
+   */
+  static async uploadStallholderDocument(documentData, token) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      const formData = new FormData();
+      formData.append('stallholder_id', documentData.stallholder_id);
+      formData.append('document_type_id', documentData.document_type_id);
+      formData.append('file', {
+        uri: documentData.file.uri,
+        type: documentData.file.type || 'image/jpeg',
+        name: documentData.file.name || `document_${Date.now()}.jpg`,
+      });
+
+      console.log('📤 Uploading stallholder document...');
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.UPLOAD_STALLHOLDER_DOCUMENT}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload document');
+      }
+
+      console.log('✅ Document uploaded successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Upload Stallholder Document API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // ===== UTILITY METHODS =====
 
   // Reset network configuration (force server rediscovery)
