@@ -25,11 +25,12 @@ import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import complianceRoutes from './routes/complianceRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.WEB_PORT || 3001;
 
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '50mb' }));
@@ -62,6 +63,7 @@ app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRo
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
 app.use('/api/stallholders', enhancedAuthMiddleware.authenticateToken, stallholderRoutes);
 app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
+app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/subscriptions', subscriptionRoutes); // Has its own auth middleware
 
@@ -116,6 +118,7 @@ app.get('/', (req, res) => {
       employees: '/api/employees',
       stallholders: '/api/stallholders',
       compliances: '/api/compliances',
+      complaints: '/api/complaints',
       payments: '/api/payments',
       subscriptions: '/api/subscriptions',
       health: '/api/health'
@@ -141,6 +144,7 @@ app.use('*', (req, res) => {
       '/api/employees',
       '/api/stallholders',
       '/api/compliances',
+      '/api/complaints',
       '/api/payments',
       '/api/subscriptions',
       '/api/health'
