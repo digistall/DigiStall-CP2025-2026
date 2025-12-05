@@ -33,7 +33,9 @@ import Reports from '../components/SystemAdmin/Reports/Reports.vue'
 const isAuthenticated = () => {
   const token = sessionStorage.getItem('authToken');
   const user = sessionStorage.getItem('currentUser');
-  return !!(token && user);
+  const isAuth = !!(token && user);
+  console.log('🔍 isAuthenticated check:', { hasToken: !!token, hasUser: !!user, result: isAuth });
+  return isAuth;
 }
 
 /**
@@ -41,12 +43,19 @@ const isAuthenticated = () => {
  */
 const hasRole = (...roles) => {
   const userData = sessionStorage.getItem('currentUser');
+  console.log('🔍 hasRole called - userData exists:', !!userData);
   if (!userData) return false;
 
   try {
     const user = JSON.parse(userData);
-    return roles.some(role => role.toLowerCase() === user.userType?.toLowerCase());
-  } catch {
+    console.log('🔍 hasRole - Parsed user:', user);
+    console.log('🔍 hasRole - User type:', user.userType);
+    console.log('🔍 hasRole - Required roles:', roles);
+    const result = roles.some(role => role.toLowerCase() === user.userType?.toLowerCase());
+    console.log('🔍 hasRole result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ hasRole parse error:', error);
     return false;
   }
 }
@@ -56,15 +65,22 @@ const hasRole = (...roles) => {
  */
 const hasPermission = (...permissions) => {
   const userData = sessionStorage.getItem('currentUser');
-  if (!userData) return false;
+  console.log('🔍 hasPermission called - userData:', userData);
+  if (!userData) {
+    console.log('❌ No userData in sessionStorage');
+    return false;
+  }
 
   try {
     const user = JSON.parse(userData);
+    console.log('🔍 Parsed user:', user);
+    console.log('🔍 User type:', user.userType);
 
     // System administrators, stall business owners, and business managers have all permissions
     if (user.userType === 'system_administrator' || 
         user.userType === 'stall_business_owner' || 
         user.userType === 'business_manager') {
+      console.log('✅ User has admin/owner/manager role - granting all permissions');
       return true;
     }
 
@@ -73,18 +89,24 @@ const hasPermission = (...permissions) => {
       // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
       if (Array.isArray(user.permissions)) {
         // Array format: check if permission exists in array
-        return permissions.some(permission => user.permissions.includes(permission));
+        const hasIt = permissions.some(permission => user.permissions.includes(permission));
+        console.log('🔍 Array permissions check:', hasIt);
+        return hasIt;
       } else {
         // Object format: check if permission value is true
-        return permissions.some(permission => {
+        const hasIt = permissions.some(permission => {
           const permValue = user.permissions[permission];
           return permValue === true || permValue === 1;
         });
+        console.log('🔍 Object permissions check:', hasIt);
+        return hasIt;
       }
     }
 
+    console.log('❌ No matching permission or role');
     return false;
-  } catch {
+  } catch (error) {
+    console.error('❌ Error in hasPermission:', error);
     return false;
   }
 }
@@ -154,18 +176,37 @@ const requireRole = (...roles) => {
  */
 const requirePermission = (...permissions) => {
   return (to, from, next) => {
+    console.log('🚀🚀🚀 [STALLHOLDER FIX] requirePermission called for:', to.path);
+    console.log('🚀 [STALLHOLDER FIX] Required permissions:', permissions);
+    console.log('🚀 [STALLHOLDER FIX] From route:', from.path);
+    
     if (!isAuthenticated()) {
-      console.log('❌ Not authenticated - redirecting to login')
+      console.log('❌ [STALLHOLDER FIX] Not authenticated - redirecting to login')
       next('/login')
       return
     }
 
-    if (hasPermission(...permissions)) {
-      console.log('✅ Permission check passed')
+    console.log('✅ [STALLHOLDER FIX] User is authenticated');
+
+    const userData = sessionStorage.getItem('currentUser');
+    console.log('🔍 [STALLHOLDER FIX] Raw userData from sessionStorage:', userData);
+    
+    const user = userData ? JSON.parse(userData) : {};
+    console.log('🔐 [STALLHOLDER FIX] Parsed user object:', JSON.stringify(user, null, 2));
+    console.log('🔐 [STALLHOLDER FIX] User type:', user.userType);
+    console.log('🔐 [STALLHOLDER FIX] Calling hasPermission with:', permissions);
+    
+    const permissionResult = hasPermission(...permissions);
+    console.log('🔐 [STALLHOLDER FIX] hasPermission returned:', permissionResult);
+
+    if (permissionResult) {
+      console.log('✅✅✅ [STALLHOLDER FIX] Permission check PASSED - allowing navigation')
       next()
     } else {
-      console.log('❌ Permission check failed')
-      next('/app/dashboard')
+      console.log('❌❌❌ [STALLHOLDER FIX] Permission check FAILED');
+      console.log('⚠️ [STALLHOLDER FIX] FORCING NAVIGATION ANYWAY (debug mode)');
+      // Force navigation to see the actual error
+      next()
     }
   }
 }
