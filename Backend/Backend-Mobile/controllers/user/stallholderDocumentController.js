@@ -34,28 +34,27 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
         sh.stall_id,
         sh.contract_status,
         sh.compliance_status,
-        s.stall_name,
-        s.stall_number,
+        s.stall_no as stall_name,
+        s.stall_no as stall_number,
         s.size,
-        s.price,
+        s.rental_price as price,
         s.price_type,
         b.branch_name,
         b.area as branch_area,
         b.location as branch_location,
-        bo.business_owner_id,
-        COALESCE(u.first_name, '') as owner_first_name,
-        COALESCE(u.last_name, '') as owner_last_name,
-        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as business_owner_name
+        b.business_owner_id,
+        '' as owner_first_name,
+        '' as owner_last_name,
+        '' as business_owner_name
       FROM stallholder sh
       INNER JOIN stall s ON sh.stall_id = s.stall_id
       INNER JOIN branch b ON sh.branch_id = b.branch_id
-      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id AND bm.status = 'Active'
-      LEFT JOIN business_owner_managers bom ON bm.business_manager_id = bom.business_manager_id AND bom.status = 'Active'
-      LEFT JOIN business_owner bo ON bom.business_owner_id = bo.business_owner_id
-      LEFT JOIN user u ON bo.user_id = u.user_id
       WHERE sh.applicant_id = ? AND sh.contract_status = 'Active'
-      ORDER BY b.branch_name, s.stall_name
+      ORDER BY b.branch_name, s.stall_no
     `, [applicantId]);
+
+    console.log('📊 Query result - stallholderStalls:', stallholderStalls.length, 'found');
+    console.log('📊 Stalls data:', JSON.stringify(stallholderStalls, null, 2));
 
     if (stallholderStalls.length === 0) {
       return res.status(200).json({

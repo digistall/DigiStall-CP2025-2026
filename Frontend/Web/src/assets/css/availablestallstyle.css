@@ -34,10 +34,10 @@
   box-shadow: 0 4px 12px rgba(0, 33, 129, 0.3);
 }
 
-/* Stall Grid - Compact 4 Column Layout */
+/* Stall Grid - Compact 5 Column Layout */
 .stall-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 1.5rem;
 }
@@ -333,24 +333,32 @@
 }
 
 /* Responsive Design */
-/* Large tablet view */
-@media (max-width: 1200px) {
+/* Large view - 4 columns */
+@media (max-width: 1400px) {
+  .stall-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+}
+
+/* Large tablet view - 3 columns */
+@media (max-width: 1100px) {
   .stall-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 14px;
   }
 }
 
-/* Tablet view */
-@media (max-width: 1024px) {
+/* Tablet view - 2 columns */
+@media (max-width: 850px) {
   .stall-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
 }
 
-/* Mobile view */
-@media (max-width: 768px) {
+/* Mobile view - 2 columns */
+@media (max-width: 600px) {
   .stall-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -381,7 +389,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 500px) {
   .stall-grid {
     grid-template-columns: 1fr;
     gap: 12px;

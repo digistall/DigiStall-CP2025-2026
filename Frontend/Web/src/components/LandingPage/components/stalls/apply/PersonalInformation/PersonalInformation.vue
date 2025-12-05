@@ -1,6 +1,14 @@
 <template>
     <div class="overlay">
         <div class="form-container">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div v-for="step in totalSteps" :key="step" class="step-dot" 
+                    :class="{ 'active': step === currentStep, 'completed': step < currentStep }">
+                    {{ step }}
+                </div>
+            </div>
+            
             <h3>Provide Personal Information</h3>
             <p>The submitted application will be reviewed by the MEPO Administrator for approval.</p>
 
@@ -26,16 +34,20 @@
 
                 <label>
                     Date of Birth:
-                    <v-menu v-model="datePickerMenu" :close-on-content-click="false" transition="scale-transition">
-                        <template v-slot:activator="{ props }">
-                            <input type="text" v-model="formattedBirthdate" v-bind="props" required readonly
-                                placeholder="Click to select date" :class="{ 'input-error': errors.birthdate }"
-                                style="cursor: pointer;" />
-                        </template>
-
-                        <v-date-picker v-model="birthdateDate" @update:model-value="updateBirthdate" :max="maxDate"
-                            show-adjacent-months header="Select Birth Date" class="large-date-picker"></v-date-picker>
-                    </v-menu>
+                    <input type="text" v-model="formattedBirthdate" @click="datePickerMenu = true" required readonly
+                        placeholder="Click to select date" :class="{ 'input-error': errors.birthdate }"
+                        style="cursor: pointer;" />
+                    
+                    <v-dialog v-model="datePickerMenu" width="auto" :z-index="9999999">
+                        <v-date-picker 
+                            v-model="birthdateDate" 
+                            @update:model-value="updateBirthdate" 
+                            :max="maxDate"
+                            show-adjacent-months 
+                            header="Select Birth Date"
+                        ></v-date-picker>
+                    </v-dialog>
+                    
                     <span v-if="calculatedAge !== null" class="age-display"
                         :class="{ 'age-error': calculatedAge < 18 }">
                         Age: {{ calculatedAge }} years old
@@ -77,6 +89,18 @@ export default {
     emits: ['close', 'next'],
     props: {
         stall: Object,
+        savedData: {
+            type: Object,
+            default: null
+        },
+        currentStep: {
+            type: Number,
+            default: 1
+        },
+        totalSteps: {
+            type: Number,
+            default: 4
+        }
     },
     data() {
         return {
@@ -114,6 +138,22 @@ export default {
                 'Separated',
             ],
         };
+    },
+    mounted() {
+        // Initialize form with saved data if available
+        if (this.savedData) {
+            this.fullName = this.savedData.fullName || '';
+            this.education = this.savedData.education || '';
+            this.birthdate = this.savedData.birthdate || '';
+            this.civilStatus = this.savedData.civilStatus || '';
+            this.contactNumber = this.savedData.contactNumber || '';
+            this.mailingAddress = this.savedData.mailingAddress || '';
+            
+            // Initialize date picker date if birthdate exists
+            if (this.birthdate) {
+                this.birthdateDate = new Date(this.birthdate);
+            }
+        }
     },
     computed: {
         calculatedAge() {
@@ -229,4 +269,24 @@ export default {
 
 <style scoped>
 @import '@/assets/LandingPage/css/applicationformstyle.css';
+</style>
+
+<!-- Unscoped styles to fix Vuetify date picker z-index -->
+<style>
+/* Force date picker to appear above the overlay (must be higher than 999999 used by application modal) */
+.v-overlay-container {
+    z-index: 9999999 !important;
+}
+
+.v-overlay.v-menu {
+    z-index: 9999999 !important;
+}
+
+.v-overlay__content {
+    z-index: 9999999 !important;
+}
+
+.v-picker {
+    z-index: 9999999 !important;
+}
 </style>

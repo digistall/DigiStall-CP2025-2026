@@ -50,7 +50,7 @@ class ApiService {
       return {
         success: true,
         data: data.data,  // Extract the data from the response
-        user: data.data?.user,
+        user: data.data?.user || data.user,
         token: data.token,
         message: data.message
       };
@@ -656,10 +656,17 @@ class ApiService {
       
       console.log('🔄 Fetching stallholder stalls with documents from:', url);
 
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       const response = await fetch(url, {
         method: 'GET',
         headers: API_CONFIG.HEADERS,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -675,9 +682,12 @@ class ApiService {
       };
     } catch (error) {
       console.error('❌ Get Stallholder Stalls Documents API Error:', error);
+      const errorMessage = error.name === 'AbortError' 
+        ? 'Request timed out. Please check your connection.'
+        : (error.message || 'Network error occurred');
       return {
         success: false,
-        message: error.message || 'Network error occurred',
+        message: errorMessage,
         data: { stalls: [], grouped_by_branch: [] }
       };
     }
