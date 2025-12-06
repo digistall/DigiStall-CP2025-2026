@@ -54,6 +54,21 @@ export default {
         this.processingMessage = 'Generating credentials...'
 
         console.log('🎯 Approving applicant:', this.applicant)
+        console.log('🔍 DEBUG - applicant_id:', this.applicant.applicant_id)
+        console.log('🔍 DEBUG - application_id:', this.applicant.application_id)
+        console.log('🔍 DEBUG - id:', this.applicant.id)
+
+        // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+        const applicantId = this.applicant.applicant_id || 
+          (this.applicant.id && typeof this.applicant.id === 'string' 
+            ? parseInt(this.applicant.id.replace('#', ''), 10) 
+            : this.applicant.id)
+
+        console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
+        if (!applicantId) {
+          throw new Error('Cannot determine applicant ID')
+        }
 
         // Generate credentials for the applicant
         const username = generateUsername()
@@ -72,7 +87,7 @@ export default {
 
         // Update database status to approved using the same endpoint that works for decline/recheck
         const updateResult = await this.updateApplicantStatus(
-          this.applicant.applicant_id,
+          applicantId,
           'Approved', // Use proper capitalization for database enum
           username,
           password,

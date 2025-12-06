@@ -513,34 +513,54 @@
       </v-card>
     </v-dialog>
 
-    <!-- Confirmation Dialog -->
-    <v-dialog v-model="showConfirmDialog" max-width="400">
-      <v-card>
-        <v-card-title class="text-h6">
-          {{ confirmAction === "accept" ? "Accept" : "Decline" }} Applicant
-        </v-card-title>
-        <v-card-text>
-          Are you sure you want to {{ confirmAction }}
-          <strong>{{ selectedApplicant?.fullName }}</strong
-          >?
+    <!-- Confirmation Dialog - Enhanced Design -->
+    <v-dialog v-model="showConfirmDialog" max-width="420" persistent>
+      <v-card class="confirm-dialog-card" rounded="lg">
+        <!-- Header with Icon -->
+        <div class="confirm-dialog-header" :class="confirmAction === 'accept' ? 'accept-header' : 'decline-header'">
+          <div class="confirm-icon-wrapper">
+            <v-icon size="32" color="white">
+              {{ confirmAction === 'accept' ? 'mdi-check-circle' : 'mdi-close-circle' }}
+            </v-icon>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <v-card-text class="confirm-dialog-content text-center pt-8 pb-4">
+          <h3 class="confirm-dialog-title mb-3">
+            {{ confirmAction === "accept" ? "Accept Applicant" : "Decline Applicant" }}
+          </h3>
+          <p class="confirm-dialog-message">
+            Are you sure you want to {{ confirmAction }}
+            <strong class="applicant-name">{{ selectedApplicant?.fullName }}</strong>?
+          </p>
+          <p v-if="confirmAction === 'accept'" class="confirm-dialog-note mt-3">
+            <v-icon size="16" color="success" class="mr-1">mdi-information</v-icon>
+            Login credentials will be generated and sent to the applicant's email.
+          </p>
+          <p v-else class="confirm-dialog-note mt-3">
+            <v-icon size="16" color="warning" class="mr-1">mdi-alert</v-icon>
+            You will need to provide a reason for declining this application.
+          </p>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
+
+        <!-- Actions -->
+        <v-card-actions class="confirm-dialog-actions pa-4">
           <v-btn 
             variant="outlined" 
-            color="black"
-            style="background-color: white; color: black; border-color: black;"
+            color="grey-darken-1"
+            class="confirm-btn cancel-btn"
             @click="showConfirmDialog = false"
           >
-            Cancel
+            CANCEL
           </v-btn>
           <v-btn
-            :color="confirmAction === 'accept' ? 'primary' : 'black'"
-            :variant="confirmAction === 'accept' ? 'flat' : 'outlined'"
-            :style="confirmAction === 'decline' ? 'background-color: white; color: black; border-color: black;' : ''"
+            :color="confirmAction === 'accept' ? 'primary' : 'grey-darken-3'"
+            variant="flat"
+            class="confirm-btn action-btn"
             @click="confirmActionHandler"
           >
-            {{ confirmAction === "accept" ? "Accept" : "Decline" }}
+            {{ confirmAction === "accept" ? "ACCEPT" : "DECLINE" }}
           </v-btn>
         </v-card-actions>
       </v-card>

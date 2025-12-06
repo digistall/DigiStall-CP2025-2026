@@ -22,11 +22,19 @@ export default {
   },
   methods: {
     acceptApplicant(applicant) {
+      console.log('📋 Accept clicked - Full applicant object:', applicant)
+      console.log('📋 Accept - applicant_id:', applicant.applicant_id)
+      console.log('📋 Accept - application_id:', applicant.application_id)
+      console.log('📋 Accept - id:', applicant.id)
       this.selectedApplicant = applicant
       this.confirmAction = 'accept'
       this.showConfirmDialog = true
     },
     declineApplicant(applicant) {
+      console.log('📋 Decline clicked - Full applicant object:', applicant)
+      console.log('📋 Decline - applicant_id:', applicant.applicant_id)
+      console.log('📋 Decline - application_id:', applicant.application_id)
+      console.log('📋 Decline - id:', applicant.id)
       this.selectedApplicant = applicant
       this.confirmAction = 'decline'
       this.showConfirmDialog = true
@@ -37,6 +45,8 @@ export default {
       this.showInfoDialog = true
     },
     confirmActionHandler() {
+      console.log('✅ Confirm action - selectedApplicant:', this.selectedApplicant)
+      console.log('✅ Confirm action - applicant_id to use:', this.selectedApplicant?.applicant_id)
       if (this.confirmAction === 'accept') {
         this.$emit('accept', this.selectedApplicant)
       } else {
