@@ -152,12 +152,17 @@ export const mobileLogin = async (req, res) => {
     }))
 
     // Step 7: Get additional applicant information (spouse, business, other info)
-    const [otherInfoResult] = await connection.execute(
+    const otherInfoResultRaw = await connection.execute(
       'CALL getApplicantAdditionalInfo(?)',
       [userCredentials.applicant_id]
     )
-    // Stored procedure returns [[rows], metadata] - extract first row from first array
-    const additionalInfo = otherInfoResult.length > 0 && otherInfoResult[0] ? otherInfoResult[0] : {}
+    // Stored procedure returns [[rows], metadata] structure
+    // connection.execute returns [[[actual_data], procedure_metadata], query_metadata]
+    // We need to extract: [0] = [[actual_data], proc_metadata], [0][0] = [actual_data], [0][0][0] = actual_data object
+    const additionalInfoRows = otherInfoResultRaw[0] // This gives [[actual_data], proc_metadata]
+    const additionalInfo = additionalInfoRows && additionalInfoRows.length > 0 && additionalInfoRows[0] && additionalInfoRows[0].length > 0 
+      ? additionalInfoRows[0][0] 
+      : {}
     console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
     // Step 7b: Get stallholder information if user is a stallholder
@@ -176,13 +181,13 @@ export const mobileLogin = async (req, res) => {
         sh.contract_end_date,
         sh.contract_status,
         sh.compliance_status,
+        sh.payment_status,
         s.stall_no,
         s.size,
         s.rental_price as monthly_rent,
         s.stall_location,
         b.branch_name,
-        b.area as branch_area,
-        'Pending' as payment_status
+        b.area as branch_area
       FROM stallholder sh
       INNER JOIN stall s ON sh.stall_id = s.stall_id
       INNER JOIN branch b ON sh.branch_id = b.branch_id
