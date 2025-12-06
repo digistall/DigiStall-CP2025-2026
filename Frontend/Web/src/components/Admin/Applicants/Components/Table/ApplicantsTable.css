@@ -478,3 +478,101 @@
     padding: 10px 4px;
   }
 }
+
+/* ==========================================
+   ENHANCED CONFIRMATION DIALOG STYLES
+   ========================================== */
+
+.confirm-dialog-card {
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+.confirm-dialog-header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.confirm-dialog-header.accept-header {
+  background: linear-gradient(135deg, #002181 0%, #003399 100%);
+}
+
+.confirm-dialog-header.decline-header {
+  background: linear-gradient(135deg, #424242 0%, #616161 100%);
+}
+
+.confirm-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.confirm-dialog-content {
+  padding: 24px 32px 16px 32px !important;
+}
+
+.confirm-dialog-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.confirm-dialog-message {
+  font-size: 1rem;
+  color: #555;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.confirm-dialog-message .applicant-name {
+  color: #002181;
+  font-weight: 600;
+}
+
+.confirm-dialog-note {
+  font-size: 0.85rem;
+  color: #666;
+  background: #f8f9fa;
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px 24px 24px !important;
+}
+
+.confirm-btn {
+  min-width: 120px;
+  height: 42px !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: 8px !important;
+}
+
+.confirm-btn.cancel-btn {
+  border-width: 1.5px !important;
+}
+
+.confirm-btn.action-btn {
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.25);
+}
+
+.confirm-btn.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 33, 129, 0.35);
+}

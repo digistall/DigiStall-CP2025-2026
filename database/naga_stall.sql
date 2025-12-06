@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 05, 2025 at 09:25 PM
+-- Generation Time: Dec 05, 2025 at 11:07 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2715,6 +2715,44 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `reportStallholder` (IN `p_inspector
     WHERE stallholder_id = p_stallholder_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAllAutoIncrements` ()   BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE tblName VARCHAR(255);
+    DECLARE tableCount INT DEFAULT 0;
+    
+    -- Cursor for all tables with auto_increment columns
+    DECLARE tableCursor CURSOR FOR
+        SELECT DISTINCT TABLE_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND EXTRA LIKE '%auto_increment%';
+    
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    
+    -- Disable foreign key checks
+    SET FOREIGN_KEY_CHECKS = 0;
+    
+    OPEN tableCursor;
+    
+    read_loop: LOOP
+        FETCH tableCursor INTO tblName;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+        
+        -- Reset auto_increment for this table
+        CALL ResetTableAutoIncrement(tblName);
+        SET tableCount = tableCount + 1;
+    END LOOP;
+    
+    CLOSE tableCursor;
+    
+    -- Re-enable foreign key checks
+    SET FOREIGN_KEY_CHECKS = 1;
+    
+    SELECT CONCAT('✅ Reset AUTO_INCREMENT for ', tableCount, ' tables') AS summary;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `resetBusinessEmployeePassword` (IN `p_employee_id` INT, IN `p_new_password_hash` VARCHAR(255), IN `p_reset_by` INT)   BEGIN
     UPDATE `business_employee` 
     SET 
@@ -2781,6 +2819,33 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `resetSystemAdministratorPassword` (
     SELECT 1 as success, 
            'Password reset successfully' AS message,
            ROW_COUNT() as affected_rows;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetTableAutoIncrement` (IN `tableName` VARCHAR(255))   BEGIN
+    DECLARE maxId INT DEFAULT 0;
+    DECLARE newAutoInc INT DEFAULT 1;
+    
+    SET @sql = CONCAT('SELECT COALESCE(MAX(', 
+        (SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = tableName 
+         AND COLUMN_KEY = 'PRI' 
+         AND EXTRA LIKE '%auto_increment%'
+         LIMIT 1), 
+        '), 0) INTO @maxId FROM ', tableName);
+    
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    
+    SET newAutoInc = @maxId + 1;
+    
+    SET @alterSql = CONCAT('ALTER TABLE ', tableName, ' AUTO_INCREMENT = ', newAutoInc);
+    PREPARE alterStmt FROM @alterSql;
+    EXECUTE alterStmt;
+    DEALLOCATE PREPARE alterStmt;
+    
+    SELECT CONCAT('✅ Reset ', tableName, ' AUTO_INCREMENT to ', newAutoInc) AS result;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `resolveComplaint` (IN `p_complaint_id` INT, IN `p_resolution_notes` TEXT, IN `p_status` VARCHAR(20))   BEGIN
@@ -4623,12 +4688,7 @@ CREATE TABLE `applicant` (
 --
 
 INSERT INTO `applicant` (`applicant_id`, `applicant_full_name`, `applicant_contact_number`, `applicant_address`, `applicant_birthdate`, `applicant_civil_status`, `applicant_educational_attainment`, `created_at`, `updated_at`, `applicant_username`, `applicant_email`, `applicant_password_hash`, `email_verified`, `last_login`, `login_attempts`, `account_locked_until`) VALUES
-(12, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2005-01-24', 'Married', 'Postgraduate', '2025-10-05 09:11:25', '2025-10-05 09:11:25', NULL, NULL, NULL, 0, NULL, 0, NULL),
-(33, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2004-11-09', 'Single', 'High School Graduate', '2025-11-06 05:30:18', '2025-11-06 05:30:18', NULL, NULL, NULL, 0, NULL, 0, NULL),
-(34, 'Test_FullName', '09473430196', 'Zone 5', '2001-11-14', 'Single', 'Elementary Graduate', '2025-11-06 05:32:16', '2025-11-06 05:32:16', NULL, NULL, NULL, 0, NULL, 0, NULL),
-(35, 'Carlos Mendoza', '09201234567', 'Barangay Concepcion Grande, Naga City', '1985-06-15', 'Married', 'College Graduate', '2025-11-12 03:34:59', '2025-11-12 03:34:59', NULL, 'carlos.mendoza@email.com', NULL, 0, NULL, 0, NULL),
-(36, 'Ana Villanueva', '09211234567', 'Barangay Pacol, Naga City', '1990-03-20', 'Single', 'College Graduate', '2025-11-12 03:34:59', '2025-11-12 03:34:59', NULL, 'ana.villanueva@email.com', NULL, 0, NULL, 0, NULL),
-(37, 'Fernando Garcia', '09221234567', 'Barangay Balatas, Naga City', '1988-09-10', 'Married', 'High School Graduate', '2025-11-12 03:34:59', '2025-11-12 03:34:59', NULL, 'fernando.garcia@email.com', NULL, 0, NULL, 0, NULL);
+(47, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2005-01-24', 'Married', 'College Graduate', '2025-12-05 21:39:33', '2025-12-05 21:39:33', NULL, NULL, NULL, 0, NULL, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -4678,9 +4738,7 @@ CREATE TABLE `application` (
 --
 
 INSERT INTO `application` (`application_id`, `stall_id`, `applicant_id`, `application_date`, `application_status`, `created_at`, `updated_at`) VALUES
-(12, 123, 12, '2025-10-05', 'Approved', '2025-10-05 09:11:25', '2025-12-03 06:32:43'),
-(17, 58, 33, '2025-11-06', 'Approved', '2025-11-06 05:30:18', '2025-11-27 08:26:41'),
-(18, 142, 34, '2025-11-06', 'Approved', '2025-11-06 05:32:16', '2025-11-06 05:32:54');
+(0, 58, 47, '2025-12-05', 'Pending', '2025-12-05 21:39:34', '2025-12-05 21:39:34');
 
 -- --------------------------------------------------------
 
@@ -4921,9 +4979,7 @@ CREATE TABLE `business_information` (
 --
 
 INSERT INTO `business_information` (`business_id`, `applicant_id`, `nature_of_business`, `capitalization`, `source_of_capital`, `previous_business_experience`, `relative_stall_owner`, `created_at`, `updated_at`) VALUES
-(12, 12, 'Meat', 20000.00, 'Personal Savings', 'none', '', '2025-10-05 09:11:25', '2025-10-05 09:11:25'),
-(31, 33, 'Vegetables and Fruits', 21000.00, 'Personal Savings', 'None', '', '2025-11-06 05:30:18', '2025-11-06 05:30:18'),
-(32, 34, 'Vegetables and Fruits', 21000.00, 'Loan from Bank/Financial Institution', 'None', '', '2025-11-06 05:32:16', '2025-11-06 05:32:16');
+(33, 47, 'Flowers and Plants', 56200.00, 'Personal Savings', 'None', '', '2025-12-05 21:39:33', '2025-12-05 21:39:33');
 
 -- --------------------------------------------------------
 
@@ -5038,15 +5094,6 @@ CREATE TABLE `complaint` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `complaint`
---
-
-INSERT INTO `complaint` (`complaint_id`, `complaint_type`, `sender_id`, `sender_name`, `sender_contact`, `sender_email`, `stallholder_id`, `stall_id`, `branch_id`, `subject`, `description`, `evidence`, `status`, `priority`, `resolution_notes`, `date_submitted`, `date_resolved`, `created_at`, `updated_at`) VALUES
-(1, 'Sanitary Issue', NULL, 'Jonathan Reyna', '09171234567', 'jonathan.reyna@email.com', 13, 50, 1, 'Unclean stall area', 'The stall has not been properly cleaned and there are food scraps on the floor.', NULL, 'pending', 'high', NULL, '2024-01-15 08:30:00', NULL, '2025-12-05 20:23:37', '2025-12-05 20:23:37'),
-(2, 'Illegal Vending', NULL, 'Pedro Cruz', '09187654321', 'pedro.cruz@email.com', 15, 52, 1, 'Selling outside designated area', 'Vendor is selling products outside their assigned stall space.', NULL, 'pending', 'medium', NULL, '2024-01-18 10:15:00', NULL, '2025-12-05 20:23:37', '2025-12-05 20:23:37'),
-(3, 'Faulty Equipment', NULL, 'Miguel Ohara', '09198765432', 'miguel.ohara@email.com', 14, 51, 1, 'Weighing scale not calibrated', 'Customer reported that weighing scale is giving incorrect measurements.', NULL, 'pending', 'high', NULL, '2024-01-20 09:45:00', NULL, '2025-12-05 20:23:37', '2025-12-05 20:23:37');
-
 -- --------------------------------------------------------
 
 --
@@ -5062,15 +5109,6 @@ CREATE TABLE `credential` (
   `last_login` timestamp NULL DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `credential`
---
-
-INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
-(9, 12, '25-59663', '$2b$10$lYLaIa3klQd0ifKyV8mUa.D1RSTqj/BMfpvFs69pGixHTwozNjg1.', '2025-10-09 00:49:20', '2025-12-05 06:27:20', 1),
-(12, 34, '25-24154', '$2b$10$2XDnKyjqkHcah78ERX8xmuHwuXpMvnKwuMapqhNmvb5YQIC8tCvCi', '2025-11-06 05:32:54', NULL, 1),
-(13, 33, '25-13962', '$2b$10$nqLfFP3TgPE9Ar/y5D37dOe.iD.Ot0mX5.uzJew/g3BuCJv6foGXy', '2025-11-14 07:16:54', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -5373,9 +5411,7 @@ CREATE TABLE `other_information` (
 --
 
 INSERT INTO `other_information` (`other_info_id`, `applicant_id`, `signature_of_applicant`, `house_sketch_location`, `valid_id`, `email_address`, `created_at`, `updated_at`) VALUES
-(12, 12, 'Gemini_Generated_Image_7rbb2p7rbb2p7rbb.png', '552653185_808836058297483_1273040061360099495_n.jpg', 'Trillion Peso March.png', 'laurentejeno73@gmail.com', '2025-10-05 09:11:25', '2025-10-05 09:11:25'),
-(31, 33, 'balance.jpg', '024d5f08-4675-4461-b959-7bd308b04745.jpg', 'Contrast.png', 'requiem121701@gmail.com', '2025-11-06 05:30:18', '2025-11-06 05:30:18'),
-(32, 34, 'unity.jpg', '024d5f08-4675-4461-b959-7bd308b04745.jpg', 'Contrast.png', 'requiem121701@gmail.com', '2025-11-06 05:32:16', '2025-11-06 05:32:16');
+(33, 47, 'c18ed552-b187-4562-8c54-365631e206ac.jpg', 'c85c58cb-950d-426b-879f-b1de6c1ab03a.jpg', 'Gemini_Generated_Image_snogujsnogujsnog.png', 'laurentejeno73@gmail.com', '2025-12-05 21:39:33', '2025-12-05 21:39:33');
 
 -- --------------------------------------------------------
 
@@ -5604,7 +5640,7 @@ CREATE TABLE `spouse` (
 --
 
 INSERT INTO `spouse` (`spouse_id`, `applicant_id`, `spouse_full_name`, `spouse_birthdate`, `spouse_educational_attainment`, `spouse_contact_number`, `spouse_occupation`, `created_at`, `updated_at`) VALUES
-(4, 12, 'Elaine Zennia S. Laurente', '2005-06-03', 'Postgraduate', '09876543212', 'Archi', '2025-10-05 09:11:25', '2025-10-05 09:11:25');
+(5, 47, 'Elaine Zennia S. Laurente', '2005-06-03', 'College Graduate', '09126471858', 'Architecture', '2025-12-05 21:39:33', '2025-12-05 21:39:33');
 
 -- --------------------------------------------------------
 
@@ -5689,18 +5725,6 @@ CREATE TABLE `stallholder` (
   `last_violation_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `stallholder`
---
-
-INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`, `contact_number`, `email`, `address`, `business_name`, `business_type`, `branch_id`, `stall_id`, `contract_start_date`, `contract_end_date`, `contract_status`, `lease_amount`, `monthly_rent`, `payment_status`, `last_payment_date`, `notes`, `created_by_business_manager`, `compliance_status`, `date_created`, `updated_at`, `last_violation_date`) VALUES
-(13, 12, 'Maria Santos', '09171234567', 'maria.santos@email.com', 'Barangay Carolina, Naga City', 'Santos General Merchandise', 'General Merchandise', 1, 54, '2024-01-15', '2024-12-31', 'Active', 28800.00, 2400.00, 'paid', '2025-11-18', 'Reliable tenant, always pays on time', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-18 07:22:03', NULL),
-(14, 33, 'Roberto Cruz', '09181234567', 'roberto.cruz@email.com', 'Barangay Triangulo, Naga City', 'Cruz Electronics Repair', 'Electronics', 1, 57, '2024-03-01', '2025-02-28', 'Active', 31200.00, 2600.00, 'pending', '2025-11-18', 'Electronics repair specialist', 1, 'Compliant', '2025-11-12 03:33:36', '2025-11-18 07:21:10', NULL),
-(15, 34, 'Elena Reyes', '09191234567', 'elena.reyes@email.com', 'Barangay San Francisco, Naga City', 'Elena\'s Fashion Corner', 'Clothing', 1, 58, '2023-06-01', '2024-05-31', 'Active', 25200.00, 2100.00, 'pending', '2025-11-18', 'Payment overdue by 15 days. Last violation: improper display', 1, 'Non-Compliant', '2025-11-12 03:33:36', '2025-11-19 08:02:06', '2025-11-02'),
-(16, 35, 'Carlos Mendoza', '09201234567', 'carlos.mendoza@email.com', 'Barangay Concepcion Grande, Naga City', 'Mendoza Food Corner', 'Food Service', 1, 55, '2024-02-15', '2025-01-31', 'Active', 33600.00, 2800.00, 'paid', '2025-12-02', 'Popular food stall, excellent customer ratings', 1, 'Compliant', '2025-11-12 03:34:59', '2025-12-02 16:48:49', NULL),
-(17, 36, 'Ana Villanueva', '09211234567', 'ana.villanueva@email.com', 'Barangay Pacol, Naga City', 'Villanueva Meat Shop', 'Meat Products', 3, 91, '2024-01-01', '2024-12-31', 'Active', 30000.00, 2500.00, 'current', '2025-10-29', 'Fresh meat supplier, good hygiene practices', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL),
-(18, 37, 'Fernando Garcia', '09221234567', 'fernando.garcia@email.com', 'Barangay Balatas, Naga City', 'Garcia Fresh Produce', 'Vegetables & Fruits', 3, 93, '2023-09-01', '2024-08-31', 'Active', 21600.00, 1800.00, 'grace_period', '2025-10-08', 'Seasonal produce vendor, payment due in 5 days', 1, 'Compliant', '2025-11-12 03:34:59', '2025-11-12 03:36:25', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -5722,24 +5746,6 @@ CREATE TABLE `stallholder_documents` (
   `expiry_date` date DEFAULT NULL COMMENT 'For documents that expire',
   `notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `stallholder_documents`
---
-
-INSERT INTO `stallholder_documents` (`document_id`, `stallholder_id`, `document_type_id`, `file_path`, `original_filename`, `file_size`, `upload_date`, `verification_status`, `verified_by`, `verified_at`, `rejection_reason`, `expiry_date`, `notes`) VALUES
-(25, 13, 1, '/uploads/documents/maria_santos_business_permit.pdf', 'business_permit_2024.pdf', 2048576, '2025-11-12 03:36:25', 'verified', NULL, '2024-01-20 02:30:00', NULL, '2024-12-31', 'Valid business permit'),
-(26, 13, 4, '/uploads/documents/maria_santos_cedula.pdf', 'cedula_2024.pdf', 1024768, '2025-11-12 03:36:25', 'verified', NULL, '2024-01-20 02:35:00', NULL, '2024-12-31', 'Community tax certificate'),
-(27, 13, 5, '/uploads/documents/maria_santos_valid_id.pdf', 'drivers_license.pdf', 1536890, '2025-11-12 03:36:25', 'verified', NULL, '2024-01-20 02:40:00', NULL, '2027-08-15', 'Driver\'s license'),
-(28, 14, 1, '/uploads/documents/roberto_cruz_business_permit.pdf', 'business_permit_2024.pdf', 2156432, '2025-11-12 03:36:25', 'verified', NULL, '2024-03-05 06:15:00', NULL, '2024-12-31', 'Electronics repair permit'),
-(29, 14, 3, '/uploads/documents/roberto_cruz_fire_safety.pdf', 'fire_safety_cert.pdf', 1847293, '2025-11-12 03:36:25', 'verified', NULL, '2024-03-05 06:20:00', NULL, '2025-03-01', 'Fire safety certificate'),
-(30, 15, 1, '/uploads/documents/elena_reyes_business_permit.pdf', 'business_permit_2023.pdf', 1923847, '2025-11-12 03:36:25', 'expired', NULL, '2023-06-05 01:15:00', NULL, '2023-12-31', 'Business permit expired, renewal needed'),
-(31, 15, 5, '/uploads/documents/elena_reyes_valid_id.pdf', 'national_id.pdf', 1672834, '2025-11-12 03:36:25', 'verified', NULL, '2023-06-05 01:20:00', NULL, '2030-12-31', 'National ID'),
-(32, 16, 1, '/uploads/documents/carlos_mendoza_business_permit.pdf', 'food_business_permit.pdf', 2387456, '2025-11-12 03:36:25', 'verified', NULL, '2024-02-20 03:00:00', NULL, '2024-12-31', 'Food business permit'),
-(33, 16, 2, '/uploads/documents/carlos_mendoza_sanitary_permit.pdf', 'sanitary_permit.pdf', 1923874, '2025-11-12 03:36:25', 'verified', NULL, '2024-02-20 03:05:00', NULL, '2024-12-31', 'Health department permit'),
-(34, 16, 10, '/uploads/documents/carlos_mendoza_health_cert.pdf', 'health_certificate.pdf', 1456732, '2025-11-12 03:36:25', 'verified', NULL, '2024-02-20 03:10:00', NULL, '2024-08-20', 'Medical certificate'),
-(35, 17, 1, '/uploads/documents/ana_villanueva_business_permit.pdf', 'meat_business_permit.pdf', 2198374, '2025-11-12 03:36:25', 'verified', NULL, '2024-01-05 07:30:00', NULL, '2024-12-31', 'Meat vendor permit'),
-(36, 17, 2, '/uploads/documents/ana_villanueva_sanitary_permit.pdf', 'meat_sanitary_permit.pdf', 1847293, '2025-11-12 03:36:25', 'verified', NULL, '2024-01-05 07:35:00', NULL, '2024-12-31', 'Meat handling permit');
 
 -- --------------------------------------------------------
 
@@ -6686,7 +6692,7 @@ ALTER TABLE `violation_report`
 -- AUTO_INCREMENT for table `applicant`
 --
 ALTER TABLE `applicant`
-  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `applicant_documents`
@@ -6734,7 +6740,7 @@ ALTER TABLE `business_employee`
 -- AUTO_INCREMENT for table `business_information`
 --
 ALTER TABLE `business_information`
-  MODIFY `business_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `business_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `business_manager`
@@ -6836,7 +6842,7 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `other_information`
 --
 ALTER TABLE `other_information`
-  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -6884,7 +6890,7 @@ ALTER TABLE `section`
 -- AUTO_INCREMENT for table `spouse`
 --
 ALTER TABLE `spouse`
-  MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `stall`
@@ -6896,7 +6902,7 @@ ALTER TABLE `stall`
 -- AUTO_INCREMENT for table `stallholder`
 --
 ALTER TABLE `stallholder`
-  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `stallholder_documents`
