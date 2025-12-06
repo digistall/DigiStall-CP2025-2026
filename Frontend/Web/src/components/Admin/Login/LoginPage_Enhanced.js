@@ -1,16 +1,19 @@
 // ===== ENHANCED LOGIN PAGE WITH JWT AUTH =====
 import { useAuthStore } from '../../../stores/authStore'
 import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
+import LoadingScreen from '../../Common/LoadingScreen/LoadingScreen.vue'
 
 export default {
   name: 'LoginPage',
   components: {
     UniversalPopup,
+    LoadingScreen,
   },
   data() {
     return {
       valid: false,
       loading: false,
+      showLoadingScreen: false,
       username: '',
       password: '',
       showPassword: false,
@@ -21,6 +24,10 @@ export default {
       loadingText: 'Authenticating',
       loadingSubtext: 'Verifying your credentials',
       redirectTimeout: null,
+      // Logged in user info for loading screen
+      loggedInUserName: '',
+      loggedInUserRole: '',
+      loggedInBranchName: '',
       // Universal popup for errors
       errorPopup: {
         show: false,
@@ -126,17 +133,26 @@ export default {
         )
 
         if (result.success) {
-          // Login successful - keep loading state and redirect immediately
-          this.loadingText = 'Success'
-          this.loadingSubtext = 'Redirecting to dashboard'
+          // Login successful - show professional loading screen
+          this.loading = false
+          
+          // Get user info for loading screen
+          const userData = sessionStorage.getItem('currentUser')
+          if (userData) {
+            try {
+              const user = JSON.parse(userData)
+              this.loggedInUserName = user.fullName || user.full_name || user.username || 'User'
+              this.loggedInUserRole = user.userType || ''
+              this.loggedInBranchName = user.branchName || user.branch_name || ''
+            } catch (e) {
+              console.error('Error parsing user data for loading screen:', e)
+              this.loggedInUserName = 'User'
+            }
+          }
 
-          console.log('✅ Login successful, redirecting to dashboard')
-
-          // Redirect to dashboard immediately (no popup, just loading state)
-          setTimeout(() => {
-            this.loading = false
-            this.$router.push('/app/dashboard')
-          }, 800)
+          // Show the professional loading screen
+          this.showLoadingScreen = true
+          console.log('✅ Login successful, showing loading screen')
         } else {
           this.loading = false
           // Login failed
@@ -242,6 +258,17 @@ export default {
 
     goToLandingPage() {
       this.$router.push('/')
+    },
+
+    // Loading screen event handlers
+    onLoadingComplete() {
+      console.log('📋 Loading animation complete')
+    },
+
+    onReadyToNavigate() {
+      console.log('🚀 Ready to navigate to dashboard')
+      this.showLoadingScreen = false
+      this.$router.push('/app/dashboard')
     },
   },
 
