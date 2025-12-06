@@ -9,8 +9,10 @@ import {
 } from "react-native";
 import PaymentCard from "./Components/PaymentCard/PaymentCard";
 import PaymentTable from "./Components/PaymentTable/PaymentTable";
+import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
 
 const PaymentScreen = ({ navigation, onBack }) => {
+  const { theme, isDark } = useTheme();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   const handlePaymentMethodSelect = (method) => {
@@ -43,16 +45,22 @@ const PaymentScreen = ({ navigation, onBack }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Payment Method Selection with Proceed Button */}
         <PaymentCard
           onPaymentMethodSelect={handlePaymentMethodSelect}
           onProceedPayment={handleProceedPayment}
+          theme={theme}
+          isDark={isDark}
         />
 
         {/* Payment Records Table */}
-        <PaymentTable selectedPaymentMethod={selectedPaymentMethod} />
+        <PaymentTable 
+          selectedPaymentMethod={selectedPaymentMethod}
+          theme={theme}
+          isDark={isDark}
+        />
       </ScrollView>
     </View>
   );
@@ -61,7 +69,6 @@ const PaymentScreen = ({ navigation, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
   },
 
   content: {

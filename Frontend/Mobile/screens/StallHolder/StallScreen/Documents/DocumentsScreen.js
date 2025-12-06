@@ -18,10 +18,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import API Service
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
 const { width, height } = Dimensions.get("window");
 
 const DocumentsScreen = () => {
+  const { theme, isDark } = useTheme();
+  
   // State for tabs and data
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [branchTabs, setBranchTabs] = useState([]);
@@ -297,24 +300,24 @@ const DocumentsScreen = () => {
     const isUserStallholder = userData?.isStallholder || userData?.stallholder != null;
     
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
         <Image 
           source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
           style={styles.emptyIcon}
           resizeMode="contain"
         />
-        <Text style={styles.emptyTitle}>
+        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
           {isUserStallholder ? 'No Document Requirements' : 'No Active Stalls'}
         </Text>
-        <Text style={styles.emptyText}>
+        <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
           {isUserStallholder 
             ? 'The business owner has not set up document requirements for your stall yet. Please check back later or contact your branch administrator.'
             : 'You don\'t have any active stalls yet. Once your application is approved and your contract is active, you\'ll see the required documents for your stalls here.'
           }
         </Text>
         {!isUserStallholder && userData?.applicationStatus && (
-          <View style={styles.statusBadgeContainer}>
-            <Text style={styles.statusLabel}>Application Status: </Text>
+          <View style={[styles.statusBadgeContainer, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.statusLabel, { color: theme.colors.textSecondary }]}>Application Status: </Text>
             <Text style={[
               styles.statusValue,
               { color: userData.applicationStatus === 'Approved' ? '#10b981' : '#f59e0b' }
@@ -329,19 +332,19 @@ const DocumentsScreen = () => {
 
   // Render document card
   const renderDocumentCard = (doc, index, stallholderId) => (
-    <View key={doc.document_type_id} style={styles.documentCard}>
+    <View key={doc.document_type_id} style={[styles.documentCard, { backgroundColor: theme.colors.card }]}>
       <View style={styles.documentHeader}>
         <View style={styles.documentTitleRow}>
           <Text style={styles.documentIcon}>
             {getStatusIcon(doc.status)}
           </Text>
           <View style={styles.documentInfo}>
-            <Text style={styles.documentName}>
+            <Text style={[styles.documentName, { color: theme.colors.text }]}>
               {index + 1}. {doc.document_name}
               {doc.is_required && <Text style={styles.required}> *</Text>}
             </Text>
             {doc.description && (
-              <Text style={styles.documentDescription}>
+              <Text style={[styles.documentDescription, { color: theme.colors.textSecondary }]}>
                 {doc.description}
               </Text>
             )}
@@ -361,12 +364,12 @@ const DocumentsScreen = () => {
       </View>
 
       {doc.instructions && (
-        <Text style={styles.instructions}>{doc.instructions}</Text>
+        <Text style={[styles.instructions, { color: theme.colors.textSecondary }]}>{doc.instructions}</Text>
       )}
 
       {doc.status !== 'not_uploaded' && (
         <View style={styles.documentDetails}>
-          <Text style={styles.detailText}>
+          <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
             Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
           </Text>
           {doc.expiry_date && (
@@ -423,11 +426,11 @@ const DocumentsScreen = () => {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
         }
       >
         {/* Branch Info Header */}
-        <View style={styles.branchInfoCard}>
+        <View style={[styles.branchInfoCard, { backgroundColor: theme.colors.primary }]}>
           <Text style={styles.branchName}>{branch_name}</Text>
           <Text style={styles.ownerName}>Business Owner: {business_owner_name || 'Not assigned'}</Text>
           <View style={styles.stallsInfo}>
@@ -440,22 +443,25 @@ const DocumentsScreen = () => {
           </View>
         </View>
 
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           Upload the required documents for this branch. Documents are customized
           based on the business owner's requirements.
         </Text>
 
         {/* Progress Card */}
-        <View style={styles.progressCard}>
-          <Text style={styles.progressTitle}>Document Status</Text>
-          <Text style={styles.progressText}>
+        <View style={[styles.progressCard, { backgroundColor: theme.colors.card }]}>
+          <Text style={[styles.progressTitle, { color: theme.colors.text }]}>Document Status</Text>
+          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
             {getUploadedCount(document_requirements)} of {getRequiredCount(document_requirements)} required documents uploaded
           </Text>
-          <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBarContainer, { backgroundColor: isDark ? theme.colors.border : '#e2e8f0' }]}>
             <View 
               style={[
                 styles.progressBar,
-                { width: `${(getUploadedCount(document_requirements) / Math.max(getRequiredCount(document_requirements), 1)) * 100}%` }
+                { 
+                  width: `${(getUploadedCount(document_requirements) / Math.max(getRequiredCount(document_requirements), 1)) * 100}%`,
+                  backgroundColor: theme.colors.primary
+                }
               ]} 
             />
           </View>
@@ -463,11 +469,11 @@ const DocumentsScreen = () => {
 
         {/* Document List */}
         <View style={styles.documentsContainer}>
-          <Text style={styles.sectionTitle}>Required Documents</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Required Documents</Text>
           
           {!document_requirements || document_requirements.length === 0 ? (
-            <View style={styles.emptyDocState}>
-              <Text style={styles.emptyDocText}>
+            <View style={[styles.emptyDocState, { backgroundColor: isDark ? theme.colors.surface : '#f8fafc', borderColor: theme.colors.border }]}>
+              <Text style={[styles.emptyDocText, { color: theme.colors.textSecondary }]}>
                 No document requirements set by the business owner for this branch yet.
               </Text>
             </View>
@@ -484,14 +490,14 @@ const DocumentsScreen = () => {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#305CDE" />
-        <Text style={styles.loadingText}>Loading documents...</Text>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading documents...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {uploading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="large" color="#ffffff" />
@@ -504,7 +510,7 @@ const DocumentsScreen = () => {
       ) : (
         <>
           {/* Tab Navigation - Similar to TabbedStallScreen */}
-          <View style={styles.tabContainer}>
+          <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -515,18 +521,21 @@ const DocumentsScreen = () => {
                   key={tab.id}
                   style={[
                     styles.tab,
-                    activeTabIndex === index && styles.activeTab
+                    { backgroundColor: isDark ? theme.colors.card : '#f1f5f9' },
+                    activeTabIndex === index && [styles.activeTab, { backgroundColor: theme.colors.primary }]
                   ]}
                   onPress={() => handleTabPress(index)}
                 >
                   <Text style={[
                     styles.tabText,
+                    { color: theme.colors.textSecondary },
                     activeTabIndex === index && styles.activeTabText
                   ]}>
                     {tab.label}
                   </Text>
                   <Text style={[
                     styles.tabSubtext,
+                    { color: theme.colors.textTertiary },
                     activeTabIndex === index && styles.activeTabSubtext
                   ]}>
                     {tab.stallCount} stall{tab.stallCount !== 1 ? 's' : ''}

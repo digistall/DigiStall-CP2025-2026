@@ -9,12 +9,26 @@ import {
 
 const { width, height } = Dimensions.get("window");
 
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    border: '#e5e7eb',
+    textSecondary: '#6b7280',
+    primary: '#3b82f6',
+  }
+};
+
 const Navbar = ({
   activeTab = null,
   onStallPress,
   onDocumentsPress,
   onPaymentPress,
+  theme = defaultTheme,
+  isDarkMode = false,
 }) => {
+  const colors = theme?.colors || defaultTheme.colors;
+  
   const navItems = [
     {
       id: "Stall",
@@ -37,7 +51,10 @@ const Navbar = ({
   ];
 
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { 
+      backgroundColor: colors.surface, 
+      borderTopColor: colors.border 
+    }]}>
       {navItems.map((item) => {
         // Only show active state if activeTab matches the item id
         const isActive = activeTab === item.id;
@@ -51,10 +68,18 @@ const Navbar = ({
           >
             <Image
               source={item.icon}
-              style={[styles.navIcon, isActive && styles.activeNavIcon]}
+              style={[
+                styles.navIcon, 
+                { tintColor: isActive ? colors.primary : colors.textSecondary },
+                isActive && styles.activeNavIcon
+              ]}
               resizeMode="contain"
             />
-            <Text style={[styles.navText, isActive && styles.activeNavText]}>
+            <Text style={[
+              styles.navText, 
+              { color: isActive ? colors.primary : colors.textSecondary },
+              isActive && styles.activeNavText
+            ]}>
               {item.label}
             </Text>
           </TouchableOpacity>
@@ -67,9 +92,7 @@ const Navbar = ({
 const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: "row",
-    backgroundColor: "#ffffff",
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
     paddingVertical: height * 0.015,
     paddingHorizontal: width * 0.04,
     minHeight: 70,
@@ -99,24 +122,19 @@ const styles = StyleSheet.create({
     minWidth: 20,
     minHeight: 20,
     marginBottom: 4,
-    // Default tint color for inactive state
-    tintColor: "#6b7280",
   },
   navText: {
     fontSize: width * 0.03,
     maxFontSize: 14,
     minFontSize: 10,
-    color: "#6b7280",
     textAlign: "center",
     fontWeight: "400",
   },
   activeNavIcon: {
-    tintColor: "#3b82f6",
     // Add slight scale effect for active state
     transform: [{ scale: 1.1 }],
   },
   activeNavText: {
-    color: "#3b82f6",
     fontWeight: "600",
   },
 });

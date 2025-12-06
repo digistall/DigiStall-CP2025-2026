@@ -18,10 +18,12 @@ import StallCard from './components/StallCard';
 // Import services
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const TabbedStallScreen = () => {
+  const { theme, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('Fixed Price'); // Default to Fixed Price
   const [stallsData, setStallsData] = useState([]);
   const [filteredStalls, setFilteredStalls] = useState([]);
@@ -262,15 +264,16 @@ const TabbedStallScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.id}
             style={[
               styles.tab,
-              activeTab === tab.id && styles.activeTab
+              { backgroundColor: isDark ? theme.colors.card : '#f8f9fa' },
+              activeTab === tab.id && [styles.activeTab, { backgroundColor: theme.colors.primary }]
             ]}
             onPress={() => handleTabPress(tab.id)}
           >
@@ -284,6 +287,7 @@ const TabbedStallScreen = () => {
             />
             <Text style={[
               styles.tabText,
+              { color: theme.colors.textSecondary },
               activeTab === tab.id && styles.activeTabText
             ]}>
               {tab.label}
@@ -301,13 +305,15 @@ const TabbedStallScreen = () => {
         searchText={searchText}
         onSearchChange={setSearchText}
         availableFilters={availableFilters}
+        theme={theme}
+        isDark={isDark}
       />
 
       {/* Stalls List */}
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Loading {activeTab} stalls...</Text>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading {activeTab} stalls...</Text>
         </View>
       ) : (
         <ScrollView 
@@ -317,8 +323,8 @@ const TabbedStallScreen = () => {
         >
           {filteredStalls.length > 0 ? (
             <>
-              <View style={styles.resultsHeader}>
-                <Text style={styles.resultsText}>
+              <View style={[styles.resultsHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+                <Text style={[styles.resultsText, { color: theme.colors.text }]}>
                   {filteredStalls.length} {activeTab} stall{filteredStalls.length !== 1 ? 's' : ''} found
                 </Text>
               </View>
@@ -330,18 +336,20 @@ const TabbedStallScreen = () => {
                   onApply={() => handleStallApplication(stall.id)}
                   isApplying={applying === stall.id}
                   stallType={activeTab}
+                  theme={theme}
+                  isDark={isDark}
                 />
               ))}
             </>
           ) : (
-            <View style={styles.emptyContainer}>
+            <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
               <Image 
                 source={require('../../../../assets/Home-Image/StallIcon.png')} 
-                style={styles.emptyIcon}
+                style={[styles.emptyIcon, { tintColor: theme.colors.textSecondary }]}
                 resizeMode="contain"
               />
-              <Text style={styles.emptyTitle}>No {activeTab} Stalls Found</Text>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No {activeTab} Stalls Found</Text>
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
                 {searchText || selectedFilter !== 'ALL' 
                   ? 'Try adjusting your search or filter criteria'
                   : `No ${activeTab} stalls are currently available in your area`

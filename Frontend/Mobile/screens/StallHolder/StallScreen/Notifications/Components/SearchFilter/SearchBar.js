@@ -14,6 +14,7 @@ const SearchBar = ({
   searchText,
   onSearchChange,
   placeholder = "Search notifications...",
+  theme,
 }) => {
   const handleSubmitEditing = () => {
     Keyboard.dismiss();
@@ -25,15 +26,15 @@ const SearchBar = ({
   };
 
   return (
-    <View style={styles.searchContainer}>
-      <Icon name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+    <View style={[styles.searchContainer, theme && { backgroundColor: theme.colors.background }]}>
+      <Icon name="search" size={20} color={theme ? theme.colors.textTertiary : "#9CA3AF"} style={styles.searchIcon} />
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, theme && { color: theme.colors.text }]}
         placeholder={placeholder}
         value={searchText}
         onChangeText={onSearchChange}
         onSubmitEditing={handleSubmitEditing}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={theme ? theme.colors.textTertiary : "#9CA3AF"}
         returnKeyType="search"
         autoCapitalize="none"
         autoCorrect={false}
@@ -44,7 +45,7 @@ const SearchBar = ({
           onPress={handleClearSearch}
           style={styles.clearButton}
         >
-          <Icon name="clear" size={18} color="#9CA3AF" />
+          <Icon name="clear" size={18} color={theme ? theme.colors.textTertiary : "#9CA3AF"} />
         </TouchableOpacity>
       )}
     </View>

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { mockUser } from "../mockUser";
 import EditProfileModal from "../EditComponents/editProfile";
 import UserStorageService from "../../../../../../../services/UserStorageService";
-// import { useTheme } from "../ThemeContext"; babalikan kita soon, darkmode.
+import { useTheme } from "../../../../Settings/components/ThemeComponents/ThemeContext";
+
+const { width, height } = Dimensions.get("window");
 
 const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
+  const { theme, isDark } = useTheme();
   console.log("ProfileDisplay component rendered with user:", user);
 
   // state for controlling edit modal visibility
@@ -180,6 +183,9 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
     }
   };
 
+  // Create themed styles
+  const styles = createThemedStyles(theme);
+
   const InfoSection = ({ title, children }) => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -319,6 +325,133 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
   );
 };
 
-import { ProfileStyles as styles } from "./ProfileStyles";
+// Create themed styles function
+const createThemedStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  backButton: {
+    position: "absolute",
+    top: height * 0.02,
+    left: width * 0.02,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 1,
+  },
+  backButtonText: {
+    color: "#fff",
+    fontSize: width * 0.04,
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  editButton: {
+    position: "absolute",
+    top: height * 0.02,
+    right: width * 0.02,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 1,
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: width * 0.04,
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  header: {
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    paddingVertical: height * 0.04,
+    paddingHorizontal: width * 0.06,
+  },
+  avatarContainer: {
+    width: width * 0.2,
+    height: width * 0.2,
+    borderRadius: width * 0.1,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: height * 0.015,
+  },
+  avatarText: {
+    fontSize: width * 0.08,
+    fontWeight: "bold",
+    color: "white",
+  },
+  profileName: {
+    fontSize: width * 0.06,
+    fontWeight: "bold",
+    color: theme.colors.text,
+    textAlign: "center",
+    marginBottom: height * 0.005,
+  },
+  profileEmail: {
+    fontSize: width * 0.04,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
+  section: {
+    backgroundColor: theme.colors.card,
+    marginHorizontal: width * 0.04,
+    marginTop: height * 0.02,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: width * 0.05,
+    fontWeight: "bold",
+    color: theme.colors.text,
+    padding: width * 0.04,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  sectionContent: {
+    padding: width * 0.04,
+  },
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: height * 0.015,
+    alignItems: "flex-start",
+  },
+  label: {
+    fontSize: width * 0.04,
+    fontWeight: "600",
+    color: theme.colors.text,
+    width: "40%",
+    marginRight: width * 0.02,
+  },
+  value: {
+    fontSize: width * 0.04,
+    color: theme.colors.textSecondary,
+    flex: 1,
+    textAlign: "right",
+  },
+  footer: {
+    alignItems: "center",
+    paddingVertical: height * 0.03,
+    paddingHorizontal: width * 0.06,
+  },
+  footerText: {
+    fontSize: width * 0.035,
+    color: theme.colors.textSecondary,
+    fontStyle: "italic",
+  },
+});
 
 export default ProfileDisplay;
