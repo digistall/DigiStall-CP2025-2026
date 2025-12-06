@@ -151,13 +151,69 @@ export const mobileLogin = async (req, res) => {
       max_applications_reached: (branchApplicationCounts[stall.branch_id] || 0) >= 2
     }))
 
-    // Step 7: Get additional applicant information
-    const [otherInfo] = await connection.execute(
+    // Step 7: Get additional applicant information (spouse, business, other info)
+    const [otherInfoResult] = await connection.execute(
       'CALL getApplicantAdditionalInfo(?)',
       [userCredentials.applicant_id]
     )
+    // Stored procedure returns [[rows], metadata] - extract first row from first array
+    const additionalInfo = otherInfoResult.length > 0 && otherInfoResult[0] ? otherInfoResult[0] : {}
+    console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
-    const additionalInfo = otherInfo.length > 0 ? otherInfo[0] : {}
+    // Step 7b: Get stallholder information if user is a stallholder
+    const [stallholderResult] = await connection.execute(`
+      SELECT 
+        sh.stallholder_id,
+        sh.stallholder_name,
+        sh.business_name,
+        sh.business_type,
+        sh.contact_number as stallholder_contact,
+        sh.email as stallholder_email,
+        sh.address as stallholder_address,
+        sh.branch_id,
+        sh.stall_id,
+        sh.contract_start_date,
+        sh.contract_end_date,
+        sh.contract_status,
+        sh.compliance_status,
+        s.stall_no,
+        s.size,
+        s.rental_price as monthly_rent,
+        s.stall_location,
+        b.branch_name,
+        b.area as branch_area,
+        'Pending' as payment_status
+      FROM stallholder sh
+      INNER JOIN stall s ON sh.stall_id = s.stall_id
+      INNER JOIN branch b ON sh.branch_id = b.branch_id
+      WHERE sh.applicant_id = ?
+      LIMIT 1
+    `, [userCredentials.applicant_id])
+    
+    const stallholderInfo = stallholderResult.length > 0 ? stallholderResult[0] : null
+    console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
+
+    // Step 7c: Get application status
+    const [applicationResult] = await connection.execute(`
+      SELECT 
+        app.application_id,
+        app.stall_id,
+        app.application_status as status,
+        app.application_date,
+        s.stall_no,
+        s.rental_price,
+        b.branch_name
+      FROM application app
+      INNER JOIN stall s ON app.stall_id = s.stall_id
+      INNER JOIN floor f ON s.floor_id = f.floor_id
+      INNER JOIN branch b ON f.branch_id = b.branch_id
+      WHERE app.applicant_id = ?
+      ORDER BY app.application_date DESC
+      LIMIT 1
+    `, [userCredentials.applicant_id])
+    
+    const applicationInfo = applicationResult.length > 0 ? applicationResult[0] : null
+    console.log('📄 Application info:', applicationInfo ? applicationInfo.status : 'No application')
 
     // Step 8: Update last login using stored procedure
     await connection.execute(
@@ -165,7 +221,7 @@ export const mobileLogin = async (req, res) => {
       [userCredentials.applicant_id]
     )
 
-    // Step 9: Prepare React.js-friendly response
+    // Step 9: Prepare React.js-friendly response with complete user data
     const responseData = {
       // User profile for React state
       user: {
@@ -178,12 +234,79 @@ export const mobileLogin = async (req, res) => {
         birthdate: userCredentials.applicant_birthdate,
         civil_status: userCredentials.applicant_civil_status,
         educational_attainment: userCredentials.applicant_educational_attainment,
-        email: additionalInfo.email_address || null, // Get email from other_information table
+        email: additionalInfo.email_address || null,
         created_date: userCredentials.created_date,
         last_login: new Date().toISOString()
       },
 
-      // Additional profile information
+      // Spouse information (separate object for frontend)
+      spouse: additionalInfo.spouse_full_name ? {
+        spouse_id: null, // Not available in current query
+        full_name: additionalInfo.spouse_full_name,
+        birthdate: additionalInfo.spouse_birthdate,
+        educational_attainment: additionalInfo.spouse_educational_attainment,
+        contact_number: additionalInfo.spouse_contact_number,
+        occupation: additionalInfo.spouse_occupation
+      } : null,
+
+      // Business information (separate object for frontend)
+      business: additionalInfo.nature_of_business ? {
+        business_id: null,
+        nature_of_business: additionalInfo.nature_of_business,
+        capitalization: additionalInfo.capitalization,
+        source_of_capital: additionalInfo.source_of_capital,
+        previous_business_experience: additionalInfo.previous_business_experience,
+        relative_stall_owner: additionalInfo.relative_stall_owner
+      } : null,
+
+      // Other information (separate object for frontend)
+      other_info: additionalInfo.email_address ? {
+        other_info_id: null,
+        email_address: additionalInfo.email_address,
+        signature_of_applicant: additionalInfo.signature_of_applicant,
+        house_sketch_location: additionalInfo.house_sketch_location,
+        valid_id: additionalInfo.valid_id
+      } : null,
+
+      // Application information
+      application: applicationInfo ? {
+        application_id: applicationInfo.application_id,
+        stall_id: applicationInfo.stall_id,
+        status: applicationInfo.status,
+        stall_no: applicationInfo.stall_no,
+        rental_price: applicationInfo.rental_price,
+        branch_name: applicationInfo.branch_name
+      } : null,
+
+      // Stallholder information (if user is a stallholder)
+      stallholder: stallholderInfo ? {
+        stallholder_id: stallholderInfo.stallholder_id,
+        stallholder_name: stallholderInfo.stallholder_name,
+        contact_number: stallholderInfo.stallholder_contact,
+        email: stallholderInfo.stallholder_email,
+        address: stallholderInfo.stallholder_address,
+        business_name: stallholderInfo.business_name,
+        business_type: stallholderInfo.business_type,
+        branch_id: stallholderInfo.branch_id,
+        branch_name: stallholderInfo.branch_name,
+        stall_id: stallholderInfo.stall_id,
+        stall_no: stallholderInfo.stall_no,
+        stall_location: stallholderInfo.stall_location,
+        size: stallholderInfo.size,
+        contract_start_date: stallholderInfo.contract_start_date,
+        contract_end_date: stallholderInfo.contract_end_date,
+        contract_status: stallholderInfo.contract_status,
+        monthly_rent: stallholderInfo.monthly_rent,
+        payment_status: stallholderInfo.payment_status,
+        compliance_status: stallholderInfo.compliance_status
+      } : null,
+
+      // Computed fields for easy access
+      isStallholder: !!stallholderInfo,
+      isApproved: applicationInfo?.status === 'Approved',
+      applicationStatus: applicationInfo?.status || 'No Application',
+
+      // Legacy profile structure (for backward compatibility)
       profile: {
         other_info: {
           email_address: additionalInfo.email_address,

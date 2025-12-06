@@ -52,13 +52,17 @@ const DocumentsScreen = () => {
       const userToken = await AsyncStorage.getItem('userToken');
       const storedUserData = await UserStorageService.getUserData();
       
-      console.log('📱 Loaded user data:', JSON.stringify(storedUserData, null, 2));
+      console.log('📱 Documents - Loaded user data:', JSON.stringify(storedUserData, null, 2));
+      console.log('📱 Documents - Token available:', !!userToken);
+      console.log('📱 Documents - Is Stallholder:', storedUserData?.isStallholder);
+      console.log('📱 Documents - Applicant ID:', storedUserData?.user?.applicant_id || storedUserData?.user?.id);
       
-      if (userToken && storedUserData) {
+      if (storedUserData) {
         setToken(userToken);
         setUserData(storedUserData);
       } else {
         // No user data found, stop loading
+        console.log('❌ No user data found in storage');
         setLoading(false);
       }
     } catch (error) {
@@ -289,20 +293,39 @@ const DocumentsScreen = () => {
   };
 
   // Render empty state when no stalls owned
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Image 
-        source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
-        style={styles.emptyIcon}
-        resizeMode="contain"
-      />
-      <Text style={styles.emptyTitle}>No Stalls Owned</Text>
-      <Text style={styles.emptyText}>
-        You don't own any stalls yet. Once you're approved as a stallholder, 
-        you'll see the required documents for your stalls here.
-      </Text>
-    </View>
-  );
+  const renderEmptyState = () => {
+    const isUserStallholder = userData?.isStallholder || userData?.stallholder != null;
+    
+    return (
+      <View style={styles.emptyContainer}>
+        <Image 
+          source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
+          style={styles.emptyIcon}
+          resizeMode="contain"
+        />
+        <Text style={styles.emptyTitle}>
+          {isUserStallholder ? 'No Document Requirements' : 'No Active Stalls'}
+        </Text>
+        <Text style={styles.emptyText}>
+          {isUserStallholder 
+            ? 'The business owner has not set up document requirements for your stall yet. Please check back later or contact your branch administrator.'
+            : 'You don\'t have any active stalls yet. Once your application is approved and your contract is active, you\'ll see the required documents for your stalls here.'
+          }
+        </Text>
+        {!isUserStallholder && userData?.applicationStatus && (
+          <View style={styles.statusBadgeContainer}>
+            <Text style={styles.statusLabel}>Application Status: </Text>
+            <Text style={[
+              styles.statusValue,
+              { color: userData.applicationStatus === 'Approved' ? '#10b981' : '#f59e0b' }
+            ]}>
+              {userData.applicationStatus}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   // Render document card
   const renderDocumentCard = (doc, index, stallholderId) => (
@@ -712,6 +735,24 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  statusBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+  },
+  statusLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  statusValue: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyDocState: {
     padding: 32,

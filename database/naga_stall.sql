@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 05, 2025 at 11:07 PM
+-- Generation Time: Dec 06, 2025 at 07:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2716,41 +2716,88 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `reportStallholder` (IN `p_inspector
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAllAutoIncrements` ()   BEGIN
-    DECLARE done INT DEFAULT FALSE;
-    DECLARE tblName VARCHAR(255);
-    DECLARE tableCount INT DEFAULT 0;
     
-    -- Cursor for all tables with auto_increment columns
-    DECLARE tableCursor CURSOR FOR
-        SELECT DISTINCT TABLE_NAME 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_SCHEMA = DATABASE() 
-        AND EXTRA LIKE '%auto_increment%';
+    CALL ResetAutoIncrement('applicant', 'applicant_id');
+    CALL ResetAutoIncrement('applicant_documents', 'document_id');
+    CALL ResetAutoIncrement('credential', 'registrationid');
+    CALL ResetAutoIncrement('stallholder', 'stallholder_id');
     
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
     
-    -- Disable foreign key checks
-    SET FOREIGN_KEY_CHECKS = 0;
+    CALL ResetAutoIncrement('branch', 'branch_id');
+    CALL ResetAutoIncrement('floor', 'floor_id');
+    CALL ResetAutoIncrement('section', 'section_id');
+    CALL ResetAutoIncrement('stall', 'stall_id');
     
-    OPEN tableCursor;
     
-    read_loop: LOOP
-        FETCH tableCursor INTO tblName;
-        IF done THEN
-            LEAVE read_loop;
-        END IF;
-        
-        -- Reset auto_increment for this table
-        CALL ResetTableAutoIncrement(tblName);
-        SET tableCount = tableCount + 1;
-    END LOOP;
+    CALL ResetAutoIncrement('business_employee', 'business_employee_id');
+    CALL ResetAutoIncrement('business_manager', 'business_manager_id');
+    CALL ResetAutoIncrement('stall_business_owner', 'business_owner_id');
+    CALL ResetAutoIncrement('system_administrator', 'system_admin_id');
+    CALL ResetAutoIncrement('inspector', 'inspector_id');
     
-    CLOSE tableCursor;
     
-    -- Re-enable foreign key checks
-    SET FOREIGN_KEY_CHECKS = 1;
+    CALL ResetAutoIncrement('spouse', 'spouse_id');
+    CALL ResetAutoIncrement('business_information', 'business_id');
+    CALL ResetAutoIncrement('other_information', 'other_info_id');
+    CALL ResetAutoIncrement('stall_applications', 'application_id');
     
-    SELECT CONCAT('✅ Reset AUTO_INCREMENT for ', tableCount, ' tables') AS summary;
+    
+    CALL ResetAutoIncrement('raffle', 'raffle_id');
+    CALL ResetAutoIncrement('auction', 'auction_id');
+    CALL ResetAutoIncrement('auction_bids', 'bid_id');
+    CALL ResetAutoIncrement('auction_result', 'result_id');
+    CALL ResetAutoIncrement('raffle_participants', 'participant_id');
+    CALL ResetAutoIncrement('raffle_result', 'result_id');
+    
+    
+    CALL ResetAutoIncrement('complaint', 'complaint_id');
+    CALL ResetAutoIncrement('payments', 'payment_id');
+    CALL ResetAutoIncrement('violation', 'violation_id');
+    CALL ResetAutoIncrement('violation_penalty', 'penalty_id');
+    CALL ResetAutoIncrement('violation_report', 'report_id');
+    
+    
+    CALL ResetAutoIncrement('document_types', 'document_type_id');
+    CALL ResetAutoIncrement('branch_document_requirements', 'requirement_id');
+    CALL ResetAutoIncrement('stallholder_documents', 'document_id');
+    CALL ResetAutoIncrement('stallholder_document_submissions', 'submission_id');
+    
+    
+    CALL ResetAutoIncrement('subscription_plans', 'plan_id');
+    CALL ResetAutoIncrement('subscription_payments', 'payment_id');
+    CALL ResetAutoIncrement('business_owner_subscriptions', 'subscription_id');
+    CALL ResetAutoIncrement('business_owner_managers', 'relationship_id');
+    
+    
+    CALL ResetAutoIncrement('employee_activity_log', 'log_id');
+    CALL ResetAutoIncrement('employee_credential_log', 'log_id');
+    CALL ResetAutoIncrement('employee_email_template', 'template_id');
+    CALL ResetAutoIncrement('employee_password_reset', 'reset_id');
+    CALL ResetAutoIncrement('employee_session', 'session_id');
+    
+    
+    CALL ResetAutoIncrement('inspector_action_log', 'action_id');
+    CALL ResetAutoIncrement('inspector_assignment', 'assignment_id');
+    
+    
+    CALL ResetAutoIncrement('payment_status_log', 'log_id');
+    CALL ResetAutoIncrement('raffle_auction_log', 'log_id');
+    
+    SELECT '??? All auto_increments have been reset!' AS result;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAutoIncrement` (IN `tbl_name` VARCHAR(100), IN `pk_column` VARCHAR(100))   BEGIN
+    SET @max_id = 0;
+    SET @sql = CONCAT('SELECT COALESCE(MAX(', pk_column, '), 0) INTO @max_id FROM ', tbl_name);
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    
+    SET @new_auto = @max_id + 1;
+    SET @alter_sql = CONCAT('ALTER TABLE ', tbl_name, ' AUTO_INCREMENT = ', @new_auto);
+    PREPARE alter_stmt FROM @alter_sql;
+    EXECUTE alter_stmt;
+    DEALLOCATE PREPARE alter_stmt;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `resetBusinessEmployeePassword` (IN `p_employee_id` INT, IN `p_new_password_hash` VARCHAR(255), IN `p_reset_by` INT)   BEGIN
@@ -4688,7 +4735,17 @@ CREATE TABLE `applicant` (
 --
 
 INSERT INTO `applicant` (`applicant_id`, `applicant_full_name`, `applicant_contact_number`, `applicant_address`, `applicant_birthdate`, `applicant_civil_status`, `applicant_educational_attainment`, `created_at`, `updated_at`, `applicant_username`, `applicant_email`, `applicant_password_hash`, `email_verified`, `last_login`, `login_attempts`, `account_locked_until`) VALUES
-(47, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2005-01-24', 'Married', 'College Graduate', '2025-12-05 21:39:33', '2025-12-05 21:39:33', NULL, NULL, NULL, 0, NULL, 0, NULL);
+(1, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2005-01-24', 'Married', 'College Graduate', '2025-12-05 21:39:33', '2025-12-05 22:28:46', NULL, NULL, NULL, 0, NULL, 0, NULL);
+
+--
+-- Triggers `applicant`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_applicant_reset_auto` AFTER DELETE ON `applicant` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('applicant', 'applicant_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -4717,6 +4774,16 @@ CREATE TABLE `applicant_documents` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Documents uploaded by applicants for different business owners';
 
+--
+-- Triggers `applicant_documents`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_applicant_documents_reset_auto` AFTER DELETE ON `applicant_documents` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('applicant_documents', 'document_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -4738,7 +4805,17 @@ CREATE TABLE `application` (
 --
 
 INSERT INTO `application` (`application_id`, `stall_id`, `applicant_id`, `application_date`, `application_status`, `created_at`, `updated_at`) VALUES
-(0, 58, 47, '2025-12-05', 'Pending', '2025-12-05 21:39:34', '2025-12-05 21:39:34');
+(1, 58, 1, '2025-12-05', 'Approved', '2025-12-05 21:39:34', '2025-12-05 22:32:44');
+
+--
+-- Triggers `application`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_application_reset_auto` AFTER DELETE ON `application` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('application', 'application_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -4778,6 +4855,12 @@ INSERT INTO `auction` (`auction_id`, `stall_id`, `starting_price`, `current_high
 -- Triggers `auction`
 --
 DELIMITER $$
+CREATE TRIGGER `trg_auction_reset_auto` AFTER DELETE ON `auction` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('auction', 'auction_id');
+END
+$$
+DELIMITER ;
+DELIMITER $$
 CREATE TRIGGER `update_expired_auctions` AFTER UPDATE ON `auction` FOR EACH ROW BEGIN
     IF NEW.end_time IS NOT NULL AND NEW.end_time <= NOW() AND NEW.auction_status = 'Active' THEN
         UPDATE auction SET auction_status = 'Ended' WHERE auction_id = NEW.auction_id;
@@ -4816,6 +4899,12 @@ CREATE TRIGGER `handle_auction_bid` AFTER INSERT ON `auction_bids` FOR EACH ROW 
 END
 $$
 DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_auction_bids_reset_auto` AFTER DELETE ON `auction_bids` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('auction_bids', 'bid_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -4838,6 +4927,16 @@ CREATE TABLE `auction_result` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `auction_result`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_auction_result_reset_auto` AFTER DELETE ON `auction_result` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('auction_result', 'result_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -4867,6 +4966,16 @@ INSERT INTO `branch` (`branch_id`, `business_owner_id`, `branch_name`, `area`, `
 (1, 3, 'Naga City Peoples Mall', 'Naga City', 'Peoples Mall', 'Peoples Mall Complex, Naga City, Camarines Sur', '+63917123456', 'ncpm@nagastall.com', 'Active', '2025-09-15 08:00:00', '2025-11-26 16:38:54'),
 (3, 3, 'Satellite Market 1 & 2', 'Naga City', 'Satellite Market', 'Satellite Market Complex, Naga City, Camarines Sur', '+63919345678', 'satellite@nagastall.com', 'Active', '2025-09-15 08:00:00', '2025-11-26 16:38:59'),
 (23, 3, 'Test_branch', 'Test_area', 'Test_location', 'Test_address', '09876543212', 'Test@gmail.com', 'Active', '2025-11-05 15:50:12', '2025-11-26 16:39:02');
+
+--
+-- Triggers `branch`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_branch_reset_auto` AFTER DELETE ON `branch` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('branch', 'branch_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -4906,6 +5015,16 @@ INSERT INTO `branch_document_requirements` (`requirement_id`, `branch_id`, `docu
 (14, 23, 1, 1, 'Business permit', 16, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
 (15, 23, 6, 1, 'Valid ID', 16, '2025-12-01 07:53:42', '2025-12-01 07:53:42'),
 (16, 23, 5, 1, 'Cedula', 16, '2025-12-01 07:53:42', '2025-12-01 07:53:42');
+
+--
+-- Triggers `branch_document_requirements`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_branch_document_requirements_reset_auto` AFTER DELETE ON `branch_document_requirements` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('branch_document_requirements', 'requirement_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -4956,6 +5075,16 @@ INSERT INTO `business_employee` (`business_employee_id`, `employee_username`, `e
 (33, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 23, 16, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11'),
 (35, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'test', 'Employee', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', NULL, 1, '2025-12-03 04:03:26', '2025-12-03 04:03:26');
 
+--
+-- Triggers `business_employee`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_business_employee_reset_auto` AFTER DELETE ON `business_employee` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('business_employee', 'business_employee_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -4979,7 +5108,17 @@ CREATE TABLE `business_information` (
 --
 
 INSERT INTO `business_information` (`business_id`, `applicant_id`, `nature_of_business`, `capitalization`, `source_of_capital`, `previous_business_experience`, `relative_stall_owner`, `created_at`, `updated_at`) VALUES
-(33, 47, 'Flowers and Plants', 56200.00, 'Personal Savings', 'None', '', '2025-12-05 21:39:33', '2025-12-05 21:39:33');
+(1, 1, 'Flowers and Plants', 56200.00, 'Personal Savings', 'None', '', '2025-12-05 21:39:33', '2025-12-05 22:28:56');
+
+--
+-- Triggers `business_information`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_business_information_reset_auto` AFTER DELETE ON `business_information` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('business_information', 'business_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5011,6 +5150,16 @@ INSERT INTO `business_manager` (`business_manager_id`, `branch_id`, `manager_use
 (3, 3, 'Satellite_Manager', '$2b$12$BBqcS.8r8jLyEGBcXssooe7RkFayxY9N82MJQRgrFv2ATAAcTkwwG', 'Zed', 'Shadows', 'zed.shadows@example.com', '+63919333333', 'Active', NULL, '2025-09-08 13:49:24', '2025-09-08 13:49:24'),
 (16, 23, 'Test_Manager', '$2b$10$khUzmmbIEaa/gUdYMQTSiugujaK3D.3rGcdxtqR91loKMpejjVq4a', 'Jonas', 'Laurente', NULL, NULL, 'Active', NULL, '2025-11-05 15:50:30', '2025-11-05 15:50:30');
 
+--
+-- Triggers `business_manager`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_business_manager_reset_auto` AFTER DELETE ON `business_manager` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('business_manager', 'business_manager_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5040,6 +5189,16 @@ INSERT INTO `business_owner_managers` (`relationship_id`, `business_owner_id`, `
 (2, 3, 3, 0, 'Full', '2025-11-26 15:59:07', 1, 'Additional manager assigned during account creation', 'Active', '2025-11-26 15:59:07', '2025-11-26 15:59:07'),
 (3, 3, 16, 0, 'Full', '2025-11-26 15:59:07', 1, 'Additional manager assigned during account creation', 'Active', '2025-11-26 15:59:07', '2025-11-26 15:59:07');
 
+--
+-- Triggers `business_owner_managers`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_business_owner_managers_reset_auto` AFTER DELETE ON `business_owner_managers` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('business_owner_managers', 'relationship_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5065,6 +5224,16 @@ CREATE TABLE `business_owner_subscriptions` (
 
 INSERT INTO `business_owner_subscriptions` (`subscription_id`, `business_owner_id`, `plan_id`, `subscription_status`, `start_date`, `end_date`, `auto_renew`, `created_by_system_admin`, `created_at`, `updated_at`) VALUES
 (1, 3, 2, 'Active', '2025-11-26', '2025-12-27', 1, 1, '2025-11-26 07:59:07', '2025-11-26 21:23:25');
+
+--
+-- Triggers `business_owner_subscriptions`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_business_owner_subscriptions_reset_auto` AFTER DELETE ON `business_owner_subscriptions` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('business_owner_subscriptions', 'subscription_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5094,6 +5263,16 @@ CREATE TABLE `complaint` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Triggers `complaint`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_complaint_reset_auto` AFTER DELETE ON `complaint` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('complaint', 'complaint_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5109,6 +5288,23 @@ CREATE TABLE `credential` (
   `last_login` timestamp NULL DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `credential`
+--
+
+INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
+(1, 1, '25-93345', '$2a$10$H8h0deN.eJlHzjcLJ.RY4.ISRKZf.EMrLzhAfX/.NZMNU0ee1s3wu', '2025-12-05 22:32:44', '2025-12-06 06:29:05', 1);
+
+--
+-- Triggers `credential`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_credential_reset_auto` AFTER DELETE ON `credential` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('credential', 'registrationid');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5146,6 +5342,16 @@ INSERT INTO `document_types` (`document_type_id`, `document_name`, `description`
 (14, 'Bank Certificate', 'Certificate of bank deposit or financial capacity', 0, '2025-11-12 03:16:19', '2025-11-12 03:16:19'),
 (15, 'Product Registration', 'DTI or FDA registration for specific products', 0, '2025-11-12 03:16:19', '2025-11-12 03:16:19');
 
+--
+-- Triggers `document_types`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_document_types_reset_auto` AFTER DELETE ON `document_types` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('document_types', 'document_type_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5164,6 +5370,16 @@ CREATE TABLE `employee_activity_log` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Triggers `employee_activity_log`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_employee_activity_log_reset_auto` AFTER DELETE ON `employee_activity_log` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('employee_activity_log', 'log_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5181,6 +5397,16 @@ CREATE TABLE `employee_credential_log` (
   `email_sent_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `employee_credential_log`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_employee_credential_log_reset_auto` AFTER DELETE ON `employee_credential_log` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('employee_credential_log', 'log_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5208,6 +5434,16 @@ INSERT INTO `employee_email_template` (`template_id`, `template_name`, `subject`
 (1, 'welcome_employee', 'Welcome to Naga Stall Management - Your Account Details', '<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }\n        .credentials { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #667eea; }\n        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h1>Welcome to Naga Stall Management</h1>\n            <p>Your employee account has been created</p>\n        </div>\n        <div class=\"content\">\n            <p>Hello {{firstName}} {{lastName}},</p>\n            <p>Your employee account has been successfully created in the Naga Stall Management System. Below are your login credentials:</p>\n            \n            <div class=\"credentials\">\n                <h3>Your Login Credentials</h3>\n                <p><strong>Username:</strong> {{username}}</p>\n                <p><strong>Password:</strong> {{password}}</p>\n                <p><strong>Login URL:</strong> <a href=\"{{loginUrl}}\">{{loginUrl}}</a></p>\n            </div>\n            \n            <p><strong>Important Security Notes:</strong></p>\n            <ul>\n                <li>Please change your password after your first login</li>\n                <li>Keep your credentials secure and do not share them</li>\n                <li>Contact your manager if you have any login issues</li>\n            </ul>\n            \n            <a href=\"{{loginUrl}}\" class=\"button\">Login to Your Account</a>\n            \n            <p>If you have any questions, please contact your branch manager or the system administrator.</p>\n        </div>\n        <div class=\"footer\">\n            <p>This is an automated message from Naga Stall Management System</p>\n            <p>Branch: {{branchName}} | Created by: {{createdBy}}</p>\n        </div>\n    </div>\n</body>\n</html>', 'Welcome to Naga Stall Management System\n\nHello {{firstName}} {{lastName}},\n\nYour employee account has been successfully created. Here are your login credentials:\n\nUsername: {{username}}\nPassword: {{password}}\nLogin URL: {{loginUrl}}\n\nIMPORTANT SECURITY NOTES:\n- Please change your password after your first login\n- Keep your credentials secure and do not share them\n- Contact your manager if you have any login issues\n\nIf you have any questions, please contact your branch manager or system administrator.\n\nBranch: {{branchName}}\nCreated by: {{createdBy}}\n\nThis is an automated message from Naga Stall Management System.', '[\"firstName\", \"lastName\", \"username\", \"password\", \"loginUrl\", \"branchName\", \"createdBy\"]', 1, '2025-10-23 01:13:29', '2025-10-23 01:13:29'),
 (2, 'password_reset', 'Password Reset - Naga Stall Management', '<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n        .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }\n        .credentials { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ff6b6b; }\n        .button { display: inline-block; background: #ff6b6b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h1>Password Reset</h1>\n            <p>Your password has been reset</p>\n        </div>\n        <div class=\"content\">\n            <p>Hello {{firstName}} {{lastName}},</p>\n            <p>Your password has been reset by your manager. Below are your new login credentials:</p>\n            \n            <div class=\"credentials\">\n                <h3>Your New Login Credentials</h3>\n                <p><strong>Username:</strong> {{username}}</p>\n                <p><strong>New Password:</strong> {{password}}</p>\n                <p><strong>Login URL:</strong> <a href=\"{{loginUrl}}\">{{loginUrl}}</a></p>\n            </div>\n            \n            <p><strong>What to do next:</strong></p>\n            <ul>\n                <li>Login with your new password immediately</li>\n                <li>Change your password to something secure</li>\n                <li>Contact your manager if you did not request this reset</li>\n            </ul>\n            \n            <a href=\"{{loginUrl}}\" class=\"button\">Login with New Password</a>\n            \n            <p>Reset performed by: {{resetBy}} on {{resetDate}}</p>\n        </div>\n        <div class=\"footer\">\n            <p>This is an automated message from Naga Stall Management System</p>\n            <p>If you did not request this reset, please contact your manager immediately.</p>\n        </div>\n    </div>\n</body>\n</html>', 'Password Reset - Naga Stall Management System\n\nHello {{firstName}} {{lastName}},\n\nYour password has been reset by your manager. Here are your new login credentials:\n\nUsername: {{username}}\nNew Password: {{password}}\nLogin URL: {{loginUrl}}\n\nWHAT TO DO NEXT:\n- Login with your new password immediately\n- Change your password to something secure\n- Contact your manager if you did not request this reset\n\nReset performed by: {{resetBy}} on {{resetDate}}\n\nIf you did not request this reset, please contact your manager immediately.\n\nThis is an automated message from Naga Stall Management System.', '[\"firstName\", \"lastName\", \"username\", \"password\", \"loginUrl\", \"resetBy\", \"resetDate\"]', 1, '2025-10-23 01:13:29', '2025-10-23 01:13:29');
 
+--
+-- Triggers `employee_email_template`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_employee_email_template_reset_auto` AFTER DELETE ON `employee_email_template` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('employee_email_template', 'template_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5224,6 +5460,16 @@ CREATE TABLE `employee_password_reset` (
   `used_at` timestamp NULL DEFAULT NULL,
   `is_used` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `employee_password_reset`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_employee_password_reset_reset_auto` AFTER DELETE ON `employee_password_reset` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('employee_password_reset', 'reset_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5242,6 +5488,16 @@ CREATE TABLE `employee_session` (
   `is_active` tinyint(1) DEFAULT 1,
   `logout_time` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `employee_session`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_employee_session_reset_auto` AFTER DELETE ON `employee_session` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('employee_session', 'session_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5272,6 +5528,16 @@ INSERT INTO `floor` (`floor_id`, `branch_id`, `floor_name`, `floor_number`, `sta
 (16, 23, '1', 1, 'Active', '2025-11-05 15:51:01', '2025-11-05 15:51:01'),
 (17, 23, '2', 2, 'Active', '2025-11-06 05:42:02', '2025-11-06 05:42:02');
 
+--
+-- Triggers `floor`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_floor_reset_auto` AFTER DELETE ON `floor` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('floor', 'floor_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5301,6 +5567,16 @@ INSERT INTO `inspector` (`inspector_id`, `first_name`, `last_name`, `middle_name
 (2, 'Ye', 'Zhu', '', 'yezhu@city.gov', 'f16054f85276a1e985bd8198dd2eaa02f27b4c9e9d179108f0ef56a60b5d558b', '2025-10-08 00:45:24', 'active', '2025-10-02', '09171231234', NULL, NULL),
 (3, 'Rafael', 'Domingo', '', 'rafael.domingo@city.gov', 'c0916336f5cfea960657799367f049ea91502360fe58857ae2af117eec37853f', '2025-10-08 00:53:54', 'inactive', '2025-10-02', '09171231234', '2025-10-08', 'Negligence of duty');
 
+--
+-- Triggers `inspector`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_inspector_reset_auto` AFTER DELETE ON `inspector` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('inspector', 'inspector_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5327,6 +5603,16 @@ INSERT INTO `inspector_action_log` (`action_id`, `inspector_id`, `branch_id`, `b
 (3, 3, 1, 1, 'Termination', '2025-10-08 01:29:12', 'Inspector ID 3 terminated. Reason: Negligence of duty'),
 (4, 2, 1, 1, 'Termination', '2025-10-08 09:35:13', 'Inspector ID 2 terminated. Reason: Negligence of duty');
 
+--
+-- Triggers `inspector_action_log`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_inspector_action_log_reset_auto` AFTER DELETE ON `inspector_action_log` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('inspector_action_log', 'action_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5351,6 +5637,16 @@ CREATE TABLE `inspector_assignment` (
 INSERT INTO `inspector_assignment` (`assignment_id`, `inspector_id`, `branch_id`, `start_date`, `end_date`, `status`, `remarks`, `date_assigned`) VALUES
 (1, 2, 1, '2025-10-08', NULL, 'Active', NULL, '2025-10-07 16:45:24'),
 (2, 3, 1, '2025-10-08', '2025-10-08', 'Inactive', 'Terminated: Negligence of duty', '2025-10-07 16:53:54');
+
+--
+-- Triggers `inspector_assignment`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_inspector_assignment_reset_auto` AFTER DELETE ON `inspector_assignment` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('inspector_assignment', 'assignment_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5411,7 +5707,17 @@ CREATE TABLE `other_information` (
 --
 
 INSERT INTO `other_information` (`other_info_id`, `applicant_id`, `signature_of_applicant`, `house_sketch_location`, `valid_id`, `email_address`, `created_at`, `updated_at`) VALUES
-(33, 47, 'c18ed552-b187-4562-8c54-365631e206ac.jpg', 'c85c58cb-950d-426b-879f-b1de6c1ab03a.jpg', 'Gemini_Generated_Image_snogujsnogujsnog.png', 'laurentejeno73@gmail.com', '2025-12-05 21:39:33', '2025-12-05 21:39:33');
+(1, 1, 'c18ed552-b187-4562-8c54-365631e206ac.jpg', 'c85c58cb-950d-426b-879f-b1de6c1ab03a.jpg', 'Gemini_Generated_Image_snogujsnogujsnog.png', 'laurentejeno73@gmail.com', '2025-12-05 21:39:33', '2025-12-05 22:28:56');
+
+--
+-- Triggers `other_information`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_other_information_reset_auto` AFTER DELETE ON `other_information` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('other_information', 'other_info_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5443,11 +5749,7 @@ CREATE TABLE `payments` (
 --
 
 INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amount`, `payment_date`, `payment_time`, `payment_for_month`, `payment_type`, `reference_number`, `collected_by`, `payment_status`, `notes`, `branch_id`, `created_by`, `created_at`, `updated_at`) VALUES
-(34, 13, 'onsite', 3500.00, '2025-11-03', '11:00:00', '2025-11', 'rental', 'RCP-20251103-001', 'Juan Dela Cruz', 'completed', 'Cash payment at office', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:19:40'),
-(37, 13, 'gcash', 3200.00, '2025-11-06', '16:30:00', '2025-11', 'rental', 'TXN-20251106-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - BPI', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
-(42, 13, 'maya', 3500.00, '2025-11-13', '11:15:00', '2025-11', 'rental', 'BT-20251113-001', 'Juan Dela Cruz', 'completed', 'Bank Transfer - UnionBank', 1, 1, '2025-11-13 02:31:36', '2025-11-14 09:50:57'),
-(54, 13, 'onsite', 2400.00, '2025-11-18', '15:21:00', '2025-11', 'rental', 'RCP-20251118-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-11-18 07:22:03', '2025-11-18 07:22:03'),
-(65, 16, 'onsite', 2800.00, '2025-12-02', '00:48:00', '2025-12', 'rental', 'RCP-20251203-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-12-02 16:48:49', '2025-12-02 16:48:49');
+(1, 1, 'onsite', 2100.00, '2025-12-06', '12:25:00', '2025-12', 'rental', 'RCP-20251206-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-12-06 04:25:28', '2025-12-06 06:25:09');
 
 -- --------------------------------------------------------
 
@@ -5470,6 +5772,16 @@ CREATE TABLE `payment_status_log` (
 
 INSERT INTO `payment_status_log` (`log_id`, `reset_date`, `stallholders_reset_count`, `reset_type`, `notes`, `created_at`) VALUES
 (1, '2025-11-18', 1, 'manual', 'Manual reset by admin on 2025-11-18 13:48:18', '2025-11-18 05:48:18');
+
+--
+-- Triggers `payment_status_log`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_payment_status_log_reset_auto` AFTER DELETE ON `payment_status_log` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('payment_status_log', 'log_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5507,6 +5819,12 @@ INSERT INTO `raffle` (`raffle_id`, `stall_id`, `application_deadline`, `first_ap
 -- Triggers `raffle`
 --
 DELIMITER $$
+CREATE TRIGGER `trg_raffle_reset_auto` AFTER DELETE ON `raffle` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('raffle', 'raffle_id');
+END
+$$
+DELIMITER ;
+DELIMITER $$
 CREATE TRIGGER `update_expired_raffles` AFTER UPDATE ON `raffle` FOR EACH ROW BEGIN
     IF NEW.end_time IS NOT NULL AND NEW.end_time <= NOW() AND NEW.raffle_status = 'Active' THEN
         UPDATE raffle SET raffle_status = 'Ended' WHERE raffle_id = NEW.raffle_id;
@@ -5542,6 +5860,16 @@ CREATE TABLE `raffle_auction_log` (
 INSERT INTO `raffle_auction_log` (`log_id`, `stall_id`, `raffle_id`, `auction_id`, `action_type`, `old_deadline`, `new_deadline`, `reason`, `performed_by_business_manager`, `action_timestamp`) VALUES
 (1, 123, 6, NULL, 'Deadline Activated', NULL, '2025-10-07 23:00:00', 'First application received - deadline timer activated', 1, '2025-10-05 03:26:37');
 
+--
+-- Triggers `raffle_auction_log`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_raffle_auction_log_reset_auto` AFTER DELETE ON `raffle_auction_log` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('raffle_auction_log', 'log_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5557,6 +5885,16 @@ CREATE TABLE `raffle_participants` (
   `is_winner` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `raffle_participants`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_raffle_participants_reset_auto` AFTER DELETE ON `raffle_participants` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('raffle_participants', 'participant_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5578,6 +5916,16 @@ CREATE TABLE `raffle_result` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `raffle_result`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_raffle_result_reset_auto` AFTER DELETE ON `raffle_result` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('raffle_result', 'result_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5617,6 +5965,16 @@ INSERT INTO `section` (`section_id`, `floor_id`, `section_name`, `status`, `crea
 (35, 16, 'Meat Shop', 'Active', '2025-11-05 15:51:19', '2025-11-05 15:51:19'),
 (36, 17, 'Flower Shop', 'Active', '2025-11-06 05:42:30', '2025-11-06 05:42:30');
 
+--
+-- Triggers `section`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_section_reset_auto` AFTER DELETE ON `section` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('section', 'section_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5640,7 +5998,17 @@ CREATE TABLE `spouse` (
 --
 
 INSERT INTO `spouse` (`spouse_id`, `applicant_id`, `spouse_full_name`, `spouse_birthdate`, `spouse_educational_attainment`, `spouse_contact_number`, `spouse_occupation`, `created_at`, `updated_at`) VALUES
-(5, 47, 'Elaine Zennia S. Laurente', '2005-06-03', 'College Graduate', '09126471858', 'Architecture', '2025-12-05 21:39:33', '2025-12-05 21:39:33');
+(1, 1, 'Elaine Zennia S. Laurente', '2005-06-03', 'College Graduate', '09126471858', 'Architecture', '2025-12-05 21:39:33', '2025-12-05 22:28:56');
+
+--
+-- Triggers `spouse`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_spouse_reset_auto` AFTER DELETE ON `spouse` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('spouse', 'spouse_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5681,7 +6049,7 @@ INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_lo
 (54, 4, 1, 'NPM-005', 'Corner Market Area', '2x2', 2400.00, 'Fixed Price', 'Active', 'APPROVED', 'Meat section stall with proper refrigeration and ventilation systems', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 07:00:00', '2025-09-07 07:00:00'),
 (55, 5, 2, 'NPM-006', 'Food Court Central', '2x2', 2800.00, 'Fixed Price', 'Active', 'APPROVED', 'Compact food stall in busy food court, perfect for specialty snacks or beverages', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 07:15:00', '2025-11-05 13:26:05'),
 (57, 6, 2, 'NPM-008', 'South Plaza', '4x2', 2610.00, 'Fixed Price', 'Active', 'APPROVED', 'Long narrow stall perfect for electronics repair shop or computer accessories', 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 07:45:00', '2025-10-27 03:50:36'),
-(58, 7, 2, 'NPM-009', 'Center Court', '5x3', 2100.00, 'Fixed Price', 'Active', 'APPROVED', 'Premium large stall in center court, excellent for flagship fashion store', 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 08:00:00', '2025-11-05 14:14:55'),
+(58, 7, 2, 'NPM-009', 'Center Court', '5x3', 2100.00, 'Fixed Price', 'Occupied', 'APPROVED', 'Premium large stall in center court, excellent for flagship fashion store', 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400', 0, NULL, 0, 'Not Started', NULL, NULL, 1, '2025-09-07 08:00:00', '2025-12-06 03:38:38'),
 (91, 18, 6, 'STL-001', 'Main Entrance', '3x4', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'STL-001 is a standard meat vending unit located in the central aisle of the public market meat section. Ideal for vendors selling pork, beef, or poultry.', 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=400', 1, NULL, 0, 'Not Started', NULL, NULL, 3, '2025-09-08 14:12:42', '2025-09-08 14:12:42'),
 (93, 23, 6, 'STL-003', 'Fresh Market Area', '2x3', 1800.00, 'Fixed Price', 'Active', 'APPROVED', 'Fresh produce stall with refrigeration capabilities', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 3, '2025-09-08 17:00:00', '2025-09-08 17:00:00'),
 (94, 24, 6, 'STL-004', 'Dry Goods Section', '3x3', 2000.00, 'Fixed Price', 'Active', 'APPROVED', 'Dry goods and canned items stall', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 3, '2025-09-08 17:15:00', '2025-09-08 17:15:00'),
@@ -5692,6 +6060,16 @@ INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_lo
 (140, 35, 16, 'TEST-001', 'Main', '3x4', 2510.00, 'Raffle', 'Active', 'APPROVED', 'Test Data Stall', 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', 1, '2025-11-08 23:00:00', 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:52:01', '2025-11-05 15:52:12'),
 (142, 35, 16, 'TEST-002', 'Main', '3x5', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test for application', NULL, 1, NULL, 0, 'Not Started', NULL, NULL, 16, '2025-11-05 15:53:45', '2025-11-05 15:53:45'),
 (149, 6, 2, 'NPM-001', 'Main', '3x4', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'test data', NULL, 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-03 07:30:08', '2025-12-03 07:30:08');
+
+--
+-- Triggers `stall`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stall_reset_auto` AFTER DELETE ON `stall` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('stall', 'stall_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5725,6 +6103,23 @@ CREATE TABLE `stallholder` (
   `last_violation_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `stallholder`
+--
+
+INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`, `contact_number`, `email`, `address`, `business_name`, `business_type`, `branch_id`, `stall_id`, `contract_start_date`, `contract_end_date`, `contract_status`, `lease_amount`, `monthly_rent`, `payment_status`, `last_payment_date`, `notes`, `created_by_business_manager`, `compliance_status`, `date_created`, `updated_at`, `last_violation_date`) VALUES
+(1, 1, 'Jeno Aldrei Laurente', '09473430196', 'laurentejeno73@gmail.com', 'Zone 5', NULL, 'Flowers and Plants', 1, 58, '2025-12-06', '2026-12-06', 'Active', 2100.00, 2100.00, 'paid', '2025-12-06', NULL, NULL, 'Compliant', '2025-12-06 03:38:38', '2025-12-06 04:25:28', NULL);
+
+--
+-- Triggers `stallholder`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stallholder_reset_auto` AFTER DELETE ON `stallholder` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('stallholder', 'stallholder_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5746,6 +6141,16 @@ CREATE TABLE `stallholder_documents` (
   `expiry_date` date DEFAULT NULL COMMENT 'For documents that expire',
   `notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `stallholder_documents`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stallholder_documents_reset_auto` AFTER DELETE ON `stallholder_documents` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('stallholder_documents', 'document_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5770,6 +6175,16 @@ CREATE TABLE `stallholder_document_submissions` (
   `reviewed_by` int(11) DEFAULT NULL,
   `reviewed_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Triggers `stallholder_document_submissions`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stallholder_document_submissions_reset_auto` AFTER DELETE ON `stallholder_document_submissions` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('stallholder_document_submissions', 'submission_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5831,6 +6246,16 @@ CREATE TABLE `stall_applications` (
   `reviewed_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Triggers `stall_applications`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stall_applications_reset_auto` AFTER DELETE ON `stall_applications` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('stall_applications', 'application_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5861,6 +6286,16 @@ CREATE TABLE `stall_business_owner` (
 
 INSERT INTO `stall_business_owner` (`business_owner_id`, `owner_username`, `owner_password_hash`, `first_name`, `last_name`, `contact_number`, `email`, `status`, `subscription_status`, `subscription_expiry_date`, `last_payment_date`, `created_by_system_admin`, `primary_manager_id`, `created_at`, `updated_at`) VALUES
 (3, 'multimanager_owner', '$2b$10$OyB7NCCcmad/QQZnRo15GulfZ8C2g1LtghZe5r2MHAcsM7G2KKxkC', 'Multi', 'Manager Owner', '+639173333333', 'multiowner@nagastall.com', 'Active', 'Active', '2025-12-27', '2025-11-27', 1, 1, '2025-11-26 15:59:07', '2025-11-28 03:50:39');
+
+--
+-- Triggers `stall_business_owner`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stall_business_owner_reset_auto` AFTER DELETE ON `stall_business_owner` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('stall_business_owner', 'business_owner_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -5893,6 +6328,16 @@ CREATE TABLE `subscription_payments` (
 INSERT INTO `subscription_payments` (`payment_id`, `subscription_id`, `business_owner_id`, `amount`, `payment_date`, `payment_method`, `payment_status`, `reference_number`, `receipt_number`, `payment_period_start`, `payment_period_end`, `notes`, `processed_by_system_admin`, `created_at`, `updated_at`) VALUES
 (1, 1, 3, 10000.00, '2025-11-27', 'Cash', 'Completed', '12dd44Fa22', 'RCPT-20251127-6432', '2025-11-27', '2025-12-27', NULL, 1, '2025-11-26 21:23:25', '2025-11-28 03:53:37');
 
+--
+-- Triggers `subscription_payments`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_subscription_payments_reset_auto` AFTER DELETE ON `subscription_payments` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('subscription_payments', 'payment_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5921,6 +6366,16 @@ INSERT INTO `subscription_plans` (`plan_id`, `plan_name`, `plan_description`, `m
 (2, 'Standard Plan', 'Ideal for growing businesses', 10000.00, 5, 25, '{\"branches\": 5, \"employees\": 25, \"stalls\": 150, \"reports\": true, \"advanced_reports\": true, \"support\": \"email_phone\"}', 'Active', '2025-11-26 13:36:04', '2025-11-26 13:36:04'),
 (3, 'Premium Plan', 'Complete solution for large businesses', 20000.00, 10, 100, '{\"branches\": \"10\", \"employees\": \"100\", \"stalls\": \"unlimited\", \"reports\": true, \"advanced_reports\": true, \"custom_reports\": true, \"support\": \"24/7\", \"priority_support\": true}', 'Active', '2025-11-26 13:36:04', '2025-11-27 03:05:18');
 
+--
+-- Triggers `subscription_plans`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_subscription_plans_reset_auto` AFTER DELETE ON `subscription_plans` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('subscription_plans', 'plan_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -5946,6 +6401,16 @@ CREATE TABLE `system_administrator` (
 
 INSERT INTO `system_administrator` (`system_admin_id`, `username`, `password_hash`, `first_name`, `last_name`, `contact_number`, `email`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'sysadmin', '$2b$12$ZeU7W7K6xmviVoqgaHoK9uYL2lMuD98DLd3yffXi0WfM6l2vHSQWa', 'System', 'Administrator', '+63900000000', 'sysadmin@nagastall.com', 'Active', '2025-11-26 12:34:08', '2025-11-26 12:59:38');
+
+--
+-- Triggers `system_administrator`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_system_administrator_reset_auto` AFTER DELETE ON `system_administrator` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('system_administrator', 'system_admin_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -6095,6 +6560,16 @@ INSERT INTO `violation` (`violation_id`, `ordinance_no`, `violation_type`, `deta
 (2, 'Ordinance No. 2001-056', 'Waste Segregation / Anti-Littering', 'Improper waste disposal or littering'),
 (3, 'Ordinance No. 2017-066', 'Anti-Smoking', 'Smoking in prohibited public areas');
 
+--
+-- Triggers `violation`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_violation_reset_auto` AFTER DELETE ON `violation` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('violation', 'violation_id');
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -6125,6 +6600,16 @@ INSERT INTO `violation_penalty` (`penalty_id`, `violation_id`, `offense_no`, `pe
 (9, 3, 2, 2500.00, NULL),
 (10, 3, 3, 3500.00, NULL),
 (11, 3, 4, 5000.00, 'Imprisonment of not less than 6 months');
+
+--
+-- Triggers `violation_penalty`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_violation_penalty_reset_auto` AFTER DELETE ON `violation_penalty` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('violation_penalty', 'penalty_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -6159,6 +6644,16 @@ CREATE TABLE `violation_report` (
 INSERT INTO `violation_report` (`report_id`, `inspector_id`, `stallholder_id`, `violator_name`, `violation_id`, `compliance_type`, `severity`, `stall_id`, `branch_id`, `evidence`, `date_reported`, `remarks`, `status`, `resolved_date`, `resolved_by`, `offense_no`, `penalty_id`) VALUES
 (1, 2, 13, NULL, 1, 'Illegal Vending', 'minor', 50, 1, 0x466f756e642076656e646f722073656c6c696e67206f7574736964652061737369676e6564206172656120617420383a313520414d2e, '2025-10-08 09:30:41', 'First warning issued. | Offense #1 | Fine: â‚±300.00 | ', 'complete', '2025-10-15 09:30:41', NULL, 1, 1),
 (2, 2, 15, NULL, 1, 'Illegal Vending', 'moderate', 50, 1, 0x466f756e642076656e646f722073656c6c696e67206f7574736964652061737369676e6564206172656120617420383a313520414d2e, '2025-10-08 09:30:58', 'First warning issued. | Offense #1 | Fine: â‚±300.00 | ', 'pending', NULL, NULL, 1, 1);
+
+--
+-- Triggers `violation_report`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_violation_report_reset_auto` AFTER DELETE ON `violation_report` FOR EACH ROW BEGIN
+    CALL ResetAutoIncrement('violation_report', 'report_id');
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -6692,7 +7187,7 @@ ALTER TABLE `violation_report`
 -- AUTO_INCREMENT for table `applicant`
 --
 ALTER TABLE `applicant`
-  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `applicant_documents`
@@ -6704,7 +7199,7 @@ ALTER TABLE `applicant_documents`
 -- AUTO_INCREMENT for table `auction`
 --
 ALTER TABLE `auction`
-  MODIFY `auction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `auction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `auction_bids`
@@ -6740,7 +7235,7 @@ ALTER TABLE `business_employee`
 -- AUTO_INCREMENT for table `business_information`
 --
 ALTER TABLE `business_information`
-  MODIFY `business_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `business_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `business_manager`
@@ -6764,13 +7259,13 @@ ALTER TABLE `business_owner_subscriptions`
 -- AUTO_INCREMENT for table `complaint`
 --
 ALTER TABLE `complaint`
-  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `credential`
 --
 ALTER TABLE `credential`
-  MODIFY `registrationid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `registrationid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `document_types`
@@ -6794,7 +7289,7 @@ ALTER TABLE `employee_credential_log`
 -- AUTO_INCREMENT for table `employee_email_template`
 --
 ALTER TABLE `employee_email_template`
-  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `employee_password_reset`
@@ -6806,7 +7301,7 @@ ALTER TABLE `employee_password_reset`
 -- AUTO_INCREMENT for table `employee_session`
 --
 ALTER TABLE `employee_session`
-  MODIFY `session_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
+  MODIFY `session_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `floor`
@@ -6842,13 +7337,13 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `other_information`
 --
 ALTER TABLE `other_information`
-  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `payment_status_log`
@@ -6872,7 +7367,7 @@ ALTER TABLE `raffle_auction_log`
 -- AUTO_INCREMENT for table `raffle_participants`
 --
 ALTER TABLE `raffle_participants`
-  MODIFY `participant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `participant_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `raffle_result`
@@ -6890,7 +7385,7 @@ ALTER TABLE `section`
 -- AUTO_INCREMENT for table `spouse`
 --
 ALTER TABLE `spouse`
-  MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `stall`
@@ -6902,13 +7397,13 @@ ALTER TABLE `stall`
 -- AUTO_INCREMENT for table `stallholder`
 --
 ALTER TABLE `stallholder`
-  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `stallholder_documents`
 --
 ALTER TABLE `stallholder_documents`
-  MODIFY `document_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `document_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `stallholder_document_submissions`
@@ -6938,7 +7433,7 @@ ALTER TABLE `subscription_payments`
 -- AUTO_INCREMENT for table `subscription_plans`
 --
 ALTER TABLE `subscription_plans`
-  MODIFY `plan_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `plan_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `system_administrator`
@@ -6962,7 +7457,7 @@ ALTER TABLE `violation_penalty`
 -- AUTO_INCREMENT for table `violation_report`
 --
 ALTER TABLE `violation_report`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables

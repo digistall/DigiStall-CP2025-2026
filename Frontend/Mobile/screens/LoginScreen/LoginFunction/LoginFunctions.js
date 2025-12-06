@@ -58,8 +58,13 @@ export const handleLogin = async (username, password, setIsLoading, navigation, 
       
       console.log('💾 Saving user data with keys:', Object.keys(userData));
       console.log('👤 User info:', JSON.stringify(userData.user, null, 2));
-      console.log('📊 Applications:', JSON.stringify(userData.applications, null, 2));
-      console.log('🏪 Stalls:', JSON.stringify(userData.stalls, null, 2));
+      console.log('💑 Spouse info:', JSON.stringify(userData.spouse, null, 2));
+      console.log('💼 Business info:', JSON.stringify(userData.business, null, 2));
+      console.log('📋 Other info:', JSON.stringify(userData.other_info, null, 2));
+      console.log('📄 Application info:', JSON.stringify(userData.application, null, 2));
+      console.log('🏪 Stallholder info:', JSON.stringify(userData.stallholder, null, 2));
+      console.log('🔑 Is Stallholder:', userData.isStallholder);
+      console.log('📝 Application Status:', userData.applicationStatus);
       
       await UserStorageService.saveUserData(userData);
       // Save JWT token if provided so the user remains logged in across app reloads
@@ -68,12 +73,20 @@ export const handleLogin = async (username, password, setIsLoading, navigation, 
         console.log('🔐 Auth token saved for persistent login');
       }
 
-      // Show success message
+      // Show professional success message
       const userName = userData.user?.full_name || userData.user?.username || 'User';
+      const isStallholder = userData.isStallholder;
+      const stallNo = userData.stallholder?.stall_no;
+      
+      let welcomeMessage = `Welcome back, ${userName}!`;
+      if (isStallholder && stallNo) {
+        welcomeMessage = `Welcome back, ${userName}!\n\nYour account has been verified. Stall: ${stallNo}`;
+      }
+      
       setErrorModal({
         visible: true,
-        title: 'Login Successful',
-        message: `Welcome back, ${userName}!`,
+        title: 'Authentication Successful',
+        message: welcomeMessage,
         type: 'success'
       });
 
@@ -82,16 +95,16 @@ export const handleLogin = async (username, password, setIsLoading, navigation, 
         if (navigation) {
           navigation.navigate('StallHome');
         }
-      }, 1500);
+      }, 1800);
 
     } else {
-      // Login failed
+      // Login failed - show professional error message
       console.log('❌ Login failed:', response.message);
 
       setErrorModal({
         visible: true,
-        title: 'Login Failed',
-        message: response.message || 'Invalid username or password. Please check your credentials and try again.',
+        title: 'Authentication Failed',
+        message: response.message || 'The credentials you entered are incorrect. Please verify your username and password.',
         type: 'error'
       });
     }
@@ -124,14 +137,16 @@ export const handleLogin = async (username, password, setIsLoading, navigation, 
     // Stop loading
     setIsLoading(false);
   }
-};export const handleForgotPassword = (setErrorModal) => {
+};
+
+export const handleForgotPassword = (setErrorModal) => {
   console.log('Forgot password pressed');
   
   if (setErrorModal) {
     setErrorModal({
       visible: true,
       title: 'Password Recovery',
-      message: 'Please contact your system administrator to reset your password or visit the main office for assistance.',
+      message: 'To reset your password, please contact your administrator or visit the Naga City Public Market management office with a valid ID.',
       type: 'info'
     });
   }
