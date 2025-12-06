@@ -13,10 +13,12 @@ import {
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import UserStorageService from "../../../../services/UserStorageService";
+import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 
 const DashboardScreen = () => {
+  const { theme, isDark } = useTheme();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,22 +151,22 @@ const DashboardScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, styles.loadingContainer]}>
-          <ActivityIndicator size="large" color="#4472C4" />
-          <Text style={styles.loadingText}>Loading your dashboard...</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4472C4']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
         }
       >
         {/* Header with Gradient */}
@@ -202,24 +204,24 @@ const DashboardScreen = () => {
           </View>
         </LinearGradient>
 
-        <View style={styles.contentContainer}>
+        <View style={[styles.contentContainer, { backgroundColor: theme.colors.background }]}>
           {/* Status Cards Row */}
           <View style={styles.statusCardsRow}>
-            <View style={[styles.statusCard, { borderLeftColor: getPaymentStatusColor() }]}>
+            <View style={[styles.statusCard, { backgroundColor: theme.colors.card, borderLeftColor: getPaymentStatusColor() }]}>
               <View style={styles.statusCardIcon}>
                 <FontAwesome5 name="money-bill-wave" size={18} color={getPaymentStatusColor()} />
               </View>
-              <Text style={styles.statusCardTitle}>Payment</Text>
+              <Text style={[styles.statusCardTitle, { color: theme.colors.textSecondary }]}>Payment</Text>
               <Text style={[styles.statusCardValue, { color: getPaymentStatusColor() }]}>
                 {getPaymentStatus()}
               </Text>
             </View>
             
-            <View style={[styles.statusCard, { borderLeftColor: getComplianceStatusColor() }]}>
+            <View style={[styles.statusCard, { backgroundColor: theme.colors.card, borderLeftColor: getComplianceStatusColor() }]}>
               <View style={styles.statusCardIcon}>
                 <MaterialCommunityIcons name="file-document-check" size={20} color={getComplianceStatusColor()} />
               </View>
-              <Text style={styles.statusCardTitle}>Compliance</Text>
+              <Text style={[styles.statusCardTitle, { color: theme.colors.textSecondary }]}>Compliance</Text>
               <Text style={[styles.statusCardValue, { color: getComplianceStatusColor() }]}>
                 {getComplianceStatus()}
               </Text>
@@ -227,42 +229,42 @@ const DashboardScreen = () => {
           </View>
 
           {/* Stall Information Card */}
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardHeader}>
-              <Ionicons name="storefront-outline" size={22} color="#4472C4" />
-              <Text style={styles.infoCardTitle}>My Stall</Text>
+          <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
+              <Ionicons name="storefront-outline" size={22} color={theme.colors.primary} />
+              <Text style={[styles.infoCardTitle, { color: theme.colors.text }]}>My Stall</Text>
             </View>
             
             <View style={styles.infoGrid}>
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Stall Number</Text>
-                  <Text style={styles.infoValue}>{getStallNumber()}</Text>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textTertiary }]}>Stall Number</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.text }]}>{getStallNumber()}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Size</Text>
-                  <Text style={styles.infoValue}>{getStallSize()}</Text>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textTertiary }]}>Size</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.text }]}>{getStallSize()}</Text>
                 </View>
               </View>
               
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Branch</Text>
-                  <Text style={styles.infoValue}>{getBranchName()}</Text>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textTertiary }]}>Branch</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.text }]}>{getBranchName()}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Location</Text>
-                  <Text style={styles.infoValue}>{getStallLocation()}</Text>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textTertiary }]}>Location</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.text }]}>{getStallLocation()}</Text>
                 </View>
               </View>
 
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Business Type</Text>
-                  <Text style={styles.infoValue}>{getBusinessType()}</Text>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textTertiary }]}>Business Type</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.text }]}>{getBusinessType()}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Contract</Text>
+                  <Text style={[styles.infoLabel, { color: theme.colors.textTertiary }]}>Contract</Text>
                   <Text style={[styles.infoValue, { color: getContractStatus() === 'Active' ? '#10b981' : '#f59e0b' }]}>
                     {getContractStatus()}
                   </Text>
@@ -272,25 +274,25 @@ const DashboardScreen = () => {
           </View>
 
           {/* Payment Summary Card */}
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardHeader}>
-              <Ionicons name="wallet-outline" size={22} color="#4472C4" />
-              <Text style={styles.infoCardTitle}>Payment Summary</Text>
+          <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
+              <Ionicons name="wallet-outline" size={22} color={theme.colors.primary} />
+              <Text style={[styles.infoCardTitle, { color: theme.colors.text }]}>Payment Summary</Text>
             </View>
             
             <View style={styles.paymentSummary}>
-              <View style={styles.paymentMainAmount}>
-                <Text style={styles.paymentLabel}>Monthly Rent Due</Text>
-                <Text style={styles.paymentAmount}>{formatCurrency(getMonthlyRent())}</Text>
+              <View style={[styles.paymentMainAmount, { backgroundColor: isDark ? theme.colors.surface : '#f8fafc' }]}>
+                <Text style={[styles.paymentLabel, { color: theme.colors.textSecondary }]}>Monthly Rent Due</Text>
+                <Text style={[styles.paymentAmount, { color: theme.colors.text }]}>{formatCurrency(getMonthlyRent())}</Text>
               </View>
               
               <View style={styles.paymentDetails}>
                 <View style={styles.paymentDetailItem}>
-                  <Text style={styles.paymentDetailLabel}>Due Date</Text>
-                  <Text style={styles.paymentDetailValue}>Every 5th of the month</Text>
+                  <Text style={[styles.paymentDetailLabel, { color: theme.colors.textSecondary }]}>Due Date</Text>
+                  <Text style={[styles.paymentDetailValue, { color: theme.colors.text }]}>Every 5th of the month</Text>
                 </View>
                 <View style={styles.paymentDetailItem}>
-                  <Text style={styles.paymentDetailLabel}>Status</Text>
+                  <Text style={[styles.paymentDetailLabel, { color: theme.colors.textSecondary }]}>Status</Text>
                   <View style={[styles.paymentStatusBadge, { backgroundColor: getPaymentStatusColor() + '20' }]}>
                     <Text style={[styles.paymentStatusText, { color: getPaymentStatusColor() }]}>
                       {getPaymentStatus()}
@@ -303,28 +305,28 @@ const DashboardScreen = () => {
 
           {/* Contract Details Card */}
           {isStallholder() && userData?.stallholder && (
-            <View style={styles.infoCard}>
-              <View style={styles.infoCardHeader}>
-                <Ionicons name="document-text-outline" size={22} color="#4472C4" />
-                <Text style={styles.infoCardTitle}>Contract Details</Text>
+            <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
+              <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
+                <Ionicons name="document-text-outline" size={22} color={theme.colors.primary} />
+                <Text style={[styles.infoCardTitle, { color: theme.colors.text }]}>Contract Details</Text>
               </View>
               
               <View style={styles.contractDetails}>
-                <View style={styles.contractRow}>
-                  <Text style={styles.contractLabel}>Start Date</Text>
-                  <Text style={styles.contractValue}>
+                <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
+                  <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>Start Date</Text>
+                  <Text style={[styles.contractValue, { color: theme.colors.text }]}>
                     {formatDate(userData.stallholder.contract_start_date)}
                   </Text>
                 </View>
-                <View style={styles.contractRow}>
-                  <Text style={styles.contractLabel}>End Date</Text>
-                  <Text style={styles.contractValue}>
+                <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
+                  <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>End Date</Text>
+                  <Text style={[styles.contractValue, { color: theme.colors.text }]}>
                     {formatDate(userData.stallholder.contract_end_date)}
                   </Text>
                 </View>
-                <View style={styles.contractRow}>
-                  <Text style={styles.contractLabel}>Lease Amount</Text>
-                  <Text style={styles.contractValue}>
+                <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
+                  <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>Lease Amount</Text>
+                  <Text style={[styles.contractValue, { color: theme.colors.text }]}>
                     {formatCurrency(userData.stallholder.lease_amount || 0)}
                   </Text>
                 </View>
@@ -333,35 +335,35 @@ const DashboardScreen = () => {
           )}
 
           {/* Quick Actions */}
-          <View style={styles.quickActionsCard}>
-            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+          <View style={[styles.quickActionsCard, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.quickActionsTitle, { color: theme.colors.text }]}>Quick Actions</Text>
             <View style={styles.quickActionsGrid}>
               <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#dbeafe' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#1e3a5f' : '#dbeafe' }]}>
                   <Ionicons name="receipt-outline" size={22} color="#3b82f6" />
                 </View>
-                <Text style={styles.quickActionLabel}>Pay Rent</Text>
+                <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Pay Rent</Text>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#dcfce7' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#14432a' : '#dcfce7' }]}>
                   <Ionicons name="document-attach-outline" size={22} color="#22c55e" />
                 </View>
-                <Text style={styles.quickActionLabel}>Documents</Text>
+                <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Documents</Text>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#fef3c7' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#422006' : '#fef3c7' }]}>
                   <Ionicons name="warning-outline" size={22} color="#f59e0b" />
                 </View>
-                <Text style={styles.quickActionLabel}>Report Issue</Text>
+                <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Report Issue</Text>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#f3e8ff' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#3b0764' : '#f3e8ff' }]}>
                   <Ionicons name="help-circle-outline" size={22} color="#a855f7" />
                 </View>
-                <Text style={styles.quickActionLabel}>Support</Text>
+                <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Support</Text>
               </TouchableOpacity>
             </View>
           </View>

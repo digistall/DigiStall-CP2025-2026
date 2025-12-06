@@ -18,9 +18,13 @@ import StallCard from './components/StallCard';
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
 
+// Import theme
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+
 const { width } = Dimensions.get('window');
 
 const StallScreen = () => {
+  const { theme, isDark } = useTheme();
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [selectedSort, setSelectedSort] = useState('default');
   const [searchText, setSearchText] = useState('');
@@ -255,7 +259,7 @@ const StallScreen = () => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* Combined Search and Filter Bar */}
         <SearchFilterBar 
           searchText={searchText}
@@ -270,16 +274,16 @@ const StallScreen = () => {
         {/* Loading State */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#002181" />
-            <Text style={styles.loadingText}>Loading stalls...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading stalls...</Text>
           </View>
         ) : (
           /* Stall Cards */
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             {getFilteredAndSortedStalls().length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No stalls available</Text>
-                <Text style={styles.emptySubText}>
+                <Text style={[styles.emptyText, { color: theme.colors.text }]}>No stalls available</Text>
+                <Text style={[styles.emptySubText, { color: theme.colors.textSecondary }]}>
                   Stalls are restricted to areas where you have applications. 
                   Contact your branch manager to submit your first application.
                 </Text>

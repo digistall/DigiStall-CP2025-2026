@@ -1,7 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 
-const StallCard = ({ stall, onApply, applying }) => {
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    card: '#ffffff',
+    text: '#1F2937',
+    textSecondary: '#6b7280',
+    border: '#e5e7eb',
+    background: '#F3F4F6',
+  }
+};
+
+const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = false }) => {
+  const colors = theme?.colors || defaultTheme.colors;
   const getStatusButton = (stall) => {
     // If user cannot apply (based on backend logic)
     if (!stall.canApply) {
@@ -76,9 +89,9 @@ const StallCard = ({ stall, onApply, applying }) => {
   };
 
   return (
-    <View style={styles.stallCard}>
+    <View style={[styles.stallCard, { backgroundColor: colors.card }]}>
       <View style={styles.cardHeader}>
-        <Image source={{ uri: stall.image }} style={styles.stallImage} />
+        <Image source={{ uri: stall.image }} style={[styles.stallImage, { backgroundColor: isDark ? colors.surface : '#F3F4F6' }]} />
         <TouchableOpacity style={styles.heartIcon}>
           <Text style={styles.heartText}>♥</Text>
         </TouchableOpacity>
@@ -86,31 +99,31 @@ const StallCard = ({ stall, onApply, applying }) => {
       
       <View style={styles.cardContent}>
         <View style={styles.stallInfo}>
-          <View style={styles.stallNumberContainer}>
-            <Text style={styles.stallLabel}>STALL#</Text>
-            <Text style={styles.stallNumber}>{stall.stallNumber}</Text>
+          <View style={[styles.stallNumberContainer, { backgroundColor: isDark ? colors.surface : '#F3F4F6' }]}>
+            <Text style={[styles.stallLabel, { color: colors.textSecondary }]}>STALL#</Text>
+            <Text style={[styles.stallNumber, { color: colors.text }]}>{stall.stallNumber}</Text>
           </View>
           
           <View style={styles.locationContainer}>
-            <Text style={styles.locationText}>{stall.location}</Text>
+            <Text style={[styles.locationText, { color: colors.textSecondary }]}>{stall.location}</Text>
           </View>
         </View>
 
         <View style={styles.priceContainer}>
-          <Text style={styles.priceText}>{stall.price} Php / Monthly</Text>
+          <Text style={[styles.priceText, { color: colors.text }]}>{stall.price} Php / Monthly</Text>
           {stall.priceType && stall.priceType !== 'Fixed Price' && (
-            <Text style={styles.priceTypeText}>({stall.priceType})</Text>
+            <Text style={[styles.priceTypeText, { color: colors.textSecondary }]}>({stall.priceType})</Text>
           )}
         </View>
 
         <View style={styles.detailsContainer}>
-          <Text style={styles.floorText}>{stall.floor}</Text>
-          <Text style={styles.sizeText}>{stall.size}</Text>
+          <Text style={[styles.floorText, { color: colors.textSecondary }]}>{stall.floor}</Text>
+          <Text style={[styles.sizeText, { color: colors.textSecondary }]}>{stall.size}</Text>
         </View>
 
         {stall.description && (
           <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionText}>{stall.description}</Text>
+            <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>{stall.description}</Text>
           </View>
         )}
 
