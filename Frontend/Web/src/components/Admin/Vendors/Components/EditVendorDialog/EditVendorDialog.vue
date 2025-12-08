@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="model" max-width="900" persistent>
-    <v-card class="add-stallholder-modal">
+    <v-card class="edit-modal">
       <!-- Header -->
       <v-card-title class="modal-header">
         <h2 class="modal-title">
@@ -192,6 +192,18 @@
                   variant="outlined"
                   density="comfortable"
               /></v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="form.assignedCollector"
+                  :items="collectorItems"
+                  :item-text="collectorItemText"
+                  :item-value="collectorItemValue"
+                  label="Assigned Collector"
+                  variant="outlined"
+                  density="comfortable"
+                />
+              </v-col>
             </v-row>
 
             <div class="text-h6 font-weight-bold mt-6 mb-2">Edit Uploaded Documents</div>

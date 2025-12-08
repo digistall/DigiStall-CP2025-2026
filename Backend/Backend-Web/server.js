@@ -23,6 +23,8 @@ import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import stallRoutes from './routes/stallRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
+import collectorRoutes from './routes/collectorRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import complianceRoutes from './routes/complianceRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
@@ -58,6 +60,8 @@ app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page appl
 app.use('/api/employees', employeeRoutes);      // Employee routes (login is public, others protected internally)
 
 // Management routes (authentication required)
+app.use('/api/vendors', authMiddleware.authenticateToken, vendorRoutes);
+app.use('/api/collectors', authMiddleware.authenticateToken, collectorRoutes);
 // Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility
 app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
@@ -116,6 +120,8 @@ app.get('/', (req, res) => {
       applicants: '/api/applicants',
       branches: '/api/branches',
       employees: '/api/employees',
+      vendors: '/api/vendors',
+      collectors: '/api/collectors'
       stallholders: '/api/stallholders',
       compliances: '/api/compliances',
       complaints: '/api/complaints',
@@ -142,6 +148,8 @@ app.use('*', (req, res) => {
       '/api/applicants',
       '/api/branches',
       '/api/employees',
+      '/api/vendors',
+      '/api/collectors'
       '/api/stallholders',
       '/api/compliances',
       '/api/complaints',

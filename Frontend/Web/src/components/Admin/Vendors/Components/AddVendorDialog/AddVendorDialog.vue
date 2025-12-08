@@ -1,17 +1,13 @@
 <template>
   <v-dialog v-model="visibleModel" max-width="900px" persistent>
-    <v-card>
-      <!-- Toolbar Header (matching Stallholders) -->
-      <v-toolbar color="primary" dark dense>
-        <v-toolbar-title class="toolbar-title">
-          <v-icon left>mdi-store-plus</v-icon>
-          Add New Vendor
-        </v-toolbar-title>
-        <v-spacer></v-spacer>
-        <v-btn icon @click="closeDialog">
-          <v-icon>mdi-close</v-icon>
+    <v-card class="add-modal">
+      <!-- Custom Header -->
+      <v-card-title class="modal-header">
+        <h2 class="modal-title">Add New Vendor</h2>
+        <v-btn icon class="close-btn" @click="closeDialog">
+          <v-icon color="white">mdi-close</v-icon>
         </v-btn>
-      </v-toolbar>
+      </v-card-title>
 
       <!-- Tabbed Content (matching Stallholders structure) -->
       <v-card-text class="pa-0">
@@ -175,7 +171,9 @@
                     <v-col cols="12" md="6">
                       <v-select
                         v-model="form.assignedCollector"
-                        :items="collectors"
+                        :items="collectorItems"
+                        :item-text="collectorItemText"
+                        :item-value="collectorItemValue"
                         label="Assigned Collector"
                         outlined
                         prepend-inner-icon="mdi-account-tie"

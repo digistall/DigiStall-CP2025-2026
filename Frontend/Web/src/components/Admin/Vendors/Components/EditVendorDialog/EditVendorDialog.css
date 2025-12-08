@@ -1,4 +1,5 @@
-.add-stallholder-modal {
+/* Modal styling */
+.edit-modal {
   border-radius: 12px !important;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
