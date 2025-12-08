@@ -432,8 +432,12 @@ export default {
         priceType: stall.price_type || 'Fixed Price',
         price_type: stall.price_type || 'Fixed Price',
 
-        // Image
-        image: stall.stall_image || this.getDefaultImage(stall.section_name),
+        // Image - Convert relative path to full URL
+        image: stall.stall_image 
+          ? (stall.stall_image.startsWith('http') 
+              ? stall.stall_image 
+              : `http://localhost${stall.stall_image}`)
+          : this.getDefaultImage(stall.section_name),
 
         // Manager info
         managerName:

@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "Stall Image Management API",
+    "description": "Complete API collection for testing stall image upload, retrieval, deletion, and management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "stall_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "branch_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "stall_number",
+      "value": "25",
+      "type": "string"
+    },
+    {
+      "key": "image_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Upload Stall Images",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "images",
+              "type": "file",
+              "src": []
+            },
+            {
+              "key": "stall_id",
+              "value": "{{stall_id}}",
+              "type": "text"
+            },
+            {
+              "key": "branch_id",
+              "value": "{{branch_id}}",
+              "type": "text"
+            },
+            {
+              "key": "stall_number",
+              "value": "{{stall_number}}",
+              "type": "text"
+            },
+            {
+              "key": "is_primary",
+              "value": "true",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/stalls/{{stall_id}}/images/upload",
+          "host": ["{{base_url}}"],
+          "path": ["api", "stalls", "{{stall_id}}", "images", "upload"]
+        },
+        "description": "Upload multiple images for a stall (max 10 images, 2MB each, PNG/JPG only)"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get All Stall Images",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/stalls/{{stall_id}}/images",
+          "host": ["{{base_url}}"],
+          "path": ["api", "stalls", "{{stall_id}}", "images"]
+        },
+        "description": "Retrieve all images for a specific stall, sorted by primary status and display order"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Stall Image Count",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/stalls/{{stall_id}}/images/count",
+          "host": ["{{base_url}}"],
+          "path": ["api", "stalls", "{{stall_id}}", "images", "count"]
+        },
+        "description": "Get the current image count for a stall (current/remaining/max)"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Set Primary Image",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/stalls/images/{{image_id}}/set-primary",
+          "host": ["{{base_url}}"],
+          "path": ["api", "stalls", "images", "{{image_id}}", "set-primary"]
+        },
+        "description": "Set a specific image as the primary/featured image for the stall"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Delete Stall Image",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/stalls/images/{{image_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "stalls", "images", "{{image_id}}"]
+        },
+        "description": "Delete a specific image from the stall (removes from database and filesystem)"
+      },
+      "response": []
+    },
+    {
+      "name": "0. Login (Get JWT Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.token) {",
+              "        pm.collectionVariables.set('jwt_token', jsonData.token);",
+              "        console.log('JWT Token saved to collection variable');",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employee_id\": \"your_employee_id\",\n  \"password\": \"your_password\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Login to get JWT token. Token will be automatically saved to collection variable."
+      },
+      "response": []
+    }
+  ]
+}
