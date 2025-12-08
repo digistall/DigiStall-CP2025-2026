@@ -16,7 +16,10 @@ class VendorsService {
       return config
     })
 
-    this.apiClient.interceptors.response.use((r) => r, (e) => Promise.reject(e))
+    this.apiClient.interceptors.response.use(
+      (r) => r,
+      (e) => Promise.reject(e),
+    )
   }
 
   async getAllVendors() {

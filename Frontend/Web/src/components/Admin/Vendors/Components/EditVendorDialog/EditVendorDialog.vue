@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="model" max-width="900" persistent>
-    <v-card class="add-stallholder-modal">
+    <v-card class="edit-modal">
       <!-- Header -->
       <v-card-title class="modal-header">
         <h2 class="modal-title">
