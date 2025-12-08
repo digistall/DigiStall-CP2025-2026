@@ -25,6 +25,11 @@ export default {
       showDeleteConfirm: false,
       valid: false,
       loading: false,
+      // Multi-image gallery data
+      stallImages: [],
+      currentImageIndex: 0,
+      loadingImages: false,
+      imageBaseUrl: import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost',
       rules: {
         stallNumber: [
           (v) => !!v || 'Stall number is required',
@@ -87,6 +92,8 @@ export default {
         if (newData && Object.keys(newData).length) {
           console.log('📝 Populating form with new data')
           this.populateForm(newData)
+          // Fetch images from htdocs after populating form
+          this.fetchStallImagesFromHtdocs(newData)
         } else {
           console.log('⚠️ stallData is empty or undefined - modal may be closing')
           // Don't clear form data when stallData becomes empty
@@ -96,6 +103,15 @@ export default {
       immediate: true,
       deep: true,
     },
+    showModal: {
+      handler(newVal) {
+        if (!newVal) {
+          // Clear images when modal closes
+          this.stallImages = []
+          this.currentImageIndex = 0
+        }
+      }
+    }
   },
   methods: {
     closeModal() {
@@ -148,10 +164,9 @@ export default {
         priceType: data.price_type || data.priceType || 'Fixed Price',
       }
 
-      if (this.editForm.image) {
-        this.imagePreview = this.editForm.image
-      }
-
+      // Don't set imagePreview from existing image - only set it for newly uploaded images
+      // This allows the gallery to show instead of the upload preview
+      this.imagePreview = null
       this.selectedImageFile = null
       console.log('Form populated:', this.editForm)
     },
@@ -431,7 +446,154 @@ export default {
       this.selectedImageFile = null
       this.imagePreview = null
       this.showDeleteConfirm = false
+      this.stallImages = []
+      this.currentImageIndex = 0
       if (this.$refs.editForm) this.$refs.editForm.resetValidation()
+    },
+
+    // Multi-image gallery methods
+    async fetchStallImagesFromHtdocs(stallData) {
+      const stallNo = stallData.stall_no || stallData.stallNumber
+      const branchId = stallData.branch_id || stallData.branchId || 1
+
+      if (!stallNo) {
+        console.log('No stall number available for image fetching')
+        return
+      }
+
+      console.log(`🖼️ Fetching images for stall ${stallNo} from htdocs...`)
+      this.loadingImages = true
+      this.stallImages = []
+
+      try {
+        const foundImages = []
+        const maxImagesToCheck = 10
+
+        // Check for numbered images (1.png, 2.png, etc.)
+        for (let i = 1; i <= maxImagesToCheck; i++) {
+          const imageUrl = `${this.imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNo}/${i}.png`
+          const exists = await this.checkImageExists(imageUrl)
+          if (exists) {
+            foundImages.push(imageUrl)
+            console.log(`✅ Found image: ${imageUrl}`)
+          }
+        }
+
+        // Also check for common naming patterns
+        const patterns = ['main.png', 'primary.png', 'stall.png', 'image.png']
+        for (const pattern of patterns) {
+          const imageUrl = `${this.imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNo}/${pattern}`
+          const exists = await this.checkImageExists(imageUrl)
+          if (exists && !foundImages.includes(imageUrl)) {
+            foundImages.push(imageUrl)
+            console.log(`✅ Found image: ${imageUrl}`)
+          }
+        }
+
+        if (foundImages.length > 0) {
+          this.stallImages = foundImages
+          console.log(`📸 Found ${foundImages.length} images for stall ${stallNo}`)
+        } else {
+          // Fallback to the image from database
+          if (stallData.stall_image || stallData.image) {
+            this.stallImages = [stallData.stall_image || stallData.image]
+            console.log('📸 Using database image as fallback')
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stall images:', error)
+        // Fallback to database image
+        if (stallData.stall_image || stallData.image) {
+          this.stallImages = [stallData.stall_image || stallData.image]
+        }
+      } finally {
+        this.loadingImages = false
+        this.currentImageIndex = 0
+      }
+    },
+
+    checkImageExists(url) {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(true)
+        img.onerror = () => resolve(false)
+        img.src = url
+      })
+    },
+
+    nextImage() {
+      if (this.stallImages.length > 1) {
+        this.currentImageIndex = (this.currentImageIndex + 1) % this.stallImages.length
+      }
+    },
+
+    prevImage() {
+      if (this.stallImages.length > 1) {
+        this.currentImageIndex = (this.currentImageIndex - 1 + this.stallImages.length) % this.stallImages.length
+      }
+    },
+
+    goToImage(index) {
+      this.currentImageIndex = index
+    },
+
+    getCurrentImage() {
+      if (this.stallImages.length > 0) {
+        return this.stallImages[this.currentImageIndex]
+      }
+      return this.editForm.image || null
+    },
+
+    async deleteStallImage(imageUrl, index) {
+      // Extract filename from URL
+      const urlParts = imageUrl.split('/')
+      const filename = urlParts[urlParts.length - 1]
+      const stallNo = this.editForm.stallNumber
+      const branchId = this.stallData.branch_id || this.stallData.branchId || 1
+
+      console.log(`🗑️ Deleting image: ${filename} for stall ${stallNo}`)
+
+      try {
+        const token = sessionStorage.getItem('authToken')
+        const response = await fetch(`${this.apiBaseUrl}/stalls/${this.editForm.id}/images/${filename}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            stall_no: stallNo,
+            branch_id: branchId,
+            filename: filename
+          })
+        })
+
+        if (response.ok) {
+          // Remove image from local array
+          this.stallImages.splice(index, 1)
+          
+          // Adjust current index if needed
+          if (this.currentImageIndex >= this.stallImages.length) {
+            this.currentImageIndex = Math.max(0, this.stallImages.length - 1)
+          }
+          
+          console.log(`✅ Image ${filename} deleted successfully`)
+          this.$emit('image-deleted', { filename, stallNo })
+        } else {
+          const result = await response.json().catch(() => ({ message: 'Failed to delete image' }))
+          console.error('Failed to delete image:', result.message)
+          this.$emit('error', `Failed to delete image: ${result.message}`)
+        }
+      } catch (error) {
+        console.error('Error deleting image:', error)
+        this.$emit('error', `Error deleting image: ${error.message}`)
+      }
+    },
+
+    confirmDeleteImage(index) {
+      if (confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
+        this.deleteStallImage(this.stallImages[index], index)
+      }
     },
 
     handleImageUpload(event) {

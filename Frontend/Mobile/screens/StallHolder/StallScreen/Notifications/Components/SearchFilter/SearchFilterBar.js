@@ -19,13 +19,15 @@ const SearchFilterBar = ({
     { label: "Unread First", value: "unread" },
     { label: "Default", value: "default" },
   ],
+  theme,
 }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, theme && { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
       <SearchBar
         searchText={searchText}
         onSearchChange={onSearchChange}
         placeholder={searchPlaceholder}
+        theme={theme}
       />
 
       <FilterButton
@@ -35,6 +37,7 @@ const SearchFilterBar = ({
         onSortSelect={onSortSelect}
         filters={filters}
         sortOptions={sortOptions}
+        theme={theme}
       />
     </View>
   );

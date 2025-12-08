@@ -478,3 +478,171 @@
     padding: 10px 4px;
   }
 }
+
+/* ==========================================
+   ENHANCED CONFIRMATION DIALOG STYLES
+   ========================================== */
+
+.confirm-dialog-card {
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+.confirm-dialog-header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.confirm-dialog-header.accept-header {
+  background: linear-gradient(135deg, #002181 0%, #003399 100%);
+}
+
+.confirm-dialog-header.decline-header {
+  background: linear-gradient(135deg, #424242 0%, #616161 100%);
+}
+
+.confirm-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.confirm-dialog-content {
+  padding: 24px 32px 16px 32px !important;
+}
+
+.confirm-dialog-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.confirm-dialog-message {
+  font-size: 1rem;
+  color: #555;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.confirm-dialog-message .applicant-name {
+  color: #002181;
+  font-weight: 600;
+}
+
+.confirm-dialog-note {
+  font-size: 0.85rem;
+  color: #666;
+  background: #f8f9fa;
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px 24px 24px !important;
+}
+
+.confirm-btn {
+  min-width: 120px;
+  height: 42px !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: 8px !important;
+}
+
+.confirm-btn.cancel-btn {
+  border-width: 1.5px !important;
+}
+
+.confirm-btn.action-btn {
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.25);
+}
+
+.confirm-btn.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 33, 129, 0.35);
+}
+
+/* =============================================
+   DOCUMENT CARDS - Applicant Documents Display
+   ============================================= */
+.subsection-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+.document-card {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  height: 100%;
+}
+
+.document-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.document-image-container {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px dashed #ccc;
+}
+
+.document-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.document-image:hover {
+  transform: scale(1.02);
+}
+
+.no-document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #999;
+  font-size: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+.no-document span {
+  max-width: 120px;
+}

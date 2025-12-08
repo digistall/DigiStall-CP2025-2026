@@ -24,8 +24,15 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+      # Upload directories (Docker-compatible paths)
+      UPLOAD_DIR_STALLS: /app/uploads/stalls
+      UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
     ports:
       - "3001:3001"
+    volumes:
+      # Mount local uploads folder so existing images are accessible
+      # Windows: C:/xampp/htdocs/digistall_uploads -> /app/uploads inside container
+      - ${UPLOAD_PATH:-C:/xampp/htdocs/digistall_uploads}:/app/uploads
     networks:
       - digistall-network
     extra_hosts:
@@ -58,6 +65,34 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Frontend Mobile Application (Expo Development Server)
+  frontend-mobile:
+    build:
+      context: ./Frontend/Mobile
+      dockerfile: Dockerfile.dev
+    container_name: digistall-frontend-mobile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # Expo configuration
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: "0.0.0.0"
+      REACT_NATIVE_PACKAGER_HOSTNAME: "${HOST_IP:-192.168.1.105}"
+      # API URL for the mobile app
+      EXPO_PUBLIC_API_URL: "http://${HOST_IP:-192.168.1.105}:3001"
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    networks:
+      - digistall-network
+    # Use host network mode alternative: uncomment if LAN access doesn't work
+    # network_mode: host
+    stdin_open: true
+    tty: true
 
 # Networks
 networks:

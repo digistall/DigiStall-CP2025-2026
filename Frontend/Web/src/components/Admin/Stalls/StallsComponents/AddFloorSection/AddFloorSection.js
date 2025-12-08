@@ -47,11 +47,13 @@ export default {
       // API base URL
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 
-      // Success popup state
-      showSuccessPopup: false,
+      // Success snackbar state
+      showSuccessSnackbar: false,
       successMessage: '',
-      successType: '', // 'floor' or 'section'
-      popupState: 'success', // 'loading' or 'success'
+      
+      // Error snackbar state
+      showErrorSnackbar: false,
+      errorMessage: '',
     }
   },
 
@@ -125,21 +127,9 @@ export default {
         }
         const result = await response.json()
 
-        // Show success popup with loading and success states
-        this.popupState = 'loading'
-        this.showSuccessPopup = true
-
-        // Simulate loading then show success
-        setTimeout(() => {
-          this.successMessage = `Floor "${this.newFloor.floorName}" added successfully!`
-          this.successType = 'floor'
-          this.popupState = 'success'
-
-          // Auto-close after 3 seconds
-          setTimeout(() => {
-            this.closeSuccessPopup()
-          }, 3000)
-        }, 800)
+        // Show success snackbar notification
+        this.successMessage = `Floor "${this.newFloor.floorName}" added successfully!`
+        this.showSuccessSnackbar = true
 
         this.resetFloorForm()
         await this.loadFloors()
@@ -158,7 +148,9 @@ export default {
         })
       } catch (error) {
         console.error('Error adding floor:', error)
-        console.warn('Floor addition failed:', error.message || 'Unknown error')
+        // Show error snackbar notification
+        this.errorMessage = error.message || 'Failed to add floor. Please try again.'
+        this.showErrorSnackbar = true
       } finally {
         this.loading = false
       }
@@ -190,21 +182,9 @@ export default {
         }
         const result = await response.json()
 
-        // Show success popup with loading and success states
-        this.popupState = 'loading'
-        this.showSuccessPopup = true
-
-        // Simulate loading then show success
-        setTimeout(() => {
-          this.successMessage = `Section "${this.newSection.sectionName}" added successfully!`
-          this.successType = 'section'
-          this.popupState = 'success'
-
-          // Auto-close after 3 seconds
-          setTimeout(() => {
-            this.closeSuccessPopup()
-          }, 3000)
-        }, 800)
+        // Show success snackbar notification
+        this.successMessage = `Section "${this.newSection.sectionName}" added successfully!`
+        this.showSuccessSnackbar = true
 
         this.resetSectionForm()
         this.$emit('section-added', result)
@@ -222,7 +202,9 @@ export default {
         })
       } catch (error) {
         console.error('Error adding section:', error)
-        console.warn('Section addition failed:', error.message || 'Unknown error')
+        // Show error snackbar notification
+        this.errorMessage = error.message || 'Failed to add section. Please try again.'
+        this.showErrorSnackbar = true
       } finally {
         this.loading = false
       }
@@ -263,16 +245,6 @@ export default {
     closeModal() {
       this.$emit('close-modal')
       this.resetForms()
-    },
-
-    // Success popup controls
-    closeSuccessPopup() {
-      this.showSuccessPopup = false
-      this.successMessage = ''
-      this.successType = ''
-      this.popupState = 'success'
-      // Also close the main modal
-      this.closeModal()
     },
   },
 }

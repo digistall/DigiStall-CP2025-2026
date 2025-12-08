@@ -86,8 +86,24 @@ const styles = StyleSheet.create({
   },
 
   inputContainer: {
-    marginBottom: 10,
+    marginBottom: 15,
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  inputIconWrapper: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 1,
+  },
+
+  inputIcon: {
+    marginRight: 5,
+  },
+
+  textInputWithIcon: {
+    paddingLeft: 45,
   },
 
   passwordToggle: {
@@ -137,6 +153,7 @@ const styles = StyleSheet.create({
   },
   
   textInput: {
+    flex: 1,
     height: 50, 
     borderWidth: 1,
     borderColor: '#ddd',
@@ -154,6 +171,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    flexDirection: 'row',
+  },
+
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   loginButtonDisabled: {
@@ -179,13 +203,102 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+
+  forgotPasswordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
   
   forgotPasswordText: {
     color: '#3498db',
     fontSize: 14,
     textAlign: 'center',
-    textDecorationLine: 'underline',
-    paddingVertical: 10, 
+  },
+
+  // ===== PROFESSIONAL LOADING OVERLAY STYLES =====
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  loadingCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    width: width * 0.85,
+    maxWidth: 350,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+
+  loadingLogoContainer: {
+    marginBottom: 25,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 100,
+  },
+
+  loadingLogo: {
+    width: 80,
+    height: 80,
+  },
+
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+
+  loadingDotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  loadingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4472C4',
+    marginHorizontal: 5,
+  },
+
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    width: '100%',
+  },
+
+  securityNoteText: {
+    fontSize: 12,
+    color: '#27ae60',
+    marginLeft: 5,
+    fontWeight: '500',
   },
   
   modalOverlay: {
@@ -224,66 +337,99 @@ const styles = StyleSheet.create({
   
   errorModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   errorModalContainer: {
     backgroundColor: 'white',
-    borderRadius: 15,
+    borderRadius: 20,
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 340,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 10,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 15,
     overflow: 'hidden',
   },
   errorModalHeader: {
-    padding: 20,
+    paddingTop: 30,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalIconCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  errorModalIconNew: {
+    marginBottom: 10,
   },
   errorModalIcon: {
     fontSize: 24,
     marginRight: 10,
   },
+  errorModalTitleSection: {
+    paddingHorizontal: 25,
+    paddingTop: 20,
+    paddingBottom: 5,
+  },
   errorModalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   errorModalBody: {
-    padding: 20,
-    paddingTop: 15,
+    paddingHorizontal: 25,
+    paddingTop: 10,
+    paddingBottom: 25,
   },
   errorModalMessage: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#5a6978',
     textAlign: 'center',
     lineHeight: 22,
   },
   errorModalFooter: {
-    padding: 15,
+    padding: 20,
     paddingTop: 0,
   },
   errorModalButton: {
-    height: 45,
-    borderRadius: 8,
+    height: 48,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   errorModalButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });
 

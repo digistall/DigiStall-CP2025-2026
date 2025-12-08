@@ -13,7 +13,19 @@ import { styles } from "./PaymentCardStyles";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.75 + 12;
 
-const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment }) => {
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    card: '#ffffff',
+    text: '#333',
+    textSecondary: '#6b7280',
+    border: '#e5e7eb',
+  }
+};
+
+const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment, theme = defaultTheme, isDark = false }) => {
+  const colors = theme?.colors || defaultTheme.colors;
   const [selectedCard, setSelectedCard] = useState(0);
   const scrollViewRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -89,6 +101,10 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment }) => {
 
   const renderPaymentCard = (method, index) => {
     const isSelected = selectedCard === index;
+    // Adjust background color for dark mode
+    const cardBackgroundColor = isDark 
+      ? (method.color + '20') // Add 20% opacity of the method color in dark mode
+      : method.backgroundColor;
 
     return (
       <TouchableOpacity
@@ -99,7 +115,7 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment }) => {
         <View
           style={[
             styles.paymentCard,
-            { backgroundColor: method.backgroundColor },
+            { backgroundColor: cardBackgroundColor },
             isSelected && [styles.selectedCard, { borderColor: method.color }],
           ]}
         >
@@ -121,12 +137,12 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment }) => {
               )}
             </View>
             <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>{method.name}</Text>
-              <Text style={styles.cardType}>{method.type}</Text>
+              <Text style={[styles.cardTitle, { color: isDark ? colors.text : '#333' }]}>{method.name}</Text>
+              <Text style={[styles.cardType, { color: isDark ? colors.textSecondary : '#6B7280' }]}>{method.type}</Text>
             </View>
           </View>
 
-          <Text style={styles.cardDescription}>{method.description}</Text>
+          <Text style={[styles.cardDescription, { color: isDark ? colors.textSecondary : '#6B7280' }]}>{method.description}</Text>
 
           <View style={styles.cardFooter}>
             <View
@@ -224,13 +240,20 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment }) => {
         style: styles.mainContainer,
       };
 
+  // Override wrapper props for dark mode
+  const themedWrapperProps = backgroundImage
+    ? wrapperProps
+    : {
+        style: [styles.mainContainer, { backgroundColor: colors.card }],
+      };
+
   return (
-    <WrapperComponent {...wrapperProps}>
+    <WrapperComponent {...themedWrapperProps}>
       {/* Semi-transparent overlay for better visibility */}
       {backgroundImage && <View style={styles.mainOverlay} />}
 
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>Select Payment Method</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Payment Method</Text>
 
         <Animated.ScrollView
           ref={scrollViewRef}

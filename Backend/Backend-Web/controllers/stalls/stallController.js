@@ -19,6 +19,10 @@ import { getLocationsByArea } from './stallComponents/landingPageComponents/getL
 import { getStallsByArea } from './stallComponents/landingPageComponents/getStallsByArea/getStallsByArea.js'
 import { getStallsByLocation } from './stallComponents/landingPageComponents/getStallsByLocation/getStallsByLocation.js'
 import { getFilteredStalls } from './stallComponents/landingPageComponents/getFilteredStalls/getFilteredStalls.js'
+import { getLandingPageStats } from './stallComponents/landingPageComponents/getLandingPageStats/getLandingPageStats.js'
+import { getLandingPageStallholders } from './stallComponents/landingPageComponents/getLandingPageStallholders/getLandingPageStallholders.js'
+import { getLandingPageStallsList } from './stallComponents/landingPageComponents/getLandingPageStallsList/getLandingPageStallsList.js'
+import { getLandingPageFilterOptions } from './stallComponents/landingPageComponents/getLandingPageFilterOptions/getLandingPageFilterOptions.js'
 
 // Import raffle components
 import { createRaffle } from './stallComponents/raffleComponents/createRaffle.js'
@@ -55,6 +59,10 @@ export {
   getStallsByArea,
   getStallsByLocation,
   getFilteredStalls,
+  getLandingPageStats,
+  getLandingPageStallholders,
+  getLandingPageStallsList,
+  getLandingPageFilterOptions,
   
   // Raffle management
   createRaffle,

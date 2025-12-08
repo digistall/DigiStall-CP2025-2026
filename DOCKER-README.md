@@ -41,9 +41,46 @@
    ```
 
 5. **Access the application:**
-   - Frontend: http://localhost
+   - Frontend Web: http://localhost
+   - Frontend Mobile: See terminal output for `exp://YOUR_IP:8081` URL
    - Backend API: http://localhost:3001
    - Health Check: http://localhost:3001/api/health
+
+---
+
+## 📱 Mobile App Setup (Expo)
+
+The mobile app runs as an Expo development server inside Docker. To use it:
+
+### Before Starting Docker
+
+1. **Find your computer's local IP address:**
+   ```powershell
+   # Windows PowerShell
+   (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notlike "*Loopback*" -and $_.IPAddress -notlike "169.*" }).IPAddress
+   ```
+
+2. **Set your IP in the `.env` file:**
+   ```env
+   HOST_IP=192.168.1.105  # Replace with your actual IP
+   ```
+
+### After Starting Docker
+
+1. **View the mobile app logs to get the Expo URL:**
+   ```bash
+   docker-compose logs -f frontend-mobile
+   ```
+
+2. **Look for the URL in the output:**
+   ```
+   › Metro waiting on exp://192.168.1.105:8081
+   ```
+
+3. **Open Expo Go app on your phone and enter the URL:**
+   - Copy the `exp://192.168.1.105:8081` URL
+   - Paste it in the Expo Go app on your phone
+   - Make sure your phone is on the same WiFi network as your computer
 
 ---
 
@@ -112,12 +149,14 @@ docker-compose logs -f
 # Specific service
 docker-compose logs -f backend
 docker-compose logs -f frontend-web
+docker-compose logs -f frontend-mobile
 ```
 
 ### Rebuild Specific Service
 ```bash
 docker-compose up --build backend
 docker-compose up --build frontend-web
+docker-compose up --build frontend-mobile
 ```
 
 ---
@@ -164,8 +203,14 @@ DigiStall-CP2025-2026/
 │   ├── package.json        # Dependencies definition
 │   ├── package-lock.json   # Locked dependency versions
 │   └── ...
-└── Frontend/Web/
-    ├── Dockerfile          # Frontend Docker build
+├── Frontend/Web/
+│   ├── Dockerfile          # Frontend Web Docker build
+│   ├── package.json        # Dependencies definition
+│   ├── package-lock.json   # Locked dependency versions
+│   └── ...
+└── Frontend/Mobile/
+    ├── Dockerfile          # Mobile production build (web export)
+    ├── Dockerfile.dev      # Mobile development (Expo server)
     ├── package.json        # Dependencies definition
     ├── package-lock.json   # Locked dependency versions
     └── ...

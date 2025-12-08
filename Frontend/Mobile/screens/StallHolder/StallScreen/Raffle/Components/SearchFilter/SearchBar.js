@@ -10,24 +10,32 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 const SearchBar = ({ 
   searchValue = '', 
   onSearch,
-  placeholder = "Search by stall number or location..."
+  placeholder = "Search by stall number or location...",
+  theme,
+  isDark
 }) => {
   return (
-    <View style={styles.searchContainer}>
-      <Icon name="search" size={22} color="#64748b" style={styles.searchIcon} />
+    <View style={[
+      styles.searchContainer,
+      {
+        backgroundColor: isDark ? theme.colors.card : '#f8fafc',
+        borderColor: theme.colors.border
+      }
+    ]}>
+      <Icon name="search" size={22} color={theme?.colors?.textTertiary || "#64748b"} style={styles.searchIcon} />
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { color: theme?.colors?.text || '#1e293b' }]}
         placeholder={placeholder}
         value={searchValue}
         onChangeText={onSearch}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={theme?.colors?.textTertiary || "#94a3b8"}
       />
       {searchValue.length > 0 && (
         <TouchableOpacity
           onPress={() => onSearch('')}
           style={styles.clearSearchButton}
         >
-          <Icon name="clear" size={20} color="#64748b" />
+          <Icon name="clear" size={20} color={theme?.colors?.textTertiary || "#64748b"} />
         </TouchableOpacity>
       )}
     </View>
@@ -39,13 +47,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 16,
     marginRight: 12,
     height: 48,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   searchIcon: {
     marginRight: 12,
@@ -53,7 +59,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1e293b',
     fontWeight: '400',
   },
   clearSearchButton: {

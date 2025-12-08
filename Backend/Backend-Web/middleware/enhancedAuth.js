@@ -11,7 +11,8 @@ import process from 'process';
 
 const { verify } = jwt;
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+// Helper function to get JWT secret at runtime (after dotenv.config() has run)
+const getJwtSecret = () => process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 /**
  * Authenticate JWT Token
@@ -20,8 +21,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-t
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const JWT_SECRET = getJwtSecret(); // Get secret at runtime
+
+  console.log('🔍 [STALLHOLDER DEBUG] Auth header received:', authHeader ? 'Present' : 'Missing');
+  console.log('🔍 [STALLHOLDER DEBUG] Token extracted:', token ? `${token.substring(0, 20)}...` : 'None');
+  console.log('🔍 [STALLHOLDER DEBUG] Request URL:', req.url);
+  console.log('🔍 [STALLHOLDER DEBUG] Request method:', req.method);
 
   if (!token) {
+    console.log('❌ [STALLHOLDER DEBUG] No token provided');
     return res.status(401).json({
       success: false,
       message: 'Access token required',
@@ -31,7 +39,11 @@ const authenticateToken = (req, res, next) => {
 
   verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
-      console.error('❌ Token verification error:', err);
+      console.error('❌ [STALLHOLDER DEBUG] Token verification error:', err);
+      console.error('❌ [STALLHOLDER DEBUG] Error name:', err.name);
+      console.error('❌ [STALLHOLDER DEBUG] Error message:', err.message);
+      console.error('❌ [STALLHOLDER DEBUG] JWT_SECRET being used:', JWT_SECRET.substring(0, 20) + '...');
+      console.error('❌ [STALLHOLDER DEBUG] Token received (first 50 chars):', token.substring(0, 50) + '...');
 
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({
@@ -307,6 +319,7 @@ const checkBranchAccess = (req, res, next) => {
 const optionalAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
+  const JWT_SECRET = getJwtSecret(); // Get secret at runtime
 
   if (!token) {
     req.user = null;

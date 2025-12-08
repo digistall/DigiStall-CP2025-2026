@@ -17,9 +17,20 @@
         <div class="stall-grid" :key="currentPage">
           <div class="stall-card" v-for="stall in paginatedStalls" :key="stall.id" @click="openStallDetails(stall)">
             <div class="stall-image">
-              <img :src="stall.imageUrl" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
+              <img :src="getStallDisplayImage(stall)" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
               <div class="stall-status-badge" :class="getStallBadgeClass(stall)">
                 {{ getStallBadgeText(stall) }}
+              </div>
+              
+              <!-- Image pagination dots (show only if multiple images) -->
+              <div class="image-pagination-dots" v-if="stall.imageCount > 1">
+                <div 
+                  v-for="n in Math.min(stall.imageCount, 10)" 
+                  :key="n"
+                  class="pagination-dot"
+                  :class="{ active: stall.currentImageIndex === (n - 1) }"
+                  @click.stop="changeStallImage(stall, n - 1)"
+                ></div>
               </div>
             </div>
             <div class="stall-info">
@@ -96,91 +107,184 @@
     <!-- Stall Details Modal -->
     <transition name="modal-fade">
       <div v-if="showStallDetails" class="modal-overlay" @click.self="closeStallDetails">
-        <div class="modal-container">
-          <div class="modal-header">
-            <h2>Stall Details</h2>
-            <button class="close-btn" @click="closeStallDetails">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </button>
-          </div>
+        <div class="modal-container professional">
+          <!-- Close button floating -->
+          <button class="close-btn-floating" @click="closeStallDetails">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
 
           <div class="modal-content" v-if="selectedStallDetails">
-            <div class="modal-image-section" @click="openImageGallery" title="Click to view more images">
-              <img :src="selectedStallDetails.imageUrl" :alt="`Stall ${selectedStallDetails.stallNumber}`"
-                @error="handleImageError" />
-              <div class="image-gallery-hint">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
-                Click to view more images
+            <!-- Image Gallery Section - Full width hero -->
+            <div class="modal-image-hero">
+              <div class="hero-image-container" @click="openFullscreenViewer">
+                <img :src="currentDisplayImage" :alt="`Stall ${selectedStallDetails.stallNumber}`"
+                  @error="handleImageError" class="hero-image" />
+                
+                <!-- Gradient overlay -->
+                <div class="hero-gradient"></div>
+                
+                <!-- Stall number badge on image -->
+                <div class="hero-badge">
+                  <span class="badge-number">{{ selectedStallDetails.stallNumber }}</span>
+                  <span class="badge-status" :class="getStallBadgeClass(selectedStallDetails)">
+                    {{ getStallBadgeText(selectedStallDetails) }}
+                  </span>
+                </div>
+                
+                <!-- Image navigation arrows -->
+                <template v-if="stallImages.length > 1">
+                  <button class="hero-nav prev" @click.stop="prevImage">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                  <button class="hero-nav next" @click.stop="nextImage">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </template>
+                
+                <!-- Image dots indicator -->
+                <div class="hero-dots" v-if="stallImages.length > 1">
+                  <span 
+                    v-for="(img, index) in stallImages" 
+                    :key="index"
+                    class="dot"
+                    :class="{ active: currentImageIndex === index }"
+                    @click.stop="currentImageIndex = index"
+                  ></span>
+                </div>
               </div>
             </div>
 
-            <div class="modal-info-section">
-              <div class="info-row">
-                <span class="info-label">Stall Number:</span>
-                <span class="info-value stall-number-highlight">{{ selectedStallDetails.stallNumber }}</span>
+            <!-- Info Section - Clean card layout -->
+            <div class="modal-info-card">
+              <!-- Price highlight -->
+              <div class="price-section">
+                <span class="price-label">Monthly Rent</span>
+                <span class="price-amount">{{ selectedStallDetails.price }}</span>
+                <span class="price-type">{{ selectedStallDetails.price_type || 'Fixed Price' }}</span>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">Price:</span>
-                <span class="info-value price-highlight">{{ selectedStallDetails.price }}</span>
+              <!-- Details grid -->
+              <div class="details-grid">
+                <div class="detail-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Floor & Section</span>
+                    <span class="detail-value">{{ selectedStallDetails.floor }} / {{ selectedStallDetails.section }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18"></rect>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Dimensions</span>
+                    <span class="detail-value">{{ selectedStallDetails.dimensions }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Location</span>
+                    <span class="detail-value">{{ selectedStallDetails.branch }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item" v-if="selectedStallDetails.managerName && selectedStallDetails.managerName !== 'Unknown' && selectedStallDetails.managerName !== 'N/A'">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Manager</span>
+                    <span class="detail-value">{{ selectedStallDetails.managerName }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">Price Type:</span>
-                <span class="info-value">{{ selectedStallDetails.price_type || 'Fixed Price' }}</span>
+              <!-- Description -->
+              <div class="description-section" v-if="selectedStallDetails.description">
+                <span class="description-label">About this stall</span>
+                <p class="description-text">{{ selectedStallDetails.description }}</p>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">Floor:</span>
-                <span class="info-value">{{ selectedStallDetails.floor }}</span>
-              </div>
+              <!-- Apply button -->
+              <button 
+                v-if="shouldShowApplyButton(selectedStallDetails)" 
+                class="apply-btn-large" 
+                @click="applyFromModal"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="12"></line>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                APPLY NOW
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
 
-              <div class="info-row">
-                <span class="info-label">Section:</span>
-                <span class="info-value">{{ selectedStallDetails.section }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Dimensions:</span>
-                <span class="info-value">{{ selectedStallDetails.dimensions }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Branch:</span>
-                <span class="info-value">{{ selectedStallDetails.branch }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Location:</span>
-                <span class="info-value">{{ selectedStallDetails.branchLocation }}</span>
-              </div>
-
-              <div class="info-row" v-if="selectedStallDetails.managerName">
-                <span class="info-label">Manager:</span>
-                <span class="info-value">{{ selectedStallDetails.managerName }}</span>
-              </div>
-
-              <div class="info-row full-width" v-if="selectedStallDetails.description">
-                <span class="info-label">Description:</span>
-                <p class="info-description">{{ selectedStallDetails.description }}</p>
-              </div>
-
-              <div class="modal-actions">
-                <button v-if="shouldShowApplyButton(selectedStallDetails)" class="modal-apply-btn"
-                  @click="applyFromModal">
-                  APPLY NOW!
-                </button>
-                <button v-else-if="!selectedStallDetails.isAvailable" class="modal-apply-btn occupied" disabled>
-                  OCCUPIED
-                </button>
-              </div>
+    <!-- Fullscreen Image Viewer -->
+    <transition name="fade">
+      <div v-if="showFullscreenViewer" class="fullscreen-viewer" @click.self="closeFullscreenViewer">
+        <button class="fullscreen-close" @click="closeFullscreenViewer">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6L18 18"></path>
+          </svg>
+        </button>
+        
+        <div class="fullscreen-content">
+          <!-- Main Image -->
+          <div class="fullscreen-image-container">
+            <img :src="currentDisplayImage" :alt="`Stall ${selectedStallDetails?.stallNumber}`" @error="handleImageError" />
+          </div>
+          
+          <!-- Navigation Arrows -->
+          <template v-if="stallImages.length > 1">
+            <button class="fullscreen-nav prev" @click="prevImage" :disabled="currentImageIndex === 0">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button class="fullscreen-nav next" @click="nextImage" :disabled="currentImageIndex === stallImages.length - 1">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </template>
+          
+          <!-- Image Counter -->
+          <div class="fullscreen-counter" v-if="stallImages.length > 0">
+            {{ currentImageIndex + 1 }} / {{ stallImages.length }}
+          </div>
+          
+          <!-- Thumbnail Strip -->
+          <div class="fullscreen-thumbnails" v-if="stallImages.length > 1">
+            <div 
+              v-for="(img, index) in stallImages" 
+              :key="img.id || index"
+              class="fullscreen-thumb"
+              :class="{ active: currentImageIndex === index }"
+              @click="currentImageIndex = index"
+            >
+              <img :src="buildImageUrl(img.image_url)" :alt="`Image ${index + 1}`" @error="handleThumbnailError($event)" />
             </div>
           </div>
         </div>
@@ -198,6 +302,7 @@ export default {
   components: {
     StallApplicationContainer,
   },
+  emits: ['modal-opened', 'modal-closed'],
   props: {
     filteredStalls: {
       type: Array,
@@ -220,7 +325,40 @@ export default {
       selectedStallDetails: null,
       currentPage: 1,
       stallsPerPage: 8,
+      // Image gallery
+      stallImages: [],
+      currentImageIndex: 0,
+      loadingImages: false,
+      // Fullscreen viewer
+      showFullscreenViewer: false,
+      // Stall images cache for main grid
+      stallImageCache: new Map(),
+      // Auto slideshow
+      autoSlideInterval: null,
+      autoSlideDelay: 3000, // 3 seconds
+      // Grid auto slideshow
+      gridAutoSlideInterval: null,
+      gridAutoSlideDelay: 2500, // 2.5 seconds for grid cards
+      // Wheel listener for closing modal on scroll
+      wheelListener: null,
+      wheelScrollAccumulator: 0,
+      wheelScrollThreshold: 150, // Pixels of wheel scroll to close
     }
+  },
+  beforeUnmount() {
+    // Clean up auto slide interval
+    this.stopAutoSlide()
+    this.stopGridAutoSlide()
+    // Remove wheel listener
+    this.removeWheelListener()
+    // Restore body scroll
+    document.body.style.overflow = ''
+  },
+  mounted() {
+    // Start grid auto slide after a short delay to allow images to load
+    setTimeout(() => {
+      this.startGridAutoSlide()
+    }, 1000)
   },
   computed: {
     totalPages() {
@@ -231,11 +369,29 @@ export default {
       const endIndex = startIndex + this.stallsPerPage
       const stalls = this.filteredStalls.slice(startIndex, endIndex)
 
-      // Ensure all stalls have an image
-      return stalls.map((stall) => ({
-        ...stall,
-        imageUrl: stall.imageUrl || stall.image || stallBackgroundImg,
-      }))
+      // Ensure all stalls have an image and fetch image info
+      return stalls.map((stall) => {
+        const stallWithDefaults = {
+          ...stall,
+          imageUrl: stall.imageUrl || stall.image || stallBackgroundImg,
+          currentImageIndex: 0,
+          imageCount: 1,
+          stallImages: []
+        }
+        
+        // Fetch images for this stall if not cached
+        this.fetchStallImagesForGrid(stallWithDefaults)
+        
+        return stallWithDefaults
+      })
+    },
+    currentDisplayImage() {
+      // If we have fetched images, use the current one
+      if (this.stallImages.length > 0 && this.stallImages[this.currentImageIndex]) {
+        return this.buildImageUrl(this.stallImages[this.currentImageIndex].image_url)
+      }
+      // Fallback to the stall's primary image
+      return this.selectedStallDetails?.imageUrl || stallBackgroundImg
     },
   },
   watch: {
@@ -248,22 +404,356 @@ export default {
       event.target.src = stallBackgroundImg
     },
 
-    openStallDetails(stall) {
+    handleThumbnailError(event) {
+      event.target.src = stallBackgroundImg
+    },
+
+    buildImageUrl(imagePath) {
+      if (!imagePath) return stallBackgroundImg
+      // Already a full URL
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath
+      }
+      // Build full URL from relative path
+      const imageBaseUrl = 'http://localhost'
+      return `${imageBaseUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`
+    },
+
+    async fetchStallImagesForGrid(stall) {
+      if (!stall.id) return
+      
+      // Check if we already have this stall's images cached
+      if (this.stallImageCache.has(stall.id)) {
+        const cachedImages = this.stallImageCache.get(stall.id)
+        stall.stallImages = cachedImages
+        stall.imageCount = cachedImages.length
+        return
+      }
+      
+      // For landing page (public), directly scan htdocs instead of calling authenticated API
+      // This avoids 401 Unauthorized errors for public users
+      await this.fetchImagesFromFileSystemForGrid(stall)
+    },
+
+    async fetchImagesFromFileSystemForGrid(stall) {
+      if (!stall.stallNumber) {
+        stall.stallImages = []
+        stall.imageCount = 1
+        return
+      }
+      
+      const imageBaseUrl = 'http://localhost'
+      const branchId = stall.branchId || 1
+      const stallNumber = stall.stallNumber
+      
+      // Test a single image URL silently (no console errors)
+      const testImageSilent = (url) => {
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => resolve(true)
+          img.onerror = () => resolve(false)
+          img.src = url
+        })
+      }
+      
+      const images = []
+      
+      // Check for images 1-10, stop early if an image number is not found
+      for (let i = 1; i <= 10; i++) {
+        // First, quickly test the most common extension (png)
+        const pngUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.png`
+        let foundUrl = null
+        
+        if (await testImageSilent(pngUrl)) {
+          foundUrl = pngUrl
+        } else {
+          // Only try other extensions if png fails
+          for (const ext of ['jpg', 'jpeg']) {
+            const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
+            if (await testImageSilent(imageUrl)) {
+              foundUrl = imageUrl
+              break
+            }
+          }
+        }
+        
+        if (foundUrl) {
+          images.push({
+            id: `grid_img_${i}`,
+            stall_id: stall.id,
+            image_url: foundUrl,
+            display_order: i,
+            is_primary: i === 1 ? 1 : 0
+          })
+        } else {
+          // Stop checking more image numbers once we find a gap
+          // (e.g., if image 5 doesn't exist, don't check 6-10)
+          break
+        }
+      }
+      
+      // Cache the results
+      this.stallImageCache.set(stall.id, images)
+      stall.stallImages = images
+      stall.imageCount = images.length > 0 ? images.length : 1
+      
+      if (images.length > 0) {
+        console.log(`📁 Grid: Loaded ${images.length} images for stall ${stallNumber}`)
+      }
+    },
+
+    getStallDisplayImage(stall) {
+      // If stall has multiple images, show the current one
+      if (stall.stallImages && stall.stallImages.length > 0 && stall.stallImages[stall.currentImageIndex]) {
+        return this.buildImageUrl(stall.stallImages[stall.currentImageIndex].image_url)
+      }
+      // Fallback to original image
+      return stall.imageUrl || stall.image || stallBackgroundImg
+    },
+
+    changeStallImage(stall, imageIndex) {
+      if (stall.stallImages && stall.stallImages.length > imageIndex) {
+        stall.currentImageIndex = imageIndex
+        // Force reactivity update
+        this.$forceUpdate()
+      }
+    },
+
+    async openStallDetails(stall) {
       this.selectedStallDetails = stall
       this.showStallDetails = true
+      this.currentImageIndex = 0
+      this.stallImages = []
+      
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden'
+      
+      // Emit event to parent to pause scroll listener
+      this.$emit('modal-opened')
+      
+      // Setup wheel listener to close modal on scroll
+      this.setupWheelListener()
+      
+      // Fetch all images for this stall
+      await this.fetchStallImages(stall.id)
+      
+      // Start auto slideshow if multiple images
+      this.startAutoSlide()
+    },
+
+    async fetchStallImages(stallId) {
+      if (!stallId) return
+      
+      this.loadingImages = true
+      
+      // For public landing page, use file system scanning only
+      // The API requires authentication which public users don't have
+      await this.fetchImagesFromFileSystem(stallId)
+      
+      this.loadingImages = false
+    },
+
+    async fetchImagesFromFileSystem(stallId) {
+      // Scan htdocs folder for stall images
+      const stall = this.selectedStallDetails
+      if (!stall || !stall.stallNumber) return
+      
+      console.log(`🔍 Scanning htdocs for stall ${stall.stallNumber} images`)
+      
+      const imageBaseUrl = 'http://localhost'  // Apache runs on port 80
+      const branchId = stall.branchId || 1
+      const stallNumber = stall.stallNumber
+      
+      // Test images by actually loading them (avoids CORS issues with HEAD requests)
+      const testImage = (url) => {
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => resolve(true)
+          img.onerror = () => resolve(false)
+          img.src = url
+        })
+      }
+      
+      const images = []
+      const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif']
+      
+      console.log(`📂 Scanning: ${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/`)
+      
+      // Check for images 1-10
+      for (let i = 1; i <= 10; i++) {
+        let foundForThisNumber = false
+        for (const ext of extensions) {
+          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
+          
+          const exists = await testImage(imageUrl)
+          if (exists) {
+            images.push({
+              id: `img_${i}`,
+              stall_id: stallId,
+              image_url: imageUrl,
+              display_order: i,
+              is_primary: i === 1 ? 1 : 0
+            })
+            console.log(`✅ Found: ${i}.${ext}`)
+            foundForThisNumber = true
+            break
+          }
+        }
+        // If no image found for this number and we already have some images, 
+        // stop searching (consecutive images expected)
+        if (!foundForThisNumber && images.length > 0) {
+          break
+        }
+      }
+      
+      if (images.length > 0) {
+        this.stallImages = images
+        console.log(`📁 Loaded ${images.length} images for stall ${stallNumber}`)
+      } else {
+        console.log(`❌ No images found, using fallback`)
+        // Use main stall image as fallback
+        if (stall.imageUrl && stall.imageUrl !== 'stall-image.jpg') {
+          this.stallImages = [{
+            id: 'fallback_1',
+            stall_id: stallId,
+            image_url: stall.imageUrl,
+            display_order: 1,
+            is_primary: 1
+          }]
+        }
+      }
+    },
+
+    prevImage() {
+      if (this.currentImageIndex > 0) {
+        this.currentImageIndex--
+      }
+    },
+
+    nextImage() {
+      if (this.currentImageIndex < this.stallImages.length - 1) {
+        this.currentImageIndex++
+      }
+    },
+
+    startAutoSlide() {
+      // Stop any existing interval
+      this.stopAutoSlide()
+      
+      // Only start if there are multiple images
+      if (this.stallImages.length > 1) {
+        this.autoSlideInterval = setInterval(() => {
+          // Loop back to first image after last
+          if (this.currentImageIndex >= this.stallImages.length - 1) {
+            this.currentImageIndex = 0
+          } else {
+            this.currentImageIndex++
+          }
+        }, this.autoSlideDelay)
+      }
+    },
+
+    stopAutoSlide() {
+      if (this.autoSlideInterval) {
+        clearInterval(this.autoSlideInterval)
+        this.autoSlideInterval = null
+      }
+    },
+
+    // Restart auto slide when images are loaded
+    restartAutoSlide() {
+      if (this.stallImages.length > 1) {
+        this.startAutoSlide()
+      }
+    },
+
+    // Grid auto slide methods
+    startGridAutoSlide() {
+      this.stopGridAutoSlide()
+      
+      this.gridAutoSlideInterval = setInterval(() => {
+        // Get all stalls from cache and advance their images
+        this.stallImageCache.forEach((images, stallId) => {
+          if (images.length > 1) {
+            // Find the stall in paginatedStalls
+            const stall = this.paginatedStalls.find(s => s.id === stallId)
+            if (stall) {
+              // Advance to next image, loop back to 0
+              const nextIndex = (stall.currentImageIndex + 1) % images.length
+              stall.currentImageIndex = nextIndex
+            }
+          }
+        })
+        // Force reactivity update
+        this.$forceUpdate()
+      }, this.gridAutoSlideDelay)
+    },
+
+    stopGridAutoSlide() {
+      if (this.gridAutoSlideInterval) {
+        clearInterval(this.gridAutoSlideInterval)
+        this.gridAutoSlideInterval = null
+      }
+    },
+
+    // Wheel listener to close modal on scroll
+    setupWheelListener() {
+      this.wheelScrollAccumulator = 0
+      this.wheelListener = (e) => {
+        // Accumulate scroll delta
+        this.wheelScrollAccumulator += Math.abs(e.deltaY)
+        
+        // If accumulated scroll exceeds threshold, close modal
+        if (this.wheelScrollAccumulator > this.wheelScrollThreshold) {
+          this.closeStallDetails()
+        }
+      }
+      window.addEventListener('wheel', this.wheelListener, { passive: true })
+    },
+
+    removeWheelListener() {
+      if (this.wheelListener) {
+        window.removeEventListener('wheel', this.wheelListener)
+        this.wheelListener = null
+      }
+      this.wheelScrollAccumulator = 0
     },
 
     closeStallDetails() {
       this.showStallDetails = false
       this.selectedStallDetails = null
+      this.stallImages = []
+      this.currentImageIndex = 0
+      this.showFullscreenViewer = false
+      
+      // Stop auto slideshow
+      this.stopAutoSlide()
+      
+      // Remove wheel listener
+      this.removeWheelListener()
+      
+      // Restore body scroll
+      document.body.style.overflow = ''
+      
+      // Emit event to parent to resume scroll listener
+      this.$emit('modal-closed')
+    },
+
+    openFullscreenViewer() {
+      this.showFullscreenViewer = true
+      // Prevent body scroll when fullscreen is open
+      document.body.style.overflow = 'hidden'
+    },
+
+    closeFullscreenViewer() {
+      this.showFullscreenViewer = false
+      // Restore body scroll
+      document.body.style.overflow = ''
     },
 
     openImageGallery() {
-      // TODO: Implement image gallery modal with multiple stall images
-      // For now, this will be a placeholder for future gallery implementation
-      console.log('📷 Opening image gallery for stall:', this.selectedStallDetails?.stallNumber)
-      // You can emit an event or open a new gallery modal here
-      // this.$emit('openGallery', this.selectedStallDetails)
+      // Legacy method - now using fullscreen viewer
+      this.openFullscreenViewer()
     },
 
     applyFromModal() {
@@ -308,7 +798,9 @@ export default {
       }
 
       // For available stalls, return class based on price type
-      switch (stall.price_type) {
+      // Support both snake_case and camelCase property names
+      const priceType = stall.price_type || stall.priceType
+      switch (priceType) {
         case 'Fixed Price':
           return 'available'
         case 'Auction':
@@ -327,7 +819,9 @@ export default {
       }
 
       // For available stalls, return text based on price type
-      switch (stall.price_type) {
+      // Support both snake_case and camelCase property names
+      const priceType = stall.price_type || stall.priceType
+      switch (priceType) {
         case 'Fixed Price':
           return 'Available'
         case 'Auction':
@@ -348,7 +842,9 @@ export default {
       }
 
       // Get price type and normalize it - default to 'Fixed Price' if empty/null
-      const priceType = stall.price_type ? stall.price_type.toString().toLowerCase().trim() : 'fixed price'
+      // Support both snake_case and camelCase property names
+      const rawPriceType = stall.price_type || stall.priceType
+      const priceType = rawPriceType ? rawPriceType.toString().toLowerCase().trim() : 'fixed price'
 
       // Only show apply button for Fixed Price stalls
       // Explicitly exclude Auction and Raffle

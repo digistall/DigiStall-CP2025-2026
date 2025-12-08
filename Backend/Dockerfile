@@ -64,9 +64,16 @@ COPY --from=builder /app/middleware ./middleware
 COPY --from=builder /app/Backend-Web ./Backend-Web
 COPY --from=builder /app/Backend-Mobile ./Backend-Mobile
 
+# Create upload directories for Docker environment
+RUN mkdir -p /app/uploads/stalls /app/uploads/applicants
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
+
+# Give ownership of upload directories to nodejs user
+RUN chown -R nodejs:nodejs /app/uploads
+
 USER nodejs
 
 # Expose port

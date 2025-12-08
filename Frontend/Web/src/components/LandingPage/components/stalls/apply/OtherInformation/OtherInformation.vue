@@ -1,6 +1,14 @@
 <template>
     <div class="overlay">
         <div class="form-container">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div v-for="step in totalSteps" :key="step" class="step-dot" 
+                    :class="{ 'active': step === currentStep, 'completed': step < currentStep }">
+                    {{ step }}
+                </div>
+            </div>
+            
             <h3>Other Information</h3>
 
             <!-- Error Message Display -->
@@ -56,6 +64,18 @@ export default {
         spouseInfo: {
             type: Object,
             default: null
+        },
+        savedData: {
+            type: Object,
+            default: null
+        },
+        currentStep: {
+            type: Number,
+            default: 4
+        },
+        totalSteps: {
+            type: Number,
+            default: 4
         }
     },
     data() {
@@ -72,6 +92,17 @@ export default {
                 emailAddress: false
             }
         };
+    },
+    mounted() {
+        // Initialize form with saved data if available
+        if (this.savedData) {
+            this.emailAddress = this.savedData.emailAddress || '';
+            // Note: File inputs cannot be pre-filled for security reasons
+            // But we can keep the file references if they exist
+            this.applicantSignature = this.savedData.applicantSignature || null;
+            this.applicantLocation = this.savedData.applicantLocation || null;
+            this.applicantValidID = this.savedData.applicantValidID || null;
+        }
     },
     methods: {
         clearErrors() {
