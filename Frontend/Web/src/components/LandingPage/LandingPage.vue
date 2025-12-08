@@ -29,7 +29,8 @@
       <StallSection />
       <VendorSection />
       <ComplianceSection />
-      <FreeTrialSection />
+      <!-- FreeTrialSection hidden for now -->
+      <!-- <FreeTrialSection /> -->
     </div>
     
     <FooterSection />
@@ -41,7 +42,6 @@ import HeaderSection from "./components/header/HeaderSection.vue";
 import StallSection from "./components/stalls/StallSection.vue";
 import VendorSection from "./components/vendor/VendorSection.vue";
 import ComplianceSection from "./components/compliance/ComplianceSection.vue";
-import FreeTrialSection from "./components/freetrial/FreeTrialSection.vue";
 import FooterSection from "./components/footer/FooterSection.vue";
 
 export default {
@@ -51,7 +51,6 @@ export default {
     StallSection,
     VendorSection,
     ComplianceSection,
-    FreeTrialSection,
     FooterSection,
   },
   data() {
@@ -62,10 +61,9 @@ export default {
       isHeaderVisible: true,
       lastScrollY: 0,
       sections: [
-        { id: 'home', label: 'STALLS', position: 3 },
-        { id: 'vendor', label: 'VENDOR', position: 30 },
-        { id: 'about', label: 'REPORT', position: 60 },
-        { id: 'free-trial', label: 'TRIAL', position: 97 }
+        { id: 'home', label: 'STALLS', position: 5 },
+        { id: 'vendor', label: 'VENDOR', position: 45 },
+        { id: 'about', label: 'REPORT', position: 95 }
       ]
     }
   },
@@ -152,31 +150,42 @@ export default {
         return;
       }
       
-      // Get section elements
-      const homeSection = document.getElementById('home');
-      const trialSection = document.getElementById('free-trial');
+      // Get the scroll-line-wrapper element to calculate progress only within it
+      const wrapper = document.querySelector('.scroll-line-wrapper');
+      const complianceSection = document.getElementById('about');
       
-      if (homeSection && trialSection) {
-        // The line spans from home to trial within the wrapper
-        const wrapperStart = homeSection.offsetTop;
-        const wrapperEnd = trialSection.offsetTop + trialSection.offsetHeight;
+      if (wrapper && complianceSection) {
+        // Calculate the start and end of the wrapper
+        const wrapperTop = wrapper.offsetTop;
+        const wrapperBottom = complianceSection.offsetTop + complianceSection.offsetHeight;
+        const wrapperHeight = wrapperBottom - wrapperTop;
         
-        // Calculate total scrollable distance (from start to when bottom of viewport reaches end)
-        const totalScrollDistance = wrapperEnd - window.innerHeight;
+        // Calculate how far we've scrolled within the wrapper
+        const scrollWithinWrapper = scrolled - wrapperTop;
         
-        // Calculate how far we've scrolled from the start
-        const scrolledFromStart = scrolled - wrapperStart;
-        const scrollRange = totalScrollDistance - wrapperStart;
+        // Calculate progress (0 to 100%) based on wrapper content, not entire document
+        // Add viewport height consideration to reach 100% when bottom of wrapper is visible
+        const viewportHeight = window.innerHeight;
         
-        // Calculate progress (0 to 1)
-        const progress = Math.min(Math.max(scrolledFromStart / scrollRange, 0), 1);
+        // Calculate progress based on scroll position relative to wrapper content
+        let progress;
+        if (scrolled <= wrapperTop) {
+          progress = 0;
+        } else if (scrolled >= wrapperBottom - viewportHeight) {
+          progress = 1;
+        } else {
+          progress = scrollWithinWrapper / (wrapperHeight - viewportHeight);
+        }
+        
+        // Clamp between 0 and 1
+        progress = Math.min(Math.max(progress, 0), 1);
         
         // Set scroll progress as percentage (0-100)
         this.scrollProgress = progress * 100;
       }
       
-      // Determine current section (home, vendor, about, free-trial)
-      const sectionIds = ['home', 'vendor', 'about', 'free-trial'];
+      // Determine current section (home, vendor, about)
+      const sectionIds = ['home', 'vendor', 'about'];
       for (let i = sectionIds.length - 1; i >= 0; i--) {
         const section = document.getElementById(sectionIds[i]);
         if (section && scrolled >= section.offsetTop - 200) {
@@ -185,11 +194,11 @@ export default {
         }
       }
       
-      // Check if user is in the Free Trial section
-      const freeTrialSection = document.getElementById('free-trial');
-      if (freeTrialSection) {
-        const trialTop = freeTrialSection.offsetTop;
-        this.isInTrialSection = scrolled >= trialTop - 300;
+      // Check if user is at the end (about section) - keep isInTrialSection for white line effect
+      const aboutSectionEl = document.getElementById('about');
+      if (aboutSectionEl) {
+        const aboutTop = aboutSectionEl.offsetTop;
+        this.isInTrialSection = scrolled >= aboutTop - 300;
       }
     },
     scrollToSection(id) {
@@ -240,14 +249,14 @@ export default {
   left: 0;
   width: 100%;
   height: 0%;
-  background: linear-gradient(180deg, transparent 0%, #002181 5%, #1976d2 50%, #002181 100%);
+  background: linear-gradient(180deg, transparent 0%, #1976d2 5%, #0e4175 50%, #002181 100%);
   border-radius: 3px;
   box-shadow: 0 0 10px rgba(0, 33, 129, 0.3);
   transition: height 0.1s ease-out, background 0.3s ease;
 }
 
 .scroll-progress-line.white-line {
-  background: linear-gradient(180deg, transparent 0%, #002181 5%, #1976d2 40%, #ffffff 100%);
+  background: linear-gradient(180deg, transparent 0%, #1976d2 5%, #0e4175 40%, #002181 100%);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
