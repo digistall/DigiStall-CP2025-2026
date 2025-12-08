@@ -221,10 +221,12 @@ export default {
         const data = await response.json()
         
         if (data.success) {
-          // Process stall images - use default images based on section
+          // Process stall images - use backend image if available, otherwise default
           const processedStalls = data.data.map(stall => ({
             ...stall,
-            stall_image: this.getDefaultImage(stall.section_name)
+            stall_image: stall.stall_image 
+              ? this.buildImageUrl(stall.stall_image) 
+              : this.getDefaultImage(stall.section_name)
           }))
           
           if (this.stallsPage === 1) {
@@ -257,6 +259,21 @@ export default {
       // Hide broken image and show placeholder instead
       event.target.style.display = 'none'
       stall.stall_image = null
+    },
+    
+    buildImageUrl(imagePath) {
+      // Build full URL for images stored in XAMPP htdocs
+      // imagePath format: /digistall_uploads/stalls/{branch_id}/{stall_no}/{filename}
+      if (!imagePath) return null
+      
+      // If it's already a full URL (http:// or https://), return as-is
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath
+      }
+      
+      // Build URL for XAMPP hosted images (localhost:80)
+      const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
+      return `${imageBaseUrl}${imagePath}`
     },
     
     getDefaultImage(section) {
