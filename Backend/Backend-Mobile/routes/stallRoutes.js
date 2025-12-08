@@ -5,7 +5,8 @@ import {
   getStallsByArea,
   getStallById,
   getAvailableAreas,
-  searchStalls
+  searchStalls,
+  getStallImages
 } from '../controllers/stall/stallController.js'
 
 const router = express.Router()
@@ -21,6 +22,10 @@ router.get('/type/:type', getStallsByType)
 // Get stalls by area - restricted to applicant's applied areas
 // GET /mobile/api/stalls/area/Naga City?applicant_id=123&type=Auction (applicant_id REQUIRED)
 router.get('/area/:area', getStallsByArea)
+
+// Get all images for a stall
+// GET /mobile/api/stalls/images/123
+router.get('/images/:stall_id', getStallImages)
 
 // Get stall details by ID
 // GET /mobile/api/stalls/123?applicant_id=456

@@ -79,6 +79,14 @@ export default {
         console.log('🎯 Declining applicant:', this.applicant)
         console.log('📝 Decline reason:', this.declineReason)
 
+        // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+        const applicantId = this.applicant.applicant_id || 
+          (this.applicant.id && typeof this.applicant.id === 'string' 
+            ? parseInt(this.applicant.id.replace('#', ''), 10) 
+            : this.applicant.id)
+
+        console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
         // Step 1: Send decline email first if requested
         let emailSuccess = false
         if (this.sendNotification) {
@@ -100,7 +108,7 @@ export default {
 
         // Step 2: Update applicant status to 'Rejected' via backend (no data deletion)
         const declineResult = await this.updateApplicantStatus(
-          this.applicant.applicant_id || this.applicant.id,
+          applicantId,
           'Rejected',
           this.declineReason.trim(),
         )
@@ -124,7 +132,7 @@ export default {
 
         // Emit to parent components for immediate list updates
         this.$emit('applicant-status-updated', {
-          id: this.applicant.applicant_id || this.applicant.id,
+          id: applicantId,
           status: 'Rejected',
           declined_at: new Date().toISOString(),
         })

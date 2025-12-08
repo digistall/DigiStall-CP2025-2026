@@ -28,6 +28,7 @@ import subscriptionRoutes from './Backend-Web/routes/subscriptionRoutes.js';
 import mobileAuthRoutes from './Backend-Mobile/routes/authRoutes.js';
 import mobileStallRoutes from './Backend-Mobile/routes/stallRoutes.js';
 import mobileApplicationRoutes from './Backend-Mobile/routes/applicationRoutes.js';
+import mobileStallholderRoutes from './Backend-Mobile/routes/stallholderRoutes.js';
 
 const app = express();
 const WEB_PORT = process.env.WEB_PORT || 3001;
@@ -37,6 +38,22 @@ const MOBILE_PORT = process.env.MOBILE_PORT || 5001;
 app.use(cors(corsConfig));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve static files for uploaded documents
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/uploads', express.static(path.join(__dirname, 'Backend-Mobile', 'uploads')));
+
+// Serve stall images from digistall_uploads path (for Docker compatibility)
+// In Docker: /app/uploads/stalls, locally: C:/xampp/htdocs/digistall_uploads/stalls
+const stallUploadsDir = process.env.UPLOAD_DIR_STALLS || 'C:/xampp/htdocs/digistall_uploads/stalls';
+app.use('/digistall_uploads/stalls', express.static(stallUploadsDir));
+
+// Serve applicant documents from digistall_uploads path
+const applicantUploadsDir = process.env.UPLOAD_DIR_APPLICANTS || 'C:/xampp/htdocs/digistall_uploads/applicants';
+app.use('/digistall_uploads/applicants', express.static(applicantUploadsDir));
 
 // ===== WEB ROUTES (Backend-Web functionality) =====
 // Public web routes (no authentication required)
@@ -60,6 +77,7 @@ app.use('/api/subscriptions', subscriptionRoutes); // Subscription management (S
 app.use('/mobile/api/auth', mobileAuthRoutes);
 app.use('/mobile/api/stalls', mobileStallRoutes);
 app.use('/mobile/api/applications', mobileApplicationRoutes);
+app.use('/api/mobile/stallholder', mobileStallholderRoutes); // Stallholder document management for mobile
 
 // Mobile areas endpoint (separate from stalls)
 app.get('/mobile/api/areas', async (req, res) => {

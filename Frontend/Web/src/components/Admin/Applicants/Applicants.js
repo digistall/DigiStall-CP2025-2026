@@ -398,6 +398,14 @@ export default {
     async handleRecheck(applicant) {
       console.log('🔄 Re-checking rejected applicant:', applicant)
 
+      // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+      const applicantId = applicant.applicant_id || 
+        (applicant.id && typeof applicant.id === 'string' 
+          ? parseInt(applicant.id.replace('#', ''), 10) 
+          : applicant.id)
+
+      console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
       try {
         // Make API call to update status to "Under Review" in the backend database
         const token =
@@ -410,7 +418,7 @@ export default {
         }
 
         const response = await fetch(
-          `${API_BASE_URL}/applicants/${applicant.applicant_id || applicant.id}/status`,
+          `${API_BASE_URL}/applicants/${applicantId}/status`,
           {
             method: 'PUT',
             headers: {
@@ -442,7 +450,7 @@ export default {
 
         if (result.success) {
           // Update local data only after successful backend update
-          this.updateApplicantStatus(applicant.applicant_id || applicant.id, 'Under Review')
+          this.updateApplicantStatus(applicantId, 'Under Review')
 
           // Show success message
           if (this.$toast) {

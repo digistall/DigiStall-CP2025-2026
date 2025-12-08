@@ -11,6 +11,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>DigiStall - Naga City Stall Management</title>
     <meta name="description" content="Naga City Stall Management System - Powered by DigiStall">
+    
+    <!-- Global fix for Vuetify date picker z-index in modals -->
+    <style>
+      .v-overlay-container {
+        z-index: 9999999 !important;
+      }
+      .v-overlay-container .v-overlay {
+        z-index: 9999999 !important;
+      }
+      .v-overlay-container .v-overlay__content {
+        z-index: 9999999 !important;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

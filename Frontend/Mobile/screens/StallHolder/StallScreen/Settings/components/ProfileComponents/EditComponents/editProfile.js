@@ -9,9 +9,13 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  StyleSheet,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-//LALAGYAN DIN DARK MODE SUPPORT SOON.
+import { useTheme } from "../../ThemeComponents/ThemeContext";
+
+const { width, height } = Dimensions.get("window");
 
 // SectionHeader, outside component
 const SectionHeader = React.memo(function SectionHeader({ title, styles }) {
@@ -33,6 +37,7 @@ const InputField = React.memo(function InputField({
   editable = true,
   onChangeText,
   styles,
+  placeholderColor = "#9ca3af",
 }) {
   return (
     <View style={styles.inputGroup}>
@@ -47,7 +52,7 @@ const InputField = React.memo(function InputField({
         value={value || ""} // Ensure value is never undefined
         onChangeText={editable ? onChangeText : undefined}
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={placeholderColor}
         keyboardType={keyboardType}
         multiline={multiline}
         numberOfLines={multiline ? 3 : 1}
@@ -65,6 +70,9 @@ const InputField = React.memo(function InputField({
 
 // Main Modal Component
 const EditProfileModal = ({ visible, onClose, user, onSave }) => {
+  const { theme, isDark } = useTheme();
+  const styles = createThemedEditStyles(theme);
+  
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
     birthDate: user?.birthDate || "",
@@ -214,7 +222,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#374151" />
+            <Ionicons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
@@ -243,6 +251,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 placeholder="Enter your full name"
                 editable={false}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Birth Date"
@@ -251,6 +260,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 keyboardType="default"
                 editable={false}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Civil Status"
@@ -258,6 +268,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 placeholder="Single, Married, Widowed, etc."
                 editable={false}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Education"
@@ -265,6 +276,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 placeholder="Highest educational attainment"
                 editable={false}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Contact Number"
@@ -273,6 +285,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 keyboardType="phone-pad"
                 editable={false}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Email Address *"
@@ -281,6 +294,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 keyboardType="email-address"
                 editable={true}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Mailing Address *"
@@ -289,6 +303,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 multiline={true}
                 editable={true}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
             </View>
 
@@ -303,6 +318,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                     placeholder="Enter spouse's full name"
                     editable={true}
                     styles={styles}
+                    placeholderColor={theme.colors.textTertiary}
                   />
                   <InputField
                     label="Spouse Birth Date *"
@@ -311,6 +327,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                     keyboardType="default"
                     editable={true}
                     styles={styles}
+                    placeholderColor={theme.colors.textTertiary}
                   />
                   <InputField
                     label="Spouse Education *"
@@ -318,6 +335,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                     placeholder="Spouse's educational attainment"
                     editable={true}
                     styles={styles}
+                    placeholderColor={theme.colors.textTertiary}
                   />
                   <InputField
                     label="Occupation *"
@@ -325,6 +343,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                     placeholder="Spouse's occupation"
                     editable={true}
                     styles={styles}
+                    placeholderColor={theme.colors.textTertiary}
                   />
                   <InputField
                     label="Spouse Contact *"
@@ -333,6 +352,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                     keyboardType="phone-pad"
                     editable={true}
                     styles={styles}
+                    placeholderColor={theme.colors.textTertiary}
                   />
                 </View>
               </>
@@ -348,6 +368,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 keyboardType="numeric"
                 editable={true}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Source of Capital"
@@ -355,6 +376,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 placeholder="Where did the capital come from?"
                 editable={true}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Previous Business"
@@ -363,6 +385,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 multiline={true}
                 editable={true}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
               <InputField
                 label="Relative at NCPM"
@@ -370,6 +393,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
                 placeholder="Do you have relatives working at NCPM?"
                 editable={true}
                 styles={styles}
+                placeholderColor={theme.colors.textTertiary}
               />
             </View>
 
@@ -382,5 +406,6 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
 };
 
 import { editStyles as styles } from "./editStyles";
+import { createThemedEditStyles } from "./editStyles";
 
 export default EditProfileModal;

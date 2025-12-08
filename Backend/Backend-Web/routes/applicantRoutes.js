@@ -17,6 +17,15 @@ import {
   triggerCleanup
 } from '../controllers/applicants/applicantsController.js'
 
+// Import document controller and multer config
+import {
+  uploadApplicantDocuments,
+  getApplicantDocuments,
+  deleteApplicantDocument,
+  deleteAllDocuments
+} from '../controllers/applicants/applicantDocumentController.js'
+import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
+
 const router = express.Router()
 
 // Protected routes (authentication required)
@@ -54,5 +63,24 @@ router.delete('/:id', deleteApplicant)
 // Auto-cleanup routes
 router.post('/cleanup/auto', autoCleanupApplicants)    // Automatic cleanup of rejected applicants older than 30 days
 router.post('/cleanup/trigger', triggerCleanup)       // Manual trigger for admin use
+
+// =============================================
+// APPLICANT DOCUMENT ROUTES
+// =============================================
+// Upload documents for an applicant (signature, house_location, valid_id)
+router.post(
+  '/:applicant_id/documents',
+  uploadApplicantDocs,
+  uploadApplicantDocuments
+)
+
+// Get all documents for an applicant
+router.get('/:applicant_id/documents', getApplicantDocuments)
+
+// Delete a specific document
+router.delete('/:applicant_id/documents/:filename', deleteApplicantDocument)
+
+// Delete all documents for an applicant
+router.delete('/:applicant_id/documents', deleteAllDocuments)
 
 export default router

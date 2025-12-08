@@ -7,6 +7,7 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "./Settings/components/ThemeComponents/ThemeContext";
 
 // nav bar and sidebar components
 import Header from "../StallComponents/header";
@@ -27,6 +28,9 @@ import PaymentScreen from "./Payment/PaymentScreen";
 const { width, height } = Dimensions.get("window");
 
 const StallHome = ({ navigation }) => {
+  // Get theme from context
+  const { theme, isDarkMode } = useTheme();
+  
   // Single source of truth for current screen
   const [currentScreen, setCurrentScreen] = useState("stall");
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -129,26 +133,26 @@ const StallHome = ({ navigation }) => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top", "left", "right"]}>
         <StatusBar
-          barStyle="dark-content"
-          backgroundColor="#ffffff"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+          backgroundColor={theme.colors.surface}
           translucent={false}
         />
 
-        <Header onMenuPress={handleMenuPress} title={getPageTitle()} />
+        <Header onMenuPress={handleMenuPress} title={getPageTitle()} theme={theme} isDarkMode={isDarkMode} />
 
         {/* Main Content */}
         {needsScrollView ? (
           <ScrollView
-            style={styles.scrollView}
+            style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
             {renderCurrentScreen()}
           </ScrollView>
         ) : (
-          <View style={styles.contentView}>{renderCurrentScreen()}</View>
+          <View style={[styles.contentView, { backgroundColor: theme.colors.background }]}>{renderCurrentScreen()}</View>
         )}
 
         {/* Bottom Navigation Component */}
@@ -157,6 +161,8 @@ const StallHome = ({ navigation }) => {
           onStallPress={() => handleNavigation("stall")}
           onDocumentsPress={() => handleNavigation("documents")}
           onPaymentPress={() => handleNavigation("payment")}
+          theme={theme}
+          isDarkMode={isDarkMode}
         />
 
         {/* Sidebar Component */}
@@ -166,6 +172,8 @@ const StallHome = ({ navigation }) => {
           onProfilePress={handleProfilePress}
           onMenuItemPress={handleMenuItemPress}
           activeMenuItem={currentScreen}
+          theme={theme}
+          isDarkMode={isDarkMode}
         />
       </SafeAreaView>
     </SafeAreaProvider>

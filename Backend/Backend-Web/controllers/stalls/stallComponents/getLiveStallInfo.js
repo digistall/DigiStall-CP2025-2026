@@ -27,7 +27,7 @@ export const getLiveStallInfo = async (req, res) => {
         s.raffle_auction_status,
         s.raffle_auction_duration_hours,
         s.description,
-        s.stall_image,
+        si.image_url as stall_image,
         sec.section_name,
         f.floor_name,
         b.branch_name,
@@ -85,6 +85,7 @@ export const getLiveStallInfo = async (req, res) => {
       LEFT JOIN branch b ON f.branch_id = b.branch_id
       LEFT JOIN raffle r ON s.stall_id = r.stall_id
       LEFT JOIN auction a ON s.stall_id = a.stall_id
+      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.stall_id = ? AND s.status = 'Active'`,
       [stallId]
     );

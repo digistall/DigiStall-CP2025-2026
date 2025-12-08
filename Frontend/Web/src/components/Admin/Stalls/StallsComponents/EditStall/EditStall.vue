@@ -61,7 +61,7 @@
                   variant="outlined" prepend-inner-icon="mdi-text" rows="3" counter="200" maxlength="200"></v-textarea>
 
                 <!-- Image Upload -->
-                <v-file-input v-model="selectedImageFile" label="Upload Stall Image" variant="outlined"
+                <v-file-input v-model="selectedImageFile" label="Upload New Image" variant="outlined"
                   prepend-inner-icon="mdi-camera" accept="image/*" @change="handleImageUpload" :rules="imageRules"
                   show-size counter>
                   <template v-slot:selection="{ fileNames }">
@@ -73,23 +73,117 @@
                   </template>
                 </v-file-input>
 
-                <!-- Image Preview -->
-                <div v-if="imagePreview" class="mt-3">
-                  <v-card class="image-preview" elevation="2">
-                    <v-img :src="imagePreview" height="150" cover class="rounded">
+                <!-- Image Gallery (Multi-image display) -->
+                <div class="mt-3">
+                  <p class="text-caption text-grey-darken-1 mb-2">
+                    Current Images ({{ stallImages.length }} found):
+                  </p>
+                  
+                  <!-- Loading State -->
+                  <div v-if="loadingImages" class="d-flex align-center justify-center pa-4">
+                    <v-progress-circular color="primary" indeterminate size="32"></v-progress-circular>
+                    <span class="ml-3 text-grey">Loading images...</span>
+                  </div>
+                  
+                  <!-- Image Gallery Card -->
+                  <v-card v-else-if="stallImages.length > 0 && !imagePreview" class="image-gallery-card" elevation="2">
+                    <div class="image-gallery-container">
+                      <!-- Main Image Display -->
+                      <v-img 
+                        :src="getCurrentImage()" 
+                        height="180" 
+                        cover 
+                        class="rounded-t"
+                      >
+                        <template v-slot:placeholder>
+                          <div class="d-flex align-center justify-center fill-height">
+                            <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
+                          </div>
+                        </template>
+                        <template v-slot:error>
+                          <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
+                            <v-icon color="error" size="48">mdi-image-broken</v-icon>
+                          </div>
+                        </template>
+
+                        <!-- Navigation Arrows (only show if multiple images) -->
+                        <div v-if="stallImages.length > 1" class="gallery-navigation">
+                          <v-btn 
+                            icon 
+                            size="small" 
+                            class="nav-btn prev-btn" 
+                            @click.stop="prevImage"
+                            color="white"
+                          >
+                            <v-icon>mdi-chevron-left</v-icon>
+                          </v-btn>
+                          <v-btn 
+                            icon 
+                            size="small" 
+                            class="nav-btn next-btn" 
+                            @click.stop="nextImage"
+                            color="white"
+                          >
+                            <v-icon>mdi-chevron-right</v-icon>
+                          </v-btn>
+                        </div>
+
+                        <!-- Image Counter Badge -->
+                        <div v-if="stallImages.length > 1" class="image-counter">
+                          {{ currentImageIndex + 1 }} / {{ stallImages.length }}
+                        </div>
+
+                        <!-- Delete Current Image Button -->
+                        <v-btn
+                          icon
+                          size="small"
+                          class="delete-image-btn"
+                          color="error"
+                          @click.stop="confirmDeleteImage(currentImageIndex)"
+                          title="Delete this image"
+                        >
+                          <v-icon size="small">mdi-delete</v-icon>
+                        </v-btn>
+                      </v-img>
+
+                      <!-- Thumbnail Strip (for multiple images) -->
+                      <div v-if="stallImages.length > 1" class="thumbnail-strip pa-2">
+                        <div 
+                          v-for="(img, index) in stallImages" 
+                          :key="index" 
+                          class="thumbnail-item"
+                          :class="{ 'active': index === currentImageIndex }"
+                          @click="goToImage(index)"
+                        >
+                          <v-img :src="img" height="40" width="50" cover class="rounded"></v-img>
+                          <!-- Mini delete button on thumbnail -->
+                          <v-btn
+                            icon
+                            size="x-small"
+                            class="thumbnail-delete-btn"
+                            color="error"
+                            @click.stop="confirmDeleteImage(index)"
+                          >
+                            <v-icon size="x-small">mdi-close</v-icon>
+                          </v-btn>
+                        </div>
+                      </div>
+                    </div>
+                  </v-card>
+
+                  <!-- New Image Preview (when uploading) -->
+                  <v-card v-else-if="imagePreview" class="image-preview" elevation="2">
+                    <p class="text-caption text-success pa-2 mb-0">
+                      <v-icon size="small" color="success">mdi-check-circle</v-icon>
+                      New image selected
+                    </p>
+                    <v-img :src="imagePreview" height="150" cover class="rounded-b">
                       <template v-slot:placeholder>
                         <div class="d-flex align-center justify-center fill-height">
                           <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
                         </div>
                       </template>
-                      <template v-slot:error>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-icon color="error" size="48">mdi-image-broken</v-icon>
-                        </div>
-                      </template>
                     </v-img>
-
-                    <!-- Remove Image Button -->
                     <v-card-actions class="pa-2">
                       <v-spacer></v-spacer>
                       <v-btn size="small" color="error" variant="text" @click="removeImage">
@@ -98,28 +192,12 @@
                       </v-btn>
                     </v-card-actions>
                   </v-card>
-                </div>
 
-                <!-- Current Image (if editing existing stall) -->
-                <div v-else-if="editForm.image && !selectedImageFile" class="mt-3">
-                  <p class="text-caption text-grey-darken-1 mb-2">Current Image:</p>
-                  <v-card class="image-preview" elevation="2">
-                    <v-img :src="editForm.image" height="150" cover class="rounded">
-                      <template v-slot:placeholder>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
-                        </div>
-                      </template>
-                      <template v-slot:error>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-icon color="error" size="48">mdi-image-broken</v-icon>
-                        </div>
-                      </template>
-                    </v-img>
+                  <!-- No Images Found -->
+                  <v-card v-else class="pa-4 text-center bg-grey-lighten-4" elevation="0">
+                    <v-icon size="48" color="grey">mdi-image-off</v-icon>
+                    <p class="text-grey mt-2 mb-0">No images found for this stall</p>
                   </v-card>
-                  <p class="text-caption text-grey mt-1">
-                    Upload a new image to replace the current one
-                  </p>
                 </div>
 
                 <!-- Availability Toggle -->

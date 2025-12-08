@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ThemeProvider } from "./screens/StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
 import LoginScreen from "./screens/LoginScreen/LoginScreen";
+import LoadingScreen from "./screens/LoadingScreen/LoadingScreen";
 import StallHome from "./screens/StallHolder/StallScreen/StallHome";
 import VendorHome from "./screens/Vendor/VendorHome";
 import InspectorHome from "./screens/Inspector/InspectorHome";
@@ -59,6 +60,7 @@ export default function App() {
           screenOptions={{ headerShown: false }}
         >
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
+          <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
           <Stack.Screen name="StallHome" component={StallHome} />
           <Stack.Screen name="VendorHome" component={VendorHome} />
           <Stack.Screen name="InspectorHome" component={InspectorHome} />

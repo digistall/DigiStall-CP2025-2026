@@ -3,7 +3,20 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { styles } from "./PaymentTableStyles";
 import ViewAllTable from "./ViewAllTable";
 
-const PaymentTable = ({ selectedPaymentMethod }) => {
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    card: '#ffffff',
+    text: '#1F2937',
+    textSecondary: '#6b7280',
+    border: '#F3F4F6',
+    background: '#FAFBFC',
+  }
+};
+
+const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = false }) => {
+  const colors = theme?.colors || defaultTheme.colors;
   const [showViewAllModal, setShowViewAllModal] = useState(false);
 
   // All payment records data
@@ -196,14 +209,14 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
   };
 
   const renderPaymentRecord = (record) => (
-    <TouchableOpacity key={record.id} style={styles.recordCard}>
+    <TouchableOpacity key={record.id} style={[styles.recordCard, { backgroundColor: isDark ? colors.surface : '#FAFBFC' }]}>
       <View style={styles.recordHeader}>
-        <Text style={styles.recordDescription}>{record.description}</Text>
+        <Text style={[styles.recordDescription, { color: colors.text }]}>{record.description}</Text>
         <Text style={styles.recordAmount}>{record.amount}</Text>
       </View>
 
       <View style={styles.recordDetails}>
-        <Text style={styles.recordDate}>{record.date}</Text>
+        <Text style={[styles.recordDate, { color: colors.textSecondary }]}>{record.date}</Text>
         <View style={styles.recordMeta}>
           <View
             style={[
@@ -239,18 +252,18 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tableHeader}>
-        <Text style={styles.tableTitle}>
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
+      <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.tableTitle, { color: colors.text }]}>
           {selectedPaymentMethod
             ? `${selectedPaymentMethod.name} Record Transactions`
             : "Payment Records"}
         </Text>
         <TouchableOpacity
-          style={styles.viewAllButton}
+          style={[styles.viewAllButton, { backgroundColor: isDark ? colors.surface : '#F8FAFC', borderColor: colors.border }]}
           onPress={handleViewAllPress}
         >
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={[styles.viewAllText, { color: colors.textSecondary }]}>View All</Text>
         </TouchableOpacity>
       </View>
 
@@ -269,6 +282,7 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
         onClose={handleCloseModal}
         paymentRecords={allFilteredRecords}
         selectedPaymentMethod={selectedPaymentMethod}
+        theme={theme}
       />
     </View>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import SearchBar from './SearchBar';
 import FilterButton from './FilterButton';
+import { useTheme } from '../../../Settings/components/ThemeComponents/ThemeContext';
 
 const SearchFilterBar = ({ 
   onSearch, 
@@ -9,16 +10,28 @@ const SearchFilterBar = ({
   searchValue = '', 
   selectedFilters = [] 
 }) => {
+  const { theme, isDark } = useTheme();
+  
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: theme.colors.surface,
+        borderBottomColor: theme.colors.border
+      }
+    ]}>
       <SearchBar 
         searchValue={searchValue}
         onSearch={onSearch}
         placeholder="Search by stall number or location..."
+        theme={theme}
+        isDark={isDark}
       />
       <FilterButton 
         selectedFilters={selectedFilters}
         onFilter={onFilter}
+        theme={theme}
+        isDark={isDark}
       />
     </View>
   );
@@ -29,9 +42,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {

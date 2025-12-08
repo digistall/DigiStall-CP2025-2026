@@ -87,11 +87,120 @@
                   hint="Time of day for deadline" />
               </v-col>
 
-              <!-- Image Upload -->
-              <v-col cols="12" sm="6">
-                <v-file-input v-model="newStall.image" accept="image/*" label="Upload Stall Image"
-                  prepend-icon="mdi-image" outlined dense show-size truncate-length="25"
-                  hint="Optional: Upload an image of the stall" persistent-hint />
+              <!-- Image Upload - Multiple Images -->
+              <v-col cols="12">
+                <v-file-input 
+                  v-model="newStall.images" 
+                  accept="image/png,image/jpeg,image/jpg" 
+                  label="Upload Stall Images (Max 10)"
+                  prepend-icon="mdi-image-multiple" 
+                  outlined 
+                  dense 
+                  multiple
+                  chips
+                  show-size
+                  counter
+                  :rules="[rules.imageCount, rules.imageSize]"
+                  hint="Upload up to 10 images (PNG/JPG, max 10MB each). First image will be primary."
+                  persistent-hint
+                  @update:model-value="handleImageSelection"
+                >
+                  <template v-slot:selection="{ index, text, file }">
+                    <v-chip
+                      v-if="file"
+                      small
+                      close
+                      @click:close="removeImage(index)"
+                      class="ma-1"
+                    >
+                      <v-avatar left>
+                        <v-img :src="getImagePreview(file)" :alt="`Image ${index + 1}`" />
+                      </v-avatar>
+                      {{ index + 1 }}
+                    </v-chip>
+                  </template>
+                </v-file-input>
+                
+                <!-- Image Previews - Professional Grid -->
+                <div v-if="imagePreviews.length > 0" class="mt-4">
+                  <v-divider class="mb-3"></v-divider>
+                  <div class="d-flex align-center mb-2">
+                    <v-icon color="primary" class="mr-2">mdi-image-multiple</v-icon>
+                    <span class="text-subtitle-2 font-weight-medium">Image Previews</span>
+                    <v-chip x-small class="ml-2" color="primary" outlined>{{ imagePreviews.length }} / 10</v-chip>
+                  </div>
+                  
+                  <v-row dense>
+                    <v-col 
+                      v-for="(preview, index) in imagePreviews" 
+                      :key="index" 
+                      cols="6" 
+                      sm="4" 
+                      md="3"
+                    >
+                      <v-card 
+                        elevation="2" 
+                        class="image-preview-card"
+                        :class="{ 'primary-image': index === 0 }"
+                      >
+                        <div class="image-container">
+                          <v-img 
+                            :src="preview" 
+                            aspect-ratio="1.2" 
+                            cover
+                            class="rounded"
+                          >
+                            <template v-slot:placeholder>
+                              <v-row class="fill-height ma-0" align="center" justify="center">
+                                <v-progress-circular 
+                                  indeterminate 
+                                  color="primary"
+                                  size="40"
+                                ></v-progress-circular>
+                              </v-row>
+                            </template>
+                            
+                            <!-- Overlay badges -->
+                            <div class="image-overlay">
+                              <v-chip 
+                                v-if="index === 0" 
+                                x-small 
+                                color="success" 
+                                dark
+                                class="ma-2"
+                              >
+                                <v-icon x-small left>mdi-star</v-icon>
+                                Primary
+                              </v-chip>
+                              <v-chip 
+                                v-else
+                                x-small 
+                                color="grey darken-2" 
+                                dark
+                                class="ma-2"
+                              >
+                                Image {{ index + 1 }}
+                              </v-chip>
+                            </div>
+                          </v-img>
+                          
+                          <!-- Delete button overlay -->
+                          <div class="delete-overlay">
+                            <v-btn 
+                              icon 
+                              small 
+                              color="error" 
+                              @click="removeImage(index)"
+                              class="delete-btn"
+                            >
+                              <v-icon small>mdi-delete</v-icon>
+                            </v-btn>
+                          </div>
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </div>
               </v-col>
 
               <!-- Description -->

@@ -13,8 +13,11 @@ import SearchFilterBar from "./Components/SearchFilter/SearchFilterBar";
 import NotificationCard from "./Components/NotificationCard";
 import NotificationEmptyState from "./Components/NotificationEmptyState";
 import { generateSampleNotifications } from "./utils/notificationHelpers";
+import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
 
 const NotificationsScreen = () => {
+  const { theme, isDark } = useTheme();
+  
   // Sample data
   const [allNotifications, setAllNotifications] = useState(
     generateSampleNotifications()
@@ -205,6 +208,7 @@ const NotificationsScreen = () => {
         unreadCount={unreadCount}
         onMarkAllRead={handleMarkAllRead}
         onClearAll={handleClearAll}
+        theme={theme}
       />
       <SearchFilterBar
         searchText={searchText}
@@ -229,6 +233,7 @@ const NotificationsScreen = () => {
           { label: "Priority", value: "priority" },
           { label: "Default", value: "default" },
         ]}
+        theme={theme}
       />
     </>
   );
@@ -239,14 +244,15 @@ const NotificationsScreen = () => {
       onPress={handleNotificationPress}
       onMarkAsRead={handleMarkAsRead}
       onDelete={handleDelete}
+      theme={theme}
     />
   );
 
-  const renderEmptyState = () => <NotificationEmptyState />;
+  const renderEmptyState = () => <NotificationEmptyState theme={theme} />;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
         <FlatList
           data={filteredNotifications}
           keyExtractor={(item) => item.id}
@@ -257,8 +263,8 @@ const NotificationsScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#002181"]}
-              tintColor="#002181"
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
             />
           }
           showsVerticalScrollIndicator={false}

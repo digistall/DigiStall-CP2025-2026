@@ -189,7 +189,12 @@ export const login = async (req, res) => {
       permissions: additionalUserInfo.permissions || null
     };
     
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+    console.log('🔐 [LOGIN DEBUG] Creating token with secret (first 20 chars):', jwtSecret.substring(0, 20) + '...');
+    console.log('🔐 [LOGIN DEBUG] Token payload:', JSON.stringify(tokenPayload, null, 2));
+    
+    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '24h' });
+    console.log('✅ [LOGIN DEBUG] Token created (first 50 chars):', token.substring(0, 50) + '...');
     
     // Prepare user data for response (exclude password)
     const userData = {

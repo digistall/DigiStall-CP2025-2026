@@ -19,7 +19,7 @@ export default {
         size: '',
         location: '',
         description: '',
-        image: null,
+        images: [], // Changed from image to images array
         isAvailable: true,
         priceType: 'Fixed Price',
         applicationDeadline: '', // Will store calculated deadline when activated
@@ -27,6 +27,7 @@ export default {
         deadlineTime: '23:00', // Time of day for deadline (11:00 PM)
         deadlineActivated: false, // Whether the deadline timer has been activated
       },
+      imagePreviews: [], // Store image preview URLs
       // Price type options
       priceTypeOptions: [
         {
@@ -62,6 +63,15 @@ export default {
           if (!this.requiresDuration) return true
           if (!value) return 'Time is required for raffle/auction stalls'
           return true
+        },
+        imageCount: (value) => {
+          if (!value || value.length === 0) return true // Images are optional
+          return value.length <= 10 || 'Maximum 10 images allowed'
+        },
+        imageSize: (value) => {
+          if (!value || value.length === 0) return true
+          const oversized = value.filter(file => file.size > 10 * 1024 * 1024) // 10MB
+          return oversized.length === 0 || 'Each image must be less than 10MB'
         },
       },
       // UPDATED: Dynamic options loaded from API
@@ -226,7 +236,76 @@ export default {
       this.resetForm()
     },
 
+    // Image handling methods
+    handleImageSelection(files) {
+      console.log('📸 handleImageSelection called with:', files)
+      console.log('  - Type:', typeof files)
+      console.log('  - Is Array:', Array.isArray(files))
+      console.log('  - Length:', files?.length || 0)
+      
+      // Clear previous previews
+      this.imagePreviews.forEach(preview => {
+        if (preview && typeof preview === 'string' && preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview)
+        }
+      })
+      this.imagePreviews = []
+      
+      // Handle null/undefined/empty
+      if (!files || (Array.isArray(files) && files.length === 0)) {
+        console.log('  ❌ No files to process')
+        return
+      }
+      
+      // Convert to array if needed (some events pass FileList)
+      const filesArray = Array.isArray(files) ? files : Array.from(files)
+      console.log('  ✅ Files array created with', filesArray.length, 'files')
+      
+      // Generate previews using object URLs (faster than base64)
+      const maxImages = Math.min(filesArray.length, 10)
+      for (let i = 0; i < maxImages; i++) {
+        const file = filesArray[i]
+        if (file && file instanceof File) {
+          const preview = URL.createObjectURL(file)
+          this.imagePreviews.push(preview)
+          console.log(`  ✅ Preview ${i + 1} created:`, file.name, `(${(file.size / 1024).toFixed(2)} KB)`)
+        } else {
+          console.warn(`  ⚠️ Item ${i} is not a valid File object:`, file)
+        }
+      }
+      
+      console.log('📸 Total previews generated:', this.imagePreviews.length)
+      console.log('📸 Preview URLs:', this.imagePreviews)
+    },
+
+    getImagePreview(file) {
+      return URL.createObjectURL(file)
+    },
+
+    removeImage(index) {
+      console.log('🗑️ Removing image at index:', index)
+      if (this.newStall.images && Array.isArray(this.newStall.images)) {
+        // Revoke the object URL to free memory
+        if (this.imagePreviews[index]?.startsWith('blob:')) {
+          URL.revokeObjectURL(this.imagePreviews[index])
+        }
+        
+        // Remove from both arrays
+        this.newStall.images.splice(index, 1)
+        this.imagePreviews.splice(index, 1)
+        
+        console.log('  ✅ Removed. Remaining images:', this.newStall.images.length)
+      }
+    },
+
     resetForm() {
+      // Clean up image preview URLs
+      this.imagePreviews.forEach(preview => {
+        if (preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview)
+        }
+      })
+      
       this.newStall = {
         stallNumber: '',
         price: '',
@@ -235,7 +314,7 @@ export default {
         size: '',
         location: '',
         description: '',
-        image: null,
+        images: [],
         isAvailable: true,
         priceType: 'Fixed Price',
         applicationDeadline: '', // Will store calculated deadline when activated
@@ -243,6 +322,7 @@ export default {
         deadlineTime: '23:00', // Time of day for deadline (11:00 PM)
         deadlineActivated: false, // Whether the deadline timer has been activated
       }
+      this.imagePreviews = [] // Clear image previews
       if (this.$refs.form) {
         this.$refs.form.resetValidation()
       }
@@ -305,38 +385,12 @@ export default {
           })
         }
 
-        // Convert image to base64 if uploaded
-        if (this.newStall.image) {
-          try {
-            stallData.image = await this.convertImageToBase64(this.newStall.image)
-          } catch (imageError) {
-            console.error('Error converting image:', imageError)
-            this.$emit('show-message', {
-              type: 'warning',
-              text: 'Image upload failed, but stall will be created without image.',
-            })
-          }
-        }
-
         console.log('Sending stall data to backend:', stallData)
 
         // Get auth token from sessionStorage
         const token = sessionStorage.getItem('authToken')
 
-        // ✅ DEBUGGING: Log session storage data
-        console.log('🔍 FRONTEND DEBUG - Session Storage:')
-        console.log('- authToken exists:', !!token)
-        console.log('- currentUser:', JSON.parse(sessionStorage.getItem('currentUser') || '{}'))
-        console.log('- userType:', sessionStorage.getItem('userType'))
-        console.log('- branchId:', sessionStorage.getItem('branchId'))
-        console.log('- employeeId:', sessionStorage.getItem('employeeId'))
-        console.log(
-          '- employeePermissions:',
-          JSON.parse(sessionStorage.getItem('employeePermissions') || '[]'),
-        )
-
         if (!token) {
-          // FIXED: Corrected the emit call - was missing 'show-message' event name
           this.$emit('show-message', {
             type: 'error',
             text: 'Authentication token not found. Please login again.',
@@ -345,19 +399,33 @@ export default {
           return
         }
 
-        // Prepare headers
-        const headers = {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+        // Create FormData for multipart upload
+        const formData = new FormData()
+        
+        // Append stall data fields
+        Object.keys(stallData).forEach(key => {
+          formData.append(key, stallData[key])
+        })
+
+        // Append images if any
+        if (this.newStall.images && this.newStall.images.length > 0) {
+          console.log('📸 Appending images to FormData:', this.newStall.images.length)
+          this.newStall.images.forEach((file, index) => {
+            formData.append('images', file)
+            console.log(`  Image ${index + 1}: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`)
+          })
         }
 
         console.log('Making API request to:', `${this.apiBaseUrl}/stalls`)
 
-        // Make API call to backend
+        // Make API call to backend with FormData
         const response = await fetch(`${this.apiBaseUrl}/stalls`, {
           method: 'POST',
-          headers: headers,
-          body: JSON.stringify(stallData),
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // Don't set Content-Type - let browser set it with boundary for multipart
+          },
+          body: formData,
         })
 
         console.log('Response status:', response.status)
@@ -669,11 +737,20 @@ export default {
       }
     },
 
-    // Watch for image file changes
+    // Watch for image file changes (deprecated - now using images array)
     'newStall.image'(newFile) {
       if (newFile) {
         console.log('Image file selected:', newFile.name, newFile.size)
       }
+    },
+
+    // Watch for images array changes
+    'newStall.images': {
+      handler(newImages) {
+        console.log('🔄 Images watcher triggered, images count:', newImages?.length || 0)
+        this.handleImageSelection(newImages)
+      },
+      deep: true
     },
 
     // Watch for form changes to debug (only in development)
@@ -738,6 +815,13 @@ export default {
       clearTimeout(this.refreshTimeout)
       this.refreshTimeout = null
     }
+    
+    // Clean up image preview URLs to prevent memory leaks
+    this.imagePreviews.forEach(preview => {
+      if (preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview)
+      }
+    })
   },
 
   // Error handling for the component

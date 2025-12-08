@@ -44,7 +44,7 @@
           <ul class="link-list">
             <li><a href="#stalls"><i class="mdi mdi-chevron-right"></i> Home</a></li>
             <li><a href="#about"><i class="mdi mdi-chevron-right"></i> About Us</a></li>
-            <li><a href="#free-trial"><i class="mdi mdi-chevron-right"></i> Free Trial</a></li>
+            <!--<li><a href="#free-trial"><i class="mdi mdi-chevron-right"></i> Free Trial</a></li>-->
             <li><a href="#"><i class="mdi mdi-chevron-right"></i> FAQs</a></li>
           </ul>
         </div>
