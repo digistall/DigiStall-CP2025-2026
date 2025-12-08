@@ -52,6 +52,7 @@ export default {
       },
       set(val) {
         this.$emit('update:modelValue', val)
+        this.$emit('update:isVisible', val)
       },
     },
   },
@@ -85,21 +86,44 @@ export default {
 
       this.saving = true
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Generate ID if not present
-        if (!this.form.id) {
-          this.form.id = Date.now()
+        // Build payload expected by backend stored procedure: first_name, last_name, email, contact_number, branch_id
+        const payload = {
+          first_name: this.form.firstName,
+          last_name: this.form.lastName,
+          email: this.form.email || null,
+          contact_number: this.form.phone || null,
+          branch_id: null, // UI uses location string; backend expects branch_id. Set null for now.
         }
 
-        this.$emit('save', {
-          id: this.form.id,
-          name: `${this.form.firstName} ${this.form.lastName}`,
-          contact: this.form.phone,
+        const collectorsService = await import('../../../../../services/collectorsService.js')
+        const resp = await collectorsService.default.createCollector(payload)
+
+        // resp is { success, data } where data is the full collector row from stored procedure
+        const createdCollector = resp?.data ?? resp
+
+        // Extract the full row (stored procedure now returns SELECT * FROM collector)
+        let collectorData = null
+        if (Array.isArray(createdCollector) && createdCollector.length > 0) {
+          collectorData = createdCollector[0]
+        } else if (createdCollector && typeof createdCollector === 'object') {
+          collectorData = createdCollector
+        } else {
+          collectorData = {
+            first_name: this.form.firstName,
+            last_name: this.form.lastName,
+            contact_number: this.form.phone,
+          }
+        }
+
+        const newCollector = {
+          id: collectorData?.collector_id || collectorData?.id || Date.now(),
+          name: `${collectorData?.first_name || this.form.firstName} ${collectorData?.last_name || this.form.lastName}`.trim(),
+          contact: collectorData?.contact_number || this.form.phone,
           location: this.form.location,
-          raw: { ...this.form },
-        })
+          raw: collectorData,
+        }
+
+        this.$emit('save', newCollector)
 
         this.showToast('✅ Collector added successfully!', 'success')
         this.closeDialog()

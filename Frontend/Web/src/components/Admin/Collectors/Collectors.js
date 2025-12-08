@@ -3,6 +3,7 @@ import TableCollector from './Components/Table/TableCollector.vue'
 import AddCollectorDialog from './Components/AddCollectorDialog/AddCollectorDialog.vue'
 import EditCollectorDialog from './Components/EditCollectorDialog/EditCollectorDialog.vue'
 import CollectorDetailsDialog from './Components/CollectorDetailsDialog/CollectorDetailsDialog.vue'
+import collectorsService from '../../../services/collectorsService'
 
 export default {
   name: 'Collectors',
@@ -25,13 +26,8 @@ export default {
 
       locations: ['Panganiban', 'Naga City Market', 'Triangulo', 'Concepcion Pequeña'],
 
-      // Mock data
-      collectors: Array.from({ length: 14 }, (_, i) => ({
-        id: 1000 + i,
-        name: 'Peter Corpuz',
-        contact: '09123456789',
-        location: i % 2 === 0 ? 'Panganiban' : 'Naga City Market',
-      })),
+      // Collectors (loaded from API)
+      collectors: [],
     }
   },
   computed: {
@@ -90,5 +86,25 @@ export default {
         }
       this.detailsDialog = true
     },
+
+    async loadCollectors() {
+      try {
+        const resp = await collectorsService.getAllCollectors()
+        const data = resp?.data || []
+        // Map to the minimal UI shape: id, name, contact, location, raw
+        this.collectors = (data || []).map((c) => ({
+          id: c.collector_id || c.id,
+          name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
+          contact: c.contact_number || c.phone || c.contact || '',
+          location: c.branch_id ? String(c.branch_id) : '',
+          raw: c,
+        }))
+      } catch (err) {
+        console.error('Failed to load collectors:', err)
+      }
+    },
+  },
+  mounted() {
+    this.loadCollectors()
   },
 }
