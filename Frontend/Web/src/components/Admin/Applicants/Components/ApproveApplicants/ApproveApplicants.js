@@ -170,17 +170,15 @@ export default {
           throw new Error('Authentication token not found. Please log in again.')
         }
 
-        // Use the same /status endpoint that works for decline/recheck
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-        const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/status`, {
+        // Use the approve endpoint which creates credentials
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/approve`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            status: status,
-            // Note: credentials are just for email/frontend display, not stored in DB
             username: username,
             password: password,
           }),

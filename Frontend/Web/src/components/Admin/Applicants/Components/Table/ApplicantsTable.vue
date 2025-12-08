@@ -462,42 +462,82 @@
 
             <!-- Documents/Other Information Tab -->
             <v-tabs-window-item value="documents">
-              <div class="info-section" v-if="selectedApplicant?.other_information">
+              <div class="info-section">
                 <h3 class="section-title">Documents & Other Information</h3>
                 <v-row>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Email Address:</span>
                       <span class="info-value">{{
-                        selectedApplicant.other_information.email_address
+                        selectedApplicant?.other_information?.email_address || selectedApplicant?.email || 'N/A'
                       }}</span>
                     </div>
                   </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Signature:</span>
-                      <span class="info-value document-file">
-                        <v-icon size="16" class="mr-1">mdi-file-document</v-icon>
-                        {{ selectedApplicant.other_information.signature_of_applicant }}
-                      </span>
+                </v-row>
+                
+                <!-- Document Images -->
+                <h4 class="subsection-title mt-4 mb-2">Uploaded Documents</h4>
+                <v-row>
+                  <!-- Signature -->
+                  <v-col cols="12" md="4">
+                    <div class="document-card">
+                      <span class="document-label">Signature</span>
+                      <div class="document-image-container">
+                        <img 
+                          v-if="applicantDocuments.signature" 
+                          :src="applicantDocuments.signature" 
+                          alt="Signature"
+                          class="document-image"
+                          @error="handleDocumentError('signature')"
+                          @click="openDocumentPreview(applicantDocuments.signature, 'Signature')"
+                        />
+                        <div v-else class="no-document">
+                          <v-icon size="48" color="grey">mdi-file-document-outline</v-icon>
+                          <span>No signature uploaded</span>
+                        </div>
+                      </div>
                     </div>
                   </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">House Sketch:</span>
-                      <span class="info-value document-file">
-                        <v-icon size="16" class="mr-1">mdi-file-image</v-icon>
-                        {{ selectedApplicant.other_information.house_sketch_location }}
-                      </span>
+                  
+                  <!-- House Location Sketch -->
+                  <v-col cols="12" md="4">
+                    <div class="document-card">
+                      <span class="document-label">House Location Sketch</span>
+                      <div class="document-image-container">
+                        <img 
+                          v-if="applicantDocuments.house_location" 
+                          :src="applicantDocuments.house_location" 
+                          alt="House Location"
+                          class="document-image"
+                          @error="handleDocumentError('house_location')"
+                          @click="openDocumentPreview(applicantDocuments.house_location, 'House Location Sketch')"
+                        />
+                        <div v-else class="no-document">
+                          <v-icon size="48" color="grey">mdi-map-outline</v-icon>
+                          <span>No house sketch uploaded</span>
+                        </div>
+                      </div>
                     </div>
                   </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Valid ID:</span>
-                      <span class="info-value document-file">
-                        <v-icon size="16" class="mr-1">mdi-file-image</v-icon>
-                        {{ selectedApplicant.other_information.valid_id }}
-                      </span>
+                  
+                  <!-- Valid ID -->
+                  <v-col cols="12" md="4">
+                    <div class="document-card">
+                      <span class="document-label">Valid ID</span>
+                      <div class="document-image-container">
+                        <img 
+                          v-if="applicantDocuments.valid_id" 
+                          :src="applicantDocuments.valid_id" 
+                          alt="Valid ID"
+                          class="document-image"
+                          @error="handleDocumentError('valid_id')"
+                          @click="openDocumentPreview(applicantDocuments.valid_id, 'Valid ID')"
+                        />
+                        <div v-else class="no-document">
+                          <v-icon size="48" color="grey">mdi-card-account-details-outline</v-icon>
+                          <span>No valid ID uploaded</span>
+                        </div>
+                      </div>
                     </div>
                   </v-col>
                 </v-row>

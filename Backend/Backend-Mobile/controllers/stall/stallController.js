@@ -49,7 +49,8 @@ export const getAllStalls = async (req, res) => {
     const [availableStalls] = await connection.execute(`
       SELECT 
         st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
+        st.price_type, st.status, st.description, st.is_available,
+        si.image_url as stall_image,
         sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
         b.branch_name, b.area, b.location, b.branch_id,
         CASE 
@@ -60,6 +61,7 @@ export const getAllStalls = async (req, res) => {
       JOIN section sec ON st.section_id = sec.section_id
       JOIN floor f ON sec.floor_id = f.floor_id
       JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN stall_images si ON st.stall_id = si.stall_id AND si.is_primary = 1
       LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
       WHERE st.is_available = 1 AND st.status = 'Active' AND (${areaConditions})
       ORDER BY st.price_type, b.branch_name, f.floor_name, sec.section_name, st.stall_no
@@ -208,7 +210,8 @@ export const getStallsByType = async (req, res) => {
     const [stalls] = await connection.execute(`
       SELECT 
         st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
+        st.price_type, st.status, st.description, st.is_available,
+        si.image_url as stall_image,
         sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
         b.branch_name, b.area, b.location, b.branch_id,
         CASE 
@@ -219,6 +222,7 @@ export const getStallsByType = async (req, res) => {
       JOIN section sec ON st.section_id = sec.section_id
       JOIN floor f ON sec.floor_id = f.floor_id
       JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN stall_images si ON st.stall_id = si.stall_id AND si.is_primary = 1
       LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
       WHERE st.is_available = 1 AND st.status = 'Active' AND st.price_type = ? AND (${areaConditions})
       ORDER BY b.branch_name, f.floor_name, sec.section_name, st.stall_no
@@ -339,7 +343,8 @@ export const getStallsByArea = async (req, res) => {
     let query = `
       SELECT 
         st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
+        st.price_type, st.status, st.description, st.is_available,
+        si.image_url as stall_image,
         sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
         b.branch_name, b.area, b.location, b.branch_id,
         CASE 
@@ -350,6 +355,7 @@ export const getStallsByArea = async (req, res) => {
       JOIN section sec ON st.section_id = sec.section_id
       JOIN floor f ON sec.floor_id = f.floor_id
       JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN stall_images si ON st.stall_id = si.stall_id AND si.is_primary = 1
       LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
       WHERE st.is_available = 1 AND st.status = 'Active' AND b.area = ?`
 
@@ -449,7 +455,8 @@ export const getStallById = async (req, res) => {
     const [stallData] = await connection.execute(`
       SELECT 
         st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
+        st.price_type, st.status, st.description, st.is_available,
+        si.image_url as stall_image,
         st.created_at, st.updated_at,
         sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
         b.branch_name, b.area, b.location, b.branch_id, b.address as branch_address,
@@ -462,6 +469,7 @@ export const getStallById = async (req, res) => {
       JOIN section sec ON st.section_id = sec.section_id
       JOIN floor f ON sec.floor_id = f.floor_id
       JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN stall_images si ON st.stall_id = si.stall_id AND si.is_primary = 1
       LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
       WHERE st.stall_id = ?
     `, [applicant_id || null, id])
@@ -692,7 +700,8 @@ export const searchStalls = async (req, res) => {
     let query = `
       SELECT 
         st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
+        st.price_type, st.status, st.description, st.is_available,
+        si.image_url as stall_image,
         sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
         b.branch_name, b.area, b.location, b.branch_id,
         CASE 
@@ -703,6 +712,7 @@ export const searchStalls = async (req, res) => {
       JOIN section sec ON st.section_id = sec.section_id
       JOIN floor f ON sec.floor_id = f.floor_id
       JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN stall_images si ON st.stall_id = si.stall_id AND si.is_primary = 1
       LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
       WHERE st.is_available = 1 AND st.status = 'Active' AND (${areaConditions})`
 
@@ -814,6 +824,107 @@ export const searchStalls = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to search stalls',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    })
+  } finally {
+    await connection.end()
+  }
+}
+
+// Get all images for a specific stall
+export const getStallImages = async (req, res) => {
+  const connection = await createConnection()
+  
+  try {
+    const { stall_id } = req.params
+
+    if (!stall_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stall ID is required'
+      })
+    }
+
+    // Get all images for this stall ordered by display_order
+    const [images] = await connection.execute(`
+      SELECT 
+        si.id,
+        si.stall_id,
+        si.image_url,
+        si.is_primary,
+        si.display_order,
+        si.created_at
+      FROM stall_images si
+      WHERE si.stall_id = ?
+      ORDER BY si.is_primary DESC, si.display_order ASC, si.id ASC
+    `, [stall_id])
+
+    // Get stall info for building image paths
+    const [stallInfo] = await connection.execute(`
+      SELECT 
+        st.stall_id, st.stall_no,
+        f.floor_id,
+        b.branch_id
+      FROM stall st
+      JOIN section sec ON st.section_id = sec.section_id
+      JOIN floor f ON sec.floor_id = f.floor_id
+      JOIN branch b ON f.branch_id = b.branch_id
+      WHERE st.stall_id = ?
+    `, [stall_id])
+
+    if (stallInfo.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stall not found'
+      })
+    }
+
+    const stall = stallInfo[0]
+    const baseImageUrl = 'http://localhost/digistall_uploads/stalls'
+
+    // Format images with full URLs
+    const formattedImages = images.map(img => ({
+      id: img.id,
+      stall_id: img.stall_id,
+      image_url: img.image_url.startsWith('http') 
+        ? img.image_url 
+        : `${baseImageUrl}/${stall.branch_id}/${stall.stall_no}/${img.image_url}`,
+      is_primary: img.is_primary === 1,
+      display_order: img.display_order
+    }))
+
+    // If no images in database, try to detect from file system pattern
+    if (formattedImages.length === 0) {
+      // Return empty but with suggested path for client-side detection
+      return res.json({
+        success: true,
+        message: 'No images found in database. Client can try file system detection.',
+        data: {
+          images: [],
+          stall_id: stall.stall_id,
+          stall_no: stall.stall_no,
+          branch_id: stall.branch_id,
+          image_base_path: `${baseImageUrl}/${stall.branch_id}/${stall.stall_no}`
+        }
+      })
+    }
+
+    res.json({
+      success: true,
+      message: `Retrieved ${formattedImages.length} images for stall ${stall.stall_no}`,
+      data: {
+        images: formattedImages,
+        stall_id: stall.stall_id,
+        stall_no: stall.stall_no,
+        total_count: formattedImages.length
+      }
+    })
+
+  } catch (error) {
+    console.error('Get stall images error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve stall images',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     })
   } finally {

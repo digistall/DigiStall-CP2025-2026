@@ -20,7 +20,16 @@ import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Responsive layout constants
+const isTablet = SCREEN_WIDTH >= 768;
+const numColumns = isTablet ? 2 : 1;
+const containerPadding = 16;
+const cardMargin = 12;
+const CARD_WIDTH = isTablet 
+  ? (SCREEN_WIDTH - (containerPadding * 2) - (cardMargin * (numColumns - 1))) / numColumns 
+  : SCREEN_WIDTH - (containerPadding * 2);
 
 const TabbedStallScreen = () => {
   const { theme, isDark } = useTheme();
@@ -323,23 +332,26 @@ const TabbedStallScreen = () => {
         >
           {filteredStalls.length > 0 ? (
             <>
-              <View style={[styles.resultsHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+              <View style={styles.resultsHeader}>
                 <Text style={[styles.resultsText, { color: theme.colors.text }]}>
                   {filteredStalls.length} {activeTab} stall{filteredStalls.length !== 1 ? 's' : ''} found
                 </Text>
               </View>
               
-              {filteredStalls.map((stall) => (
-                <StallCard
-                  key={stall.id}
-                  stall={stall}
-                  onApply={() => handleStallApplication(stall.id)}
-                  isApplying={applying === stall.id}
-                  stallType={activeTab}
-                  theme={theme}
-                  isDark={isDark}
-                />
-              ))}
+              <View style={styles.stallsGrid}>
+                {filteredStalls.map((stall) => (
+                  <StallCard
+                    key={stall.id}
+                    stall={stall}
+                    onApply={() => handleStallApplication(stall.id)}
+                    isApplying={applying === stall.id}
+                    stallType={activeTab}
+                    theme={theme}
+                    isDark={isDark}
+                    cardWidth={CARD_WIDTH}
+                  />
+                ))}
+              </View>
             </>
           ) : (
             <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
@@ -419,14 +431,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stallsListContent: {
-    paddingVertical: 16, // Only vertical padding
+    paddingVertical: 16,
+    paddingHorizontal: containerPadding,
+  },
+  // Grid wrapper for tablet layout
+  stallsGrid: {
+    flexDirection: isTablet ? 'row' : 'column',
+    flexWrap: 'wrap',
+    justifyContent: isTablet ? 'flex-start' : 'center',
+    gap: cardMargin,
   },
   resultsHeader: {
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginBottom: 12,
+    backgroundColor: 'transparent',
   },
   resultsText: {
     fontSize: 14,

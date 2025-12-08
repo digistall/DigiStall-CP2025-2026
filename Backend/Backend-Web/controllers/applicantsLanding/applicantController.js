@@ -1,4 +1,5 @@
 import { createConnection } from "../../config/database.js";
+import { saveApplicantDocumentFromBase64 } from "../../config/multerApplicantDocuments.js";
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -48,6 +49,12 @@ export const applicantController = {
         house_sketch_location,
         valid_id,
         email_address,
+
+        // Document base64 data (for saving to htdocs)
+        signature_data,
+        house_location_data,
+        valid_id_data,
+        branch_id,
 
         // Application Information
         stall_id,
@@ -210,6 +217,60 @@ export const applicantController = {
         console.log("👤 General application (no specific stall)");
       }
 
+      // Step 3: Save document files if base64 data provided
+      const savedDocuments = [];
+      const effectiveBranchId = branch_id || '1'; // Default to branch 1 if not specified
+
+      if (signature_data) {
+        try {
+          const saved = saveApplicantDocumentFromBase64(
+            effectiveBranchId, 
+            applicantId, 
+            'signature', 
+            signature_data, 
+            signature_of_applicant
+          );
+          savedDocuments.push({ type: 'signature', ...saved });
+          console.log("✅ Saved signature document:", saved.url);
+        } catch (docError) {
+          console.error("⚠️ Failed to save signature:", docError.message);
+        }
+      }
+
+      if (house_location_data) {
+        try {
+          const saved = saveApplicantDocumentFromBase64(
+            effectiveBranchId, 
+            applicantId, 
+            'house_location', 
+            house_location_data, 
+            house_sketch_location
+          );
+          savedDocuments.push({ type: 'house_location', ...saved });
+          console.log("✅ Saved house location document:", saved.url);
+        } catch (docError) {
+          console.error("⚠️ Failed to save house location:", docError.message);
+        }
+      }
+
+      if (valid_id_data) {
+        try {
+          const saved = saveApplicantDocumentFromBase64(
+            effectiveBranchId, 
+            applicantId, 
+            'valid_id', 
+            valid_id_data, 
+            valid_id
+          );
+          savedDocuments.push({ type: 'valid_id', ...saved });
+          console.log("✅ Saved valid ID document:", saved.url);
+        } catch (docError) {
+          console.error("⚠️ Failed to save valid ID:", docError.message);
+        }
+      }
+
+      console.log(`📄 Saved ${savedDocuments.length} document(s) for applicant ${applicantId}`);
+
       // Generate response
       if (stall_id) {
         res.status(201).json({
@@ -221,6 +282,7 @@ export const applicantController = {
             applicant_full_name,
             applicant_contact_number,
             stall_id: stall_id,
+            documents: savedDocuments,
             application_status: "Pending",
           },
         });
@@ -234,6 +296,7 @@ export const applicantController = {
             applicant_full_name,
             applicant_contact_number,
             stall_id: null,
+            documents: savedDocuments,
             application_status: "Pending",
           },
         });
