@@ -7,7 +7,6 @@ export default {
       get: () => (props.isVisible === undefined ? props.modelValue : props.isVisible),
       set: (v) => {
         emit('update:modelValue', v)
-        emit('update:isVisible', v)
         if (props.isVisible !== undefined && !v) emit('close')
       },
     })

@@ -56,7 +56,6 @@ export default {
       },
       set(val) {
         this.$emit('update:modelValue', val)
-        this.$emit('update:isVisible', val)
       },
     },
   },

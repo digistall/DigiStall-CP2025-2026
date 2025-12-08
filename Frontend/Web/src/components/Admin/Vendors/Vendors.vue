@@ -24,7 +24,6 @@
               <!-- Add Vendor Dialog -->
               <AddVendorDialog
                 :isVisible="addDialog"
-                :collectors="collectors"
                 @close="addDialog = false"
                 @save="handleSave"
               />
@@ -40,7 +39,6 @@
               <!-- Edit Vendor Dialog -->
               <EditVendorDialog
                 :isVisible="editDialog"
-                :collectors="collectors"
                 @close="editDialog = false"
                 :data="editData"
                 @update="handleEditUpdate"
