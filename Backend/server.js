@@ -46,6 +46,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, 'Backend-Mobile', 'uploads')));
 
+// Serve stall images from digistall_uploads path (for Docker compatibility)
+// In Docker: /app/uploads/stalls, locally: C:/xampp/htdocs/digistall_uploads/stalls
+const stallUploadsDir = process.env.UPLOAD_DIR_STALLS || 'C:/xampp/htdocs/digistall_uploads/stalls';
+app.use('/digistall_uploads/stalls', express.static(stallUploadsDir));
+
+// Serve applicant documents from digistall_uploads path
+const applicantUploadsDir = process.env.UPLOAD_DIR_APPLICANTS || 'C:/xampp/htdocs/digistall_uploads/applicants';
+app.use('/digistall_uploads/applicants', express.static(applicantUploadsDir));
+
 // ===== WEB ROUTES (Backend-Web functionality) =====
 // Public web routes (no authentication required)
 app.use('/api/auth', webAuthRoutes);

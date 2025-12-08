@@ -235,7 +235,7 @@ export async function deleteAllDocuments(req, res) {
 // =============================================
 // This is called after applicant is created to save files
 export async function saveApplicantDocumentsFromBase64(applicantId, branchId, documents) {
-  const BASE_UPLOAD_DIR = 'C:/xampp/htdocs/digistall_uploads/applicants'
+  const BASE_UPLOAD_DIR = process.env.UPLOAD_DIR_APPLICANTS || 'C:/xampp/htdocs/digistall_uploads/applicants'
   
   try {
     const uploadPath = path.join(BASE_UPLOAD_DIR, String(branchId), String(applicantId))

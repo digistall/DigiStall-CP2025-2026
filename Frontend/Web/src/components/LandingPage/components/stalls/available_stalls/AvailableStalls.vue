@@ -446,8 +446,8 @@ export default {
       const branchId = stall.branchId || 1
       const stallNumber = stall.stallNumber
       
-      // Test images by loading them (avoids CORS issues)
-      const testImage = (url) => {
+      // Test a single image URL silently (no console errors)
+      const testImageSilent = (url) => {
         return new Promise((resolve) => {
           const img = new Image()
           img.onload = () => resolve(true)
@@ -457,29 +457,39 @@ export default {
       }
       
       const images = []
-      const extensions = ['png', 'jpg', 'jpeg']
       
-      // Check for images 1-10
+      // Check for images 1-10, stop early if an image number is not found
       for (let i = 1; i <= 10; i++) {
-        let found = false
-        for (const ext of extensions) {
-          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
-          
-          const exists = await testImage(imageUrl)
-          if (exists) {
-            images.push({
-              id: `grid_img_${i}`,
-              stall_id: stall.id,
-              image_url: imageUrl,
-              display_order: i,
-              is_primary: i === 1 ? 1 : 0
-            })
-            found = true
-            break
+        // First, quickly test the most common extension (png)
+        const pngUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.png`
+        let foundUrl = null
+        
+        if (await testImageSilent(pngUrl)) {
+          foundUrl = pngUrl
+        } else {
+          // Only try other extensions if png fails
+          for (const ext of ['jpg', 'jpeg']) {
+            const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
+            if (await testImageSilent(imageUrl)) {
+              foundUrl = imageUrl
+              break
+            }
           }
         }
-        // Stop if no image found for this number and we have some images
-        if (!found && images.length > 0) break
+        
+        if (foundUrl) {
+          images.push({
+            id: `grid_img_${i}`,
+            stall_id: stall.id,
+            image_url: foundUrl,
+            display_order: i,
+            is_primary: i === 1 ? 1 : 0
+          })
+        } else {
+          // Stop checking more image numbers once we find a gap
+          // (e.g., if image 5 doesn't exist, don't check 6-10)
+          break
+        }
       }
       
       // Cache the results

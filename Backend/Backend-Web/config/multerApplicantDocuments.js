@@ -14,8 +14,8 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Base upload directory for applicants
-const BASE_UPLOAD_DIR = 'C:/xampp/htdocs/digistall_uploads/applicants'
+// Base upload directory for applicants (configurable via environment variable for Docker)
+const BASE_UPLOAD_DIR = process.env.UPLOAD_DIR_APPLICANTS || 'C:/xampp/htdocs/digistall_uploads/applicants'
 
 // Ensure base directory exists
 if (!fs.existsSync(BASE_UPLOAD_DIR)) {

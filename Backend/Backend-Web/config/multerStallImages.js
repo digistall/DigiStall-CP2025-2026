@@ -16,8 +16,8 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Base upload directory
-const BASE_UPLOAD_DIR = 'C:/xampp/htdocs/digistall_uploads/stalls'
+// Base upload directory (configurable via environment variable for Docker)
+const BASE_UPLOAD_DIR = process.env.UPLOAD_DIR_STALLS || 'C:/xampp/htdocs/digistall_uploads/stalls'
 
 // Configure storage with dynamic folder creation
 const storage = multer.diskStorage({
