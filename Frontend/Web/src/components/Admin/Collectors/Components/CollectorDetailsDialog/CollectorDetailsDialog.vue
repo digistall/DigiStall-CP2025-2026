@@ -1,17 +1,13 @@
 <template>
   <v-dialog v-model="visibleModel" max-width="900px">
-    <v-card>
-      <!-- Toolbar Header -->
-      <v-toolbar color="primary" dark dense>
-        <v-toolbar-title class="toolbar-title">
-          <v-icon left>mdi-account-details</v-icon>
-          Collector Details
-        </v-toolbar-title>
-        <v-spacer></v-spacer>
-        <v-btn icon @click="closeDialog">
-          <v-icon>mdi-close</v-icon>
+    <v-card class="details-modal">
+      <!-- Custom Header -->
+      <v-card-title class="modal-header">
+        <h2 class="modal-title">Collector Details</h2>
+        <v-btn icon class="close-btn" @click="closeDialog">
+          <v-icon color="white">mdi-close</v-icon>
         </v-btn>
-      </v-toolbar>
+      </v-card-title>
 
       <!-- Content -->
       <v-card-text class="pa-6">
@@ -20,7 +16,9 @@
             <v-avatar size="120" class="mb-4">
               <v-img :src="photo" />
             </v-avatar>
-            <h3 class="text-h6 font-weight-bold mb-2">{{ normalizedData.firstName }} {{ normalizedData.lastName }}</h3>
+            <h3 class="text-h6 font-weight-bold mb-2">
+              {{ normalizedData.firstName }} {{ normalizedData.lastName }}
+            </h3>
             <p class="text-body2 text-medium-emphasis">{{ normalizedData.collectorId }}</p>
           </v-col>
 

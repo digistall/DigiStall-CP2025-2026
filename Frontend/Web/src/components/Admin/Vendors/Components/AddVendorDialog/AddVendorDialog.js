@@ -8,7 +8,7 @@ export default {
       showSuccess: false,
       showError: false,
       errorMessage: '',
-      
+
       // Form fields
       form: {
         lastName: '',
@@ -25,27 +25,28 @@ export default {
         vendorId: '',
         assignedCollector: '',
       },
-      
+
       // Options
       genderOptions: ['Male', 'Female', 'Other'],
-      
+
       // Validation rules
       emailRules: [
-        v => !!v || 'Email is required',
-        v => /.+@.+\..+/.test(v) || 'Email must be valid',
+        (v) => !!v || 'Email is required',
+        (v) => /.+@.+\..+/.test(v) || 'Email must be valid',
       ],
     }
   },
-  
+
   computed: {
     visibleModel() {
       return this.isVisible !== undefined ? this.isVisible : this.modelValue
     },
     collectorItems() {
       // If parent passed collectors as objects with id/name, use them.
-      const c = (this.collectors && this.collectors.length && typeof this.collectors[0] === 'object')
-        ? this.collectors
-        : (this.collectors || []).map((s, i) => ({ id: i, name: s }))
+      const c =
+        this.collectors && this.collectors.length && typeof this.collectors[0] === 'object'
+          ? this.collectors
+          : (this.collectors || []).map((s, i) => ({ id: i, name: s }))
       return c
     },
     collectorItemText() {
@@ -113,9 +114,15 @@ export default {
           else if (typeof ac === 'object') resolvedId = ac.id || ac.collector_id || null
           else {
             // ac is primitive (likely id or name). If collectors list contains objects, try to match by id or name
-            if (this.collectors && this.collectors.length && typeof this.collectors[0] === 'object') {
-              const found = this.collectors.find((c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`)
-              resolvedId = found ? (found.id || found.collector_id) : null
+            if (
+              this.collectors &&
+              this.collectors.length &&
+              typeof this.collectors[0] === 'object'
+            ) {
+              const found = this.collectors.find(
+                (c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`,
+              )
+              resolvedId = found ? found.id || found.collector_id : null
             } else {
               // fallback: ac might be numeric id
               resolvedId = ac
@@ -146,14 +153,25 @@ export default {
         let collectorDisplay = null
         const ac = this.form.assignedCollector
         if (ac == null || ac === '') collectorDisplay = null
-        else if (typeof ac === 'object') collectorDisplay = ac.name || ac.first_name || ac.last_name || null
-        else if (this.collectors && this.collectors.length && typeof this.collectors[0] === 'object') {
-          const found = this.collectors.find((c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`)
+        else if (typeof ac === 'object')
+          collectorDisplay = ac.name || ac.first_name || ac.last_name || null
+        else if (
+          this.collectors &&
+          this.collectors.length &&
+          typeof this.collectors[0] === 'object'
+        ) {
+          const found = this.collectors.find(
+            (c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`,
+          )
           collectorDisplay = found ? found.name : ac
         } else collectorDisplay = ac
 
         const newRow = {
-          id: newVendor?.vendor_id || newVendor?.vendorId || newVendor?.id || Math.floor(Math.random() * 1000000),
+          id:
+            newVendor?.vendor_id ||
+            newVendor?.vendorId ||
+            newVendor?.id ||
+            Math.floor(Math.random() * 1000000),
           name: `${newVendor?.first_name || this.form.firstName} ${newVendor?.last_name || this.form.lastName}`.trim(),
           business: newVendor?.business_name || this.form.businessName,
           collector: collectorDisplay,
@@ -170,7 +188,8 @@ export default {
         }
       } catch (error) {
         console.error('Error creating vendor:', error)
-        this.errorMessage = error?.response?.data?.message || error.message || 'Failed to create vendor'
+        this.errorMessage =
+          error?.response?.data?.message || error.message || 'Failed to create vendor'
         this.showError = true
       } finally {
         this.saving = false

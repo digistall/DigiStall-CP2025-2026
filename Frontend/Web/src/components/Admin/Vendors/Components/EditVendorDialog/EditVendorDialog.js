@@ -99,9 +99,16 @@ export default {
       let collectorDisplay = null
       const ac = form.assignedCollector
       if (ac == null || ac === '') collectorDisplay = null
-      else if (typeof ac === 'object') collectorDisplay = ac.name || ac.first_name || ac.last_name || null
-      else if (props.collectors && props.collectors.length && typeof props.collectors[0] === 'object') {
-        const found = props.collectors.find((c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`)
+      else if (typeof ac === 'object')
+        collectorDisplay = ac.name || ac.first_name || ac.last_name || null
+      else if (
+        props.collectors &&
+        props.collectors.length &&
+        typeof props.collectors[0] === 'object'
+      ) {
+        const found = props.collectors.find(
+          (c) => String(c.id) === String(ac) || `${c.name}` === `${ac}`,
+        )
         collectorDisplay = found ? found.name : ac
       } else collectorDisplay = ac
 

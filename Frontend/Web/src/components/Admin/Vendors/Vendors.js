@@ -41,7 +41,8 @@ export default {
         business: '',
         business_location: '',
         status: 'Active',
-      },    }
+      },
+    }
   },
   computed: {
     filteredVendors() {
@@ -96,9 +97,10 @@ export default {
             business: v.business_name || v.business || '-',
             business_location: v.address || '-',
             status: v.status || 'Active',
-            collector: (v.collector_first_name && v.collector_last_name)
-              ? `${v.collector_first_name} ${v.collector_last_name}`
-              : v.collector || null,
+            collector:
+              v.collector_first_name && v.collector_last_name
+                ? `${v.collector_first_name} ${v.collector_last_name}`
+                : v.collector || null,
             raw: v,
           }))
         })
