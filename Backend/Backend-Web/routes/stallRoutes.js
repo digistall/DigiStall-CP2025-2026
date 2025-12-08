@@ -52,6 +52,7 @@ import {
   uploadStallImages,
   getStallImages,
   deleteStallImage,
+  deleteStallImageByFilename,
   setStallPrimaryImage,
   getStallImageCount
 } from '../controllers/stalls/stallImageController.js'
@@ -136,7 +137,8 @@ router.post('/auctions/auto-select-winners', viewOnlyForOwners, autoSelectWinner
 router.post('/:stall_id/images/upload', viewOnlyForOwners, upload.array('images', 10), uploadStallImages)  // POST /api/stalls/:stall_id/images/upload - Upload multiple images
 router.get('/:stall_id/images', getStallImages)                     // GET /api/stalls/:stall_id/images - Get all images for stall
 router.get('/:stall_id/images/count', getStallImageCount)           // GET /api/stalls/:stall_id/images/count - Get image count
-router.delete('/images/:image_id', viewOnlyForOwners, deleteStallImage)                // DELETE /api/stalls/images/:image_id - Delete image
+router.delete('/images/:image_id', viewOnlyForOwners, deleteStallImage)                // DELETE /api/stalls/images/:image_id - Delete image by database ID
+router.delete('/:stall_id/images/:filename', viewOnlyForOwners, deleteStallImageByFilename)  // DELETE /api/stalls/:stall_id/images/:filename - Delete image by filename
 router.put('/images/:image_id/set-primary', viewOnlyForOwners, setStallPrimaryImage)   // PUT /api/stalls/images/:image_id/set-primary - Set primary image
 
 export default router
