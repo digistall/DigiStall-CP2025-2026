@@ -2,8 +2,8 @@ import { createConnection } from '../../../config/database.js'
 import path from 'path'
 import fs from 'fs'
 
-// Base upload directory
-const BASE_UPLOAD_DIR = 'C:/xampp/htdocs/digistall_uploads/stalls'
+// Base upload directory (configurable via environment variable for Docker)
+const BASE_UPLOAD_DIR = process.env.UPLOAD_DIR_STALLS || 'C:/xampp/htdocs/digistall_uploads/stalls'
 
 /**
  * Add new stall with multi-image upload support
