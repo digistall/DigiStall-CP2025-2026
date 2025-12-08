@@ -47,6 +47,25 @@ import {
   autoSelectWinnerForExpiredAuctions
 } from '../controllers/stalls/stallController.js'
 
+// Import stall image controller
+import {
+  uploadStallImages,
+  getStallImages,
+  deleteStallImage,
+  setStallPrimaryImage,
+  getStallImageCount
+} from '../controllers/stalls/stallImageController.js'
+
+// Import new addStall with images
+import { addStallWithImages } from '../controllers/stalls/stallComponents/addStallWithImages.js'
+
+// Import multer configuration
+import upload, { checkImageLimit } from '../config/multerStallImages.js'
+import multer from 'multer'
+
+// Temporary upload for addStall
+const tempUpload = multer({ dest: 'uploads/temp/' })
+
 const router = express.Router()
 
 // ===== PUBLIC ROUTES (No Authentication) =====
@@ -69,7 +88,18 @@ router.get('/public/:id', getStallById)                 // GET /api/stalls/publi
 router.use(authMiddleware.authenticateToken)
 
 // Stall routes
-router.post('/', viewOnlyForOwners, addStall)                    // POST /api/stalls - Add new stall
+router.post('/', 
+  (req, res, next) => {
+    console.log('🎯 POST /api/stalls received');
+    console.log('  - User:', req.user);
+    console.log('  - Content-Type:', req.headers['content-type']);
+    console.log('  - Files:', req.files?.length || 0);
+    next();
+  },
+  viewOnlyForOwners, 
+  tempUpload.array('images', 10), 
+  addStallWithImages
+)  // POST /api/stalls - Add new stall with images
 router.get('/', getAllStalls)                 // GET /api/stalls - Get all stalls for branch manager
 router.get('/available', getAvailableStalls)  // GET /api/stalls/available - Get available stalls
 router.get('/filter', getStallsByFilter)     // GET /api/stalls/filter - Get stalls by filter
@@ -100,5 +130,13 @@ router.put('/auctions/:auctionId/extend', viewOnlyForOwners, extendAuctionTimer)
 router.put('/auctions/:auctionId/cancel', viewOnlyForOwners, cancelAuction)            // PUT /api/stalls/auctions/:auctionId/cancel - Cancel auction
 router.post('/auctions/:auctionId/select-winner', viewOnlyForOwners, selectAuctionWinner) // POST /api/stalls/auctions/:auctionId/select-winner - Confirm winner
 router.post('/auctions/auto-select-winners', viewOnlyForOwners, autoSelectWinnerForExpiredAuctions) // POST /api/stalls/auctions/auto-select-winners - Auto confirm winners
+
+// ===== STALL IMAGE MANAGEMENT ROUTES =====
+// Upload stall images (max 10 per stall, 2MB each, PNG/JPG only)
+router.post('/:stall_id/images/upload', viewOnlyForOwners, upload.array('images', 10), uploadStallImages)  // POST /api/stalls/:stall_id/images/upload - Upload multiple images
+router.get('/:stall_id/images', getStallImages)                     // GET /api/stalls/:stall_id/images - Get all images for stall
+router.get('/:stall_id/images/count', getStallImageCount)           // GET /api/stalls/:stall_id/images/count - Get image count
+router.delete('/images/:image_id', viewOnlyForOwners, deleteStallImage)                // DELETE /api/stalls/images/:image_id - Delete image
+router.put('/images/:image_id/set-primary', viewOnlyForOwners, setStallPrimaryImage)   // PUT /api/stalls/images/:image_id/set-primary - Set primary image
 
 export default router
