@@ -13,7 +13,7 @@
       </div>
 
       <!-- Table Body -->
-      <div class="table-body">
+      <div class="table-body scrollable-table-wrapper">
         <div v-if="employees.length === 0" class="no-data-container">
           <v-icon size="64" color="grey-lighten-2">mdi-account-off</v-icon>
           <p class="no-data-text">No employees found</p>
@@ -77,15 +77,25 @@
                 >
                   {{ getPermissionText(permission) }}
                 </v-chip>
-                <v-chip
+                <v-tooltip 
                   v-if="(employee.permissions || []).length > 2"
                   size="x-small"
                   color="grey"
                   variant="outlined"
                   class="permission-chip more-chip"
                 >
-                  +{{ (employee.permissions || []).length - 2 }} more
-                </v-chip>
+                  <template v-slot:activator="{ props }">
+                    <v-chip
+                      v-bind="props"
+                      size="x-small"
+                      color="grey"
+                      variant="outlined"
+                      class="permission-chip permission-more-chip"
+                    >
+                      +{{ (employee.permissions || []).length - 2 }} more
+                    </v-chip>
+                  </template>
+                </v-tooltip>
               </div>
             </div>
 

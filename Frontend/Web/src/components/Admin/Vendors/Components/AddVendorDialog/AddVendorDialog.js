@@ -1,5 +1,10 @@
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
+
 export default {
   name: 'AddVendorDialog',
+  components: {
+    ToastNotification
+  },
   data() {
     return {
       activeTab: 0,
@@ -195,6 +200,14 @@ export default {
         this.saving = false
       }
     },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
+    }
   },
 
   props: {

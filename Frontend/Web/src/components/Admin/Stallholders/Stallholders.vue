@@ -14,10 +14,6 @@
               <TableStall
                 :searchQuery="searchQuery"
                 :activeFilter="activeFilter"
-                @view-stallholder="handleViewStallholder"
-                @edit-stallholder="handleEditStallholder"
-                @delete-stallholder="handleDeleteStallholder"
-                @add-stallholder="handleAddStallholder"
               />
 
               <!-- Documents View Modal -->

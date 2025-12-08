@@ -8,9 +8,10 @@ export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   SERVERS: [
     // Current detected IP addresses
-    'http://192.168.1.101:3001',   // Current Expo detected IP
+    'http://172.18.195.29:3001',   // Current Wi-Fi IP (November 7, 2025)
+    'http://192.168.137.1:3001',   // Local Area Connection (successful)
+    'http://192.168.1.101:3001',   // Previous Expo detected IP
     'http://192.168.110.16:3001',  // Previous Wi-Fi IP
-    'http://192.168.137.1:3001',   // Local Area Connection
     
     // Previous IP (backup)
     'http://192.168.8.38:3001',
@@ -59,6 +60,11 @@ export const API_CONFIG = {
     GET_MY_APPLICATIONS: '/mobile/api/applications/my',
     GET_APPLICATION_STATUS: '/mobile/api/applications',
     UPDATE_APPLICATION: '/mobile/api/applications',
+
+    // Stallholder document endpoints
+    GET_STALLHOLDER_STALLS_DOCUMENTS: '/api/mobile/stallholder/documents',
+    GET_BRANCH_DOCUMENT_REQUIREMENTS: '/api/mobile/stallholder/documents/branch',
+    UPLOAD_STALLHOLDER_DOCUMENT: '/api/mobile/stallholder/documents/upload',
     
     // Health check
     HEALTH: '/api/health'  // Main health endpoint

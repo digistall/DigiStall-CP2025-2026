@@ -31,27 +31,24 @@
           v-if="activeTab === 'online'"
           @accept-payment="handleAcceptPayment"
           @decline-payment="handleDeclinePayment"
+          @count-updated="handleOnlineCountUpdate"
         />
         <OnsitePayments
           v-else
           @payment-added="handlePaymentAdded"
           @delete-payment="handleDeletePayment"
+          @count-updated="handleOnsiteCountUpdate"
         />
       </transition>
     </div>
 
-    <!-- Success Snackbar -->
-    <v-snackbar
-      v-model="showSnackbar"
-      :color="snackbarColor"
-      :timeout="3000"
-      location="top right"
-    >
-      <div class="d-flex align-center gap-2">
-        <v-icon>{{ snackbarIcon }}</v-icon>
-        <span>{{ snackbarMessage }}</span>
-      </div>
-    </v-snackbar>
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 

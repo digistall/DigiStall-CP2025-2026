@@ -1,0 +1,105 @@
+/* Report Cards */
+.report-card {
+  border-radius: 8px !important;
+  height: 100%;
+}
+
+.report-header {
+  background: rgb(0, 33, 129) !important;
+  color: white !important;
+  padding: 16px 20px !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+}
+
+/* Revenue Comparison */
+.revenue-comparison {
+  padding: 8px 0;
+}
+
+.revenue-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.revenue-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #002181 0%, #1565c0 100%);
+}
+
+.secondary-gradient {
+  background: linear-gradient(135deg, #757575 0%, #9e9e9e 100%);
+}
+
+.revenue-info {
+  flex: 1;
+}
+
+.revenue-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.revenue-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #002181;
+}
+
+.revenue-value.secondary {
+  color: #757575;
+}
+
+/* Status Distribution */
+.status-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.status-item:hover {
+  background-color: #eeeeee;
+  transform: translateX(4px);
+}
+
+.status-count {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.success-text {
+  color: #4caf50 !important;
+}
+
+.warning-text {
+  color: #ff9800 !important;
+}
+
+.error-text {
+  color: #f44336 !important;
+}
+
+.grey-text {
+  color: #9e9e9e !important;
+}

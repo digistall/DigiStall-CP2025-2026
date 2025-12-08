@@ -10,54 +10,37 @@ export const updateApplicant = async (req, res) => {
     connection = await createConnection();
 
     // Check if applicant exists
-    const [existingApplicant] = await connection.execute(
-      'SELECT applicant_id FROM applicant WHERE applicant_id = ?',
+    const [[existingApplicant]] = await connection.execute(
+      'CALL getApplicantById(?)',
       [id]
     );
 
-    if (existingApplicant.length === 0) {
+    if (!existingApplicant) {
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
       });
     }
 
-    // Build dynamic update query
-    const updateFields = [];
-    const updateValues = [];
+    // Extract update fields with defaults from existing data
+    const first_name = updateData.first_name ?? existingApplicant.first_name;
+    const last_name = updateData.last_name ?? existingApplicant.last_name;
+    const email = updateData.email ?? existingApplicant.email;
+    const contact_number = updateData.contact_number ?? existingApplicant.contact_number;
+    const address = updateData.address ?? existingApplicant.address;
+    const business_type = updateData.business_type ?? existingApplicant.business_type;
+    const business_name = updateData.business_name ?? existingApplicant.business_name;
+    const business_description = updateData.business_description ?? existingApplicant.business_description;
+    const preferred_area = updateData.preferred_area ?? existingApplicant.preferred_area;
+    const preferred_location = updateData.preferred_location ?? existingApplicant.preferred_location;
+    const application_status = updateData.application_status ?? existingApplicant.application_status;
 
-    const allowedFields = [
-      'first_name', 'last_name', 'email', 'contact_number', 'address',
-      'business_type', 'business_name', 'business_description',
-      'preferred_area', 'preferred_location', 'application_status'
-    ];
-
-    allowedFields.forEach(field => {
-      if (updateData[field] !== undefined) {
-        updateFields.push(`${field} = ?`);
-        updateValues.push(updateData[field]);
-      }
-    });
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No valid fields provided for update'
-      });
-    }
-
-    // Add updated_at timestamp and applicant ID
-    updateFields.push('updated_at = NOW()');
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE applicant SET ${updateFields.join(', ')} WHERE applicant_id = ?`;
-    
-    await connection.execute(updateQuery, updateValues);
-
-    // Get updated applicant data
-    const [updatedApplicant] = await connection.execute(
-      'SELECT * FROM applicant WHERE applicant_id = ?',
-      [id]
+    // Update applicant using stored procedure
+    const [[updatedApplicant]] = await connection.execute(
+      'CALL updateApplicant(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, first_name, last_name, email, contact_number, address, 
+       business_type, business_name, business_description, 
+       preferred_area, preferred_location, application_status]
     );
 
     console.log('✅ Applicant updated successfully:', id);
@@ -65,7 +48,7 @@ export const updateApplicant = async (req, res) => {
     res.json({
       success: true,
       message: 'Applicant updated successfully',
-      data: updatedApplicant[0]
+      data: updatedApplicant
     });
 
   } catch (error) {

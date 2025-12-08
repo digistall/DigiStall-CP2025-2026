@@ -166,21 +166,13 @@
         <v-btn color="primary" :loading="saving" @click="save"> Update Collector </v-btn>
       </v-card-actions>
 
-      <!-- Success Snackbar -->
-      <v-snackbar v-model="showSuccess" color="success" timeout="3000">
-        <template #prepend>
-          <v-icon>mdi-check-circle</v-icon>
-        </template>
-        Collector updated successfully!
-      </v-snackbar>
-
-      <!-- Error Snackbar -->
-      <v-snackbar v-model="showError" color="error" timeout="3000">
-        <template #prepend>
-          <v-icon>mdi-alert-circle</v-icon>
-        </template>
-        Error updating collector. Please try again.
-      </v-snackbar>
+      <!-- Toast Notification -->
+      <ToastNotification
+        :show="toast.show"
+        :message="toast.message"
+        :type="toast.type"
+        @close="toast.show = false"
+      />
     </v-card>
   </v-dialog>
 </template>

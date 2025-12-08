@@ -1,0 +1,95 @@
+/* Global Font Styles - Poppins */
+/* Font is loaded from Google Fonts in index.html */
+
+/* Apply Poppins to all elements */
+* {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+html, body {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Vuetify component overrides */
+.v-application {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+.v-application .text-body-1,
+.v-application .text-body-2,
+.v-application .text-subtitle-1,
+.v-application .text-subtitle-2,
+.v-application .text-caption,
+.v-application .text-overline,
+.v-application .text-h1,
+.v-application .text-h2,
+.v-application .text-h3,
+.v-application .text-h4,
+.v-application .text-h5,
+.v-application .text-h6 {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Vuetify form elements */
+.v-input,
+.v-input__control,
+.v-field,
+.v-field__input,
+.v-select,
+.v-text-field,
+.v-textarea,
+.v-autocomplete,
+.v-btn,
+.v-card,
+.v-card-title,
+.v-card-subtitle,
+.v-card-text,
+.v-list,
+.v-list-item,
+.v-list-item-title,
+.v-list-item-subtitle,
+.v-tab,
+.v-tabs,
+.v-chip,
+.v-badge,
+.v-alert,
+.v-snackbar,
+.v-dialog,
+.v-menu,
+.v-tooltip,
+.v-data-table,
+.v-data-table th,
+.v-data-table td,
+.v-pagination {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Input and form placeholders */
+input,
+textarea,
+select,
+button {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Tables */
+table,
+th,
+td {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Labels and text elements */
+label,
+span,
+p,
+h1, h2, h3, h4, h5, h6,
+a,
+div {
+  font-family: 'Poppins', sans-serif !important;
+}

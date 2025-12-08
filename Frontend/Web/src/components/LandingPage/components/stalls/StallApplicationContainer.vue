@@ -1,12 +1,8 @@
 <template>
     <div class="overlay" v-if="showForm">
         <!-- Enhanced Loading Overlay -->
-        <ApplicationLoadingOverlay 
-            v-if="isSubmitting" 
-            :state="loadingState" 
-            :error-message="loadingErrorMessage"
-            @retry="retrySubmission" 
-        />
+        <ApplicationLoadingOverlay v-if="isSubmitting" :state="loadingState" :error-message="loadingErrorMessage"
+            @retry="retrySubmission" />
 
         <!-- Step 1: Personal Information -->
         <PersonalInformation v-if="currentStep === 1 && !isSubmitting" :stall="stall" @close="closeForm"
@@ -42,6 +38,6 @@ export default StallApplicationContainerScript;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 999999;
 }
 </style>

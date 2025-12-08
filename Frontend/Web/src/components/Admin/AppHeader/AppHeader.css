@@ -197,9 +197,9 @@
 
 /* Menu Items - Updated to match image design */
 .popup-item {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   padding: 12px 16px;
   cursor: pointer;
   transition: background 0.15s ease;

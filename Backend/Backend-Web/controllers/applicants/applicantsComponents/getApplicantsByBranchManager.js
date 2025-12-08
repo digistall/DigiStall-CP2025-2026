@@ -1,4 +1,5 @@
 import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
 
 // Get applicants for stalls managed by a specific branch manager OR by employees in their assigned branch
 export const getApplicantsByBranchManager = async (req, res) => {
@@ -8,7 +9,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
 
     console.log("🔍 Request user info:", req.user);
 
-    // Check if user is an employee or branch manager
+    // Check if user is an employee, branch manager, or business owner
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
     const userBranchId = req.user?.branchId;
@@ -17,11 +18,35 @@ export const getApplicantsByBranchManager = async (req, res) => {
 
     const { application_status, price_type, search } = req.query;
 
-    let branch_id = null;
-    let managerData = null;
-    let branch_manager_id = null; // Add this for branch managers
+    // Get branch filter based on user role (supports multi-branch for business owners)
+    const branchFilter = await getBranchFilter(req, connection);
+    
+    if (branchFilter === null) {
+      // System administrator - see all
+      console.log('🔍 System admin viewing all applicants across all branches');
+    } else if (branchFilter.length === 0) {
+      // Business owner with no accessible branches
+      console.log('⚠️ Business owner has no accessible branches');
+      return res.json({
+        success: true,
+        message: 'No accessible branches',
+        data: {
+          branch_manager: null,
+          applicants: [],
+          statistics: {
+            summary: [],
+            status_breakdown: [],
+            total_results: 0
+          }
+        }
+      });
+    }
 
-    if (userType === 'employee') {
+    let managerData = null;
+    let branchIds = branchFilter;
+
+    // Get manager/owner information
+    if (userType === 'business_employee') {
       // For employees, use their assigned branch directly
       if (!userBranchId) {
         return res.status(400).json({
@@ -29,8 +54,6 @@ export const getApplicantsByBranchManager = async (req, res) => {
           message: 'Employee not assigned to any branch'
         });
       }
-
-      branch_id = userBranchId;
 
       // Get branch information for employee
       const [branchInfo] = await connection.execute(
@@ -43,7 +66,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
           'N/A' as manager_email
         FROM branch b
         WHERE b.branch_id = ?`,
-        [branch_id]
+        [userBranchId]
       );
 
       if (branchInfo.length === 0) {
@@ -55,16 +78,32 @@ export const getApplicantsByBranchManager = async (req, res) => {
 
       managerData = branchInfo[0];
 
-    } else {
-      // For branch managers, use the original logic
-      branch_manager_id = req.params.branch_manager_id;
+    } else if (userType === 'stall_business_owner') {
+      // Business owners can view multiple branches
+      console.log(`🔍 Business owner viewing applicants for branches: ${branchIds.join(', ')}`);
       
-      if (!branch_manager_id) {
-        branch_manager_id = req.user?.branchManagerId || req.user?.userId;
-        console.log("🔍 No branch_manager_id in params, using authenticated user:", req.user);
-        console.log("🎯 Extracted branch_manager_id:", branch_manager_id);
-      }
+      // Get business owner information
+      const [ownerInfo] = await connection.execute(
+        `SELECT 
+          sbo.business_owner_id,
+          CONCAT(sbo.first_name, ' ', sbo.last_name) as owner_name,
+          sbo.email as owner_email,
+          'Business Owner' as manager_name,
+          sbo.email as manager_email
+        FROM stall_business_owner sbo
+        WHERE sbo.business_owner_id = ?`,
+        [userId]
+      );
 
+      managerData = ownerInfo[0] || { 
+        manager_name: 'Business Owner', 
+        manager_email: 'N/A' 
+      };
+
+    } else if (userType === 'business_manager') {
+      // For branch managers, use the original logic
+      const branch_manager_id = req.params.branch_manager_id || req.user?.branchManagerId || req.user?.userId;
+      
       if (!branch_manager_id) {
         return res.status(400).json({
           success: false,
@@ -75,16 +114,16 @@ export const getApplicantsByBranchManager = async (req, res) => {
       // First, get the branches managed by this branch manager
       const [branchManagerInfo] = await connection.execute(
         `SELECT 
-          bm.branch_manager_id,
+          bm.business_manager_id,
           CONCAT(bm.first_name, ' ', bm.last_name) as manager_name,
           bm.email as manager_email,
           b.branch_id,
           b.branch_name,
           b.area,
           b.location
-        FROM branch_manager bm
+        FROM business_manager bm
         INNER JOIN branch b ON bm.branch_id = b.branch_id
-        WHERE bm.branch_manager_id = ?`,
+        WHERE bm.business_manager_id = ?`,
         [branch_manager_id]
       );
 
@@ -96,9 +135,9 @@ export const getApplicantsByBranchManager = async (req, res) => {
       }
 
       managerData = branchManagerInfo[0];
-      branch_id = managerData.branch_id;
     }
 
+    // Build query with multi-branch support
     let query = `
       SELECT DISTINCT
         a.applicant_id,
@@ -140,7 +179,9 @@ export const getApplicantsByBranchManager = async (req, res) => {
         s.deadline_active,
         -- Branch location details
         sec.section_name,
-        f.floor_name
+        f.floor_name,
+        b.branch_id,
+        b.branch_name
       FROM applicant a
       INNER JOIN application app ON a.applicant_id = app.applicant_id
       INNER JOIN stall s ON app.stall_id = s.stall_id
@@ -150,10 +191,20 @@ export const getApplicantsByBranchManager = async (req, res) => {
       LEFT JOIN business_information bi ON a.applicant_id = bi.applicant_id
       LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
       LEFT JOIN spouse sp ON a.applicant_id = sp.applicant_id
-      WHERE b.branch_id = ?
     `;
 
-    const params = [branch_id];
+    let params = [];
+
+    // Apply branch filter
+    if (branchFilter === null) {
+      // System administrator - no branch filter
+      query += " WHERE 1=1";
+    } else {
+      // Filter by accessible branches
+      const placeholders = branchFilter.map(() => '?').join(',');
+      query += ` WHERE b.branch_id IN (${placeholders})`;
+      params = [...branchFilter];
+    }
 
     if (application_status) {
       query += " AND app.application_status = ?";
@@ -244,6 +295,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
           stall_status: row.stall_status,
           section_name: row.section_name,
           floor_name: row.floor_name,
+          branch_name: row.branch_name,
           raffle_auction_deadline: row.raffle_auction_deadline,
           deadline_active: row.deadline_active
         }
@@ -253,9 +305,9 @@ export const getApplicantsByBranchManager = async (req, res) => {
     // Convert Map to Array
     const applicants = Array.from(applicantsMap.values());
 
-    // Get summary statistics
-    const [summaryStats] = await connection.execute(
-      `SELECT 
+    // Get summary statistics with multi-branch support
+    let summaryQuery = `
+      SELECT 
         COUNT(DISTINCT app.applicant_id) as total_unique_applicants,
         COUNT(app.application_id) as total_applications,
         COUNT(DISTINCT s.stall_id) as stalls_with_applications,
@@ -266,13 +318,21 @@ export const getApplicantsByBranchManager = async (req, res) => {
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
-      WHERE b.branch_id = ?
-      GROUP BY s.price_type`,
-      [branch_id]
-    );
+    `;
 
-    const [statusBreakdown] = await connection.execute(
-      `SELECT 
+    let summaryParams = [];
+    if (branchFilter === null) {
+      summaryQuery += " WHERE 1=1 GROUP BY s.price_type";
+    } else {
+      const placeholders = branchFilter.map(() => '?').join(',');
+      summaryQuery += ` WHERE b.branch_id IN (${placeholders}) GROUP BY s.price_type`;
+      summaryParams = [...branchFilter];
+    }
+
+    const [summaryStats] = await connection.execute(summaryQuery, summaryParams);
+
+    let statusQuery = `
+      SELECT 
         app.application_status,
         COUNT(*) as count
       FROM application app
@@ -280,14 +340,22 @@ export const getApplicantsByBranchManager = async (req, res) => {
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
-      WHERE b.branch_id = ?
-      GROUP BY app.application_status`,
-      [branch_id]
-    );
+    `;
+
+    let statusParams = [];
+    if (branchFilter === null) {
+      statusQuery += " WHERE 1=1 GROUP BY app.application_status";
+    } else {
+      const placeholders = branchFilter.map(() => '?').join(',');
+      statusQuery += ` WHERE b.branch_id IN (${placeholders}) GROUP BY app.application_status`;
+      statusParams = [...branchFilter];
+    }
+
+    const [statusBreakdown] = await connection.execute(statusQuery, statusParams);
 
     res.json({
       success: true,
-      message: 'Branch manager applicants retrieved successfully',
+      message: 'Applicants retrieved successfully',
       data: {
         branch_manager: managerData,
         applicants: applicants,
@@ -298,9 +366,8 @@ export const getApplicantsByBranchManager = async (req, res) => {
         }
       },
       filters: {
-        branch_manager_id: userType === 'employee' ? 'N/A (Employee)' : branch_manager_id,
         user_type: userType,
-        branch_id: branch_id,
+        accessible_branches: branchFilter === null ? 'all' : branchFilter.join(', '),
         application_status: application_status || 'all',
         price_type: price_type || 'all',
         search: search || ''

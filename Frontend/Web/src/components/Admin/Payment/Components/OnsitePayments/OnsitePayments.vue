@@ -28,17 +28,18 @@
                 <th>Payment Date</th>
                 <th>Collected By</th>
                 <th>Receipt No.</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="filteredPayments.length === 0">
-                <td colspan="7" class="empty-state">
+                <td colspan="8" class="empty-state">
                   <v-icon size="48" color="grey">mdi-inbox</v-icon>
                   <p>No onsite payments recorded</p>
                 </td>
               </tr>
-              <tr 
-                v-for="payment in filteredPayments" 
+              <tr
+                v-for="payment in filteredPayments"
                 :key="payment.id"
                 class="clickable-row"
                 @click="viewPayment(payment)"
@@ -46,8 +47,10 @@
                 <td class="id-cell">{{ payment.id }}</td>
                 <td class="name-cell">
                   <div class="stallholder-info">
-                    <div class="avatar">{{ payment.stallholderName.charAt(0) }}</div>
-                    <span class="name">{{ payment.stallholderName }}</span>
+                    <div class="avatar">
+                      {{ (payment.stallholderName || "N/A").charAt(0) }}
+                    </div>
+                    <span class="name">{{ payment.stallholderName || "N/A" }}</span>
                   </div>
                 </td>
                 <td class="stall-cell">
@@ -59,6 +62,11 @@
                 <td class="date-cell">{{ formatDate(payment.paymentDate) }}</td>
                 <td class="collector-cell">{{ payment.collectedBy }}</td>
                 <td class="receipt-cell">{{ payment.receiptNo }}</td>
+                <td class="status-cell">
+                  <v-chip :color="payment.statusColor" variant="flat" size="small">
+                    {{ payment.status }}
+                  </v-chip>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -78,15 +86,12 @@
         <v-card-text class="pa-6">
           <v-form ref="addForm" v-model="formValid">
             <v-row>
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="form.stallholderName"
-                  label="Stallholder Name"
-                  variant="outlined"
-                  density="comfortable"
-                  :rules="[v => !!v || 'Required']"
-                  prepend-inner-icon="mdi-account"
-                ></v-text-field>
+              <v-col cols="12">
+                <StallholderDropdown
+                  v-model="form.stallholderId"
+                  :rules="[(v) => !!v || 'Please select a stallholder']"
+                  @stallholder-selected="onStallholderSelected"
+                />
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
@@ -94,8 +99,9 @@
                   label="Stall Number"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[v => !!v || 'Required']"
+                  readonly
                   prepend-inner-icon="mdi-store"
+                  placeholder="Auto-filled when stallholder is selected"
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
@@ -105,7 +111,10 @@
                   variant="outlined"
                   density="comfortable"
                   type="number"
-                  :rules="[v => !!v || 'Required', v => v > 0 || 'Must be greater than 0']"
+                  :rules="[
+                    (v) => !!v || 'Required',
+                    (v) => v > 0 || 'Must be greater than 0',
+                  ]"
                   prepend-inner-icon="mdi-currency-php"
                 ></v-text-field>
               </v-col>
@@ -116,9 +125,40 @@
                   variant="outlined"
                   density="comfortable"
                   type="date"
-                  :rules="[v => !!v || 'Required']"
+                  :rules="[(v) => !!v || 'Required']"
                   prepend-inner-icon="mdi-calendar"
                 ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="form.paymentTime"
+                  label="Payment Time"
+                  variant="outlined"
+                  density="comfortable"
+                  type="time"
+                  :rules="[(v) => !!v || 'Required']"
+                  prepend-inner-icon="mdi-clock-outline"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="form.paymentForMonth"
+                  label="Payment For Month"
+                  variant="outlined"
+                  density="comfortable"
+                  type="month"
+                  prepend-inner-icon="mdi-calendar-month"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="form.paymentType"
+                  :items="['rental', 'utilities', 'maintenance', 'penalty', 'other']"
+                  label="Payment Type"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-tag-outline"
+                ></v-select>
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
@@ -126,8 +166,9 @@
                   label="Collected By"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[v => !!v || 'Required']"
+                  :rules="[(v) => !!v || 'Required']"
                   prepend-inner-icon="mdi-account-tie"
+                  readonly
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
@@ -136,9 +177,20 @@
                   label="Receipt Number"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[v => !!v || 'Required']"
+                  :rules="[(v) => !!v || 'Required']"
                   prepend-inner-icon="mdi-receipt"
-                ></v-text-field>
+                  readonly
+                >
+                  <template #append>
+                    <v-btn
+                      icon="mdi-refresh"
+                      size="small"
+                      variant="text"
+                      @click="generateReceiptNumber"
+                      :loading="loading"
+                    ></v-btn>
+                  </template>
+                </v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-textarea
@@ -195,11 +247,15 @@
               </div>
               <div class="detail-item">
                 <span class="detail-label">Amount:</span>
-                <span class="detail-value amount">{{ formatCurrency(selectedPayment.amount) }}</span>
+                <span class="detail-value amount">{{
+                  formatCurrency(selectedPayment.amount)
+                }}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Payment Date:</span>
-                <span class="detail-value">{{ formatDate(selectedPayment.paymentDate) }}</span>
+                <span class="detail-value">{{
+                  formatDate(selectedPayment.paymentDate)
+                }}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Collected By:</span>
@@ -229,9 +285,16 @@
         <div class="fab-ripple-2"></div>
       </button>
     </div>
+
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 
 <script src="./OnsitePayments.js"></script>
 <style scoped src="./OnsitePayments.css"></style>
-  data() {

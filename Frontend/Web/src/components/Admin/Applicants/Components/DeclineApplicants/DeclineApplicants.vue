@@ -137,44 +137,6 @@
       </div>
     </div>
 
-    <!-- Loading Popup Modal (Like Adding Stall) -->
-    <div v-if="showLoadingPopup" class="loading-popup-overlay">
-      <div class="loading-popup-card">
-        <div class="popup-content">
-          <!-- Loading State -->
-          <div v-if="popupState === 'loading'" class="popup-state">
-            <div class="loading-spinner">
-              <div class="spinner-ring"></div>
-              <div class="spinner-ring"></div>
-              <div class="spinner-ring"></div>
-            </div>
-            <p class="popup-text">{{ loadingMessage }}</p>
-          </div>
-
-          <!-- Success State -->
-          <div v-else-if="popupState === 'success'" class="popup-state">
-            <div class="success-icon">
-              <div class="checkmark-circle">
-                <div class="checkmark"></div>
-              </div>
-            </div>
-            <h3 class="success-title">Success!</h3>
-            <p class="popup-text">{{ successMessage }}</p>
-          </div>
-
-          <!-- Error State -->
-          <div v-else-if="popupState === 'error'" class="popup-state">
-            <div class="error-icon">
-              <div class="error-circle">
-                <div class="error-x"></div>
-              </div>
-            </div>
-            <h3 class="error-title">Error</h3>
-            <p class="popup-text">{{ errorMessage }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 

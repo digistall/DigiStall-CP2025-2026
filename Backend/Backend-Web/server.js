@@ -3,13 +3,20 @@
 
 import express from 'express';
 import cors from 'cors';
-import { createConnection } from './config/database.js';
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import authMiddleware from './middleware/auth.js';
+import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+
+// Load environment variables
+dotenv.config();
 
 // Import route files
 import authRoutes from './routes/authRoutes.js';
+import enhancedAuthRoutes from './routes/enhancedAuthRoutes.js';
 import applicantRoutes from './routes/applicantRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
@@ -18,13 +25,19 @@ import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
 import collectorRoutes from './routes/collectorRoutes.js';
+import stallholderRoutes from './routes/stallholderRoutes.js';
+import complianceRoutes from './routes/complianceRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.WEB_PORT || 3001;
 
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
 
 // Add request logging
@@ -39,17 +52,24 @@ app.use((req, res, next) => {
 // ===== ROUTES =====
 
 // Public routes (no authentication required)
-app.use('/api/auth', authRoutes);
-app.use('/api/stalls', stallRoutes);           // Stalls routes (public for landing page + protected for admin)
+app.use('/api/auth/v2', enhancedAuthRoutes);    // Enhanced JWT auth with refresh tokens (NEW)
+app.use('/api/auth', authRoutes);               // Legacy auth routes (backward compatibility)
+app.use('/api/stalls', stallRoutes);            // Stalls routes (public for landing page + protected for admin)
 app.use('/api/applications', applicationRoutes); // Applications (public for submissions)
 app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page applicant submissions (public)
-app.use('/api/employees', employeeRoutes);     // Employee routes (login is public, others protected internally)
+app.use('/api/employees', employeeRoutes);      // Employee routes (login is public, others protected internally)
 
 // Management routes (authentication required)
-app.use('/api/applicants', authMiddleware.authenticateToken, applicantRoutes);
-app.use('/api/branches', authMiddleware.authenticateToken, branchRoutes);
 app.use('/api/vendors', authMiddleware.authenticateToken, vendorRoutes);
 app.use('/api/collectors', authMiddleware.authenticateToken, collectorRoutes);
+// Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility
+app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);
+app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
+app.use('/api/stallholders', enhancedAuthMiddleware.authenticateToken, stallholderRoutes);
+app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
+app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
+app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
+app.use('/api/subscriptions', subscriptionRoutes); // Has its own auth middleware
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {
@@ -100,9 +120,14 @@ app.get('/', (req, res) => {
       applicants: '/api/applicants',
       branches: '/api/branches',
       employees: '/api/employees',
-      health: '/api/health',
       vendors: '/api/vendors',
       collectors: '/api/collectors'
+      stallholders: '/api/stallholders',
+      compliances: '/api/compliances',
+      complaints: '/api/complaints',
+      payments: '/api/payments',
+      subscriptions: '/api/subscriptions',
+      health: '/api/health'
     }
   });
 });
@@ -123,9 +148,14 @@ app.use('*', (req, res) => {
       '/api/applicants',
       '/api/branches',
       '/api/employees',
-      '/api/health',
       '/api/vendors',
       '/api/collectors'
+      '/api/stallholders',
+      '/api/compliances',
+      '/api/complaints',
+      '/api/payments',
+      '/api/subscriptions',
+      '/api/health'
     ]
   });
 });
@@ -147,13 +177,17 @@ app.listen(PORT, async () => {
 📚 API Documentation: http://localhost:${PORT}/
   `);
 
-  // Test database connection
+//  Test database connection and initialize tables
   try {
     const connection = await createConnection();
     await connection.execute('SELECT 1');
     await connection.end();
     console.log('✅ Database connection successful');
+    
+    // Initialize database tables
+    await initializeDatabase();
+    console.log('✅ Database tables initialized');
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Database initialization failed:', error.message);
   }
 });
