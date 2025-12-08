@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ScrollView,
+  FlatList,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
@@ -13,15 +13,26 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 // Import components
 import SearchFilterBar from './components/SearchFilter/SearchFilterBar';
 import StallCard from './components/StallCard';
+import StallDetailsModal from './components/StallDetailsModal';
 
 // Import services
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import FavoritesService from '../../../../services/FavoritesService';
 
 // Import theme
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Responsive layout - detect tablet (2 columns for better readability)
+const isTablet = SCREEN_WIDTH >= 768;
+const numColumns = isTablet ? 2 : 1;
+const cardMargin = 12;
+const containerPadding = 16;
+const CARD_WIDTH = isTablet 
+  ? (SCREEN_WIDTH - (containerPadding * 2) - (cardMargin * (numColumns - 1))) / numColumns 
+  : SCREEN_WIDTH - (containerPadding * 2);
 
 const StallScreen = () => {
   const { theme, isDark } = useTheme();
@@ -34,11 +45,55 @@ const StallScreen = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null); // Track which stall is being applied to
   const [availableFilters, setAvailableFilters] = useState(['ALL']); // Dynamic filters based on data
+  const [favoriteIds, setFavoriteIds] = useState([]); // Track favorite stall IDs
+  
+  // Stall details modal state
+  const [selectedStall, setSelectedStall] = useState(null);
+  const [showStallDetails, setShowStallDetails] = useState(false);
 
   // Load user data and stalls on component mount
   useEffect(() => {
     loadUserDataAndStalls();
   }, []);
+
+  // Load favorites when user data is available
+  useEffect(() => {
+    if (userData?.user?.applicant_id) {
+      loadFavorites();
+    }
+  }, [userData]);
+
+  const loadFavorites = async () => {
+    try {
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) return;
+      
+      const favorites = await FavoritesService.getFavorites(applicantId);
+      setFavoriteIds(favorites);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  const handleToggleFavorite = useCallback(async (stallId) => {
+    try {
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) return;
+      
+      const isNowFavorite = await FavoritesService.toggleFavorite(applicantId, stallId);
+      
+      // Update local state
+      setFavoriteIds(prev => {
+        if (isNowFavorite) {
+          return [Number(stallId), ...prev.filter(id => id !== Number(stallId))];
+        } else {
+          return prev.filter(id => id !== Number(stallId));
+        }
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  }, [userData]);
 
   const loadUserDataAndStalls = async () => {
     try {
@@ -254,8 +309,50 @@ const StallScreen = () => {
     }
     // For 'default', keep original order
     
+    // Always sort favorites first (after other sorting)
+    filtered = FavoritesService.sortWithFavoritesFirst(filtered, favoriteIds);
+    
     return filtered;
   };
+
+  // Handle opening stall details modal
+  const handleOpenStallDetails = useCallback((stall) => {
+    setSelectedStall(stall);
+    setShowStallDetails(true);
+  }, []);
+
+  // Handle closing stall details modal
+  const handleCloseStallDetails = useCallback(() => {
+    setShowStallDetails(false);
+    setSelectedStall(null);
+  }, []);
+
+  // Render item for FlatList
+  const renderStallCard = useCallback(({ item: stall }) => (
+    <StallCard 
+      key={stall.id} 
+      stall={stall} 
+      onApply={handleApplyToStall}
+      applying={applying === stall.id}
+      theme={theme}
+      isDark={isDark}
+      isFavorite={favoriteIds.includes(Number(stall.id))}
+      onToggleFavorite={handleToggleFavorite}
+      cardWidth={CARD_WIDTH}
+      onPress={handleOpenStallDetails}
+    />
+  ), [applying, theme, isDark, favoriteIds, handleToggleFavorite, handleOpenStallDetails]);
+
+  // Empty list component
+  const renderEmptyList = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={[styles.emptyText, { color: theme.colors.text }]}>No stalls available</Text>
+      <Text style={[styles.emptySubText, { color: theme.colors.textSecondary }]}>
+        Stalls are restricted to areas where you have applications. 
+        Contact your branch manager to submit your first application.
+      </Text>
+    </View>
+  );
 
   return (
     <SafeAreaProvider>
@@ -278,28 +375,32 @@ const StallScreen = () => {
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading stalls...</Text>
           </View>
         ) : (
-          /* Stall Cards */
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {getFilteredAndSortedStalls().length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: theme.colors.text }]}>No stalls available</Text>
-                <Text style={[styles.emptySubText, { color: theme.colors.textSecondary }]}>
-                  Stalls are restricted to areas where you have applications. 
-                  Contact your branch manager to submit your first application.
-                </Text>
-              </View>
-            ) : (
-              getFilteredAndSortedStalls().map((stall) => (
-                <StallCard 
-                  key={stall.id} 
-                  stall={stall} 
-                  onApply={handleApplyToStall}
-                  applying={applying === stall.id}
-                />
-              ))
-            )}
-          </ScrollView>
+          /* Stall Cards - Responsive Grid */
+          <FlatList
+            data={getFilteredAndSortedStalls()}
+            renderItem={renderStallCard}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={numColumns}
+            key={numColumns} // Force re-render when numColumns changes
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+            columnWrapperStyle={isTablet ? styles.columnWrapper : undefined}
+            ListEmptyComponent={renderEmptyList}
+          />
         )}
+
+        {/* Stall Details Modal */}
+        <StallDetailsModal
+          visible={showStallDetails}
+          stall={selectedStall}
+          onClose={handleCloseStallDetails}
+          onApply={handleApplyToStall}
+          applying={applying === selectedStall?.id}
+          theme={theme}
+          isDark={isDark}
+          isFavorite={selectedStall ? favoriteIds.includes(Number(selectedStall.id)) : false}
+          onToggleFavorite={handleToggleFavorite}
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -309,6 +410,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  listContainer: {
+    paddingHorizontal: containerPadding,
+    paddingTop: 16,
+    paddingBottom: 20,
+    // Center items for single column layout
+    alignItems: isTablet ? 'stretch' : 'center',
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start',
+    gap: cardMargin,
+    marginBottom: cardMargin,
   },
   loadingContainer: {
     flex: 1,
@@ -326,6 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 50,
+    paddingHorizontal: 20,
   },
   emptyText: {
     fontSize: 18,
@@ -338,10 +452,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: width * 0.04,
   },
 });
 

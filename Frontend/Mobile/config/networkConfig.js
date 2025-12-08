@@ -36,6 +36,10 @@ export const API_CONFIG = {
     // 'https://your-app-name.vercel.app',
   ],
   
+  // Static file server for images (Apache on port 80)
+  // Must match one of the server IPs above
+  STATIC_FILE_SERVER: null,
+  
   // Current active server (will be set automatically)
   BASE_URL: null,
   
@@ -52,6 +56,7 @@ export const API_CONFIG = {
     GET_STALLS_BY_TYPE: '/mobile/api/stalls/type',
     GET_STALLS_BY_AREA: '/mobile/api/stalls/area',
     GET_STALL_BY_ID: '/mobile/api/stalls',
+    GET_STALL_IMAGES: '/mobile/api/stalls/images',
     GET_AVAILABLE_AREAS: '/mobile/api/areas',
     SEARCH_STALLS: '/mobile/api/stalls/search',
     
@@ -118,7 +123,11 @@ export const NetworkUtils = {
     for (const server of API_CONFIG.SERVERS) {
       if (await this.testConnection(server)) {
         API_CONFIG.BASE_URL = server;
+        // Extract host IP from server URL for static files (Apache on port 80)
+        const url = new URL(server);
+        API_CONFIG.STATIC_FILE_SERVER = `http://${url.hostname}`;
         console.log(`🎯 Active server set to: ${server}`);
+        console.log(`📁 Static file server set to: ${API_CONFIG.STATIC_FILE_SERVER}`);
         return server;
       }
     }
@@ -136,10 +145,29 @@ export const NetworkUtils = {
       } else {
         console.log('🔄 Current server not responding, finding new one...');
         API_CONFIG.BASE_URL = null;
+        API_CONFIG.STATIC_FILE_SERVER = null;
       }
     }
     
     return await this.findWorkingServer();
+  },
+  
+  // Get static file server URL (for images served by Apache)
+  getStaticFileServer() {
+    // If we have BASE_URL, always extract the hostname from it
+    if (API_CONFIG.BASE_URL) {
+      try {
+        const url = new URL(API_CONFIG.BASE_URL);
+        API_CONFIG.STATIC_FILE_SERVER = `http://${url.hostname}`;
+      } catch (e) {
+        // Fallback: extract IP from URL string
+        const match = API_CONFIG.BASE_URL.match(/http:\/\/([^:]+)/);
+        if (match) {
+          API_CONFIG.STATIC_FILE_SERVER = `http://${match[1]}`;
+        }
+      }
+    }
+    return API_CONFIG.STATIC_FILE_SERVER || 'http://localhost';
   }
 };
 

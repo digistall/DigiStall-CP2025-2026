@@ -18,9 +18,96 @@ export default {
       confirmAction: '',
       selectedApplicant: null,
       activeTab: 'personal',
+      // Applicant documents from htdocs
+      applicantDocuments: {
+        signature: null,
+        house_location: null,
+        valid_id: null
+      },
+      documentPreview: {
+        show: false,
+        url: '',
+        title: ''
+      }
+    }
+  },
+  watch: {
+    // When selectedApplicant changes, fetch documents
+    selectedApplicant: {
+      handler(newApplicant) {
+        if (newApplicant) {
+          this.fetchApplicantDocuments(newApplicant)
+        } else {
+          this.resetApplicantDocuments()
+        }
+      },
+      immediate: true
     }
   },
   methods: {
+    // Fetch documents from htdocs for the selected applicant
+    async fetchApplicantDocuments(applicant) {
+      this.resetApplicantDocuments()
+      
+      if (!applicant) return
+      
+      const applicantId = applicant.applicant_id || applicant.id
+      const branchId = applicant.branch_id || applicant.stall_info?.branch_id || '1'
+      
+      console.log(`📄 Fetching documents for applicant ${applicantId}, branch ${branchId}`)
+      
+      // Base URL for applicant documents in htdocs
+      const baseUrl = `http://localhost/digistall_uploads/applicants/${branchId}/${applicantId}`
+      
+      // Check for each document type with common extensions
+      const documentTypes = ['signature', 'house_location', 'valid_id']
+      const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+      
+      for (const docType of documentTypes) {
+        for (const ext of extensions) {
+          const imageUrl = `${baseUrl}/${docType}${ext}`
+          const exists = await this.checkImageExists(imageUrl)
+          if (exists) {
+            this.applicantDocuments[docType] = imageUrl
+            console.log(`✅ Found ${docType}: ${imageUrl}`)
+            break // Found the image, stop checking extensions
+          }
+        }
+      }
+    },
+    
+    // Check if an image exists at the given URL
+    async checkImageExists(url) {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(true)
+        img.onerror = () => resolve(false)
+        img.src = url
+      })
+    },
+    
+    // Reset document URLs
+    resetApplicantDocuments() {
+      this.applicantDocuments = {
+        signature: null,
+        house_location: null,
+        valid_id: null
+      }
+    },
+    
+    // Handle document image load error
+    handleDocumentError(docType) {
+      console.warn(`⚠️ Failed to load ${docType} document`)
+      this.applicantDocuments[docType] = null
+    },
+    
+    // Open document preview
+    openDocumentPreview(url, title) {
+      if (url) {
+        window.open(url, '_blank')
+      }
+    },
+
     acceptApplicant(applicant) {
       console.log('📋 Accept clicked - Full applicant object:', applicant)
       console.log('📋 Accept - applicant_id:', applicant.applicant_id)

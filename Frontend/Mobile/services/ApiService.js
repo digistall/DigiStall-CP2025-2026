@@ -293,6 +293,41 @@ class ApiService {
     }
   }
 
+  // Get all images for a stall
+  static async getStallImages(stallId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALL_IMAGES}/${stallId}`;
+      
+      console.log('🖼️ Fetching images for stall ID:', stallId, 'from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: API_CONFIG.HEADERS,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stall images');
+      }
+
+      console.log(`✅ Stall images fetched: ${data.data?.images?.length || 0} images`);
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Stall Images API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: { images: [] }
+      };
+    }
+  }
+
   // Get stall by ID
   static async getStallById(stallId, applicantId) {
     try {
