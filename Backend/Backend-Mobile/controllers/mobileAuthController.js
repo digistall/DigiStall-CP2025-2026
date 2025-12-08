@@ -20,22 +20,26 @@ export const mobileLogin = async (req, res) => {
       });
     }
     
-    // Query mobile users from credential table
+    // Query mobile users from credential table using stored procedure
+    console.log('🔍 Calling stored procedure getMobileUserByUsername with:', username);
     const [users] = await connection.execute(
-      `SELECT 
-        c.registrationid,
-        c.applicant_id, 
-        c.user_name, 
-        c.password_hash,
-        c.is_active,
-        a.applicant_full_name,
-        a.applicant_email,
-        a.applicant_contact_number
-      FROM credential c
-      LEFT JOIN applicant a ON c.applicant_id = a.applicant_id
-      WHERE c.user_name = ? AND c.is_active = 1`,
+      'CALL getMobileUserByUsername(?)',
       [username]
     );
+    
+    console.log('📋 Stored procedure returned:', users.length, 'users');
+    if (users.length > 0) {
+      console.log('👤 User data structure:', {
+        registrationid: users[0].registrationid,
+        applicant_id: users[0].applicant_id,
+        user_name: users[0].user_name,
+        has_password_hash: !!users[0].password_hash,
+        password_hash_format: users[0].password_hash?.substring(0, 10) + '...',
+        has_applicant_email: !!users[0].applicant_email,
+        applicant_email: users[0].applicant_email,
+        applicant_full_name: users[0].applicant_full_name
+      });
+    }
     
     if (users.length === 0) {
       console.log('❌ User not found:', username);
@@ -48,7 +52,21 @@ export const mobileLogin = async (req, res) => {
     const user = users[0];
     
     // Verify password using credential table password_hash
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    let isValidPassword = false;
+    
+    try {
+      // First try bcrypt comparison (for properly hashed passwords)
+      if (user.password_hash.startsWith('$2b$') || user.password_hash.startsWith('$2a$')) {
+        isValidPassword = await bcrypt.compare(password, user.password_hash);
+      } else {
+        // Fallback for legacy plain text passwords (temporary fix)
+        isValidPassword = password === user.password_hash;
+        console.log('⚠️ Using plain text password comparison for user:', username);
+      }
+    } catch (error) {
+      console.error('❌ Password verification error:', error);
+      isValidPassword = false;
+    }
     
     if (!isValidPassword) {
       console.log('❌ Invalid password for:', username);
@@ -92,11 +110,19 @@ export const mobileLogin = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Mobile login error:', error);
+    console.error('🚨 DETAILED Mobile login error:', {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      stack: error.stack,
+      username: req.body.username
+    });
     res.status(500).json({
       success: false,
       message: 'Login failed',
-      error: error.message
+      error: error.message,
+      details: error.code || 'Unknown error'
     });
   } finally {
     if (connection) {
@@ -123,9 +149,9 @@ export const mobileRegister = async (req, res) => {
       });
     }
     
-    // Check if user already exists
+    // Check if user already exists using stored procedure
     const [existingUsers] = await connection.execute(
-      'SELECT * FROM applicant WHERE applicant_username = ? OR applicant_email = ?',
+      'CALL checkExistingMobileUser(?, ?)',
       [username, email]
     );
     
@@ -140,18 +166,9 @@ export const mobileRegister = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Insert new mobile user
-    const [result] = await connection.execute(
-      `INSERT INTO applicant (
-        applicant_full_name, 
-        applicant_contact_number, 
-        applicant_address,
-        applicant_username, 
-        applicant_email, 
-        applicant_password_hash,
-        email_verified,
-        created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, FALSE, NOW())`,
+    // Insert new mobile user using stored procedure
+    const [[result]] = await connection.execute(
+      'CALL registerMobileUser(?, ?, ?, ?, ?, ?)',
       [fullName, contactNumber || null, address || null, username, email, hashedPassword]
     );
     
@@ -161,7 +178,7 @@ export const mobileRegister = async (req, res) => {
       success: true,
       message: 'Registration successful',
       user: {
-        id: result.insertId,
+        id: result.applicant_id,
         username,
         email,
         fullName

@@ -1,24 +1,30 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import { createConnection } from "./config/database.js";
-import { corsConfig } from "./config/cors.js";
-import { errorHandler } from "./middleware/errorHandler.js";
-import authMiddleware from "./middleware/auth.js";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { createConnection, initializeDatabase } from './config/database.js';
+import { corsConfig } from './config/cors.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import authMiddleware from './middleware/auth.js';
+import './Backend-Web/services/cleanupScheduler.js'; // Initialize cleanup scheduler
 
 // Load environment variables
 dotenv.config();
 
 // Import Web routes (from Backend-Web)
-import webAuthRoutes from "./Backend-Web/routes/authRoutes.js";
-import webApplicantRoutes from "./Backend-Web/routes/applicantRoutes.js";
-import webApplicationRoutes from "./Backend-Web/routes/applicationRoutes.js";
-import webLandingApplicantRoutes from "./Backend-Web/routes/landingApplicantRoutes.js";
-import webStallRoutes from "./Backend-Web/routes/stallRoutes.js";
-import webBranchRoutes from "./Backend-Web/routes/branchRoutes.js";
-import webEmployeeRoutes from "./Backend-Web/routes/employeeRoutes.js";
 import webVendorRoutes from "./Backend-Web/routes/vendorRoutes.js";
 import webCollectorRoutes from "./Backend-Web/routes/collectorRoutes.js";
+import webAuthRoutes from './Backend-Web/routes/authRoutes.js';
+import webApplicantRoutes from './Backend-Web/routes/applicantRoutes.js';
+import webApplicationRoutes from './Backend-Web/routes/applicationRoutes.js';
+import webLandingApplicantRoutes from './Backend-Web/routes/landingApplicantRoutes.js';
+import webStallRoutes from './Backend-Web/routes/stallRoutes.js';
+import webBranchRoutes from './Backend-Web/routes/branchRoutes.js';
+import webEmployeeRoutes from './Backend-Web/routes/employeeRoutes.js';
+import stallholderRoutes from './Backend-Web/routes/stallholderRoutes.js';
+import paymentRoutes from './Backend-Web/routes/paymentRoutes.js';
+import complianceRoutes from './Backend-Web/routes/complianceRoutes.js';
+import complaintRoutes from './Backend-Web/routes/complaintRoutes.js';
+import subscriptionRoutes from './Backend-Web/routes/subscriptionRoutes.js';
 
 // Import Mobile routes (from Backend-Mobile)
 import mobileAuthRoutes from "./Backend-Mobile/routes/authRoutes.js";
@@ -43,15 +49,16 @@ app.use("/api/landing-applicants", webLandingApplicantRoutes); // Landing page a
 app.use("/api/employees", webEmployeeRoutes); // Employee routes (login is public, others protected internally)
 
 // Management web routes (authentication required)
-app.use(
-  "/api/applicants",
-  authMiddleware.authenticateToken,
-  webApplicantRoutes
-);
-app.use("/api/branches", authMiddleware.authenticateToken, webBranchRoutes);
 // Vendor and Collector routes - currently testing without auth middleware
 app.use("/api/vendors", webVendorRoutes);
 app.use("/api/collectors", webCollectorRoutes);
+app.use('/api/applicants', authMiddleware.authenticateToken, webApplicantRoutes);
+app.use('/api/branches', authMiddleware.authenticateToken, webBranchRoutes);
+app.use('/api/stallholders', authMiddleware.authenticateToken, stallholderRoutes);
+app.use('/api/payments', authMiddleware.authenticateToken, paymentRoutes);
+app.use('/api/compliances', authMiddleware.authenticateToken, complianceRoutes);
+app.use('/api/complaints', authMiddleware.authenticateToken, complaintRoutes);
+app.use('/api/subscriptions', subscriptionRoutes); // Subscription management (System Admin only - auth handled internally)
 
 // ===== MOBILE ROUTES (Backend-Mobile functionality) =====
 // Mobile API routes with /mobile prefix to differentiate
@@ -127,22 +134,23 @@ app.use(errorHandler);
 // ===== SERVER STARTUP =====
 const startServer = async () => {
   try {
-    // Test database connection
-    console.log("🔧 Testing database connection...");
+    // Test database connection and initialize tables
+    console.log('🔧 Testing database connection...');
     const connection = await createConnection();
-    try {
-      await connection.end();
-    } catch (endError) {
-      console.warn("⚠️ Warning closing test connection:", endError.message);
-    }
-    console.log("✅ Database connection successful");
-
-    // Start the server
-    const server = app.listen(WEB_PORT, () => {
+    await connection.end();
+    console.log('✅ Database connection successful');
+    
+    // Initialize database tables
+    await initializeDatabase();
+    console.log('✅ Database tables initialized');
+    
+    // Start the server on all interfaces
+    const server = app.listen(WEB_PORT, '0.0.0.0', () => {
       console.log(`
 🚀 Naga Stall Management System - Unified Backend
 📍 Server running on port ${WEB_PORT}
-🌐 Environment: ${process.env.NODE_ENV || "development"}
+📡 Listening on all interfaces (0.0.0.0)
+🌐 Environment: ${process.env.NODE_ENV || 'development'}
 ⏰ Started at: ${new Date().toISOString()}
 
 📋 Available Services:

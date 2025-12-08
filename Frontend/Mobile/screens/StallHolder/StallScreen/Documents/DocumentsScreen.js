@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,81 +7,503 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
 } from "react-native";
-import DocumentModal from "../Documents/Components/DocumentModal/DocumentModal";
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import API Service
+import ApiService from '../../../../services/ApiService';
+import UserStorageService from '../../../../services/UserStorageService';
 
 const { width, height } = Dimensions.get("window");
 
 const DocumentsScreen = () => {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [submittedDocuments, setSubmittedDocuments] = useState(null);
+  // State for tabs and data
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [branchTabs, setBranchTabs] = useState([]);
+  const [groupedByBranch, setGroupedByBranch] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [token, setToken] = useState(null);
 
-  const handleDocumentSubmit = (documents) => {
-    setSubmittedDocuments(documents);
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  useEffect(() => {
+    if (userData?.user?.applicant_id) {
+      loadStallholderDocuments();
+    }
+  }, [userData]);
+
+  const loadUserData = async () => {
+    try {
+      const userToken = await AsyncStorage.getItem('userToken');
+      const storedUserData = await UserStorageService.getUserData();
+      
+      if (userToken && storedUserData) {
+        setToken(userToken);
+        setUserData(storedUserData);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const loadStallholderDocuments = async () => {
+    try {
+      setLoading(true);
+      
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) {
+        console.log('No applicant ID found');
+        setLoading(false);
+        return;
+      }
+
+      console.log('📄 Loading stallholder documents for applicant:', applicantId);
+      
+      const response = await ApiService.getStallholderStallsWithDocuments(applicantId);
+      
+      if (response.success && response.data) {
+        const { grouped_by_branch } = response.data;
+        
+        if (grouped_by_branch && grouped_by_branch.length > 0) {
+          // Create tabs from branch data
+          const tabs = grouped_by_branch.map((branch, index) => ({
+            id: branch.branch_id,
+            label: branch.branch_name,
+            ownerName: branch.business_owner_name,
+            stallCount: branch.stalls.length,
+          }));
+          
+          setBranchTabs(tabs);
+          setGroupedByBranch(grouped_by_branch);
+          
+          console.log(`✅ Loaded ${grouped_by_branch.length} branches with documents`);
+        } else {
+          setBranchTabs([]);
+          setGroupedByBranch([]);
+        }
+      } else {
+        Alert.alert('Error', response.message || 'Failed to load documents');
+      }
+    } catch (error) {
+      console.error('Error loading stallholder documents:', error);
+      Alert.alert('Error', 'Failed to connect to server');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadStallholderDocuments();
+  }, [userData]);
+
+  const handleTabPress = (index) => {
+    setActiveTabIndex(index);
+  };
+
+  // Get current branch data based on active tab
+  const getCurrentBranchData = () => {
+    if (groupedByBranch.length === 0 || activeTabIndex >= groupedByBranch.length) {
+      return null;
+    }
+    return groupedByBranch[activeTabIndex];
+  };
+
+  const getUploadedCount = (documents) => {
+    if (!documents) return 0;
+    return documents.filter(doc => doc.status !== 'not_uploaded').length;
+  };
+
+  const getRequiredCount = (documents) => {
+    if (!documents) return 0;
+    return documents.filter(doc => doc.is_required).length;
+  };
+
+  const handleUpload = (documentTypeId, documentName, stallholderId) => {
     Alert.alert(
-      "Documents Submitted",
-      "Your documents have been submitted successfully and are under review.",
-      [{ text: "OK" }]
+      'Upload Document',
+      `Select upload method for ${documentName}`,
+      [
+        {
+          text: 'Take Photo',
+          onPress: () => uploadFromCamera(documentTypeId, stallholderId),
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: () => uploadFromGallery(documentTypeId, stallholderId),
+        },
+        {
+          text: 'Choose Document/PDF',
+          onPress: () => uploadDocument(documentTypeId, stallholderId),
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
     );
   };
 
-  const getSubmittedDocumentsCount = () => {
-    if (!submittedDocuments) return 0;
-    return Object.values(submittedDocuments).filter((doc) => doc !== null)
-      .length;
+  const uploadFromCamera = async (documentTypeId, stallholderId) => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permission is required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await performUpload(result.assets[0], documentTypeId, stallholderId);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to capture image');
+      console.error('Camera error:', error);
+    }
   };
 
-  return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.subtitle}>
-          Kindly upload the required documents for your stall application. Having
-          a record of your documents in the system is essential.
-        </Text>
+  const uploadFromGallery = async (documentTypeId, stallholderId) => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Gallery permission is required');
+        return;
+      }
 
-        <View style={styles.requirementsCard}>
-          <Text style={styles.cardTitle}>Required Documents:</Text>
-          <View style={styles.requirementsList}>
-            <Text style={styles.requirementItem}>1. Voter's ID</Text>
-            <Text style={styles.requirementItem}>2. Association Clearance</Text>
-            <Text style={styles.requirementItem}>
-              3. Barangay Business Clearance
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await performUpload(result.assets[0], documentTypeId, stallholderId);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image');
+      console.error('Gallery error:', error);
+    }
+  };
+
+  const uploadDocument = async (documentTypeId, stallholderId) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.type === 'success') {
+        await performUpload(result, documentTypeId, stallholderId);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select document');
+      console.error('Document picker error:', error);
+    }
+  };
+
+  const performUpload = async (file, documentTypeId, stallholderId) => {
+    try {
+      setUploading(true);
+
+      const documentData = {
+        stallholder_id: stallholderId,
+        document_type_id: documentTypeId,
+        file: {
+          uri: file.uri,
+          type: file.type || file.mimeType || 'image/jpeg',
+          name: file.name || file.fileName || `document_${Date.now()}.jpg`,
+        }
+      };
+
+      const response = await ApiService.uploadStallholderDocument(documentData, token);
+      
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          'Document uploaded successfully and is pending verification'
+        );
+        await loadStallholderDocuments();
+      } else {
+        Alert.alert('Upload Failed', response.message || 'Failed to upload');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to upload document');
+      console.error('Upload error:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'verified': return '#10b981';
+      case 'pending': return '#f59e0b';
+      case 'rejected': return '#ef4444';
+      case 'expired': return '#6b7280';
+      default: return '#9ca3af';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'verified': return '✓';
+      case 'pending': return '⏱';
+      case 'rejected': return '✗';
+      case 'expired': return '⚠';
+      default: return '○';
+    }
+  };
+
+  // Render empty state when no stalls owned
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Image 
+        source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
+        style={styles.emptyIcon}
+        resizeMode="contain"
+      />
+      <Text style={styles.emptyTitle}>No Stalls Owned</Text>
+      <Text style={styles.emptyText}>
+        You don't own any stalls yet. Once you're approved as a stallholder, 
+        you'll see the required documents for your stalls here.
+      </Text>
+    </View>
+  );
+
+  // Render document card
+  const renderDocumentCard = (doc, index, stallholderId) => (
+    <View key={doc.document_type_id} style={styles.documentCard}>
+      <View style={styles.documentHeader}>
+        <View style={styles.documentTitleRow}>
+          <Text style={styles.documentIcon}>
+            {getStatusIcon(doc.status)}
+          </Text>
+          <View style={styles.documentInfo}>
+            <Text style={styles.documentName}>
+              {index + 1}. {doc.document_name}
+              {doc.is_required && <Text style={styles.required}> *</Text>}
             </Text>
-            <Text style={styles.requirementItem}>
-              4. Picture with White Background
+            {doc.description && (
+              <Text style={styles.documentDescription}>
+                {doc.description}
+              </Text>
+            )}
+          </View>
+        </View>
+        
+        {doc.status !== 'not_uploaded' && (
+          <View 
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(doc.status) }
+            ]}
+          >
+            <Text style={styles.statusText}>{doc.status}</Text>
+          </View>
+        )}
+      </View>
+
+      {doc.instructions && (
+        <Text style={styles.instructions}>{doc.instructions}</Text>
+      )}
+
+      {doc.status !== 'not_uploaded' && (
+        <View style={styles.documentDetails}>
+          <Text style={styles.detailText}>
+            Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
+          </Text>
+          {doc.expiry_date && (
+            <Text 
+              style={[
+                styles.detailText,
+                doc.days_until_expiry < 0 && styles.expiredText,
+                doc.days_until_expiry <= 30 && doc.days_until_expiry >= 0 && styles.expiringText
+              ]}
+            >
+              {doc.days_until_expiry < 0 
+                ? `Expired ${Math.abs(doc.days_until_expiry)} days ago`
+                : `Expires in ${doc.days_until_expiry} days`
+              }
             </Text>
-            <Text style={styles.requirementItem}>5. Health Card</Text>
-            <Text style={styles.requirementItem}>6. Cedula</Text>
+          )}
+          {doc.rejection_reason && (
+            <Text style={styles.rejectionText}>
+              Reason: {doc.rejection_reason}
+            </Text>
+          )}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[
+          styles.uploadButton,
+          doc.status === 'not_uploaded' 
+            ? styles.uploadButtonPrimary 
+            : styles.uploadButtonSecondary
+        ]}
+        onPress={() => handleUpload(doc.document_type_id, doc.document_name, stallholderId)}
+        disabled={uploading}
+      >
+        <Text style={styles.uploadButtonText}>
+          {doc.status === 'not_uploaded' ? '📤 Upload' : '🔄 Replace'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Render content for the active tab
+  const renderTabContent = () => {
+    const branchData = getCurrentBranchData();
+    
+    if (!branchData) {
+      return renderEmptyState();
+    }
+
+    const { stalls, document_requirements, business_owner_name, branch_name } = branchData;
+    const stallholderId = stalls[0]?.stallholder_id;
+
+    return (
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Branch Info Header */}
+        <View style={styles.branchInfoCard}>
+          <Text style={styles.branchName}>{branch_name}</Text>
+          <Text style={styles.ownerName}>Business Owner: {business_owner_name || 'Not assigned'}</Text>
+          <View style={styles.stallsInfo}>
+            <Text style={styles.stallsLabel}>Your Stalls:</Text>
+            {stalls.map((stall, index) => (
+              <Text key={stall.stall_id} style={styles.stallItem}>
+                • {stall.stall_name || `Stall #${stall.stall_number}`} ({stall.business_name})
+              </Text>
+            ))}
           </View>
         </View>
 
-        {submittedDocuments && (
-          <View style={styles.statusCard}>
-            <Text style={styles.statusTitle}>Submission Status</Text>
-            <Text style={styles.statusText}>
-              {getSubmittedDocumentsCount()} of 6 documents submitted
-            </Text>
-            <Text style={styles.statusSubtext}>
-              Your documents are under review
-            </Text>
-          </View>
-        )}
+        <Text style={styles.subtitle}>
+          Upload the required documents for this branch. Documents are customized
+          based on the business owner's requirements.
+        </Text>
 
-        <TouchableOpacity
-          style={styles.uploadButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.uploadButtonText}>
-            {submittedDocuments ? "Update Documents" : "Upload Documents"}
+        {/* Progress Card */}
+        <View style={styles.progressCard}>
+          <Text style={styles.progressTitle}>Document Status</Text>
+          <Text style={styles.progressText}>
+            {getUploadedCount(document_requirements)} of {getRequiredCount(document_requirements)} required documents uploaded
           </Text>
-        </TouchableOpacity>
+          <View style={styles.progressBarContainer}>
+            <View 
+              style={[
+                styles.progressBar,
+                { width: `${(getUploadedCount(document_requirements) / Math.max(getRequiredCount(document_requirements), 1)) * 100}%` }
+              ]} 
+            />
+          </View>
+        </View>
 
-        <DocumentModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          onSubmit={handleDocumentSubmit}
-        />
+        {/* Document List */}
+        <View style={styles.documentsContainer}>
+          <Text style={styles.sectionTitle}>Required Documents</Text>
+          
+          {!document_requirements || document_requirements.length === 0 ? (
+            <View style={styles.emptyDocState}>
+              <Text style={styles.emptyDocText}>
+                No document requirements set by the business owner for this branch yet.
+              </Text>
+            </View>
+          ) : (
+            document_requirements.map((doc, index) => 
+              renderDocumentCard(doc, index, stallholderId)
+            )
+          )}
+        </View>
       </ScrollView>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#305CDE" />
+        <Text style={styles.loadingText}>Loading documents...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {uploading && (
+        <View style={styles.uploadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text style={styles.uploadingText}>Uploading...</Text>
+        </View>
+      )}
+
+      {branchTabs.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <>
+          {/* Tab Navigation - Similar to TabbedStallScreen */}
+          <View style={styles.tabContainer}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabScrollContent}
+            >
+              {branchTabs.map((tab, index) => (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.tab,
+                    activeTabIndex === index && styles.activeTab
+                  ]}
+                  onPress={() => handleTabPress(index)}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    activeTabIndex === index && styles.activeTabText
+                  ]}>
+                    {tab.label}
+                  </Text>
+                  <Text style={[
+                    styles.tabSubtext,
+                    activeTabIndex === index && styles.activeTabSubtext
+                  ]}>
+                    {tab.stallCount} stall{tab.stallCount !== 1 ? 's' : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Tab Content */}
+          {renderTabContent()}
+        </>
+      )}
     </View>
   );
 };
@@ -91,88 +513,304 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8fafc",
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Tab Styles
+  tabContainer: {
+    backgroundColor: '#ffffff',
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  tabScrollContent: {
+    paddingHorizontal: 12,
+  },
+  tab: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#305CDE',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  activeTabText: {
+    color: '#ffffff',
+  },
+  tabSubtext: {
+    fontSize: 11,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  activeTabSubtext: {
+    color: '#e0e7ff',
+  },
+  // Content Styles
   scrollContent: {
     paddingHorizontal: width * 0.05,
-    paddingVertical: height * 0.03,
+    paddingVertical: height * 0.02,
+    paddingBottom: 100,
+  },
+  branchInfoCard: {
+    backgroundColor: '#305CDE',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  branchName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  ownerName: {
+    fontSize: 14,
+    color: '#e0e7ff',
+    marginBottom: 12,
+  },
+  stallsInfo: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
+    padding: 10,
+  },
+  stallsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  stallItem: {
+    fontSize: 13,
+    color: '#e0e7ff',
+    marginLeft: 8,
+    marginTop: 2,
   },
   subtitle: {
-    fontSize: width * 0.04,
-    color: "#6b7280",
+    fontSize: width * 0.038,
+    color: "#64748b",
     textAlign: "center",
     marginBottom: height * 0.02,
-    lineHeight: width * 0.058,
+    lineHeight: width * 0.055,
   },
-  requirementsCard: {
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748b',
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  uploadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  progressCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: width * 0.05,
+    borderRadius: 12,
+    padding: width * 0.045,
     marginBottom: height * 0.02,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     elevation: 3,
   },
-  cardTitle: {
-    fontSize: width * 0.045,
+  progressTitle: {
+    fontSize: width * 0.042,
     fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: height * 0.015,
+    color: "#1e293b",
+    marginBottom: 8,
   },
-  requirementsList: {
-    paddingLeft: width * 0.02,
+  progressText: {
+    fontSize: width * 0.035,
+    color: "#64748b",
+    marginBottom: 12,
   },
-  requirementItem: {
-    fontSize: width * 0.038,
-    color: "#374151",
-    marginBottom: height * 0.008,
-    lineHeight: width * 0.05,
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  statusCard: {
-    backgroundColor: "#ecfdf5",
-    borderRadius: 10,
-    padding: width * 0.05,
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#305CDE',
+    borderRadius: 4,
+  },
+  documentsContainer: {
     marginBottom: height * 0.02,
-    borderLeftWidth: 4,
-    borderLeftColor: "#10b981",
   },
-  statusTitle: {
-    fontSize: width * 0.045,
+  sectionTitle: {
+    fontSize: width * 0.042,
     fontWeight: "600",
-    color: "#065f46",
-    marginBottom: height * 0.005,
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  // Empty states
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 60,
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    marginBottom: 16,
+    tintColor: '#94a3b8',
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  emptyDocState: {
+    padding: 32,
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+  },
+  emptyDocText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+  },
+  // Document card styles
+  documentCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: width * 0.04,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  documentHeader: {
+    marginBottom: 12,
+  },
+  documentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  documentIcon: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  documentInfo: {
+    flex: 1,
+  },
+  documentName: {
+    fontSize: width * 0.038,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  required: {
+    color: '#ef4444',
+  },
+  documentDescription: {
+    fontSize: width * 0.033,
+    color: '#64748b',
+    marginTop: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 8,
   },
   statusText: {
-    fontSize: width * 0.04,
-    color: "#047857",
-    fontWeight: "500",
-    marginBottom: height * 0.005,
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
-  statusSubtext: {
-    fontSize: width * 0.035,
-    color: "#059669",
+  instructions: {
+    fontSize: width * 0.033,
+    color: '#475569',
+    fontStyle: 'italic',
+    marginBottom: 12,
+    paddingLeft: 34,
+    lineHeight: 18,
+  },
+  documentDetails: {
+    paddingLeft: 34,
+    marginBottom: 12,
+  },
+  detailText: {
+    fontSize: width * 0.033,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  expiredText: {
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  expiringText: {
+    color: '#f59e0b',
+    fontWeight: '600',
+  },
+  rejectionText: {
+    fontSize: width * 0.033,
+    color: '#ef4444',
+    marginTop: 4,
   },
   uploadButton: {
-    backgroundColor: "#305CDE",
-    borderRadius: 10,
-    paddingVertical: height * 0.02,
-    paddingHorizontal: width * 0.06,
+    borderRadius: 8,
+    paddingVertical: height * 0.014,
+    paddingHorizontal: width * 0.04,
     alignItems: "center",
-    marginTop: height * 0.02,
-    shadowColor: "#3b82f6",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+  },
+  uploadButtonPrimary: {
+    backgroundColor: "#305CDE",
+  },
+  uploadButtonSecondary: {
+    backgroundColor: "#f59e0b",
   },
   uploadButtonText: {
-    fontSize: width * 0.045,
+    fontSize: width * 0.038,
     fontWeight: "600",
     color: "#ffffff",
   },

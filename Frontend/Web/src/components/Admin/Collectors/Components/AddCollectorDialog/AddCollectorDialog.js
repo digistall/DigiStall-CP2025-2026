@@ -1,5 +1,10 @@
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
+
 export default {
   name: 'AddCollectorDialog',
+  components: {
+    ToastNotification
+  },
   props: {
     modelValue: {
       type: Boolean,
@@ -19,8 +24,11 @@ export default {
       activeTab: 0,
       formValid: false,
       saving: false,
-      showSuccess: false,
-      showError: false,
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      },
       form: {
         id: null,
         lastName: '',
@@ -117,14 +125,22 @@ export default {
 
         this.$emit('save', newCollector)
 
-        this.showSuccess = true
+        this.showToast('✅ Collector added successfully!', 'success')
         this.closeDialog()
       } catch (error) {
         console.error('Error saving collector:', error)
-        this.showError = true
+        this.showToast('❌ Error adding collector. Please try again.', 'error')
       } finally {
         this.saving = false
       }
     },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
+    }
   },
 }

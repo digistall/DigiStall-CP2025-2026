@@ -1,0 +1,45 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+logs
+*.log
+
+# Build artifacts (keep dist for production)
+# dist - We need this for nginx
+
+# Temp files
+*.tmp
+temp
+tmp
+
+# Development only
+.eslintrc.js
+.prettierrc
+vite.config.js.timestamp-*

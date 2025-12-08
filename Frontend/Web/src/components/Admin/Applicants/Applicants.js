@@ -3,6 +3,7 @@ import VendorSearchFilter from './Components/Search/ApplicantsSearch.vue'
 import VendorApplicantsTable from './Components/Table/ApplicantsTable.vue'
 import ApproveApplicants from './Components/ApproveApplicants/ApproveApplicants.vue'
 import DeclineApplicants from './Components/DeclineApplicants/DeclineApplicants.vue'
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -14,12 +15,19 @@ export default {
     VendorApplicantsTable,
     ApproveApplicants,
     DeclineApplicants,
+    ToastNotification,
   },
   data() {
     return {
       pageTitle: 'Applicants',
       searchQuery: '',
       filterCriteria: null,
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success',
+      },
       // Dropdown functionality
       currentApplicantType: 'Stall Applicants',
       showDropdown: false,
@@ -254,14 +262,44 @@ export default {
       this.fetchStallApplicants()
     }
 
-    // Start auto-cleanup for declined applicants older than 30 days
-    this.startAutoCleanupTimer()
+    // Opt-in: use table scrolling inside page instead of page scrollbar
+    try {
+      document.body.classList.add('no-page-scroll')
+      document.documentElement.classList.add('no-page-scroll')
+      try {
+        const prevHtmlOverflow = document.documentElement.style.overflow
+        const prevBodyOverflow = document.body.style.overflow
+        document.documentElement.dataset._prevOverflow = prevHtmlOverflow || ''
+        document.body.dataset._prevOverflow = prevBodyOverflow || ''
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+      } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
+
+    // Remove frontend auto-cleanup - now handled by backend
+    // this.startAutoCleanupTimer()
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleOutsideClick)
     // Clear auto-cleanup timer
     if (this.autoCleanupTimer) {
       clearInterval(this.autoCleanupTimer)
+    }
+    try {
+      document.body.classList.remove('no-page-scroll')
+      document.documentElement.classList.remove('no-page-scroll')
+      try {
+        const prevHtml = document.documentElement.dataset._prevOverflow || ''
+        const prevBody = document.body.dataset._prevOverflow || ''
+        document.documentElement.style.overflow = prevHtml
+        document.body.style.overflow = prevBody
+        delete document.documentElement.dataset._prevOverflow
+        delete document.body.dataset._prevOverflow
+      } catch (e) {}
+    } catch (e) {
+      /* ignore */
     }
   },
   methods: {
@@ -447,6 +485,12 @@ export default {
         })
       }
 
+      // Show success toast
+      this.showToast(
+        `✅ Applicant ${result.applicant?.fullName || ''} approved successfully`,
+        'success',
+      )
+
       // Refresh the applicant list
       if (this.currentApplicantType === 'Stall Applicants') {
         this.refreshStallApplicants()
@@ -470,6 +514,12 @@ export default {
           },
         )
       }
+
+      // Show success toast
+      this.showToast(
+        `🚫 Applicant ${result.applicant?.fullName || ''} declined`,
+        'delete',
+      )
 
       // Refresh the applicant list to show updated status
       if (this.currentApplicantType === 'Stall Applicants') {
@@ -925,90 +975,52 @@ export default {
       await this.fetchStallApplicants()
     },
 
-    // Start auto-cleanup timer for 30-day rejected applicants removal
-    startAutoCleanupTimer() {
-      // Run cleanup every 24 hours (86400000 ms)
-      this.autoCleanupTimer = setInterval(() => {
-        this.autoCleanupDeclinedApplicants()
-      }, 86400000) // 24 hours
-
-      // Also run cleanup immediately on component mount
-      this.autoCleanupDeclinedApplicants()
-    },
-
-    // Auto-cleanup function to remove rejected applicants older than 30 days
-    async autoCleanupDeclinedApplicants() {
-      console.log('🧹 Starting auto-cleanup for declined applicants older than 30 days...')
-
-      try {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-        // Find rejected applicants older than 30 days
-        const expiredApplicants = [...this.vendorApplicants, ...this.stallApplicants].filter(
-          (applicant) => {
-            if (applicant.application_status !== 'Rejected' || !applicant.declined_at) {
-              return false
-            }
-
-            const declinedDate = new Date(applicant.declined_at)
-            return declinedDate < thirtyDaysAgo
-          },
-        )
-
-        console.log(`🔍 Found ${expiredApplicants.length} rejected applicants older than 30 days`)
-
-        // Remove each expired applicant
-        for (const applicant of expiredApplicants) {
-          try {
-            await this.deleteExpiredApplicant(applicant.applicant_id || applicant.id)
-            this.removeApplicantFromList(applicant.applicant_id || applicant.id)
-            console.log(`🗑️ Removed expired applicant: ${applicant.fullName}`)
-          } catch (error) {
-            console.error(`❌ Failed to remove expired applicant ${applicant.fullName}:`, error)
-          }
-        }
-
-        if (expiredApplicants.length > 0) {
-          console.log(
-            `✅ Auto-cleanup completed: ${expiredApplicants.length} expired applicants removed`,
-          )
-        }
-      } catch (error) {
-        console.error('❌ Error during auto-cleanup:', error)
+    // Auto-cleanup now handled by backend scheduler
+    // Manual trigger for admin use
+    async triggerManualCleanup() {
+      if (!confirm('Are you sure you want to manually trigger cleanup of rejected applicants older than 30 days?')) {
+        return;
       }
-    },
 
-    // Delete expired applicant from database
-    async deleteExpiredApplicant(applicantId) {
       try {
-        const token =
-          sessionStorage.getItem('authToken') ||
-          localStorage.getItem('token') ||
-          localStorage.getItem('authToken')
-
+        const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+        
         if (!token) {
-          throw new Error('Authentication token not found')
+          throw new Error('Authentication token not found');
         }
 
-        const response = await fetch(`${API_BASE_URL}/applicants/${applicantId}`, {
-          method: 'DELETE',
+        const response = await fetch(`${API_BASE_URL}/applicants/cleanup/trigger`, {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`Failed to delete applicant: ${response.status}`)
+          throw new Error(`Cleanup failed: ${response.status}`);
         }
 
-        const result = await response.json()
-        return result
+        const result = await response.json();
+        
+        if (result.success) {
+          this.showToast(`✅ Cleanup completed: ${result.data.deletedCount} expired applicants removed`, 'success');
+          // Refresh the applicants list
+          await this.fetchStallApplicants();
+        } else {
+          throw new Error(result.message);
+        }
       } catch (error) {
-        console.error('❌ Error deleting expired applicant:', error)
-        throw error
+        console.error('❌ Manual cleanup error:', error);
+        this.showToast(`❌ Failed to trigger cleanup: ${error.message}`, 'error');
       }
+    },
+
+    // Toast notification helper
+    showToast(message, type = 'success') {
+      this.toast.show = true;
+      this.toast.message = message;
+      this.toast.type = type;
     },
   },
 }

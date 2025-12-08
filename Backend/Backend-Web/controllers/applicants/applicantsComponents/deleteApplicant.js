@@ -1,6 +1,6 @@
 import { createConnection } from '../../../config/database.js'
 
-// Delete applicant
+// Delete applicant with proper cascading delete
 export const deleteApplicant = async (req, res) => {
   let connection;
   try {
@@ -8,31 +8,31 @@ export const deleteApplicant = async (req, res) => {
 
     connection = await createConnection();
 
-    // Check if applicant exists
-    const [existingApplicant] = await connection.execute(
-      'SELECT applicant_id, first_name, last_name, email FROM applicant WHERE applicant_id = ?',
+    // Get applicant info before deletion
+    const [[existingApplicant]] = await connection.execute(
+      'CALL getApplicantById(?)',
       [id]
     );
 
-    if (existingApplicant.length === 0) {
+    if (!existingApplicant) {
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
       });
     }
 
-    // Delete the applicant
-    await connection.execute('DELETE FROM applicant WHERE applicant_id = ?', [id]);
+    // Delete applicant using stored procedure (handles cascading deletes)
+    await connection.execute('CALL deleteApplicant(?)', [id]);
 
-    console.log('✅ Applicant deleted successfully:', existingApplicant[0].email);
+    console.log('✅ Applicant deleted successfully');
 
     res.json({
       success: true,
       message: 'Applicant deleted successfully',
       data: {
         id: id,
-        name: `${existingApplicant[0].first_name} ${existingApplicant[0].last_name}`,
-        email: existingApplicant[0].email
+        name: `${existingApplicant.first_name} ${existingApplicant.last_name}`,
+        email: existingApplicant.email
       }
     });
 

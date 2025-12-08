@@ -2,22 +2,32 @@
     <div class="overlay">
         <div class="form-container">
             <h3>Spouse Information</h3>
+
+            <!-- Error Message Display -->
+            <div v-if="errorMessage" class="error-message-box">
+                <span class="error-text">{{ errorMessage }}</span>
+            </div>
+
             <form @submit.prevent>
                 <label>
                     Full Name of Spouse:
-                    <input type="text" v-model="spouseName" :required="personalInfo.civilStatus !== 'Single'" />
+                    <input type="text" v-model="spouseName" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.spouseName }" />
                 </label>
 
                 <label>
                     Date of Birth of Spouse:
-                    <input type="date" v-model="spouseBirthdate" :required="personalInfo.civilStatus !== 'Single'" />
-                    <span v-if="calculatedSpouseAge !== null" class="age-display">Age: {{ calculatedSpouseAge }} years
+                    <input type="date" v-model="spouseBirthdate" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.spouseBirthdate }" />
+                    <span v-if="calculatedSpouseAge !== null" class="age-display"
+                        :class="{ 'age-error': calculatedSpouseAge < 18 }">Age: {{ calculatedSpouseAge }} years
                         old</span>
                 </label>
 
                 <label>
                     Educational Attainment of Spouse:
-                    <select v-model="spouseEducation" :required="personalInfo.civilStatus !== 'Single'">
+                    <select v-model="spouseEducation" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.spouseEducation }">
                         <option disabled value="">Please select</option>
                         <option v-for="level in educationLevels" :key="level" :value="level">
                             {{ level }}
@@ -27,12 +37,15 @@
 
                 <label>
                     Occupation:
-                    <input type="text" v-model="occupation" :required="personalInfo.civilStatus !== 'Single'" />
+                    <input type="text" v-model="occupation" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.occupation }" />
                 </label>
 
                 <label>
                     Contact Number:
-                    <input type="tel" v-model="spouseContact" :required="personalInfo.civilStatus !== 'Single'" />
+                    <input type="tel" v-model="spouseContact" :required="personalInfo.civilStatus !== 'Single'"
+                        placeholder="09XXXXXXXXX" :class="{ 'input-error': errors.spouseContact }" />
+                    <small class="input-hint">Format: 09XXXXXXXXX (11 digits)</small>
                 </label>
 
                 <div class="children-section">
@@ -77,7 +90,15 @@ export default {
             ],
             occupation: '',
             spouseContact: '',
-            childrenNames: ''
+            childrenNames: '',
+            errorMessage: '',
+            errors: {
+                spouseName: false,
+                spouseBirthdate: false,
+                spouseEducation: false,
+                occupation: false,
+                spouseContact: false
+            }
         }
     },
     computed: {
@@ -101,20 +122,54 @@ export default {
         }
     },
     methods: {
+        clearErrors() {
+            this.errorMessage = '';
+            this.errors = {
+                spouseName: false,
+                spouseBirthdate: false,
+                spouseEducation: false,
+                occupation: false,
+                spouseContact: false
+            };
+        },
+        showError(message, fields = []) {
+            this.errorMessage = message;
+            fields.forEach(field => {
+                if (this.errors.hasOwnProperty(field)) {
+                    this.errors[field] = true;
+                }
+            });
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                this.errorMessage = '';
+            }, 5000);
+        },
         goNext() {
+            this.clearErrors();
+
+            // Check required fields
             if (!this.spouseName || !this.spouseBirthdate || !this.spouseEducation || !this.occupation || !this.spouseContact) {
-                console.error("Please fill in all required fields.");
+                const missingFields = [];
+                if (!this.spouseName) missingFields.push('spouseName');
+                if (!this.spouseBirthdate) missingFields.push('spouseBirthdate');
+                if (!this.spouseEducation) missingFields.push('spouseEducation');
+                if (!this.occupation) missingFields.push('occupation');
+                if (!this.spouseContact) missingFields.push('spouseContact');
+
+                this.showError("Please fill in all required spouse information fields.", missingFields);
                 return;
             }
 
+            // Check spouse age requirement
             if (this.calculatedSpouseAge < 18) {
-                console.error("Spouse must be at least 18 years old.");
+                this.showError("Spouse must be at least 18 years old.", ['spouseBirthdate']);
                 return;
             }
 
+            // Check phone number format
             const phonePattern = /^09\d{9}$/;
             if (!phonePattern.test(this.spouseContact)) {
-                console.error("Contact number must be 11 digits and start with '09'.");
+                this.showError("Contact number must be 11 digits and start with '09' (e.g., 09123456789).", ['spouseContact']);
                 return;
             }
 

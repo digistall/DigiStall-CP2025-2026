@@ -28,6 +28,39 @@ export const createConnection = async () => {
   }
 }
 
+export const initializeDatabase = async () => {
+  let connection;
+  try {
+    connection = await createConnection();
+    
+    // Create branch_document_requirements table if it doesn't exist
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS branch_document_requirements (
+        document_requirement_id int(11) NOT NULL AUTO_INCREMENT,
+        branch_id int(11) NOT NULL,
+        document_name varchar(255) NOT NULL,
+        description text,
+        is_required tinyint(1) NOT NULL DEFAULT 1,
+        created_by int(11) NOT NULL,
+        created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (document_requirement_id),
+        KEY idx_branch_id (branch_id),
+        KEY idx_created_by (created_by),
+        UNIQUE KEY unique_branch_document (branch_id, document_name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.execute(createTableSQL);
+    console.log('✅ Database tables initialized');
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error.message);
+    throw error;
+  } finally {
+    if (connection) await connection.end();
+  }
+}
+
 export const createPool = () => {
   try {
     const pool = mysql.createPool(dbConfig)

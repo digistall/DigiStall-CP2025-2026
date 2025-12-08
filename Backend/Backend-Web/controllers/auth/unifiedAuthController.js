@@ -12,51 +12,81 @@ export const login = async (req, res) => {
   try {
     connection = await createConnection();
     
-    const { email, password, userType } = req.body;
+    const { username, password, userType } = req.body;
     
-    console.log('🔐 Unified Login Attempt:', { email, userType, timestamp: new Date().toISOString() });
+    console.log('🔐 Unified Login Attempt:', { 
+      hasUsername: !!username,
+      hasPassword: !!password,
+      hasUserType: !!userType,
+      userType,
+      passwordLength: password?.length,
+      timestamp: new Date().toISOString() 
+    });
     
     // Validate required fields
-    if (!email || !password || !userType) {
+    if (!username || !password || !userType) {
+      console.log('❌ Missing required fields:', { username: !!username, password: !!password, userType: !!userType });
       return res.status(400).json({
         success: false,
-        message: 'Email, password, and user type are required'
+        message: 'Username, password, and user type are required'
       });
     }
     
     let user = null;
     let tableName = '';
     let userIdField = '';
+    let usernameField = '';
+    let passwordField = '';
     
     // Determine which table to query based on user type
     switch (userType.toLowerCase()) {
-      case 'admin':
-        tableName = 'admin';
-        userIdField = 'admin_id';
+      case 'system_administrator':
+        tableName = 'system_administrator';
+        userIdField = 'system_admin_id';
+        usernameField = 'username';
+        passwordField = 'password_hash';
         break;
-      case 'branch_manager':
-        tableName = 'branch_manager';
-        userIdField = 'manager_id';
+      case 'stall_business_owner':
+        tableName = 'stall_business_owner';
+        userIdField = 'business_owner_id';
+        usernameField = 'owner_username';
+        passwordField = 'owner_password_hash';
         break;
-      case 'employee':
-        tableName = 'employee';
-        userIdField = 'employee_id';
+      case 'business_manager':
+        tableName = 'business_manager';
+        userIdField = 'business_manager_id';
+        usernameField = 'manager_username';
+        passwordField = 'manager_password_hash';
+        break;
+      case 'business_employee':
+        tableName = 'business_employee';
+        userIdField = 'business_employee_id';
+        usernameField = 'employee_username';
+        passwordField = 'employee_password_hash';
         break;
       default:
         return res.status(400).json({
           success: false,
-          message: 'Invalid user type. Must be admin, branch_manager, or employee'
+          message: 'Invalid user type. Must be system_administrator, stall_business_owner, business_manager, or business_employee'
         });
     }
     
-    // Query the appropriate table
-    const [userRows] = await connection.execute(
-      `SELECT * FROM ${tableName} WHERE email = ? AND status = 'Active'`,
-      [email]
-    );
+    // Query the appropriate table using USERNAME field
+    const query = `SELECT * FROM ${tableName} WHERE ${usernameField} = ? AND status = 'Active'`;
+    console.log('🔍 Database Query:', { 
+      table: tableName, 
+      usernameField, 
+      hasUsername: !!username 
+    });
+    
+    const [userRows] = await connection.execute(query, [username]);
+    
+    console.log('📊 Query Results:', { 
+      foundUsers: userRows.length
+    });
     
     if (userRows.length === 0) {
-      console.log(`❌ ${userType} not found:`, email);
+      console.log(`❌ ${userType} not found or inactive`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or inactive account'
@@ -65,10 +95,19 @@ export const login = async (req, res) => {
     
     user = userRows[0];
     
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Verify password using the correct password field
+    const passwordHash = user[passwordField];
+    console.log('🔐 Password Verification:', { 
+      userFound: !!user,
+      hasPasswordHash: !!passwordHash,
+      passwordFieldUsed: passwordField
+    });
+    
+    const isPasswordValid = await bcrypt.compare(password, passwordHash);
+    console.log('🔓 Password Check Result:', { isPasswordValid });
+    
     if (!isPasswordValid) {
-      console.log(`❌ Invalid password for ${userType}:`, email);
+      console.log(`❌ Invalid password for ${userType}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -78,7 +117,7 @@ export const login = async (req, res) => {
     // Get additional user information based on type
     let additionalUserInfo = {};
     
-    if (userType.toLowerCase() === 'branch_manager' || userType.toLowerCase() === 'employee') {
+    if (userType.toLowerCase() === 'business_manager' || userType.toLowerCase() === 'business_employee') {
       // Get branch information with branch name
       const [branchRows] = await connection.execute(
         'SELECT branch_id, branch_name FROM branch WHERE branch_id = ?',
@@ -90,15 +129,27 @@ export const login = async (req, res) => {
         additionalUserInfo.branchName = branchRows[0].branch_name; // Add branch name directly
       }
       
-      // Get employee permissions if user is employee
-      if (userType.toLowerCase() === 'employee') {
+      // Get employee permissions if user is business employee
+      if (userType.toLowerCase() === 'business_employee') {
         // Parse permissions from JSON if stored as JSON string
         let permissions = {};
         if (user.permissions) {
           try {
-            permissions = typeof user.permissions === 'string' 
+            let parsedPerms = typeof user.permissions === 'string' 
               ? JSON.parse(user.permissions) 
               : user.permissions;
+            
+            // If permissions is an array like ['dashboard', 'applicants'], convert to object
+            if (Array.isArray(parsedPerms)) {
+              permissions = {};
+              parsedPerms.forEach(perm => {
+                permissions[perm] = true;
+              });
+              console.log('✅ Converted array permissions to object:', permissions);
+            } else {
+              // Already an object
+              permissions = parsedPerms;
+            }
           } catch (e) {
             console.error('Error parsing employee permissions:', e);
             permissions = {
@@ -123,29 +174,41 @@ export const login = async (req, res) => {
       }
     }
     
+    // Get the username from the correct field
+    const userUsername = user[usernameField];
+    
     // Create JWT token
     const tokenPayload = {
       userId: user[userIdField],
       userType: userType.toLowerCase(),
-      email: user.email,
+      username: userUsername,
+      email: user.email || null,
+      firstName: user.first_name || null,
+      lastName: user.last_name || null,
       branchId: user.branch_id || null,
       permissions: additionalUserInfo.permissions || null
     };
     
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+    console.log('🔐 [LOGIN DEBUG] Creating token with secret (first 20 chars):', jwtSecret.substring(0, 20) + '...');
+    console.log('🔐 [LOGIN DEBUG] Token payload:', JSON.stringify(tokenPayload, null, 2));
+    
+    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '24h' });
+    console.log('✅ [LOGIN DEBUG] Token created (first 50 chars):', token.substring(0, 50) + '...');
     
     // Prepare user data for response (exclude password)
     const userData = {
       id: user[userIdField],
       userType: userType.toLowerCase(),
-      email: user.email,
+      username: userUsername,
+      email: user.email || null,
       firstName: user.first_name,
       lastName: user.last_name,
       branchId: user.branch_id || null,
       ...additionalUserInfo
     };
     
-    console.log(`✅ ${userType} login successful:`, email);
+    console.log(`✅ ${userType} login successful:`, userUsername);
     console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     
     res.status(200).json({
@@ -237,17 +300,21 @@ export const getCurrentUser = async (req, res) => {
     let userIdField = '';
     
     switch (userType) {
-      case 'admin':
-        tableName = 'admin';
-        userIdField = 'admin_id';
+      case 'system_administrator':
+        tableName = 'system_administrator';
+        userIdField = 'system_admin_id';
         break;
-      case 'branch_manager':
-        tableName = 'branch_manager';
-        userIdField = 'branch_manager_id';
+      case 'stall_business_owner':
+        tableName = 'stall_business_owner';
+        userIdField = 'business_owner_id';
         break;
-      case 'employee':
-        tableName = 'employee';
-        userIdField = 'employee_id';
+      case 'business_manager':
+        tableName = 'business_manager';
+        userIdField = 'business_manager_id';
+        break;
+      case 'business_employee':
+        tableName = 'business_employee';
+        userIdField = 'business_employee_id';
         break;
       default:
         console.error('❌ Invalid userType:', userType);
@@ -257,12 +324,12 @@ export const getCurrentUser = async (req, res) => {
         });
     }
     
-    // Build query with JOIN to get branch information for employees and branch managers
+    // Build query with JOIN to get branch information for business employees and business managers
     let query = `SELECT * FROM ${tableName} WHERE ${userIdField} = ?`;
     let queryParams = [userId];
     
-    // For employees and branch managers, join with branch table to get branch name
-    if (userType === 'employee' || userType === 'branch_manager') {
+    // For business employees and business managers, join with branch table to get branch name
+    if (userType === 'business_employee' || userType === 'business_manager') {
       query = `
         SELECT u.*, b.branch_name 
         FROM ${tableName} u
@@ -294,12 +361,14 @@ export const getCurrentUser = async (req, res) => {
     };
     
     // Add user-type specific keys for backward compatibility
-    if (userType === 'branch_manager') {
-      responseData.branchManager = user;
-    } else if (userType === 'admin') {
-      responseData.admin = user;
-    } else if (userType === 'employee') {
-      responseData.employee = user;
+    if (userType === 'business_manager') {
+      responseData.businessManager = user;
+    } else if (userType === 'stall_business_owner') {
+      responseData.businessOwner = user;
+    } else if (userType === 'business_employee') {
+      responseData.businessEmployee = user;
+    } else if (userType === 'system_administrator') {
+      responseData.systemAdministrator = user;
     }
     
     res.status(200).json(responseData);

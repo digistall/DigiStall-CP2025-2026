@@ -11,12 +11,12 @@
           <div class="header-cell email-col">Email Address</div>
           <div class="header-cell phone-col">Phone Number</div>
           <div class="header-cell address-col">Address</div>
-          <div class="header-cell action-col">Status/Action</div>
+          <div class="header-cell action-col">Status</div>
         </div>
       </div>
 
       <!-- Table Body -->
-      <div class="table-body">
+      <div class="table-body scrollable-table-wrapper">
         <div
           v-for="applicant in applicants"
           :key="applicant.id"

@@ -2,11 +2,13 @@ import EmployeeSearch from "./Components/EmployeeSearch/EmployeeSearch.vue";
 import EmployeeTable from "./Components/EmployeeTable/EmployeeTable.vue";
 import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
   sendEmployeeCredentialsEmail,
 } from "./Components/emailService.js";
+import dataCacheService from '../../../services/dataCacheService.js';
 
 export default {
   name: "EmployeeManagement",
@@ -15,6 +17,7 @@ export default {
     EmployeeTable,
     AddEmployee,
     ManagePermissions,
+    ToastNotification,
   },
   data() {
     return {
@@ -22,9 +25,15 @@ export default {
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success',
+      },
 
       // API Configuration
-      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:3001/api",
 
       // Dialog states
       employeeDialog: false,
@@ -166,6 +175,13 @@ export default {
 
       return filtered;
     },
+
+    // Check if user is a business owner (view-only access)
+    isBusinessOwner() {
+      const userType = sessionStorage.getItem('userType');
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+      return userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner';
+    },
   },
 
   methods: {
@@ -178,51 +194,61 @@ export default {
           throw new Error("Authentication required. Please login again.");
         }
 
+        // Get current user info for branch verification
+        const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+        const userBranchId = currentUser.branchId || currentUser.branch_id || currentUser.branch?.id;
+
         console.log("🔑 Fetching employees with authentication...");
-        const response = await fetch(`${this.apiBaseUrl}/employees`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+        console.log("🏢 Current user branch ID:", userBranchId);
+        
+        // Use cached fetch with proper parameters
+        const url = `${this.apiBaseUrl}/employees`;
+        const data = await dataCacheService.cachedFetch(
+          url,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           },
-        });
+          5 * 60 * 1000 // 5 minutes cache in milliseconds
+        );
 
-        console.log("📡 Employees API response status:", response.status);
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Clear session and redirect to login
-            sessionStorage.clear();
-            this.$router.push("/login");
-            throw new Error("Session expired. Please login again.");
-          } else if (response.status === 403) {
-            throw new Error(
-              "Access denied. You do not have permission to view employees."
-            );
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
+        console.log("📡 Employees API response:", data);
 
         if (data.success) {
-          this.employees = data.data || data.employees || [];
-          console.log(`✅ Loaded ${this.employees.length} employees`);
+          let employees = data.data || data.employees || [];
+          
+          // Client-side verification: Filter employees to ensure they belong to current user's branch
+          if (userBranchId) {
+            const originalCount = employees.length;
+            employees = employees.filter(emp => {
+              const empBranchId = emp.branch_id || emp.branchId;
+              return empBranchId && parseInt(empBranchId) === parseInt(userBranchId);
+            });
+            
+            if (originalCount !== employees.length) {
+              console.warn(`⚠️ Filtered out ${originalCount - employees.length} employees from different branches`);
+            }
+          }
+          
+          this.employees = employees;
+          console.log(`✅ Loaded ${this.employees.length} employees for branch ${userBranchId}`);
 
           // Provide user feedback based on role
-          const currentUser = JSON.parse(sessionStorage.getItem("user") || "{}");
           if (this.employees.length === 0) {
-            if (currentUser.userType === "branch-manager") {
+            if (currentUser.userType === "business_manager") {
               console.log(
-                "ℹ️  No employees found - Branch manager has not created any employees yet"
+                "ℹ️  No employees found - Business manager has not created any employees yet"
               );
             } else {
               console.log("ℹ️  No employees found");
             }
           } else {
-            if (currentUser.userType === "branch-manager") {
+            if (currentUser.userType === "business_manager") {
               console.log(
-                `ℹ️  Showing ${this.employees.length} employees created by this branch manager`
+                `ℹ️  Showing ${this.employees.length} employees for branch ${userBranchId}`
               );
             }
           }
@@ -231,11 +257,23 @@ export default {
         }
       } catch (error) {
         console.error("Error fetching employees:", error);
-        this.$emit(
-          "show-snackbar",
-          `Failed to load employees: ${error.message}`,
-          "error"
-        );
+        
+        // Clear cache and retry once on auth errors
+        if (error.message.includes("Authentication") || error.message.includes("401")) {
+          console.log("🔄 Authentication error - clearing cache and retrying...");
+          dataCacheService.invalidatePattern("employees");
+          
+          // Don't retry to avoid infinite loops
+          this.showToast(
+            "❌ Authentication expired. Please login again.",
+            "error"
+          );
+        } else {
+          this.showToast(
+            `❌ Failed to load employees: ${error.message}`,
+            "error"
+          );
+        }
       }
     },
 
@@ -321,15 +359,15 @@ export default {
           throw new Error("Invalid authentication token. Please login again.");
         }
 
-        console.log("🔍 Debug - Decoded token:", decodedToken);
+        console.log("🔍 Debug - Token decoded successfully");
 
         // Extract user information from token
         const branchManagerId = decodedToken.userId || decodedToken.branchManagerId;
         const branchId = decodedToken.branchId;
 
-        console.log("🔍 Debug - Extracted from token:");
-        console.log("  - branchManagerId:", branchManagerId);
-        console.log("  - branchId:", branchId);
+        console.log("🔍 Debug - Token data extracted:");
+        console.log("  - Manager ID present:", !!branchManagerId);
+        console.log("  - Branch ID present:", !!branchId);
 
         // Validation
         if (!branchManagerId) {
@@ -391,13 +429,13 @@ export default {
         }
 
         const data = await response.json();
-        console.log("📡 Response data:", data);
+        console.log("📡 Response received:", { success: data.success, hasData: !!data.data });
 
         if (data.success) {
           if (!this.isEditMode) {
             // Backend generated credentials
             const backendCredentials = data.data.credentials;
-            console.log("✅ Employee created with backend credentials:", backendCredentials);
+            console.log("✅ Employee created with credentials generated");
             
             // Send email using EmailJS (same method as applicants)
             try {
@@ -411,39 +449,35 @@ export default {
               
               if (emailResult.success) {
                 console.log("📧 Welcome email sent successfully via EmailJS");
-                this.$emit(
-                  "show-snackbar",
-                  `Employee created successfully! Welcome email with credentials sent to ${employeeData.email}`,
-                  "success",
-                  10000
+                this.showToast(
+                  `✅ Employee created successfully! Welcome email with credentials sent to ${employeeData.email}`,
+                  "success"
                 );
               } else {
                 console.warn("⚠️ Email sending failed:", emailResult.message);
-                this.$emit(
-                  "show-snackbar",
-                  `Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed: ${emailResult.message})`,
-                  "warning",
-                  15000
+                this.showToast(
+                  `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed: ${emailResult.message})`,
+                  "warning"
                 );
               }
             } catch (emailError) {
               console.error("❌ Error sending email:", emailError);
-              this.$emit(
-                "show-snackbar",
-                `Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send credentials manually to ${employeeData.email}`,
-                "warning",
-                15000
+              this.showToast(
+                `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send credentials manually to ${employeeData.email}`,
+                "warning"
               );
             }
           } else {
-            this.$emit(
-              "show-snackbar",
-              "Employee updated successfully!",
+            this.showToast(
+              "✅ Employee updated successfully!",
               "success"
             );
           }
 
           this.closeEmployeeDialog();
+          
+          // Clear cache and refresh data
+          dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
@@ -463,7 +497,7 @@ export default {
           errorMessage = "Please fill in all required fields (First Name, Last Name, Email).";
         }
         
-        this.$emit("show-snackbar", errorMessage, "error", 10000);
+        this.showToast(`❌ ${errorMessage}`, "error");
       } finally {
         this.saving = false;
       }
@@ -497,18 +531,6 @@ export default {
       this.saving = true;
 
       try {
-        const currentUser = JSON.parse(sessionStorage.getItem("user") || "{}");
-
-        // Get the branch manager ID from various possible sources
-        const branchManagerId =
-          currentUser.branchManagerId ||
-          sessionStorage.getItem("branchManagerId") ||
-          currentUser.id;
-
-        if (!branchManagerId) {
-          throw new Error("Unable to identify the branch manager. Please login again.");
-        }
-
         // Get authentication token
         const token = sessionStorage.getItem("authToken");
         if (!token) {
@@ -516,7 +538,7 @@ export default {
         }
 
         const response = await fetch(
-          `${this.apiBaseUrl}/employees/${this.selectedEmployee.employee_id}`,
+          `${this.apiBaseUrl}/employees/${this.selectedEmployee.employee_id}/permissions`,
           {
             method: "PUT",
             headers: {
@@ -525,7 +547,6 @@ export default {
             },
             body: JSON.stringify({
               permissions: this.selectedPermissions,
-              updatedBy: parseInt(branchManagerId),
             }),
           }
         );
@@ -533,17 +554,19 @@ export default {
         const data = await response.json();
 
         if (data.success) {
-          this.$emit("show-snackbar", "Permissions updated successfully!", "success");
+          this.showToast("✅ Permissions updated successfully!", "success");
           this.closePermissionsDialog();
+          
+          // Clear cache and refresh data
+          dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
         }
       } catch (error) {
         console.error("Error updating permissions:", error);
-        this.$emit(
-          "show-snackbar",
-          `Failed to update permissions: ${error.message}`,
+        this.showToast(
+          `❌ Failed to update permissions: ${error.message}`,
           "error"
         );
       } finally {
@@ -593,14 +616,17 @@ export default {
 
         if (data.success) {
           const action = newStatus === "active" ? "activated" : "deactivated";
-          this.$emit("show-snackbar", `Employee ${action} successfully!`, "success");
+          this.showToast(`✅ Employee ${action} successfully!`, "success");
+          
+          // Clear cache and refresh data
+          dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
           throw new Error(data.message);
         }
       } catch (error) {
         console.error("Error updating employee status:", error);
-        this.$emit("show-snackbar", `Failed to update status: ${error.message}`, "error");
+        this.showToast(`❌ Failed to update status: ${error.message}`, "error");
       }
     },
 
@@ -662,18 +688,14 @@ export default {
           );
 
           if (emailResult.success) {
-            this.$emit(
-              "show-snackbar",
-              `Password reset successfully! New password: ${newPassword}. Reset notification sent to ${employee.email}`,
-              "success",
-              8000
+            this.showToast(
+              `✅ Password reset successfully! New password: ${newPassword}. Reset notification sent to ${employee.email}`,
+              "success"
             );
           } else {
-            this.$emit(
-              "show-snackbar",
-              `Password reset! New password: ${newPassword}. Warning: Email failed to send - ${emailResult.message}`,
-              "warning",
-              10000
+            this.showToast(
+              `⚠️ Password reset! New password: ${newPassword}. Warning: Email failed to send - ${emailResult.message}`,
+              "warning"
             );
           }
         } else {
@@ -681,29 +703,29 @@ export default {
         }
       } catch (error) {
         console.error("Error resetting password:", error);
-        this.$emit(
-          "show-snackbar",
-          `Failed to reset password: ${error.message}`,
+        this.showToast(
+          `❌ Failed to reset password: ${error.message}`,
           "error"
         );
       }
     },
 
+    // Toast notification helper
+    showToast(message, type = 'success') {
+      this.toast.show = true;
+      this.toast.message = message;
+      this.toast.type = type;
+    },
+
     // Utility Methods
     debugSessionStorage() {
-      console.log("🔍 === SESSION STORAGE DEBUG ===");
-      console.log("All session storage keys:", Object.keys(sessionStorage));
-      console.log(
-        "authToken:",
-        sessionStorage.getItem("authToken") ? "exists" : "missing"
-      );
-      console.log("user:", sessionStorage.getItem("user"));
-      console.log("currentUser:", sessionStorage.getItem("currentUser"));
-      console.log("userType:", sessionStorage.getItem("userType"));
-      console.log("branchManagerId:", sessionStorage.getItem("branchManagerId"));
-      console.log("branchId:", sessionStorage.getItem("branchId"));
-      console.log("branchName:", sessionStorage.getItem("branchName"));
-      console.log("branchManagerData:", sessionStorage.getItem("branchManagerData"));
+      // Security Note: Session storage debugging removed for production safety
+      // Use browser dev tools to inspect session storage if needed
+      console.log("=== SESSION DEBUG ===");
+      console.log("Session keys available:", Object.keys(sessionStorage).length);
+      console.log("Auth token:", sessionStorage.getItem("authToken") ? "present" : "missing");
+      console.log("User type:", sessionStorage.getItem("userType"));
+      console.log("Branch ID present:", !!sessionStorage.getItem("branchId"));
       console.log("=== END DEBUG ===");
     },
 
@@ -717,5 +739,32 @@ export default {
   mounted() {
     // Load employees when component is mounted
     this.fetchEmployees();
+    // Opt-in: use table scrolling inside page instead of page scrollbar
+    try {
+      document.body.classList.add('no-page-scroll')
+      document.documentElement.classList.add('no-page-scroll')
+      try {
+        const prevHtmlOverflow = document.documentElement.style.overflow
+        const prevBodyOverflow = document.body.style.overflow
+        document.documentElement.dataset._prevOverflow = prevHtmlOverflow || ''
+        document.body.dataset._prevOverflow = prevBodyOverflow || ''
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+      } catch (e) {}
+    } catch (e) {}
+  },
+  beforeUnmount() {
+    try {
+      document.body.classList.remove('no-page-scroll')
+      document.documentElement.classList.remove('no-page-scroll')
+      try {
+        const prevHtml = document.documentElement.dataset._prevOverflow || ''
+        const prevBody = document.body.dataset._prevOverflow || ''
+        document.documentElement.style.overflow = prevHtml
+        document.body.style.overflow = prevBody
+        delete document.documentElement.dataset._prevOverflow
+        delete document.body.dataset._prevOverflow
+      } catch (e) {}
+    } catch (e) {}
   },
 };

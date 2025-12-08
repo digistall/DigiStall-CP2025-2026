@@ -6,8 +6,8 @@
         <v-card-title class="d-flex flex-column align-start justify-space-between">
           <div class="d-flex align-center w-100 justify-space-between">
             <div class="d-flex align-center">
-              <v-icon color="ffffff" class="me-3">mdi-pencil</v-icon>
-              <span class="text-h6">Modify Stall</span>
+              <v-icon color="ffffff" class="me-3">{{ isBusinessOwner ? 'mdi-eye' : 'mdi-pencil' }}</v-icon>
+              <span class="text-h6">{{ isBusinessOwner ? 'View Stall' : 'Modify Stall' }}</span>
             </div>
             <v-btn icon variant="text" @click="handleClose" size="small">
               <v-icon>mdi-close</v-icon>
@@ -16,7 +16,7 @@
 
           <!-- Subtitle / Description -->
           <span class="text-subtitle-2" style="color: white">
-            You can modify the current stall — edit details or delete it as needed.
+            {{ isBusinessOwner ? 'View stall details (read-only access).' : 'You can modify the current stall — edit details or delete it as needed.' }}
           </span>
         </v-card-title>
 
@@ -30,19 +30,19 @@
               <v-col cols="12" md="6">
                 <!-- Stall Number -->
                 <v-text-field v-model="editForm.stallNumber" label="Stall Number" :rules="rules.stallNumber" required
-                  variant="outlined" prepend-inner-icon="mdi-numeric"></v-text-field>
+                  variant="outlined" prepend-inner-icon="mdi-numeric" :readonly="isBusinessOwner"></v-text-field>
 
                 <!-- Price -->
-                <v-text-field v-model="editForm.price" label="Price" :rules="rules.price" required variant="outlined"
+                <v-text-field v-model="editForm.price" label="Price" :rules="rules.price" required variant="outlined" :readonly="isBusinessOwner"
                   prepend-inner-icon="mdi-currency-php" placeholder="1,500 Php / Raffle"></v-text-field>
 
                 <!-- Floor -->
                 <v-select v-model="editForm.floor" label="Floor" :items="getFloorOptions()" :rules="rules.floor"
-                  required variant="outlined" prepend-inner-icon="mdi-floor-plan"></v-select>
+                  required variant="outlined" prepend-inner-icon="mdi-stairs" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
 
                 <!-- Section -->
                 <v-select v-model="editForm.section" label="Section" :items="getSectionOptions()" :rules="rules.section"
-                  required variant="outlined" prepend-inner-icon="mdi-store"></v-select>
+                  required variant="outlined" prepend-inner-icon="mdi-map-marker" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
 
                 <!-- Size -->
                 <v-text-field v-model="editForm.size" label="Size" :rules="rules.size" required variant="outlined"
@@ -156,44 +156,6 @@
       <!-- Delete Stall Component -->
       <DeleteStall :stallData="editForm" :showModal="showDeleteConfirm" @close="cancelDelete"
         @deleted="handleStallDeleted" @error="handleDeleteError" />
-
-      <!-- Loading Overlay -->
-      <v-overlay v-if="loading" class="align-center justify-center">
-        <v-progress-circular indeterminate size="64" color="primary"></v-progress-circular>
-      </v-overlay>
-    </v-dialog>
-
-    <!-- Success Popup Modal -->
-    <v-dialog v-model="showSuccessPopup" max-width="400px" persistent @click:outside="closeSuccessPopup">
-      <v-card class="success-popup-card">
-        <div class="popup-content">
-          <!-- Close Button -->
-          <v-btn icon class="close-btn" @click="closeSuccessPopup">
-            <v-icon color="white">mdi-close</v-icon>
-          </v-btn>
-
-          <!-- Loading State -->
-          <div v-if="popupState === 'loading'" class="popup-state">
-            <div class="loading-spinner">
-              <div class="spinner-ring"></div>
-              <div class="spinner-ring"></div>
-              <div class="spinner-ring"></div>
-            </div>
-            <p class="popup-text">Updating stall...</p>
-          </div>
-
-          <!-- Success State -->
-          <div v-else-if="popupState === 'success'" class="popup-state">
-            <div class="success-icon">
-              <div class="checkmark-circle">
-                <div class="checkmark"></div>
-              </div>
-            </div>
-            <h3 class="success-title">Success!</h3>
-            <p class="popup-text">{{ successMessage }}</p>
-          </div>
-        </div>
-      </v-card>
     </v-dialog>
   </div>
 </template>

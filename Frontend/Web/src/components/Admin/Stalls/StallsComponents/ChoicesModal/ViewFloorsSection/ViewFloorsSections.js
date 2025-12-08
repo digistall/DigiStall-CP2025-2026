@@ -94,10 +94,8 @@ export default {
         // Check if we have a token (try multiple possible key names)
         // Get the authentication token (stored in sessionStorage as 'authToken')
         const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken')
-        console.log('Token exists:', !!token)
-
         if (token) {
-          console.log('Token preview:', token.substring(0, 20) + '...')
+          console.log('Token authentication available')
         } else {
           console.warn('No authentication token found!')
         }
@@ -198,7 +196,7 @@ export default {
         }
 
         // Load floors first
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
         const floorsResponse = await fetch(`${apiBaseUrl}/floors`, {
           method: 'GET',
           headers: {

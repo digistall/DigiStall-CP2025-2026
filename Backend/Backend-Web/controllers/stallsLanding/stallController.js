@@ -11,6 +11,7 @@ import { getLocationsByArea } from "./LandingPageComponents-StallController/getL
 import { getFilteredStalls } from "./LandingPageComponents-StallController/getFilteredStalls/getFilteredStalls.js";
 import { getStallsByLocation } from "./LandingPageComponents-StallController/getStallsByLocation/getStallsByLocation.js";
 import { getAvailableMarkets } from "./LandingPageComponents-StallController/getAvailableMarkets/getAvailableMarkets.js";
+import { getLandingPageStats } from "./LandingPageComponents-StallController/getLandingPageStats/getLandingPageStats.js";
 
 // Re-export all child functions
 export {
@@ -23,4 +24,5 @@ export {
   getFilteredStalls,
   getStallsByLocation,
   getAvailableMarkets,
+  getLandingPageStats,
 };

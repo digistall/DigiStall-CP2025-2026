@@ -59,7 +59,7 @@ export const AuctionReminderStyles = StyleSheet.create({
   },
   closeButton: {
     marginTop: 20,
-    backgroundColor: "#2563EB",
+    backgroundColor: "#002181",
     paddingVertical: 15,
     borderRadius: 15,
     alignItems: "center",
