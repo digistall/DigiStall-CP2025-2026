@@ -430,26 +430,9 @@ export default {
         return
       }
       
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-        const response = await fetch(`${apiUrl}/stalls/${stall.id}/images`)
-        const data = await response.json()
-        
-        if (data.success && data.data && data.data.images && data.data.images.length > 0) {
-          const images = data.data.images
-          this.stallImageCache.set(stall.id, images)
-          stall.stallImages = images
-          stall.imageCount = images.length
-          console.log(`📷 Loaded ${images.length} images for stall ${stall.stallNumber}`)
-        } else {
-          // Fallback: Try to fetch images directly from file system
-          await this.fetchImagesFromFileSystemForGrid(stall)
-        }
-      } catch (error) {
-        console.error('❌ Failed to fetch stall images for grid:', error)
-        // Fallback: Try to fetch images directly from file system
-        await this.fetchImagesFromFileSystemForGrid(stall)
-      }
+      // For landing page (public), directly scan htdocs instead of calling authenticated API
+      // This avoids 401 Unauthorized errors for public users
+      await this.fetchImagesFromFileSystemForGrid(stall)
     },
 
     async fetchImagesFromFileSystemForGrid(stall) {
@@ -553,24 +536,9 @@ export default {
       
       this.loadingImages = true
       
-      // Always try file system first for more reliable results
+      // For public landing page, use file system scanning only
+      // The API requires authentication which public users don't have
       await this.fetchImagesFromFileSystem(stallId)
-      
-      // If no images found, try API as fallback
-      if (this.stallImages.length === 0) {
-        try {
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-          const response = await fetch(`${apiUrl}/stalls/${stallId}/images`)
-          const data = await response.json()
-          
-          if (data.success && data.data && data.data.images && data.data.images.length > 0) {
-            this.stallImages = data.data.images
-            console.log(`📷 API: Loaded ${this.stallImages.length} images for stall ${stallId}`)
-          }
-        } catch (error) {
-          console.error('❌ API fallback also failed:', error)
-        }
-      }
       
       this.loadingImages = false
     },
