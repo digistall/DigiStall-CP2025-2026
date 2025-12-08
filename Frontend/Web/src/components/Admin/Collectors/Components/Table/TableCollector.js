@@ -11,17 +11,6 @@ export default {
       itemsPerPage: 12,
     }
   },
-  methods: {
-    onView(row) {
-      this.$emit('view', row.raw || row)
-    },
-    onEdit(row) {
-      this.$emit('edit', row.raw || row)
-    },
-    onDelete(row) {
-      this.$emit('delete', row.raw || row)
-    },
-  },
   computed: {
     filteredCollectors() {
       let list = Array.isArray(this.collectors) ? this.collectors.slice() : []

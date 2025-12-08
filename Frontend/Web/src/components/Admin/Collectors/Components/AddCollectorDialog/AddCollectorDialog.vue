@@ -1,13 +1,17 @@
 <template>
   <v-dialog v-model="visibleModel" max-width="900px" persistent>
-    <v-card class="add-modal">
-      <!-- Custom Header -->
-      <v-card-title class="modal-header">
-        <h2 class="modal-title">Add New Collector</h2>
-        <v-btn icon class="close-btn" @click="closeDialog">
-          <v-icon color="white">mdi-close</v-icon>
+    <v-card>
+      <!-- Toolbar Header -->
+      <v-toolbar color="primary" dark dense>
+        <v-toolbar-title class="toolbar-title">
+          <v-icon left>mdi-account-plus</v-icon>
+          Add New Collector
+        </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="closeDialog">
+          <v-icon>mdi-close</v-icon>
         </v-btn>
-      </v-card-title>
+      </v-toolbar>
 
       <!-- Tabbed Content -->
       <v-card-text class="pa-0">
