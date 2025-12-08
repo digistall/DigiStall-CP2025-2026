@@ -322,3 +322,102 @@ export async function getStallImageCount(req, res) {
     }
   }
 }
+
+// =============================================
+// DELETE STALL IMAGE BY FILENAME
+// =============================================
+// This endpoint deletes an image file directly from htdocs
+// by specifying the stall_id and filename (e.g., "1.png")
+// =============================================
+export async function deleteStallImageByFilename(req, res) {
+  let connection
+  
+  try {
+    const { stall_id, filename } = req.params
+    const { stall_no, branch_id } = req.body
+    
+    // Validate required fields
+    if (!stall_id || !filename) {
+      return res.status(400).json({
+        success: false,
+        message: 'stall_id and filename are required'
+      })
+    }
+    
+    // Validate filename format (prevent path traversal)
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '')
+    if (safeFilename !== filename || filename.includes('..')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid filename format'
+      })
+    }
+    
+    connection = await createConnection()
+    
+    // Get stall info if not provided
+    let stallNumber = stall_no
+    let branchId = branch_id
+    
+    if (!stallNumber || !branchId) {
+      const [stalls] = await connection.execute(
+        'SELECT stall_number, branch_id FROM stalls WHERE stall_id = ?',
+        [stall_id]
+      )
+      
+      if (stalls.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Stall not found'
+        })
+      }
+      
+      stallNumber = stalls[0].stall_number
+      branchId = stalls[0].branch_id
+    }
+    
+    console.log(`🗑️ Deleting image: ${filename} for stall ${stallNumber} (branch ${branchId})`)
+    
+    // Delete the file from htdocs
+    const deleted = deleteImageFile(branchId, stallNumber, filename)
+    
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: `Image file "${filename}" not found`
+      })
+    }
+    
+    // Also try to delete from database if it exists there
+    const imageUrl = `%${filename}`
+    await connection.execute(
+      'DELETE FROM stall_images WHERE stall_id = ? AND image_url LIKE ?',
+      [stall_id, imageUrl]
+    ).catch(err => {
+      console.log('Note: Image was not in database (htdocs only):', err.message)
+    })
+    
+    res.status(200).json({
+      success: true,
+      message: `Image "${filename}" deleted successfully`,
+      data: {
+        deleted_filename: filename,
+        stall_id: stall_id,
+        stall_number: stallNumber
+      }
+    })
+    
+  } catch (error) {
+    console.error('❌ Error deleting stall image by filename:', error)
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting image',
+      error: error.message
+    })
+  } finally {
+    if (connection) {
+      await connection.end()
+    }
+  }
+}

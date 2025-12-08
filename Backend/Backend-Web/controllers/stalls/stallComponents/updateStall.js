@@ -30,9 +30,20 @@ export const updateStall = async (req, res) => {
     const status = updateData.status || "Active";
     const description = updateData.description || null;
     const stallImage = updateData.stall_image || updateData.image || null;
-    const isAvailable = updateData.is_available !== undefined ? updateData.is_available : 1;
+    // Handle is_available with multiple possible field names and proper boolean conversion
+    let isAvailable = 1; // Default to available
+    if (updateData.is_available !== undefined) {
+      isAvailable = updateData.is_available ? 1 : 0;
+    } else if (updateData.isAvailable !== undefined) {
+      isAvailable = updateData.isAvailable ? 1 : 0;
+    }
     const deadline = updateData.raffle_auction_deadline || updateData.deadline;
     const parsedDeadline = deadline ? new Date(deadline) : null;
+
+    console.log('📝 Update stall params:', {
+      id, stallNo, stallLocation, size, floorId, sectionId, 
+      rentalPrice, priceType, status, description, isAvailable
+    });
 
     // Call stored procedure - it handles ALL validation and authorization
     await connection.execute(
