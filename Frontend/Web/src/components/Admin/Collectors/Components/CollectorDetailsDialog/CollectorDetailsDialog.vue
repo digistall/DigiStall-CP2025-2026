@@ -1,13 +1,17 @@
 <template>
   <v-dialog v-model="visibleModel" max-width="900px">
-    <v-card class="details-modal">
-      <!-- Custom Header -->
-      <v-card-title class="modal-header">
-        <h2 class="modal-title">Collector Details</h2>
-        <v-btn icon class="close-btn" @click="closeDialog">
-          <v-icon color="white">mdi-close</v-icon>
+    <v-card>
+      <!-- Toolbar Header -->
+      <v-toolbar color="primary" dark dense>
+        <v-toolbar-title class="toolbar-title">
+          <v-icon left>mdi-account-details</v-icon>
+          Collector Details
+        </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="closeDialog">
+          <v-icon>mdi-close</v-icon>
         </v-btn>
-      </v-card-title>
+      </v-toolbar>
 
       <!-- Content -->
       <v-card-text class="pa-6">
@@ -16,10 +20,8 @@
             <v-avatar size="120" class="mb-4">
               <v-img :src="photo" />
             </v-avatar>
-            <h3 class="text-h6 font-weight-bold mb-2">
-              {{ normalizedData.firstName }} {{ normalizedData.lastName }}
-            </h3>
-            <p class="text-body2 text-medium-emphasis">{{ normalizedData.collectorId }}</p>
+            <h3 class="text-h6 font-weight-bold mb-2">{{ data.firstName }} {{ data.lastName }}</h3>
+            <p class="text-body2 text-medium-emphasis">{{ data.collectorId }}</p>
           </v-col>
 
           <v-col cols="12" md="8">
@@ -27,13 +29,13 @@
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Phone Number</label>
-                  <p class="info-value">{{ normalizedData.phone }}</p>
+                  <p class="info-value">{{ data.phone }}</p>
                 </div>
               </v-col>
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Email Address</label>
-                  <p class="info-value">{{ normalizedData.email }}</p>
+                  <p class="info-value">{{ data.email }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -42,13 +44,13 @@
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Birthdate</label>
-                  <p class="info-value">{{ formatDate(normalizedData.birthdate) }}</p>
+                  <p class="info-value">{{ formatDate(data.birthdate) }}</p>
                 </div>
               </v-col>
               <v-col cols="12" md="6">
                 <div class="info-item">
                   <label class="info-label">Gender</label>
-                  <p class="info-value">{{ normalizedData.gender }}</p>
+                  <p class="info-value">{{ data.gender }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -57,7 +59,7 @@
               <v-col cols="12">
                 <div class="info-item">
                   <label class="info-label">Address</label>
-                  <p class="info-value">{{ normalizedData.address }}</p>
+                  <p class="info-value">{{ data.address }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -71,23 +73,23 @@
             <div class="info-item">
               <label class="info-label">Assigned Location</label>
               <v-chip color="primary" text-color="white">
-                {{ normalizedData.location }}
+                {{ data.location }}
               </v-chip>
             </div>
           </v-col>
           <v-col cols="12" md="6">
             <div class="info-item">
               <label class="info-label">Collector ID</label>
-              <p class="info-value">{{ normalizedData.collectorId }}</p>
+              <p class="info-value">{{ data.collectorId }}</p>
             </div>
           </v-col>
         </v-row>
 
-        <v-row v-if="normalizedData.notes">
+        <v-row v-if="data.notes">
           <v-col cols="12">
             <div class="info-item">
               <label class="info-label">Notes</label>
-              <p class="info-value">{{ normalizedData.notes }}</p>
+              <p class="info-value">{{ data.notes }}</p>
             </div>
           </v-col>
         </v-row>
