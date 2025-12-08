@@ -798,7 +798,9 @@ export default {
       }
 
       // For available stalls, return class based on price type
-      switch (stall.price_type) {
+      // Support both snake_case and camelCase property names
+      const priceType = stall.price_type || stall.priceType
+      switch (priceType) {
         case 'Fixed Price':
           return 'available'
         case 'Auction':
@@ -817,7 +819,9 @@ export default {
       }
 
       // For available stalls, return text based on price type
-      switch (stall.price_type) {
+      // Support both snake_case and camelCase property names
+      const priceType = stall.price_type || stall.priceType
+      switch (priceType) {
         case 'Fixed Price':
           return 'Available'
         case 'Auction':
@@ -838,7 +842,9 @@ export default {
       }
 
       // Get price type and normalize it - default to 'Fixed Price' if empty/null
-      const priceType = stall.price_type ? stall.price_type.toString().toLowerCase().trim() : 'fixed price'
+      // Support both snake_case and camelCase property names
+      const rawPriceType = stall.price_type || stall.priceType
+      const priceType = rawPriceType ? rawPriceType.toString().toLowerCase().trim() : 'fixed price'
 
       // Only show apply button for Fixed Price stalls
       // Explicitly exclude Auction and Raffle
