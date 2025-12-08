@@ -14,10 +14,12 @@ import {
 // Import components
 import SearchFilterBar from './components/SearchFilter/SearchFilterBar';
 import StallCard from './components/StallCard';
+import StallDetailsModal from './components/StallDetailsModal';
 
 // Import services
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import FavoritesService from '../../../../services/FavoritesService';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -44,6 +46,13 @@ const TabbedStallScreen = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null);
   const [availableFilters, setAvailableFilters] = useState(['ALL']);
+  
+  // Favorites state
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  
+  // Stall details modal state
+  const [selectedStall, setSelectedStall] = useState(null);
+  const [showStallDetails, setShowStallDetails] = useState(false);
 
   // Tab configuration
   const tabs = [
@@ -69,7 +78,60 @@ const TabbedStallScreen = () => {
   // Filter and sort stalls when data or filters change
   useEffect(() => {
     filterAndSortStalls();
-  }, [stallsData, selectedFilter, selectedSort, searchText]);
+  }, [stallsData, selectedFilter, selectedSort, searchText, favoriteIds]);
+
+  // Load favorites when user data is available
+  useEffect(() => {
+    if (userData?.user?.applicant_id) {
+      loadFavorites();
+    }
+  }, [userData]);
+
+  // Load favorites from storage
+  const loadFavorites = async () => {
+    try {
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) return;
+      
+      const favorites = await FavoritesService.getFavorites(applicantId);
+      setFavoriteIds(favorites);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  // Toggle favorite status
+  const handleToggleFavorite = async (stallId) => {
+    try {
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) return;
+      
+      const isNowFavorite = await FavoritesService.toggleFavorite(applicantId, stallId);
+      
+      // Update local state
+      setFavoriteIds(prev => {
+        if (isNowFavorite) {
+          return [Number(stallId), ...prev.filter(id => id !== Number(stallId))];
+        } else {
+          return prev.filter(id => id !== Number(stallId));
+        }
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  // Handle opening stall details modal
+  const handleOpenStallDetails = (stall) => {
+    setSelectedStall(stall);
+    setShowStallDetails(true);
+  };
+
+  // Handle closing stall details modal
+  const handleCloseStallDetails = () => {
+    setShowStallDetails(false);
+    setSelectedStall(null);
+  };
 
   const loadUserDataAndStalls = async () => {
     try {
@@ -201,6 +263,9 @@ const TabbedStallScreen = () => {
         // Keep original order
         break;
     }
+
+    // Sort favorites first
+    filtered = FavoritesService.sortWithFavoritesFirst(filtered, favoriteIds);
 
     setFilteredStalls(filtered);
   };
@@ -344,11 +409,14 @@ const TabbedStallScreen = () => {
                     key={stall.id}
                     stall={stall}
                     onApply={() => handleStallApplication(stall.id)}
-                    isApplying={applying === stall.id}
+                    applying={applying === stall.id}
                     stallType={activeTab}
                     theme={theme}
                     isDark={isDark}
                     cardWidth={CARD_WIDTH}
+                    isFavorite={favoriteIds.includes(Number(stall.id))}
+                    onToggleFavorite={handleToggleFavorite}
+                    onPress={handleOpenStallDetails}
                   />
                 ))}
               </View>
@@ -371,6 +439,19 @@ const TabbedStallScreen = () => {
           )}
         </ScrollView>
       )}
+
+      {/* Stall Details Modal */}
+      <StallDetailsModal
+        visible={showStallDetails}
+        stall={selectedStall}
+        onClose={handleCloseStallDetails}
+        onApply={handleStallApplication}
+        applying={applying === selectedStall?.id}
+        theme={theme}
+        isDark={isDark}
+        isFavorite={selectedStall ? favoriteIds.includes(Number(selectedStall.id)) : false}
+        onToggleFavorite={handleToggleFavorite}
+      />
     </View>
   );
 };
