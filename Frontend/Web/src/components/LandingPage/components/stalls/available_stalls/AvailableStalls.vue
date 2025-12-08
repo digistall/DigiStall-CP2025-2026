@@ -107,128 +107,134 @@
     <!-- Stall Details Modal -->
     <transition name="modal-fade">
       <div v-if="showStallDetails" class="modal-overlay" @click.self="closeStallDetails">
-        <div class="modal-container compact">
-          <div class="modal-header">
-            <h2>Stall Details</h2>
-            <button class="close-btn" @click="closeStallDetails">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </button>
-          </div>
+        <div class="modal-container professional">
+          <!-- Close button floating -->
+          <button class="close-btn-floating" @click="closeStallDetails">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
 
           <div class="modal-content" v-if="selectedStallDetails">
-            <!-- Image Gallery Section -->
-            <div class="modal-image-gallery">
-              <div class="gallery-main-image" @click="openFullscreenViewer">
+            <!-- Image Gallery Section - Full width hero -->
+            <div class="modal-image-hero">
+              <div class="hero-image-container" @click="openFullscreenViewer">
                 <img :src="currentDisplayImage" :alt="`Stall ${selectedStallDetails.stallNumber}`"
-                  @error="handleImageError" />
+                  @error="handleImageError" class="hero-image" />
                 
-                <!-- Click to expand hint -->
-                <div class="expand-hint">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <polyline points="9 21 3 21 3 15"></polyline>
-                    <line x1="21" y1="3" x2="14" y2="10"></line>
-                    <line x1="3" y1="21" x2="10" y2="14"></line>
-                  </svg>
+                <!-- Gradient overlay -->
+                <div class="hero-gradient"></div>
+                
+                <!-- Stall number badge on image -->
+                <div class="hero-badge">
+                  <span class="badge-number">{{ selectedStallDetails.stallNumber }}</span>
+                  <span class="badge-status" :class="getStallBadgeClass(selectedStallDetails)">
+                    {{ getStallBadgeText(selectedStallDetails) }}
+                  </span>
                 </div>
                 
-                <!-- Image navigation arrows (only show if multiple images) -->
+                <!-- Image navigation arrows -->
                 <template v-if="stallImages.length > 1">
-                  <button class="gallery-nav prev" @click.stop="prevImage" :disabled="currentImageIndex === 0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <button class="hero-nav prev" @click.stop="prevImage">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                       <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
                   </button>
-                  <button class="gallery-nav next" @click.stop="nextImage" :disabled="currentImageIndex === stallImages.length - 1">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <button class="hero-nav next" @click.stop="nextImage">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                       <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                   </button>
                 </template>
                 
-                <!-- Image counter -->
-                <div class="image-counter" v-if="stallImages.length > 0">
-                  {{ currentImageIndex + 1 }} / {{ stallImages.length }}
-                </div>
-              </div>
-              
-              <!-- Thumbnail strip (only show if multiple images) -->
-              <div class="gallery-thumbnails" v-if="stallImages.length > 1">
-                <div 
-                  v-for="(img, index) in stallImages" 
-                  :key="img.id || index"
-                  class="thumbnail"
-                  :class="{ active: currentImageIndex === index }"
-                  @click="currentImageIndex = index"
-                >
-                  <img :src="buildImageUrl(img.image_url)" :alt="`Image ${index + 1}`" @error="handleThumbnailError($event)" />
+                <!-- Image dots indicator -->
+                <div class="hero-dots" v-if="stallImages.length > 1">
+                  <span 
+                    v-for="(img, index) in stallImages" 
+                    :key="index"
+                    class="dot"
+                    :class="{ active: currentImageIndex === index }"
+                    @click.stop="currentImageIndex = index"
+                  ></span>
                 </div>
               </div>
             </div>
 
-            <div class="modal-info-section">
-              <div class="info-row">
-                <span class="info-label">Stall Number:</span>
-                <span class="info-value stall-number-highlight">{{ selectedStallDetails.stallNumber }}</span>
+            <!-- Info Section - Clean card layout -->
+            <div class="modal-info-card">
+              <!-- Price highlight -->
+              <div class="price-section">
+                <span class="price-label">Monthly Rent</span>
+                <span class="price-amount">{{ selectedStallDetails.price }}</span>
+                <span class="price-type">{{ selectedStallDetails.price_type || 'Fixed Price' }}</span>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">Price:</span>
-                <span class="info-value price-highlight">{{ selectedStallDetails.price }}</span>
+              <!-- Details grid -->
+              <div class="details-grid">
+                <div class="detail-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Floor & Section</span>
+                    <span class="detail-value">{{ selectedStallDetails.floor }} / {{ selectedStallDetails.section }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18"></rect>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Dimensions</span>
+                    <span class="detail-value">{{ selectedStallDetails.dimensions }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Location</span>
+                    <span class="detail-value">{{ selectedStallDetails.branch }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item" v-if="selectedStallDetails.managerName && selectedStallDetails.managerName !== 'Unknown' && selectedStallDetails.managerName !== 'N/A'">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <div class="detail-content">
+                    <span class="detail-label">Manager</span>
+                    <span class="detail-value">{{ selectedStallDetails.managerName }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">Price Type:</span>
-                <span class="info-value">{{ selectedStallDetails.price_type || 'Fixed Price' }}</span>
+              <!-- Description -->
+              <div class="description-section" v-if="selectedStallDetails.description">
+                <span class="description-label">About this stall</span>
+                <p class="description-text">{{ selectedStallDetails.description }}</p>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">Floor:</span>
-                <span class="info-value">{{ selectedStallDetails.floor }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Section:</span>
-                <span class="info-value">{{ selectedStallDetails.section }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Dimensions:</span>
-                <span class="info-value">{{ selectedStallDetails.dimensions }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Branch:</span>
-                <span class="info-value">{{ selectedStallDetails.branch }}</span>
-              </div>
-
-              <div class="info-row">
-                <span class="info-label">Location:</span>
-                <span class="info-value">{{ selectedStallDetails.branchLocation }}</span>
-              </div>
-
-              <div class="info-row" v-if="selectedStallDetails.managerName">
-                <span class="info-label">Manager:</span>
-                <span class="info-value">{{ selectedStallDetails.managerName }}</span>
-              </div>
-
-              <div class="info-row full-width" v-if="selectedStallDetails.description">
-                <span class="info-label">Description:</span>
-                <p class="info-description">{{ selectedStallDetails.description }}</p>
-              </div>
-
-              <div class="modal-actions">
-                <button v-if="shouldShowApplyButton(selectedStallDetails)" class="modal-apply-btn"
-                  @click="applyFromModal">
-                  APPLY NOW!
-                </button>
-                <button v-else-if="!selectedStallDetails.isAvailable" class="modal-apply-btn occupied" disabled>
-                  OCCUPIED
-                </button>
-              </div>
+              <!-- Apply button -->
+              <button 
+                v-if="shouldShowApplyButton(selectedStallDetails)" 
+                class="apply-btn-large" 
+                @click="applyFromModal"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="12"></line>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                APPLY NOW
+              </button>
             </div>
           </div>
         </div>
@@ -296,6 +302,7 @@ export default {
   components: {
     StallApplicationContainer,
   },
+  emits: ['modal-opened', 'modal-closed'],
   props: {
     filteredStalls: {
       type: Array,
@@ -326,7 +333,32 @@ export default {
       showFullscreenViewer: false,
       // Stall images cache for main grid
       stallImageCache: new Map(),
+      // Auto slideshow
+      autoSlideInterval: null,
+      autoSlideDelay: 3000, // 3 seconds
+      // Grid auto slideshow
+      gridAutoSlideInterval: null,
+      gridAutoSlideDelay: 2500, // 2.5 seconds for grid cards
+      // Wheel listener for closing modal on scroll
+      wheelListener: null,
+      wheelScrollAccumulator: 0,
+      wheelScrollThreshold: 150, // Pixels of wheel scroll to close
     }
+  },
+  beforeUnmount() {
+    // Clean up auto slide interval
+    this.stopAutoSlide()
+    this.stopGridAutoSlide()
+    // Remove wheel listener
+    this.removeWheelListener()
+    // Restore body scroll
+    document.body.style.overflow = ''
+  },
+  mounted() {
+    // Start grid auto slide after a short delay to allow images to load
+    setTimeout(() => {
+      this.startGridAutoSlide()
+    }, 1000)
   },
   computed: {
     totalPages() {
@@ -500,8 +532,20 @@ export default {
       this.currentImageIndex = 0
       this.stallImages = []
       
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden'
+      
+      // Emit event to parent to pause scroll listener
+      this.$emit('modal-opened')
+      
+      // Setup wheel listener to close modal on scroll
+      this.setupWheelListener()
+      
       // Fetch all images for this stall
       await this.fetchStallImages(stall.id)
+      
+      // Start auto slideshow if multiple images
+      this.startAutoSlide()
     },
 
     async fetchStallImages(stallId) {
@@ -614,12 +658,107 @@ export default {
       }
     },
 
+    startAutoSlide() {
+      // Stop any existing interval
+      this.stopAutoSlide()
+      
+      // Only start if there are multiple images
+      if (this.stallImages.length > 1) {
+        this.autoSlideInterval = setInterval(() => {
+          // Loop back to first image after last
+          if (this.currentImageIndex >= this.stallImages.length - 1) {
+            this.currentImageIndex = 0
+          } else {
+            this.currentImageIndex++
+          }
+        }, this.autoSlideDelay)
+      }
+    },
+
+    stopAutoSlide() {
+      if (this.autoSlideInterval) {
+        clearInterval(this.autoSlideInterval)
+        this.autoSlideInterval = null
+      }
+    },
+
+    // Restart auto slide when images are loaded
+    restartAutoSlide() {
+      if (this.stallImages.length > 1) {
+        this.startAutoSlide()
+      }
+    },
+
+    // Grid auto slide methods
+    startGridAutoSlide() {
+      this.stopGridAutoSlide()
+      
+      this.gridAutoSlideInterval = setInterval(() => {
+        // Get all stalls from cache and advance their images
+        this.stallImageCache.forEach((images, stallId) => {
+          if (images.length > 1) {
+            // Find the stall in paginatedStalls
+            const stall = this.paginatedStalls.find(s => s.id === stallId)
+            if (stall) {
+              // Advance to next image, loop back to 0
+              const nextIndex = (stall.currentImageIndex + 1) % images.length
+              stall.currentImageIndex = nextIndex
+            }
+          }
+        })
+        // Force reactivity update
+        this.$forceUpdate()
+      }, this.gridAutoSlideDelay)
+    },
+
+    stopGridAutoSlide() {
+      if (this.gridAutoSlideInterval) {
+        clearInterval(this.gridAutoSlideInterval)
+        this.gridAutoSlideInterval = null
+      }
+    },
+
+    // Wheel listener to close modal on scroll
+    setupWheelListener() {
+      this.wheelScrollAccumulator = 0
+      this.wheelListener = (e) => {
+        // Accumulate scroll delta
+        this.wheelScrollAccumulator += Math.abs(e.deltaY)
+        
+        // If accumulated scroll exceeds threshold, close modal
+        if (this.wheelScrollAccumulator > this.wheelScrollThreshold) {
+          this.closeStallDetails()
+        }
+      }
+      window.addEventListener('wheel', this.wheelListener, { passive: true })
+    },
+
+    removeWheelListener() {
+      if (this.wheelListener) {
+        window.removeEventListener('wheel', this.wheelListener)
+        this.wheelListener = null
+      }
+      this.wheelScrollAccumulator = 0
+    },
+
     closeStallDetails() {
       this.showStallDetails = false
       this.selectedStallDetails = null
       this.stallImages = []
       this.currentImageIndex = 0
       this.showFullscreenViewer = false
+      
+      // Stop auto slideshow
+      this.stopAutoSlide()
+      
+      // Remove wheel listener
+      this.removeWheelListener()
+      
+      // Restore body scroll
+      document.body.style.overflow = ''
+      
+      // Emit event to parent to resume scroll listener
+      this.$emit('modal-closed')
     },
 
     openFullscreenViewer() {

@@ -80,6 +80,8 @@
             :loading="stallsLoading"
             :error="stallsError"
             :key="filterKey"
+            @modal-opened="modalOpen = true"
+            @modal-closed="modalOpen = false; lastScrollY = window.scrollY"
           />
         </div>
       </div>
@@ -131,6 +133,7 @@ export default {
       windowScrollListener: null,
       lastScrollY: 0,
       scrollThreshold: 100, // Pixels to scroll before auto-closing
+      modalOpen: false, // Track if stall details modal is open
     };
   },
 
@@ -363,8 +366,8 @@ export default {
 
     setupWindowScrollListener() {
       this.windowScrollListener = () => {
-        // Only auto-close if stalls container is open
-        if (this.showStallsContainer && this.selectedBranch) {
+        // Only auto-close if stalls container is open AND modal is NOT open
+        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen) {
           const currentScrollY = window.scrollY;
           const scrollDifference = currentScrollY - this.lastScrollY;
           
