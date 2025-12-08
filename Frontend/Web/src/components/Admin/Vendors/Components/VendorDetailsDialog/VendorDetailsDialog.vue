@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="model" max-width="900">
-    <v-card class="details-modal">
+    <v-card class="add-stallholder-modal">
       <v-card-title class="modal-header">
         <h2 class="modal-title">Vendor Details</h2>
         <v-btn icon class="close-btn" @click="model = false">
