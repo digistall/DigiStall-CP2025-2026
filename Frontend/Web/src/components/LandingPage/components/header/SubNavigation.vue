@@ -28,6 +28,27 @@
           {{ branch.branch }}
         </button>
       </div>
+      
+      <!-- Bottom Navigation Arrows -->
+      <div v-if="hasOverflow" class="bottom-nav-arrows">
+        <button 
+          v-if="canScrollLeft" 
+          @click="scrollLeft" 
+          class="bottom-arrow left-arrow"
+          aria-label="Scroll left"
+        >
+          <i class="mdi mdi-chevron-left"></i>
+        </button>
+        
+        <button 
+          v-if="canScrollRight" 
+          @click="scrollRight" 
+          class="bottom-arrow right-arrow"
+          aria-label="Scroll right"
+        >
+          <i class="mdi mdi-chevron-right"></i>
+        </button>
+      </div>
     </div>
 
     <!-- Stalls Container with Filter -->
@@ -101,8 +122,15 @@ export default {
       stallsError: null,
 
       hasOverflow: false,
+      canScrollLeft: false,
+      canScrollRight: false,
+      currentScrollPosition: 0,
+      scrollListener: null,
 
       resizeCleanup: null,
+      windowScrollListener: null,
+      lastScrollY: 0,
+      scrollThreshold: 100, // Pixels to scroll before auto-closing
     };
   },
 
@@ -110,8 +138,12 @@ export default {
     await this.fetchBranches();
     this.$nextTick(() => {
       this.checkOverflow();
+      this.updateArrowStates();
+      this.setupScrollListener();
+      this.setupWindowScrollListener();
       this.resizeCleanup = UIHelperService.setupResizeListener(() => {
         this.checkOverflow();
+        this.updateArrowStates();
       });
     });
   },
@@ -119,6 +151,15 @@ export default {
   beforeUnmount() {
     if (this.resizeCleanup) {
       this.resizeCleanup();
+    }
+    if (this.scrollListener) {
+      const container = this.$refs.scrollableContainer;
+      if (container) {
+        container.removeEventListener('scroll', this.scrollListener);
+      }
+    }
+    if (this.windowScrollListener) {
+      window.removeEventListener('scroll', this.windowScrollListener);
     }
   },
 
@@ -128,6 +169,7 @@ export default {
         const container = this.$refs.scrollableContainer;
         if (container) {
           this.hasOverflow = UIHelperService.checkOverflow(container);
+          this.updateArrowStates();
         }
       });
     },
@@ -140,6 +182,7 @@ export default {
         this.availableBranches = await FetchService.fetchBranches();
         this.$nextTick(() => {
           this.checkOverflow();
+          this.updateArrowStates();
         });
       } catch (error) {
         ErrorHandlingService.logError(error, "fetchBranches");
@@ -158,6 +201,11 @@ export default {
 
       this.selectedBranch = selectionResult.selectedBranch;
       this.showStallsContainer = selectionResult.showStallsContainer;
+
+      // Reset scroll tracking when opening stalls container
+      if (this.showStallsContainer && this.selectedBranch) {
+        this.lastScrollY = window.scrollY;
+      }
 
       if (selectionResult.shouldReset) {
         this.resetFilters();
@@ -254,6 +302,80 @@ export default {
       this.showStallsContainer = false;
       this.selectedBranch = null;
       this.resetFilters();
+    },
+
+    updateArrowStates() {
+      this.$nextTick(() => {
+        const container = this.$refs.scrollableContainer;
+        if (container) {
+          const scrollLeft = container.scrollLeft;
+          const scrollWidth = container.scrollWidth;
+          const clientWidth = container.clientWidth;
+          
+          this.canScrollLeft = scrollLeft > 0;
+          this.canScrollRight = scrollLeft < (scrollWidth - clientWidth - 1);
+          this.currentScrollPosition = scrollLeft;
+        }
+      });
+    },
+
+    scrollLeft() {
+      const container = this.$refs.scrollableContainer;
+      if (container) {
+        const scrollAmount = 200; // Adjust scroll distance as needed
+        container.scrollTo({
+          left: container.scrollLeft - scrollAmount,
+          behavior: 'smooth'
+        });
+        
+        // Update arrow states after scroll
+        setTimeout(() => {
+          this.updateArrowStates();
+        }, 300);
+      }
+    },
+
+    scrollRight() {
+      const container = this.$refs.scrollableContainer;
+      if (container) {
+        const scrollAmount = 200; // Adjust scroll distance as needed
+        container.scrollTo({
+          left: container.scrollLeft + scrollAmount,
+          behavior: 'smooth'
+        });
+        
+        // Update arrow states after scroll
+        setTimeout(() => {
+          this.updateArrowStates();
+        }, 300);
+      }
+    },
+
+    setupScrollListener() {
+      const container = this.$refs.scrollableContainer;
+      if (container) {
+        this.scrollListener = () => {
+          this.updateArrowStates();
+        };
+        container.addEventListener('scroll', this.scrollListener);
+      }
+    },
+
+    setupWindowScrollListener() {
+      this.windowScrollListener = () => {
+        // Only auto-close if stalls container is open
+        if (this.showStallsContainer && this.selectedBranch) {
+          const currentScrollY = window.scrollY;
+          const scrollDifference = currentScrollY - this.lastScrollY;
+          
+          // Check if user has scrolled down more than the threshold
+          if (scrollDifference > this.scrollThreshold) {
+            this.closeStallsContainer();
+          }
+        }
+      };
+      
+      window.addEventListener('scroll', this.windowScrollListener, { passive: true });
     },
   },
 };

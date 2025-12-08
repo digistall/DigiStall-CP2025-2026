@@ -17,20 +17,9 @@
         <div class="stall-grid" :key="currentPage">
           <div class="stall-card" v-for="stall in paginatedStalls" :key="stall.id" @click="openStallDetails(stall)">
             <div class="stall-image">
-              <img :src="getStallDisplayImage(stall)" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
+              <img :src="stall.imageUrl" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
               <div class="stall-status-badge" :class="getStallBadgeClass(stall)">
                 {{ getStallBadgeText(stall) }}
-              </div>
-              
-              <!-- Image pagination dots (show only if multiple images) -->
-              <div class="image-pagination-dots" v-if="stall.imageCount > 1">
-                <div 
-                  v-for="n in Math.min(stall.imageCount, 10)" 
-                  :key="n"
-                  class="pagination-dot"
-                  :class="{ active: stall.currentImageIndex === (n - 1) }"
-                  @click.stop="changeStallImage(stall, n - 1)"
-                ></div>
               </div>
             </div>
             <div class="stall-info">
@@ -324,8 +313,6 @@ export default {
       loadingImages: false,
       // Fullscreen viewer
       showFullscreenViewer: false,
-      // Stall images cache for main grid
-      stallImageCache: new Map(),
     }
   },
   computed: {
@@ -337,21 +324,11 @@ export default {
       const endIndex = startIndex + this.stallsPerPage
       const stalls = this.filteredStalls.slice(startIndex, endIndex)
 
-      // Ensure all stalls have an image and fetch image info
-      return stalls.map((stall) => {
-        const stallWithDefaults = {
-          ...stall,
-          imageUrl: stall.imageUrl || stall.image || stallBackgroundImg,
-          currentImageIndex: 0,
-          imageCount: 1,
-          stallImages: []
-        }
-        
-        // Fetch images for this stall if not cached
-        this.fetchStallImagesForGrid(stallWithDefaults)
-        
-        return stallWithDefaults
-      })
+      // Ensure all stalls have an image
+      return stalls.map((stall) => ({
+        ...stall,
+        imageUrl: stall.imageUrl || stall.image || stallBackgroundImg,
+      }))
     },
     currentDisplayImage() {
       // If we have fetched images, use the current one
@@ -378,120 +355,11 @@ export default {
 
     buildImageUrl(imagePath) {
       if (!imagePath) return stallBackgroundImg
-      // Already a full URL
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         return imagePath
       }
-      // Build full URL from relative path
-      const imageBaseUrl = 'http://localhost'
-      return `${imageBaseUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`
-    },
-
-    async fetchStallImagesForGrid(stall) {
-      if (!stall.id) return
-      
-      // Check if we already have this stall's images cached
-      if (this.stallImageCache.has(stall.id)) {
-        const cachedImages = this.stallImageCache.get(stall.id)
-        stall.stallImages = cachedImages
-        stall.imageCount = cachedImages.length
-        return
-      }
-      
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-        const response = await fetch(`${apiUrl}/stalls/${stall.id}/images`)
-        const data = await response.json()
-        
-        if (data.success && data.data && data.data.images && data.data.images.length > 0) {
-          const images = data.data.images
-          this.stallImageCache.set(stall.id, images)
-          stall.stallImages = images
-          stall.imageCount = images.length
-          console.log(`📷 Loaded ${images.length} images for stall ${stall.stallNumber}`)
-        } else {
-          // Fallback: Try to fetch images directly from file system
-          await this.fetchImagesFromFileSystemForGrid(stall)
-        }
-      } catch (error) {
-        console.error('❌ Failed to fetch stall images for grid:', error)
-        // Fallback: Try to fetch images directly from file system
-        await this.fetchImagesFromFileSystemForGrid(stall)
-      }
-    },
-
-    async fetchImagesFromFileSystemForGrid(stall) {
-      if (!stall.stallNumber) {
-        stall.stallImages = []
-        stall.imageCount = 1
-        return
-      }
-      
-      const imageBaseUrl = 'http://localhost'
-      const branchId = stall.branchId || 1
-      const stallNumber = stall.stallNumber
-      
-      // Test images by loading them (avoids CORS issues)
-      const testImage = (url) => {
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => resolve(true)
-          img.onerror = () => resolve(false)
-          img.src = url
-        })
-      }
-      
-      const images = []
-      const extensions = ['png', 'jpg', 'jpeg']
-      
-      // Check for images 1-10
-      for (let i = 1; i <= 10; i++) {
-        let found = false
-        for (const ext of extensions) {
-          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
-          
-          const exists = await testImage(imageUrl)
-          if (exists) {
-            images.push({
-              id: `grid_img_${i}`,
-              stall_id: stall.id,
-              image_url: imageUrl,
-              display_order: i,
-              is_primary: i === 1 ? 1 : 0
-            })
-            found = true
-            break
-          }
-        }
-        // Stop if no image found for this number and we have some images
-        if (!found && images.length > 0) break
-      }
-      
-      // Cache the results
-      this.stallImageCache.set(stall.id, images)
-      stall.stallImages = images
-      stall.imageCount = images.length > 0 ? images.length : 1
-      
-      if (images.length > 0) {
-        console.log(`📁 Grid: Loaded ${images.length} images for stall ${stallNumber}`)
-      }
-    },
-
-    getStallDisplayImage(stall) {
-      // If stall has multiple images, show the current one
-      if (stall.stallImages && stall.stallImages.length > 0 && stall.stallImages[stall.currentImageIndex]) {
-        return this.buildImageUrl(stall.stallImages[stall.currentImageIndex].image_url)
-      }
-      // Fallback to original image
-      return stall.imageUrl || stall.image || stallBackgroundImg
-    },
-
-    changeStallImage(stall, imageIndex) {
-      if (stall.stallImages && stall.stallImages.length > imageIndex) {
-        stall.currentImageIndex = imageIndex
-        // Force reactivity update
-        this.$forceUpdate()
-      }
+      const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
+      return `${imageBaseUrl}${imagePath}`
     },
 
     async openStallDetails(stall) {
@@ -508,97 +376,19 @@ export default {
       if (!stallId) return
       
       this.loadingImages = true
-      
-      // Always try file system first for more reliable results
-      await this.fetchImagesFromFileSystem(stallId)
-      
-      // If no images found, try API as fallback
-      if (this.stallImages.length === 0) {
-        try {
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-          const response = await fetch(`${apiUrl}/stalls/${stallId}/images`)
-          const data = await response.json()
-          
-          if (data.success && data.data && data.data.images && data.data.images.length > 0) {
-            this.stallImages = data.data.images
-            console.log(`📷 API: Loaded ${this.stallImages.length} images for stall ${stallId}`)
-          }
-        } catch (error) {
-          console.error('❌ API fallback also failed:', error)
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        const response = await fetch(`${apiUrl}/stalls/${stallId}/images`)
+        const data = await response.json()
+        
+        if (data.success && data.data && data.data.images) {
+          this.stallImages = data.data.images
+          console.log(`📷 Loaded ${this.stallImages.length} images for stall ${stallId}`)
         }
-      }
-      
-      this.loadingImages = false
-    },
-
-    async fetchImagesFromFileSystem(stallId) {
-      // Scan htdocs folder for stall images
-      const stall = this.selectedStallDetails
-      if (!stall || !stall.stallNumber) return
-      
-      console.log(`🔍 Scanning htdocs for stall ${stall.stallNumber} images`)
-      
-      const imageBaseUrl = 'http://localhost'  // Apache runs on port 80
-      const branchId = stall.branchId || 1
-      const stallNumber = stall.stallNumber
-      
-      // Test images by actually loading them (avoids CORS issues with HEAD requests)
-      const testImage = (url) => {
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => resolve(true)
-          img.onerror = () => resolve(false)
-          img.src = url
-        })
-      }
-      
-      const images = []
-      const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif']
-      
-      console.log(`📂 Scanning: ${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/`)
-      
-      // Check for images 1-10
-      for (let i = 1; i <= 10; i++) {
-        let foundForThisNumber = false
-        for (const ext of extensions) {
-          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
-          
-          const exists = await testImage(imageUrl)
-          if (exists) {
-            images.push({
-              id: `img_${i}`,
-              stall_id: stallId,
-              image_url: imageUrl,
-              display_order: i,
-              is_primary: i === 1 ? 1 : 0
-            })
-            console.log(`✅ Found: ${i}.${ext}`)
-            foundForThisNumber = true
-            break
-          }
-        }
-        // If no image found for this number and we already have some images, 
-        // stop searching (consecutive images expected)
-        if (!foundForThisNumber && images.length > 0) {
-          break
-        }
-      }
-      
-      if (images.length > 0) {
-        this.stallImages = images
-        console.log(`📁 Loaded ${images.length} images for stall ${stallNumber}`)
-      } else {
-        console.log(`❌ No images found, using fallback`)
-        // Use main stall image as fallback
-        if (stall.imageUrl && stall.imageUrl !== 'stall-image.jpg') {
-          this.stallImages = [{
-            id: 'fallback_1',
-            stall_id: stallId,
-            image_url: stall.imageUrl,
-            display_order: 1,
-            is_primary: 1
-          }]
-        }
+      } catch (error) {
+        console.error('❌ Failed to fetch stall images:', error)
+      } finally {
+        this.loadingImages = false
       }
     },
 

@@ -39,6 +39,7 @@ export const getStallsByArea = async (req, res) => {
         b.area,
         b.location as branchLocation,
         b.branch_name as branch,
+        b.branch_id as branchId,
         bm.first_name as manager_first_name,
         bm.last_name as manager_last_name
       FROM stall s
@@ -82,6 +83,7 @@ export const getStallsByArea = async (req, res) => {
         id: stall.id,
         stallNumber: stall.stallNumber,
         branch: stall.branch,
+        branchId: stall.branchId,
         branchLocation: stall.branchLocation,
         price: formattedPrice,
         price_type: stall.price_type,

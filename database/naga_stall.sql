@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 08, 2025 at 05:48 AM
+-- Generation Time: Dec 08, 2025 at 08:06 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2928,20 +2928,44 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallComplete` (IN `p_stall_n
   SELECT LAST_INSERT_ID() as stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallImage` (IN `p_stall_id` INT, IN `p_image_url` VARCHAR(500), IN `p_is_primary` TINYINT(1))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallImage` (IN `p_stall_id` INT, IN `p_image_url` VARCHAR(500), IN `p_is_primary` TINYINT)   BEGIN
+    DECLARE image_count INT DEFAULT 0;
+    DECLARE new_display_order INT DEFAULT 1;
+    DECLARE should_be_primary TINYINT DEFAULT 0;
     
     
-    INSERT INTO stall_images (
-        stall_id,
-        image_url,
-        is_primary,
-        display_order
-    ) VALUES (
-        p_stall_id,
-        p_image_url,
-        p_is_primary,
-        NULL  
-    );
+    SELECT COUNT(*) INTO image_count
+    FROM stall_images
+    WHERE stall_id = p_stall_id;
+    
+    
+    IF image_count >= 10 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot add more than 10 images per stall';
+    END IF;
+    
+    
+    SET new_display_order = image_count + 1;
+    
+    
+    
+    IF p_is_primary = 1 OR image_count = 0 THEN
+        SET should_be_primary = 1;
+        
+        
+        IF should_be_primary = 1 AND image_count > 0 THEN
+            UPDATE stall_images 
+            SET is_primary = 0 
+            WHERE stall_id = p_stall_id;
+        END IF;
+    ELSE
+        SET should_be_primary = 0;
+    END IF;
+    
+    
+    INSERT INTO stall_images (stall_id, image_url, is_primary, display_order, created_at)
+    VALUES (p_stall_id, p_image_url, should_be_primary, new_display_order, NOW());
+    
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
@@ -4498,29 +4522,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_setRaffleWinner` (IN `p_particip
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_setStallPrimaryImage` (IN `p_image_id` INT)   BEGIN
-  DECLARE v_stall_id INT;
-  
-  
-  SELECT stall_id INTO v_stall_id
-  FROM stall_images
-  WHERE id = p_image_id;
-  
-  IF v_stall_id IS NULL THEN
-    SIGNAL SQLSTATE '45000'
-    SET MESSAGE_TEXT = 'Image not found';
-  END IF;
-  
-  
-  UPDATE stall_images 
-  SET is_primary = 0 
-  WHERE stall_id = v_stall_id;
-  
-  
-  UPDATE stall_images 
-  SET is_primary = 1 
-  WHERE id = p_image_id;
-  
-  SELECT 'Primary image updated successfully' AS message;
+    DECLARE v_stall_id INT;
+    
+    
+    SELECT stall_id INTO v_stall_id 
+    FROM stall_images 
+    WHERE id = p_image_id;
+    
+    IF v_stall_id IS NOT NULL THEN
+        
+        UPDATE stall_images 
+        SET is_primary = 0 
+        WHERE stall_id = v_stall_id;
+        
+        
+        UPDATE stall_images 
+        SET is_primary = 1 
+        WHERE id = p_image_id;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_storeRefreshToken` (IN `p_token_id` VARCHAR(255), IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_token_hash` VARCHAR(255), IN `p_device_info` VARCHAR(255), IN `p_ip_address` VARCHAR(50), IN `p_expires_at` DATETIME)   BEGIN
@@ -6529,7 +6548,7 @@ CREATE TABLE `stall` (
 --
 
 INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `rental_price`, `price_type`, `status`, `stamp`, `description`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
-(11, 4, 4, 'NPM-001', 'Near MEPO Office', '3x4', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'Best to sell meat', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 04:45:14', '2025-12-08 04:45:14');
+(12, 4, 4, 'NPM-001', 'Near MEPO Office', '3x4', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'Best area to sell meat', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 05:28:29', '2025-12-08 05:28:29');
 
 -- --------------------------------------------------------
 
@@ -6771,10 +6790,10 @@ CREATE TABLE `stall_images` (
 --
 
 INSERT INTO `stall_images` (`id`, `stall_id`, `image_url`, `display_order`, `is_primary`, `created_at`, `updated_at`) VALUES
-(1, 11, '/digistall_uploads/stalls/1/NPM-001/1.png', 1, 0, '2025-12-08 04:45:14', '2025-12-08 04:45:14'),
-(2, 11, '/digistall_uploads/stalls/1/NPM-001/2.png', 2, 0, '2025-12-08 04:45:14', '2025-12-08 04:45:14'),
-(3, 11, '/digistall_uploads/stalls/1/NPM-001/3.png', 3, 0, '2025-12-08 04:45:14', '2025-12-08 04:45:14'),
-(4, 11, '/digistall_uploads/stalls/1/NPM-001/4.png', 4, 0, '2025-12-08 04:45:14', '2025-12-08 04:45:14');
+(5, 12, '/digistall_uploads/stalls/1/NPM-001/1.png', 1, 1, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
+(6, 12, '/digistall_uploads/stalls/1/NPM-001/2.png', 2, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
+(7, 12, '/digistall_uploads/stalls/1/NPM-001/3.png', 3, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
+(8, 12, '/digistall_uploads/stalls/1/NPM-001/4.png', 4, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29');
 
 --
 -- Triggers `stall_images`
@@ -6800,17 +6819,6 @@ CREATE TRIGGER `before_stall_image_insert` BEFORE INSERT ON `stall_images` FOR E
   END IF;
   
   
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `before_stall_image_update` BEFORE UPDATE ON `stall_images` FOR EACH ROW BEGIN
-  -- Ensure only one primary image per stall
-  IF NEW.is_primary = 1 AND OLD.is_primary = 0 THEN
-    UPDATE stall_images 
-    SET is_primary = 0 
-    WHERE stall_id = NEW.stall_id AND id != NEW.id;
-  END IF;
 END
 $$
 DELIMITER ;
@@ -7909,7 +7917,7 @@ ALTER TABLE `spouse`
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `stallholder`
@@ -7945,7 +7953,7 @@ ALTER TABLE `stall_business_owner`
 -- AUTO_INCREMENT for table `stall_images`
 --
 ALTER TABLE `stall_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `subscription_payments`
