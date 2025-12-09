@@ -143,6 +143,7 @@ const LoginScreen = ({ navigation }) => {
       }
     }, 3000);
 
+    // Unified login - automatically detects staff or user
     handleLogin(username, password, setIsLoading, navigation, setErrorModal);
   };
 

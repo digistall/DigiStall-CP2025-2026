@@ -3,7 +3,7 @@ import ApiService from '../../../services/ApiService';
 import UserStorageService from '../../../services/UserStorageService';
 import { API_CONFIG } from '../../../config/networkConfig';
 
-// Mobile login using credential table with improved backend
+// Unified Mobile login - automatically detects staff or regular user
 export const handleLogin = async (
   username, 
   password, 
@@ -50,8 +50,64 @@ export const handleLogin = async (
       setLoadingState({ step: 'authenticating', message: 'Verifying credentials...' });
     }
 
-    // Now attempt login
-    console.log('🔐 Attempting login...');
+    // Try staff login first (inspector/collector)
+    console.log('🔐 Attempting staff login first...');
+    const staffResponse = await ApiService.mobileStaffLogin(username, password);
+
+    if (staffResponse.success) {
+      // Staff login successful - navigate to appropriate screen
+      console.log('✅ Staff login successful:', staffResponse.message);
+      console.log('👤 Staff type:', staffResponse.staffType);
+      
+      if (setLoadingState) {
+        setLoadingState({ step: 'loading', message: 'Loading your profile...' });
+      }
+
+      // Save staff data
+      const staffData = {
+        staff: staffResponse.user,
+        token: staffResponse.token,
+        staffType: staffResponse.staffType
+      };
+      
+      await UserStorageService.saveUserData(staffData);
+      
+      // Save JWT token
+      if (staffResponse.token) {
+        await UserStorageService.saveAuthToken(staffResponse.token);
+        console.log('🔐 Staff auth token saved');
+      }
+
+      setIsLoading(false);
+
+      // Navigate based on staff type
+      const staffType = staffResponse.staffType || staffResponse.user?.staffType;
+      const staffName = staffResponse.user?.fullName || `${staffResponse.user?.firstName} ${staffResponse.user?.lastName}`;
+      
+      if (navigation) {
+        if (staffType === 'inspector') {
+          navigation.navigate('LoadingScreen', {
+            userName: staffName,
+            isStallholder: false,
+            stallNo: null,
+            nextScreen: 'InspectorHome',
+            loadingDuration: 2000
+          });
+        } else if (staffType === 'collector') {
+          navigation.navigate('LoadingScreen', {
+            userName: staffName,
+            isStallholder: false,
+            stallNo: null,
+            nextScreen: 'CollectorHome',
+            loadingDuration: 2000
+          });
+        }
+      }
+      return; // Exit after successful staff login
+    }
+
+    // Staff login failed, try regular user login
+    console.log('🔐 Staff login failed, trying regular user login...');
     const response = await ApiService.mobileLogin(username, password);
 
     if (response.success) {
@@ -151,6 +207,135 @@ export const handleForgotPassword = (setErrorModal) => {
       title: 'Password Recovery',
       message: 'To reset your password, please contact your administrator or visit the Naga City Public Market management office with a valid ID.',
       type: 'info'
+    });
+  }
+};
+
+// Staff login (Inspector/Collector)
+export const handleStaffLogin = async (
+  username, 
+  password, 
+  setIsLoading, 
+  navigation, 
+  setErrorModal,
+  setLoadingState
+) => {
+  console.log('Staff login pressed', { username, password: '***' });
+
+  // Validation
+  if (!username || !password) {
+    setErrorModal({
+      visible: true,
+      title: 'Required Fields',
+      message: 'Please enter your username and password to continue.',
+      type: 'error'
+    });
+    return;
+  }
+
+  // Start loading
+  setIsLoading(true);
+  
+  if (setLoadingState) {
+    setLoadingState({ step: 'connecting', message: 'Connecting to server...' });
+  }
+
+  try {
+    // Test connectivity
+    console.log('🔌 Testing connectivity...');
+    const isConnected = await ApiService.testConnectivity();
+    
+    if (!isConnected) {
+      throw new Error('Cannot reach the server. Please check your network connection.');
+    }
+
+    console.log('✅ Connectivity successful');
+    
+    if (setLoadingState) {
+      setLoadingState({ step: 'authenticating', message: 'Verifying staff credentials...' });
+    }
+
+    // Attempt staff login
+    console.log('🔐 Attempting staff login...');
+    const response = await ApiService.mobileStaffLogin(username, password);
+
+    if (response.success) {
+      console.log('✅ Staff login successful:', response.message);
+      console.log('👤 Staff type:', response.staffType);
+      
+      if (setLoadingState) {
+        setLoadingState({ step: 'loading', message: 'Loading your profile...' });
+      }
+
+      // Save staff data
+      const staffData = {
+        staff: response.user,
+        token: response.token,
+        staffType: response.staffType
+      };
+      
+      await UserStorageService.saveUserData(staffData);
+      
+      // Save JWT token
+      if (response.token) {
+        await UserStorageService.saveAuthToken(response.token);
+        console.log('🔐 Staff auth token saved');
+      }
+
+      setIsLoading(false);
+
+      // Navigate based on staff type
+      const staffType = response.staffType || response.user?.staffType;
+      const staffName = response.user?.fullName || `${response.user?.firstName} ${response.user?.lastName}`;
+      
+      if (navigation) {
+        if (staffType === 'inspector') {
+          navigation.navigate('LoadingScreen', {
+            userName: staffName,
+            isStallholder: false,
+            stallNo: null,
+            nextScreen: 'InspectorHome',
+            loadingDuration: 2000
+          });
+        } else if (staffType === 'collector') {
+          navigation.navigate('LoadingScreen', {
+            userName: staffName,
+            isStallholder: false,
+            stallNo: null,
+            nextScreen: 'CollectorHome',
+            loadingDuration: 2000
+          });
+        } else {
+          // Default fallback
+          setErrorModal({
+            visible: true,
+            title: 'Unknown Staff Type',
+            message: `Staff type "${staffType}" is not recognized.`,
+            type: 'error'
+          });
+        }
+      }
+
+    } else {
+      console.log('❌ Staff login failed:', response.message);
+      setIsLoading(false);
+
+      setErrorModal({
+        visible: true,
+        title: 'Authentication Failed',
+        message: response.message || 'Invalid staff credentials. Please check your username and password.',
+        type: 'error'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Staff login error:', error);
+    setIsLoading(false);
+
+    setErrorModal({
+      visible: true,
+      title: 'Login Error',
+      message: error.message || 'An error occurred during login. Please try again.',
+      type: 'error'
     });
   }
 };

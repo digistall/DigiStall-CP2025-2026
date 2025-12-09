@@ -11,10 +11,14 @@ import {
   mobileLogout 
 } from '../controllers/mobileAuthController.js'
 
+// Import mobile staff auth controller (inspector/collector)
+import { mobileStaffLogin } from '../controllers/mobileStaffAuthController.js'
+
 const router = express.Router()
 
 // ===== MOBILE AUTHENTICATION ROUTES =====
 router.post('/login', mobileLogin)                       // POST /mobile/auth/login - Mobile user login with full data
+router.post('/staff-login', mobileStaffLogin)            // POST /mobile/auth/staff-login - Inspector/Collector login
 router.post('/register', mobileRegister)                 // POST /mobile/auth/register - Mobile user registration
 router.get('/verify-token', mobileVerifyToken)           // GET /mobile/auth/verify-token - Verify mobile token
 
