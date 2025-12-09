@@ -54,6 +54,20 @@
       return status === 'active' ? 'success' : 'warning'
     },
 
+    getRoleColor(employee) {
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
+      }
+      return 'primary' // Web employee
+    },
+
+    getRoleIcon(employee) {
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'mdi-clipboard-check' : 'mdi-account-cash'
+      }
+      return 'mdi-account' // Web employee
+    },
+
     getPermissionText(permission) {
       const permissionLabels = {
         dashboard: 'Dashboard',
@@ -65,6 +79,8 @@
         stallholders: 'Stallholders',
         collectors: 'Collectors',
         stalls: 'Stalls',
+        mobile_inspector: 'Mobile Inspector',
+        mobile_collector: 'Mobile Collector',
       }
       return permissionLabels[permission] || permission
     },

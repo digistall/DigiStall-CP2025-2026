@@ -18,6 +18,8 @@ export default {
   data() {
     return {
       formValid: false,
+      accountType: 'web', // 'web' or 'mobile'
+      mobileRole: null, // 'inspector' or 'collector'
       employeeForm: {
         firstName: "",
         lastName: "",
@@ -37,6 +39,25 @@ export default {
       },
     };
   },
+  computed: {
+    canSave() {
+      if (!this.formValid) return false;
+      if (this.isEditMode) return true;
+      if (this.accountType === 'mobile') {
+        return this.mobileRole !== null;
+      }
+      return true;
+    },
+    getSaveButtonText() {
+      if (this.isEditMode) return "Update Employee";
+      if (this.accountType === 'mobile') {
+        if (this.mobileRole === 'inspector') return "Create Inspector";
+        if (this.mobileRole === 'collector') return "Create Collector";
+        return "Create Mobile Staff";
+      }
+      return "Create Employee";
+    }
+  },
   watch: {
     employee: {
       handler(newEmployee) {
@@ -47,26 +68,57 @@ export default {
             email: newEmployee.email || "",
             phoneNumber: newEmployee.phone_number || "",
           };
+          // In edit mode, always show as web employee
+          this.accountType = 'web';
+          this.mobileRole = null;
         } else if (!this.isEditMode) {
-          this.employeeForm = {
-            firstName: "",
-            lastName: "",
-            email: "",
-            phoneNumber: "",
-          };
+          this.resetForm();
         }
       },
       immediate: true,
     },
+    modelValue(newVal) {
+      if (!newVal) {
+        // Reset when dialog closes
+        this.resetForm();
+      }
+    }
   },
   methods: {
+    resetForm() {
+      this.employeeForm = {
+        firstName: "",
+        lastName: "",
+        email: "",
+        phoneNumber: "",
+      };
+      this.accountType = 'web';
+      this.mobileRole = null;
+    },
+
+    selectAccountType(type) {
+      this.accountType = type;
+      if (type === 'web') {
+        this.mobileRole = null;
+      }
+    },
+
+    selectMobileRole(role) {
+      this.mobileRole = role;
+    },
+
     isPermissionSelected(permission) {
       return this.selectedPermissions && this.selectedPermissions.includes(permission);
     },
 
     handleSave() {
-      if (this.formValid) {
-        this.$emit("save", this.employeeForm);
+      if (this.canSave) {
+        const formData = {
+          ...this.employeeForm,
+          accountType: this.accountType,
+          mobileRole: this.mobileRole,
+        };
+        this.$emit("save", formData);
       }
     },
 
