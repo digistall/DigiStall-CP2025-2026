@@ -34,6 +34,12 @@ export default {
     // Check if user is stall_business_owner
     isStallBusinessOwner() {
       return this.authStore.isStallBusinessOwner
+    },
+    // Check if user can customize documents (business_owner, business_manager, or business_employee)
+    canCustomizeDocuments() {
+      return this.authStore.isStallBusinessOwner || 
+             this.authStore.isBusinessManager || 
+             this.authStore.isBusinessEmployee
     }
   },
   methods: {
