@@ -431,6 +431,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  
+  // Login Mode Toggle Styles
+  loginModeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f4f8',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 20,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  modeButtonActive: {
+    backgroundColor: '#4472C4',
+  },
+  modeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4472C4',
+  },
+  modeButtonTextActive: {
+    color: '#fff',
+  },
 });
 
 export default styles;

@@ -7,6 +7,7 @@ import LoadingScreen from "./screens/LoadingScreen/LoadingScreen";
 import StallHome from "./screens/StallHolder/StallScreen/StallHome";
 import VendorHome from "./screens/Vendor/VendorHome";
 import InspectorHome from "./screens/Inspector/InspectorHome";
+import CollectorHome from "./screens/Collector/CollectorHome";
 
 const Stack = createNativeStackNavigator();
 
@@ -64,6 +65,7 @@ export default function App() {
           <Stack.Screen name="StallHome" component={StallHome} />
           <Stack.Screen name="VendorHome" component={VendorHome} />
           <Stack.Screen name="InspectorHome" component={InspectorHome} />
+          <Stack.Screen name="CollectorHome" component={CollectorHome} />
         </Stack.Navigator>
       </NavigationContainer>
     </ThemeProvider>

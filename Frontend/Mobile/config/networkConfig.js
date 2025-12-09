@@ -47,6 +47,7 @@ export const API_CONFIG = {
   MOBILE_ENDPOINTS: {
     // Authentication endpoints
     LOGIN: '/mobile/api/auth/login',
+    STAFF_LOGIN: '/mobile/api/auth/staff-login',
     REGISTER: '/mobile/api/auth/register',
     VERIFY_TOKEN: '/mobile/api/auth/verify-token',
     LOGOUT: '/mobile/api/auth/logout',

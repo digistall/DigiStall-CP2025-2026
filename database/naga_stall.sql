@@ -6478,37 +6478,29 @@ DELIMITER ;
 --
 
 CREATE TABLE `inspector` (
-  `inspector_id` int(11) NOT NULL,
-  `first_name` varchar(50) NOT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `middle_name` varchar(100) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `password` varchar(100) NOT NULL,
-  `date_created` datetime DEFAULT current_timestamp(),
-  `status` enum('active','inactive') DEFAULT 'active',
-  `date_hired` date DEFAULT curdate(),
+  `inspector_id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL UNIQUE,
+  `password_hash` varchar(255) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `middle_name` varchar(100) DEFAULT NULL,
+  `email` varchar(255) NOT NULL UNIQUE,
   `contact_no` varchar(20) DEFAULT NULL,
+  `date_created` datetime DEFAULT current_timestamp(),
+  `date_hired` date DEFAULT curdate(),
+  `status` enum('active','inactive') DEFAULT 'active',
   `termination_date` date DEFAULT NULL,
-  `termination_reason` varchar(255) DEFAULT NULL
+  `termination_reason` varchar(255) DEFAULT NULL,
+  `last_login` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`inspector_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inspector`
 --
 
-INSERT INTO `inspector` (`inspector_id`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`) VALUES
-(1, 'Ye', 'Zhu', '', 'yezhu@city.gov', 'f16054f85276a1e985bd8198dd2eaa02f27b4c9e9d179108f0ef56a60b5d558b', '2025-10-08 00:45:24', 'active', '2025-10-02', '09171231234', NULL, NULL),
-(2, 'Rafael', 'Domingo', '', 'rafael.domingo@city.gov', 'c0916336f5cfea960657799367f049ea91502360fe58857ae2af117eec37853f', '2025-10-08 00:53:54', 'inactive', '2025-10-02', '09171231234', '2025-10-08', 'Negligence of duty');
-
---
--- Triggers `inspector`
---
-DELIMITER $$
-CREATE TRIGGER `trg_inspector_reset_auto` AFTER DELETE ON `inspector` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('inspector', 'inspector_id');
-END
-$$
-DELIMITER ;
+-- Inspector data will be created via the Add Employee popup
+-- with proper username and bcrypt password_hash credentials for mobile app login
 
 -- --------------------------------------------------------
 
@@ -6517,34 +6509,23 @@ DELIMITER ;
 --
 
 CREATE TABLE `inspector_action_log` (
-  `action_id` int(11) NOT NULL,
+  `action_id` int(11) NOT NULL AUTO_INCREMENT,
   `inspector_id` int(11) NOT NULL,
   `branch_id` int(11) DEFAULT NULL,
   `business_manager_id` int(11) DEFAULT NULL,
   `action_type` enum('New Hire','Termination','Rehire','Transfer') NOT NULL,
   `action_date` datetime DEFAULT current_timestamp(),
-  `remarks` text DEFAULT NULL
+  `remarks` text DEFAULT NULL,
+  PRIMARY KEY (`action_id`),
+  KEY `fk_inspector_action_log` (`inspector_id`),
+  CONSTRAINT `fk_inspector_action_log` FOREIGN KEY (`inspector_id`) REFERENCES `inspector` (`inspector_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inspector_action_log`
 --
 
-INSERT INTO `inspector_action_log` (`action_id`, `inspector_id`, `branch_id`, `business_manager_id`, `action_type`, `action_date`, `remarks`) VALUES
-(1, 1, 1, 1, 'New Hire', '2025-10-08 00:45:24', 'Inspector Ye Zhu was hired and assigned to branch ID 1'),
-(2, 2, 1, 1, 'New Hire', '2025-10-08 00:53:54', 'Inspector Rafael Domingo was hired and assigned to branch ID 1'),
-(3, 2, 1, 1, 'Termination', '2025-10-08 01:29:12', 'Inspector ID 3 terminated. Reason: Negligence of duty'),
-(4, 1, 1, 1, 'Termination', '2025-10-08 09:35:13', 'Inspector ID 2 terminated. Reason: Negligence of duty');
-
---
--- Triggers `inspector_action_log`
---
-DELIMITER $$
-CREATE TRIGGER `trg_inspector_action_log_reset_auto` AFTER DELETE ON `inspector_action_log` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('inspector_action_log', 'action_id');
-END
-$$
-DELIMITER ;
+-- Inspector action log data will be created when inspectors are added/terminated
 
 -- --------------------------------------------------------
 
@@ -6553,33 +6534,26 @@ DELIMITER ;
 --
 
 CREATE TABLE `inspector_assignment` (
-  `assignment_id` int(11) NOT NULL,
+  `assignment_id` int(11) NOT NULL AUTO_INCREMENT,
   `inspector_id` int(11) NOT NULL,
   `branch_id` int(11) NOT NULL,
-  `start_date` date NOT NULL,
+  `start_date` date DEFAULT curdate(),
   `end_date` date DEFAULT NULL,
-  `status` enum('Active','Inactive') DEFAULT 'Active',
-  `remarks` varchar(255) DEFAULT NULL,
-  `date_assigned` timestamp NOT NULL DEFAULT current_timestamp()
+  `status` enum('Active','Inactive','Transferred') DEFAULT 'Active',
+  `remarks` text DEFAULT NULL,
+  `date_assigned` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`assignment_id`),
+  KEY `fk_inspector_assignment` (`inspector_id`),
+  KEY `fk_inspector_branch` (`branch_id`),
+  CONSTRAINT `fk_inspector_assignment` FOREIGN KEY (`inspector_id`) REFERENCES `inspector` (`inspector_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_inspector_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inspector_assignment`
 --
 
-INSERT INTO `inspector_assignment` (`assignment_id`, `inspector_id`, `branch_id`, `start_date`, `end_date`, `status`, `remarks`, `date_assigned`) VALUES
-(1, 1, 1, '2025-10-08', NULL, 'Active', NULL, '2025-10-07 08:45:24'),
-(2, 2, 1, '2025-10-08', '2025-10-08', 'Inactive', 'Terminated: Negligence of duty', '2025-10-07 08:53:54');
-
---
--- Triggers `inspector_assignment`
---
-DELIMITER $$
-CREATE TRIGGER `trg_inspector_assignment_reset_auto` AFTER DELETE ON `inspector_assignment` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('inspector_assignment', 'assignment_id');
-END
-$$
-DELIMITER ;
+-- Inspector assignment data will be created when inspectors are added
 
 -- --------------------------------------------------------
 

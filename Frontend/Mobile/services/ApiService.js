@@ -63,6 +63,44 @@ class ApiService {
     }
   }
 
+  // Mobile staff login function (for Inspector/Collector)
+  static async mobileStaffLogin(username, password) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      console.log('🔄 Attempting staff login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`);
+      console.log('📱 Request data:', { username, password: '***' });
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ username, password }),
+      });
+
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff login failed');
+      }
+
+      console.log('✅ Staff login successful:', data.message);
+      return {
+        success: true,
+        user: data.user,
+        token: data.token,
+        staffType: data.user?.staffType,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Staff Login API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // Mobile registration
   static async mobileRegister(userData) {
     try {
