@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 08, 2025 at 08:06 AM
+-- Generation Time: Dec 09, 2025 at 05:20 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -149,12 +149,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `assignManagerToBusinessOwner` (IN `
         'Manager assigned successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CanCustomizeDocuments` (IN `p_owner_id` INT, OUT `can_customize` BOOLEAN)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CanCustomizeDocuments` (IN `p_business_manager_id` INT, OUT `can_customize` BOOLEAN)   BEGIN
+    -- Modified: business_manager is now responsible for document customization instead of owner
     SELECT EXISTS(
         SELECT 1 
-        FROM stall_business_owner 
-        WHERE business_owner_id = p_owner_id 
-          AND status = 'active'
+        FROM business_manager 
+        WHERE business_manager_id = p_business_manager_id 
+          AND status = 'Active'
     ) INTO can_customize;
 END$$
 
@@ -2070,22 +2071,25 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOnsitePayments` (IN `p_branch_id
         LIMIT p_limit OFFSET p_offset;
     END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetOwnerDocumentRequirements` (IN `p_owner_id` INT)   BEGIN
+-- Modified: Now uses business_manager_id and branch_document_requirements table
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetOwnerDocumentRequirements` (IN `p_business_manager_id` INT)   BEGIN
     SELECT 
-        requirement_id,
-        owner_id,
-        document_type,
-        document_name,
-        description,
-        is_required,
-        file_size_limit,
-        allowed_file_types,
-        display_order,
-        is_active
-    FROM owner_document_requirements
-    WHERE owner_id = p_owner_id
-      AND is_active = TRUE
-    ORDER BY display_order ASC, document_name ASC;
+        bdr.requirement_id,
+        bdr.branch_id,
+        dt.document_type_id,
+        dt.document_type_name as document_type,
+        dt.document_type_name as document_name,
+        dt.description,
+        bdr.is_required,
+        bdr.instructions,
+        bdr.created_by_business_manager,
+        bdr.created_at
+    FROM branch_document_requirements bdr
+    INNER JOIN document_type dt ON bdr.document_type_id = dt.document_type_id
+    INNER JOIN branch b ON bdr.branch_id = b.branch_id
+    INNER JOIN business_manager bm ON b.business_manager_id = bm.business_manager_id
+    WHERE bm.business_manager_id = p_business_manager_id
+    ORDER BY dt.document_type_name ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getPaymentStats` (IN `p_branch_id` INT, IN `p_month` VARCHAR(7))   BEGIN
@@ -2198,28 +2202,31 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderById` (IN `p_stallhol
     WHERE sh.`stallholder_id` = p_stallholder_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetStallholderDocuments` (IN `p_stallholder_id` INT, IN `p_owner_id` INT)   BEGIN
+-- Modified: Now uses business_manager_id and branch_document_requirements for document management
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetStallholderDocuments` (IN `p_stallholder_id` INT, IN `p_branch_id` INT)   BEGIN
     SELECT 
-        sds.submission_id,
-        sds.requirement_id,
-        odr.document_type,
-        odr.document_name,
-        odr.is_required,
-        sds.file_url,
-        sds.file_name,
-        sds.file_type,
-        sds.file_size,
-        sds.status,
-        sds.rejection_reason,
-        sds.uploaded_at,
-        sds.reviewed_at,
-        sbo.owner_full_name as reviewed_by_name
-    FROM stallholder_document_submissions sds
-    INNER JOIN owner_document_requirements odr ON sds.requirement_id = odr.requirement_id
-    LEFT JOIN stall_business_owner sbo ON sds.reviewed_by = sbo.business_owner_id
-    WHERE sds.stallholder_id = p_stallholder_id
-      AND sds.owner_id = p_owner_id
-    ORDER BY odr.display_order ASC;
+        ad.document_id as submission_id,
+        bdr.requirement_id,
+        dt.document_type_name as document_type,
+        dt.document_type_name as document_name,
+        bdr.is_required,
+        ad.file_path as file_url,
+        ad.original_filename as file_name,
+        ad.mime_type as file_type,
+        ad.file_size,
+        ad.status,
+        ad.rejection_reason,
+        ad.uploaded_at,
+        ad.reviewed_at,
+        CONCAT(bm.first_name, ' ', bm.last_name) as reviewed_by_name
+    FROM applicant_documents ad
+    INNER JOIN branch_document_requirements bdr ON ad.document_type_id = bdr.document_type_id
+    INNER JOIN document_type dt ON bdr.document_type_id = dt.document_type_id
+    LEFT JOIN business_manager bm ON ad.reviewed_by = bm.business_manager_id
+    INNER JOIN stallholder sh ON ad.applicant_id = sh.applicant_id
+    WHERE sh.stallholder_id = p_stallholder_id
+      AND bdr.branch_id = p_branch_id
+    ORDER BY dt.document_type_name ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholdersByBranch` (IN `p_branch_id` INT)   BEGIN
@@ -4704,7 +4711,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
 
     START TRANSACTION;
 
-    -- Check if stall exists and get its branch
+    
     SELECT f.branch_id INTO v_existing_branch_id
     FROM stall s
     INNER JOIN section sec ON s.section_id = sec.section_id
@@ -4718,9 +4725,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    -- Verify user has permission to update this stall
+    
     IF p_user_type = 'business_manager' THEN
-        -- Verify manager owns this branch
+        
         SELECT COUNT(*) INTO v_floor_section_valid
         FROM business_manager
         WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
@@ -4732,7 +4739,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        -- Verify the stall belongs to the manager's branch
+        
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -4743,7 +4750,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         SET v_business_manager_id = p_user_id;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        -- Verify employee's branch matches stall's branch
+        
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -4751,7 +4758,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        -- Get the manager ID for the branch
+        
         SELECT business_manager_id INTO v_business_manager_id
         FROM business_manager
         WHERE branch_id = p_branch_id
@@ -4764,8 +4771,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    -- Validate section exists and belongs to the user's branch
-    -- Also get the correct floor_id from the section
+    
+    
     SELECT f.floor_id INTO v_correct_floor_id
     FROM section sec
     INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -4779,10 +4786,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
     
-    -- Override the provided floor_id with the section's floor_id
+    
     SET p_floor_id = v_correct_floor_id;
 
-    -- Check for duplicate stall number (excluding current stall)
+    
     SELECT COUNT(*) INTO v_duplicate_stall
     FROM stall
     WHERE stall_no = p_stall_no 
@@ -4796,7 +4803,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    -- Update the stall
+    
     UPDATE stall SET
         stall_no = p_stall_no,
         stall_location = p_stall_location,
@@ -4807,7 +4814,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         price_type = p_price_type,
         status = p_status,
         description = p_description,
-        stall_image = p_stall_image,
         is_available = p_is_available,
         raffle_auction_deadline = p_raffle_auction_deadline,
         updated_at = NOW()
@@ -5268,6 +5274,318 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadApplicantDocument` (IN `p_app
     COMMIT;
 END$$
 
+-- ============================================================
+-- STALLHOLDER DOCUMENT MANAGEMENT PROCEDURES
+-- For business_manager and business_employee to manage 
+-- stallholder document requirements per branch
+-- ============================================================
+
+-- 1. ADD DOCUMENT REQUIREMENT TO BRANCH
+CREATE DEFINER=`root`@`localhost` PROCEDURE `addBranchDocumentRequirement` (
+    IN `p_branch_id` INT, 
+    IN `p_document_type_id` INT, 
+    IN `p_is_required` TINYINT,
+    IN `p_instructions` TEXT,
+    IN `p_created_by_manager` INT
+)   
+BEGIN
+    DECLARE v_existing INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO v_existing
+    FROM branch_document_requirements
+    WHERE branch_id = p_branch_id AND document_type_id = p_document_type_id;
+    
+    IF v_existing > 0 THEN
+        SELECT 0 as success, 'Document requirement already exists for this branch' as message;
+    ELSE
+        INSERT INTO branch_document_requirements (
+            branch_id, document_type_id, is_required, instructions,
+            created_by_business_manager, created_at
+        ) VALUES (
+            p_branch_id, p_document_type_id, COALESCE(p_is_required, 1),
+            p_instructions, p_created_by_manager, CURRENT_TIMESTAMP
+        );
+        
+        SELECT 1 as success, LAST_INSERT_ID() as requirement_id,
+               'Document requirement added successfully' as message;
+    END IF;
+END$$
+
+-- 2. UPDATE DOCUMENT REQUIREMENT FOR BRANCH
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBranchDocumentRequirement` (
+    IN `p_requirement_id` INT,
+    IN `p_is_required` TINYINT,
+    IN `p_instructions` TEXT,
+    IN `p_updated_by_manager` INT
+)   
+BEGIN
+    UPDATE branch_document_requirements
+    SET is_required = COALESCE(p_is_required, is_required),
+        instructions = COALESCE(p_instructions, instructions),
+        created_by_business_manager = p_updated_by_manager,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE requirement_id = p_requirement_id;
+    
+    IF ROW_COUNT() > 0 THEN
+        SELECT 1 as success, 'Document requirement updated successfully' as message;
+    ELSE
+        SELECT 0 as success, 'Document requirement not found' as message;
+    END IF;
+END$$
+
+-- 3. DELETE DOCUMENT REQUIREMENT FROM BRANCH
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteBranchDocumentRequirement` (
+    IN `p_requirement_id` INT,
+    IN `p_deleted_by_manager` INT
+)   
+BEGIN
+    DELETE FROM branch_document_requirements WHERE requirement_id = p_requirement_id;
+    
+    IF ROW_COUNT() > 0 THEN
+        SELECT 1 as success, 'Document requirement deleted successfully' as message;
+    ELSE
+        SELECT 0 as success, 'Document requirement not found' as message;
+    END IF;
+END$$
+
+-- 4. GET AVAILABLE DOCUMENT TYPES FOR BRANCH (not yet added)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableDocumentTypesForBranch` (
+    IN `p_branch_id` INT
+)   
+BEGIN
+    SELECT dt.document_type_id, dt.document_name, dt.description, dt.is_system_default
+    FROM document_types dt
+    WHERE dt.document_type_id NOT IN (
+        SELECT document_type_id FROM branch_document_requirements WHERE branch_id = p_branch_id
+    )
+    ORDER BY dt.is_system_default DESC, dt.document_name ASC;
+END$$
+
+-- 5. CREATE CUSTOM DOCUMENT TYPE
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createCustomDocumentType` (
+    IN `p_document_name` VARCHAR(100),
+    IN `p_description` TEXT,
+    IN `p_created_by_manager` INT
+)   
+BEGIN
+    DECLARE v_existing INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO v_existing FROM document_types
+    WHERE LOWER(document_name) = LOWER(p_document_name);
+    
+    IF v_existing > 0 THEN
+        SELECT 0 as success, 'Document type with this name already exists' as message;
+    ELSE
+        INSERT INTO document_types (document_name, description, is_system_default, created_at)
+        VALUES (p_document_name, p_description, 0, CURRENT_TIMESTAMP);
+        
+        SELECT 1 as success, LAST_INSERT_ID() as document_type_id,
+               'Custom document type created successfully' as message;
+    END IF;
+END$$
+
+-- 6. GET STALLHOLDER DOCUMENT SUBMISSIONS
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderDocumentSubmissions` (
+    IN `p_stallholder_id` INT,
+    IN `p_branch_id` INT
+)   
+BEGIN
+    SELECT 
+        ad.document_id, ad.applicant_id, sh.stallholder_id, sh.stallholder_name,
+        bdr.requirement_id, bdr.document_type_id, dt.document_name,
+        bdr.is_required, bdr.instructions, ad.file_path, ad.original_filename,
+        ad.file_size, ad.mime_type, ad.verification_status as status,
+        ad.rejection_reason, ad.uploaded_at, ad.verified_at as reviewed_at,
+        CONCAT(bm.first_name, ' ', bm.last_name) as reviewed_by_name
+    FROM branch_document_requirements bdr
+    INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
+    INNER JOIN stallholder sh ON sh.branch_id = bdr.branch_id
+    LEFT JOIN applicant_documents ad ON sh.applicant_id = ad.applicant_id 
+        AND bdr.document_type_id = ad.document_type_id
+    LEFT JOIN business_manager bm ON ad.verified_by = bm.business_manager_id
+    WHERE sh.stallholder_id = p_stallholder_id AND bdr.branch_id = p_branch_id
+    ORDER BY bdr.is_required DESC, dt.document_name ASC;
+END$$
+
+-- 7. GET ALL STALLHOLDERS WITH DOCUMENT STATUS
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholdersDocumentStatus` (
+    IN `p_branch_id` INT
+)   
+BEGIN
+    SELECT 
+        sh.stallholder_id, sh.stallholder_name, sh.business_name,
+        sh.contact_number, st.stall_no,
+        (SELECT COUNT(*) FROM branch_document_requirements 
+         WHERE branch_id = p_branch_id AND is_required = 1) as total_required_docs,
+        (SELECT COUNT(*) FROM applicant_documents ad 
+         WHERE ad.applicant_id = sh.applicant_id 
+           AND ad.document_type_id IN (
+               SELECT document_type_id FROM branch_document_requirements 
+               WHERE branch_id = p_branch_id AND is_required = 1
+           ) AND ad.verification_status = 'verified') as verified_docs,
+        CASE 
+            WHEN (SELECT COUNT(*) FROM applicant_documents ad 
+                  WHERE ad.applicant_id = sh.applicant_id 
+                    AND ad.document_type_id IN (
+                        SELECT document_type_id FROM branch_document_requirements 
+                        WHERE branch_id = p_branch_id AND is_required = 1
+                    ) AND ad.verification_status = 'verified') = 
+                 (SELECT COUNT(*) FROM branch_document_requirements 
+                  WHERE branch_id = p_branch_id AND is_required = 1)
+            THEN 'Complete' ELSE 'Incomplete'
+        END as document_status
+    FROM stallholder sh
+    LEFT JOIN stall st ON sh.stall_id = st.stall_id
+    WHERE sh.branch_id = p_branch_id
+    ORDER BY sh.stallholder_name ASC;
+END$$
+
+-- 8. VERIFY STALLHOLDER DOCUMENT
+CREATE DEFINER=`root`@`localhost` PROCEDURE `verifyStallholderDocument` (
+    IN `p_document_id` INT,
+    IN `p_status` VARCHAR(20),
+    IN `p_rejection_reason` TEXT,
+    IN `p_verified_by` INT
+)   
+BEGIN
+    UPDATE applicant_documents
+    SET verification_status = p_status,
+        rejection_reason = CASE WHEN p_status = 'rejected' THEN p_rejection_reason ELSE NULL END,
+        verified_by = p_verified_by,
+        verified_at = CASE WHEN p_status IN ('verified', 'rejected') THEN CURRENT_TIMESTAMP ELSE verified_at END
+    WHERE document_id = p_document_id;
+    
+    IF ROW_COUNT() > 0 THEN
+        SELECT 1 as success, CONCAT('Document ', p_status, ' successfully') as message;
+    ELSE
+        SELECT 0 as success, 'Document not found' as message;
+    END IF;
+END$$
+
+-- 9. ADD DEFAULT DOCUMENTS TO BRANCH
+CREATE DEFINER=`root`@`localhost` PROCEDURE `addDefaultDocumentsToBranch` (
+    IN `p_branch_id` INT,
+    IN `p_created_by_manager` INT
+)   
+BEGIN
+    INSERT INTO branch_document_requirements (
+        branch_id, document_type_id, is_required, instructions,
+        created_by_business_manager, created_at
+    )
+    SELECT p_branch_id, dt.document_type_id, 1, dt.description,
+           p_created_by_manager, CURRENT_TIMESTAMP
+    FROM document_types dt
+    WHERE dt.is_system_default = 1
+      AND dt.document_type_id NOT IN (
+          SELECT document_type_id FROM branch_document_requirements WHERE branch_id = p_branch_id
+      );
+    
+    SELECT 1 as success, ROW_COUNT() as documents_added,
+           'Default documents added to branch successfully' as message;
+END$$
+
+-- 10. COPY DOCUMENT REQUIREMENTS FROM ANOTHER BRANCH
+CREATE DEFINER=`root`@`localhost` PROCEDURE `copyBranchDocumentRequirements` (
+    IN `p_source_branch_id` INT,
+    IN `p_target_branch_id` INT,
+    IN `p_created_by_manager` INT
+)   
+BEGIN
+    INSERT INTO branch_document_requirements (
+        branch_id, document_type_id, is_required, instructions,
+        created_by_business_manager, created_at
+    )
+    SELECT p_target_branch_id, bdr.document_type_id, bdr.is_required, bdr.instructions,
+           p_created_by_manager, CURRENT_TIMESTAMP
+    FROM branch_document_requirements bdr
+    WHERE bdr.branch_id = p_source_branch_id
+      AND bdr.document_type_id NOT IN (
+          SELECT document_type_id FROM branch_document_requirements WHERE branch_id = p_target_branch_id
+      );
+    
+    SELECT 1 as success, ROW_COUNT() as requirements_copied,
+           'Document requirements copied successfully' as message;
+END$$
+
+-- 11. GET DOCUMENT REQUIREMENTS SUMMARY BY BRANCH
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getDocumentRequirementsSummary` ()   
+BEGIN
+    SELECT 
+        b.branch_id, b.branch_name, b.area,
+        COUNT(bdr.requirement_id) as total_requirements,
+        SUM(CASE WHEN bdr.is_required = 1 THEN 1 ELSE 0 END) as required_documents,
+        SUM(CASE WHEN bdr.is_required = 0 THEN 1 ELSE 0 END) as optional_documents,
+        CONCAT(bm.first_name, ' ', bm.last_name) as branch_manager
+    FROM branch b
+    LEFT JOIN branch_document_requirements bdr ON b.branch_id = bdr.branch_id
+    LEFT JOIN business_manager bm ON b.business_manager_id = bm.business_manager_id
+    GROUP BY b.branch_id, b.branch_name, b.area, bm.first_name, bm.last_name
+    ORDER BY b.branch_name ASC;
+END$$
+
+-- 12. CHECK IF STALLHOLDER HAS COMPLETE DOCUMENTS
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStallholderDocumentCompletion` (
+    IN `p_stallholder_id` INT
+)   
+BEGIN
+    DECLARE v_branch_id INT;
+    DECLARE v_required_count INT DEFAULT 0;
+    DECLARE v_submitted_count INT DEFAULT 0;
+    DECLARE v_verified_count INT DEFAULT 0;
+    
+    SELECT branch_id INTO v_branch_id FROM stallholder WHERE stallholder_id = p_stallholder_id;
+    
+    SELECT COUNT(*) INTO v_required_count
+    FROM branch_document_requirements WHERE branch_id = v_branch_id AND is_required = 1;
+    
+    SELECT COUNT(*) INTO v_submitted_count
+    FROM applicant_documents ad
+    INNER JOIN stallholder sh ON ad.applicant_id = sh.applicant_id
+    WHERE sh.stallholder_id = p_stallholder_id
+      AND ad.document_type_id IN (
+          SELECT document_type_id FROM branch_document_requirements 
+          WHERE branch_id = v_branch_id AND is_required = 1
+      );
+    
+    SELECT COUNT(*) INTO v_verified_count
+    FROM applicant_documents ad
+    INNER JOIN stallholder sh ON ad.applicant_id = sh.applicant_id
+    WHERE sh.stallholder_id = p_stallholder_id
+      AND ad.document_type_id IN (
+          SELECT document_type_id FROM branch_document_requirements 
+          WHERE branch_id = v_branch_id AND is_required = 1
+      )
+      AND ad.verification_status = 'verified';
+    
+    SELECT 
+        p_stallholder_id as stallholder_id, v_branch_id as branch_id,
+        v_required_count as required_documents, v_submitted_count as submitted_documents,
+        v_verified_count as verified_documents,
+        CASE 
+            WHEN v_verified_count = v_required_count THEN 'Complete'
+            WHEN v_submitted_count = v_required_count THEN 'Pending Verification'
+            ELSE 'Incomplete'
+        END as status,
+        CASE WHEN v_verified_count = v_required_count THEN 1 ELSE 0 END as is_complete;
+END$$
+
+-- 13. GET DOCUMENT REQUIREMENTS BY BUSINESS MANAGER
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getDocumentRequirementsByManager` (
+    IN `p_business_manager_id` INT
+)   
+BEGIN
+    SELECT 
+        bdr.requirement_id, bdr.branch_id, b.branch_name,
+        bdr.document_type_id, dt.document_name, dt.description as document_description,
+        bdr.is_required, bdr.instructions, bdr.created_at, bdr.updated_at
+    FROM branch_document_requirements bdr
+    INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
+    INNER JOIN branch b ON bdr.branch_id = b.branch_id
+    WHERE b.business_manager_id = p_business_manager_id
+       OR bdr.created_by_business_manager = p_business_manager_id
+    ORDER BY b.branch_name ASC, bdr.is_required DESC, dt.document_name ASC;
+END$$
+
 DELIMITER ;
 
 -- --------------------------------------------------------
@@ -5350,6 +5668,13 @@ CREATE TABLE `applicant` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `applicant`
+--
+
+INSERT INTO `applicant` (`applicant_id`, `applicant_full_name`, `applicant_contact_number`, `applicant_address`, `applicant_birthdate`, `applicant_civil_status`, `applicant_educational_attainment`, `created_at`, `updated_at`, `applicant_username`, `applicant_email`, `applicant_password_hash`, `email_verified`, `last_login`, `login_attempts`, `account_locked_until`) VALUES
+(1, 'Jeno Aldrei A. Laurente', '09473430196', 'Zone 5, House Number 141', '2005-01-24', 'Married', 'College Graduate', '2025-12-08 09:23:07', '2025-12-08 09:23:07', NULL, NULL, NULL, 0, NULL, 0, NULL);
+
+--
 -- Triggers `applicant`
 --
 DELIMITER $$
@@ -5411,6 +5736,13 @@ CREATE TABLE `application` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `application`
+--
+
+INSERT INTO `application` (`application_id`, `stall_id`, `applicant_id`, `application_date`, `application_status`, `created_at`, `updated_at`) VALUES
+(0, 13, 1, '2025-12-08', 'Approved', '2025-12-08 09:23:07', '2025-12-08 09:37:44');
 
 --
 -- Triggers `application`
@@ -5671,7 +6003,7 @@ CREATE TABLE `business_employee` (
 
 INSERT INTO `business_employee` (`business_employee_id`, `employee_username`, `employee_password_hash`, `first_name`, `last_name`, `email`, `phone_number`, `branch_id`, `created_by_manager`, `permissions`, `status`, `last_login`, `password_reset_required`, `created_at`, `updated_at`) VALUES
 (1, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 3, 3, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11'),
-(2, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'test', 'Employee', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', NULL, 1, '2025-12-03 04:03:26', '2025-12-03 04:03:26');
+(2, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'Jeno Aldrei', 'Laurente', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', NULL, 1, '2025-12-03 04:03:26', '2025-12-08 21:35:05');
 
 --
 -- Triggers `business_employee`
@@ -5700,6 +6032,13 @@ CREATE TABLE `business_information` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `business_information`
+--
+
+INSERT INTO `business_information` (`business_id`, `applicant_id`, `nature_of_business`, `capitalization`, `source_of_capital`, `previous_business_experience`, `relative_stall_owner`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Flowers and Plants', 52000.00, 'Personal Savings', 'None', '', '2025-12-08 09:23:07', '2025-12-08 09:23:07');
 
 --
 -- Triggers `business_information`
@@ -5855,6 +6194,13 @@ CREATE TABLE `complaint` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `complaint`
+--
+
+INSERT INTO `complaint` (`complaint_id`, `complaint_type`, `sender_id`, `sender_name`, `sender_contact`, `sender_email`, `stallholder_id`, `stall_id`, `branch_id`, `subject`, `description`, `evidence`, `status`, `priority`, `resolution_notes`, `date_submitted`, `date_resolved`, `created_at`, `updated_at`) VALUES
+(1, 'Sanitary Issue', NULL, 'Jonathan Reyna', '09171234567', 'jonathan.reyna@email.com', 1, 13, 1, 'Unclean stall area', 'The stall has not been properly cleaned and there are food scraps on the floor.', NULL, 'pending', 'high', NULL, '2024-01-15 08:30:00', NULL, '2025-12-03 22:21:51', '2025-12-03 22:21:51');
+
+--
 -- Triggers `complaint`
 --
 DELIMITER $$
@@ -5879,6 +6225,13 @@ CREATE TABLE `credential` (
   `last_login` timestamp NULL DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `credential`
+--
+
+INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
+(1, 1, '25-40329', '$2b$10$VqHIVe66uWoX42twl9Faj.nq86nq3P8TXAGMYBWAs/TgFhBjQMm26', '2025-12-08 09:37:44', '2025-12-09 01:40:37', 1);
 
 --
 -- Triggers `credential`
@@ -6105,7 +6458,8 @@ CREATE TABLE `floor` (
 
 INSERT INTO `floor` (`floor_id`, `branch_id`, `floor_name`, `floor_number`, `status`, `created_at`, `updated_at`) VALUES
 (1, 1, '1', 0, 'Active', '2025-12-06 14:00:43', '2025-12-06 14:00:53'),
-(4, 1, '2', 0, 'Active', '2025-12-07 07:09:30', '2025-12-07 07:09:30');
+(4, 1, '2', 0, 'Active', '2025-12-07 07:09:30', '2025-12-07 07:09:30'),
+(5, 1, '3', 0, 'Active', '2025-12-08 15:35:59', '2025-12-08 15:35:59');
 
 --
 -- Triggers `floor`
@@ -6139,6 +6493,14 @@ CREATE TABLE `inspector` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `inspector`
+--
+
+INSERT INTO `inspector` (`inspector_id`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`) VALUES
+(1, 'Ye', 'Zhu', '', 'yezhu@city.gov', 'f16054f85276a1e985bd8198dd2eaa02f27b4c9e9d179108f0ef56a60b5d558b', '2025-10-08 00:45:24', 'active', '2025-10-02', '09171231234', NULL, NULL),
+(2, 'Rafael', 'Domingo', '', 'rafael.domingo@city.gov', 'c0916336f5cfea960657799367f049ea91502360fe58857ae2af117eec37853f', '2025-10-08 00:53:54', 'inactive', '2025-10-02', '09171231234', '2025-10-08', 'Negligence of duty');
+
+--
 -- Triggers `inspector`
 --
 DELIMITER $$
@@ -6163,6 +6525,16 @@ CREATE TABLE `inspector_action_log` (
   `action_date` datetime DEFAULT current_timestamp(),
   `remarks` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `inspector_action_log`
+--
+
+INSERT INTO `inspector_action_log` (`action_id`, `inspector_id`, `branch_id`, `business_manager_id`, `action_type`, `action_date`, `remarks`) VALUES
+(1, 1, 1, 1, 'New Hire', '2025-10-08 00:45:24', 'Inspector Ye Zhu was hired and assigned to branch ID 1'),
+(2, 2, 1, 1, 'New Hire', '2025-10-08 00:53:54', 'Inspector Rafael Domingo was hired and assigned to branch ID 1'),
+(3, 2, 1, 1, 'Termination', '2025-10-08 01:29:12', 'Inspector ID 3 terminated. Reason: Negligence of duty'),
+(4, 1, 1, 1, 'Termination', '2025-10-08 09:35:13', 'Inspector ID 2 terminated. Reason: Negligence of duty');
 
 --
 -- Triggers `inspector_action_log`
@@ -6190,6 +6562,14 @@ CREATE TABLE `inspector_assignment` (
   `remarks` varchar(255) DEFAULT NULL,
   `date_assigned` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `inspector_assignment`
+--
+
+INSERT INTO `inspector_assignment` (`assignment_id`, `inspector_id`, `branch_id`, `start_date`, `end_date`, `status`, `remarks`, `date_assigned`) VALUES
+(1, 1, 1, '2025-10-08', NULL, 'Active', NULL, '2025-10-07 08:45:24'),
+(2, 2, 1, '2025-10-08', '2025-10-08', 'Inactive', 'Terminated: Negligence of duty', '2025-10-07 08:53:54');
 
 --
 -- Triggers `inspector_assignment`
@@ -6256,6 +6636,13 @@ CREATE TABLE `other_information` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `other_information`
+--
+
+INSERT INTO `other_information` (`other_info_id`, `applicant_id`, `signature_of_applicant`, `house_sketch_location`, `valid_id`, `email_address`, `created_at`, `updated_at`) VALUES
+(1, 1, '7c0f1f2e1303456088b15eb4c90a45a5.webp', '10-Best-Fast-Food-Restaurants-in-Gujranwala-1024x683.jpg', '16.ehzc6wm.jpg', 'laurentejeno73@gmail.com', '2025-12-08 09:23:07', '2025-12-08 09:23:07');
+
+--
 -- Triggers `other_information`
 --
 DELIMITER $$
@@ -6289,6 +6676,13 @@ CREATE TABLE `payments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amount`, `payment_date`, `payment_time`, `payment_for_month`, `payment_type`, `reference_number`, `collected_by`, `payment_status`, `notes`, `branch_id`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 1, 'onsite', 3500.00, '2025-12-08', '20:25:00', '2025-12', 'rental', 'RCP-20251208-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-12-08 12:25:57', '2025-12-08 12:25:57');
 
 --
 -- Triggers `payments`
@@ -6474,7 +6868,10 @@ CREATE TABLE `section` (
 
 INSERT INTO `section` (`section_id`, `floor_id`, `section_name`, `status`, `created_at`, `updated_at`) VALUES
 (3, 1, 'Flower Shop', 'Active', '2025-12-07 07:09:19', '2025-12-07 07:09:19'),
-(4, 4, 'Meat Shop', 'Active', '2025-12-07 07:09:41', '2025-12-07 07:09:41');
+(4, 4, 'Meat Shop', 'Active', '2025-12-07 07:09:41', '2025-12-07 07:09:41'),
+(5, 4, 'Candy', 'Active', '2025-12-08 15:35:11', '2025-12-08 15:35:11'),
+(6, 5, 'Dry Fish', 'Active', '2025-12-08 16:55:19', '2025-12-08 16:55:19'),
+(7, 5, 'Fruit', 'Active', '2025-12-08 17:02:00', '2025-12-08 17:02:00');
 
 --
 -- Triggers `section`
@@ -6503,6 +6900,13 @@ CREATE TABLE `spouse` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `spouse`
+--
+
+INSERT INTO `spouse` (`spouse_id`, `applicant_id`, `spouse_full_name`, `spouse_birthdate`, `spouse_educational_attainment`, `spouse_contact_number`, `spouse_occupation`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Elaine Zennia A. Laurente', '2005-06-03', 'College Graduate', '09126471858', 'Architecture', '2025-12-08 09:23:07', '2025-12-08 09:23:07');
 
 --
 -- Triggers `spouse`
@@ -6548,7 +6952,10 @@ CREATE TABLE `stall` (
 --
 
 INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `rental_price`, `price_type`, `status`, `stamp`, `description`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
-(12, 4, 4, 'NPM-001', 'Near MEPO Office', '3x4', 2500.00, 'Fixed Price', 'Active', 'APPROVED', 'Best area to sell meat', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 05:28:29', '2025-12-08 05:28:29');
+(12, 4, 4, 'NPM-001', 'Near MEPO Office', '3x4', 2510.00, 'Fixed Price', 'Active', 'APPROVED', 'Best area to sell meat', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 05:28:29', '2025-12-08 08:32:45'),
+(13, 3, 1, 'NPM-002', 'Back of the market', '4x5', 3500.00, 'Fixed Price', 'Occupied', 'APPROVED', 'Best area to sell flowers', 0, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 08:40:06', '2025-12-08 12:20:06'),
+(14, 5, 4, 'NPM-003', 'Near MEPO Office center in the candy section', '3x5', 3500.00, 'Raffle', 'Active', 'APPROVED', 'Best area for delivery', 1, '2025-12-12 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
+(16, 6, 5, 'NPM-004', 'Near parking area', '3x4', 2820.00, 'Auction', 'Active', 'APPROVED', 'The customer can see your stall after parking', 1, '2025-12-12 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-08 17:23:38', '2025-12-08 17:23:38');
 
 -- --------------------------------------------------------
 
@@ -6581,6 +6988,13 @@ CREATE TABLE `stallholder` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `last_violation_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `stallholder`
+--
+
+INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`, `contact_number`, `email`, `address`, `business_name`, `business_type`, `branch_id`, `stall_id`, `contract_start_date`, `contract_end_date`, `contract_status`, `lease_amount`, `monthly_rent`, `payment_status`, `last_payment_date`, `notes`, `created_by_business_manager`, `compliance_status`, `date_created`, `updated_at`, `last_violation_date`) VALUES
+(1, 1, 'Jeno Aldrei A. Laurente', '09473430196', 'laurentejeno73@gmail.com', 'Zone 5, House Number 141', 'Flowers and Plants', 'Flowers and Plants', 1, 13, '2025-12-08', '2026-12-08', 'Active', 3500.00, 3500.00, 'paid', '2025-12-08', NULL, NULL, 'Compliant', '2025-12-08 12:20:06', '2025-12-08 12:25:57', NULL);
 
 --
 -- Triggers `stallholder`
@@ -6793,7 +7207,16 @@ INSERT INTO `stall_images` (`id`, `stall_id`, `image_url`, `display_order`, `is_
 (5, 12, '/digistall_uploads/stalls/1/NPM-001/1.png', 1, 1, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
 (6, 12, '/digistall_uploads/stalls/1/NPM-001/2.png', 2, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
 (7, 12, '/digistall_uploads/stalls/1/NPM-001/3.png', 3, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(8, 12, '/digistall_uploads/stalls/1/NPM-001/4.png', 4, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29');
+(8, 12, '/digistall_uploads/stalls/1/NPM-001/4.png', 4, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
+(9, 13, '/digistall_uploads/stalls/1/NPM-002/1.png', 1, 1, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
+(10, 13, '/digistall_uploads/stalls/1/NPM-002/2.png', 2, 0, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
+(11, 13, '/digistall_uploads/stalls/1/NPM-002/3.png', 3, 0, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
+(12, 14, '/digistall_uploads/stalls/1/NPM-003/1.png', 1, 1, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
+(13, 14, '/digistall_uploads/stalls/1/NPM-003/2.png', 2, 0, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
+(14, 14, '/digistall_uploads/stalls/1/NPM-003/3.png', 3, 0, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
+(18, 16, '/digistall_uploads/stalls/1/NPM-004/1.png', 1, 1, '2025-12-08 17:23:38', '2025-12-08 17:23:38'),
+(19, 16, '/digistall_uploads/stalls/1/NPM-004/2.png', 2, 0, '2025-12-08 17:23:38', '2025-12-08 17:23:38'),
+(20, 16, '/digistall_uploads/stalls/1/NPM-004/3.png', 3, 0, '2025-12-08 17:23:38', '2025-12-08 17:23:38');
 
 --
 -- Triggers `stall_images`
@@ -7162,6 +7585,13 @@ CREATE TABLE `violation_report` (
   `offense_no` int(11) DEFAULT NULL,
   `penalty_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `violation_report`
+--
+
+INSERT INTO `violation_report` (`report_id`, `inspector_id`, `stallholder_id`, `violator_name`, `violation_id`, `compliance_type`, `severity`, `stall_id`, `branch_id`, `evidence`, `date_reported`, `remarks`, `status`, `resolved_date`, `resolved_by`, `offense_no`, `penalty_id`) VALUES
+(1, 1, 1, NULL, 1, 'Illegal Vending', 'minor', 13, 1, 0x466f756e642076656e646f722073656c6c696e67206f7574736964652061737369676e6564206172656120617420383a313520414d2e, '2025-10-08 09:30:41', 'First warning issued. | Offense #1 | Fine: ₱300.00 | ', 'complete', '2025-10-15 09:30:41', NULL, 1, 1);
 
 --
 -- Triggers `violation_report`
@@ -7713,7 +8143,7 @@ ALTER TABLE `violation_report`
 -- AUTO_INCREMENT for table `applicant`
 --
 ALTER TABLE `applicant`
-  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `applicant_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `applicant_documents`
@@ -7761,7 +8191,7 @@ ALTER TABLE `business_employee`
 -- AUTO_INCREMENT for table `business_information`
 --
 ALTER TABLE `business_information`
-  MODIFY `business_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `business_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `business_manager`
@@ -7785,13 +8215,13 @@ ALTER TABLE `business_owner_subscriptions`
 -- AUTO_INCREMENT for table `complaint`
 --
 ALTER TABLE `complaint`
-  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `credential`
 --
 ALTER TABLE `credential`
-  MODIFY `registrationid` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `registrationid` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `document_types`
@@ -7833,25 +8263,25 @@ ALTER TABLE `employee_session`
 -- AUTO_INCREMENT for table `floor`
 --
 ALTER TABLE `floor`
-  MODIFY `floor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `floor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `inspector`
 --
 ALTER TABLE `inspector`
-  MODIFY `inspector_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `inspector_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `inspector_action_log`
 --
 ALTER TABLE `inspector_action_log`
-  MODIFY `action_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `action_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `inspector_assignment`
 --
 ALTER TABLE `inspector_assignment`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -7863,13 +8293,13 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `other_information`
 --
 ALTER TABLE `other_information`
-  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `payment_status_log`
@@ -7905,25 +8335,25 @@ ALTER TABLE `raffle_result`
 -- AUTO_INCREMENT for table `section`
 --
 ALTER TABLE `section`
-  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `spouse`
 --
 ALTER TABLE `spouse`
-  MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `stallholder`
 --
 ALTER TABLE `stallholder`
-  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `stallholder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `stallholder_documents`
@@ -7953,7 +8383,7 @@ ALTER TABLE `stall_business_owner`
 -- AUTO_INCREMENT for table `stall_images`
 --
 ALTER TABLE `stall_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `subscription_payments`
@@ -7989,7 +8419,7 @@ ALTER TABLE `violation_penalty`
 -- AUTO_INCREMENT for table `violation_report`
 --
 ALTER TABLE `violation_report`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- Constraints for dumped tables
