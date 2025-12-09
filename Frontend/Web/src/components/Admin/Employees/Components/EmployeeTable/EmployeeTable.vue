@@ -5,7 +5,7 @@
       <div class="table-header">
         <div class="header-row">
           <div class="header-cell employee-col">Employee</div>
-          <div class="header-cell username-col">Username</div>
+          <div class="header-cell role-col">Role</div>
           <div class="header-cell status-col">Status</div>
           <div class="header-cell permissions-col">Permissions</div>
           <div class="header-cell login-col">Last Login</div>
@@ -44,9 +44,14 @@
               </div>
             </div>
 
-            <div class="table-cell username-col">
-              <v-chip size="small" color="primary" variant="outlined">
-                {{ employee.employee_username }}
+            <div class="table-cell role-col">
+              <v-chip
+                :color="getRoleColor(employee)"
+                size="small"
+                variant="tonal"
+              >
+                <v-icon size="14" class="me-1">{{ getRoleIcon(employee) }}</v-icon>
+                {{ employee.display_role || 'Web Employee' }}
               </v-chip>
             </div>
 

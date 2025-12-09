@@ -25,6 +25,7 @@ export default {
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,
+      employeeTypeFilter: null, // 'web', 'mobile', or null for all
       // Toast notification
       toast: {
         show: false,
@@ -49,6 +50,12 @@ export default {
         { title: "All Status", value: null },
         { title: "Active", value: "active" },
         { title: "Inactive", value: "inactive" },
+      ],
+
+      employeeTypeOptions: [
+        { title: "All Types", value: null },
+        { title: "Web Employees", value: "web" },
+        { title: "Mobile Staff", value: "mobile" },
       ],
 
       permissionOptions: [
@@ -142,15 +149,20 @@ export default {
     },
 
     activeEmployees() {
-      return this.employees.filter((emp) => emp.status === "active").length;
+      return this.employees.filter((emp) => emp.status?.toLowerCase() === "active").length;
     },
 
     inactiveEmployees() {
-      return this.employees.filter((emp) => emp.status === "inactive").length;
+      return this.employees.filter((emp) => emp.status?.toLowerCase() === "inactive").length;
     },
 
     filteredEmployees() {
       let filtered = this.employees;
+
+      // Filter by employee type (web/mobile)
+      if (this.employeeTypeFilter) {
+        filtered = filtered.filter((emp) => emp.employee_type === this.employeeTypeFilter);
+      }
 
       if (this.statusFilter) {
         filtered = filtered.filter((emp) => emp.status === this.statusFilter);
@@ -169,11 +181,21 @@ export default {
             emp.first_name?.toLowerCase().includes(query) ||
             emp.last_name?.toLowerCase().includes(query) ||
             emp.email?.toLowerCase().includes(query) ||
-            emp.employee_username?.toLowerCase().includes(query)
+            emp.employee_username?.toLowerCase().includes(query) ||
+            emp.display_role?.toLowerCase().includes(query)
         );
       }
 
       return filtered;
+    },
+
+    // Computed for mobile staff counts
+    mobileStaffCount() {
+      return this.employees.filter((emp) => emp.employee_type === 'mobile').length;
+    },
+
+    webEmployeesCount() {
+      return this.employees.filter((emp) => emp.employee_type === 'web').length;
     },
 
     // Check if user is a business owner (view-only access)
@@ -201,59 +223,158 @@ export default {
         console.log("🔑 Fetching employees with authentication...");
         console.log("🏢 Current user branch ID:", userBranchId);
         
-        // Use cached fetch with proper parameters
-        const url = `${this.apiBaseUrl}/employees`;
-        const data = await dataCacheService.cachedFetch(
-          url,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
+        // Fetch web employees, mobile staff (inspectors & collectors) in parallel
+        const [employeesData, inspectorsData, collectorsData] = await Promise.all([
+          // Web employees
+          dataCacheService.cachedFetch(
+            `${this.apiBaseUrl}/employees`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
             },
-          },
-          5 * 60 * 1000 // 5 minutes cache in milliseconds
-        );
+            5 * 60 * 1000
+          ),
+          // Mobile inspectors
+          dataCacheService.cachedFetch(
+            `${this.apiBaseUrl}/mobile-staff/inspectors`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            },
+            5 * 60 * 1000
+          ).catch(err => {
+            console.warn("⚠️ Could not fetch inspectors:", err.message);
+            return { success: true, data: [] };
+          }),
+          // Mobile collectors
+          dataCacheService.cachedFetch(
+            `${this.apiBaseUrl}/mobile-staff/collectors`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            },
+            5 * 60 * 1000
+          ).catch(err => {
+            console.warn("⚠️ Could not fetch collectors:", err.message);
+            return { success: true, data: [] };
+          })
+        ]);
 
-        console.log("📡 Employees API response:", data);
+        console.log("📡 Employees API response:", employeesData);
+        console.log("📡 Inspectors API response:", inspectorsData);
+        console.log("📡 Collectors API response:", collectorsData);
 
-        if (data.success) {
-          let employees = data.data || data.employees || [];
+        let allEmployees = [];
+
+        // Process web employees
+        if (employeesData.success) {
+          let employees = employeesData.data || employeesData.employees || [];
           
-          // Client-side verification: Filter employees to ensure they belong to current user's branch
-          if (userBranchId) {
-            const originalCount = employees.length;
-            employees = employees.filter(emp => {
-              const empBranchId = emp.branch_id || emp.branchId;
-              return empBranchId && parseInt(empBranchId) === parseInt(userBranchId);
-            });
-            
-            if (originalCount !== employees.length) {
-              console.warn(`⚠️ Filtered out ${originalCount - employees.length} employees from different branches`);
-            }
+          // Add employee_type for web employees
+          employees = employees.map(emp => ({
+            ...emp,
+            employee_type: 'web',
+            display_role: emp.role || 'Web Employee'
+          }));
+          
+          allEmployees = [...allEmployees, ...employees];
+        }
+
+        // Process inspectors (mobile staff)
+        if (inspectorsData.success) {
+          let inspectors = inspectorsData.data || [];
+          
+          // Map inspector data to employee format
+          inspectors = inspectors.map(ins => ({
+            employee_id: `inspector_${ins.inspector_id}`,
+            inspector_id: ins.inspector_id,
+            first_name: ins.first_name,
+            last_name: ins.last_name,
+            email: ins.email,
+            contact_no: ins.contact_no,
+            employee_username: ins.username,
+            status: ins.status,
+            date_created: ins.date_created,
+            date_hired: ins.date_hired,
+            branch_id: ins.branch_id,
+            branch_name: ins.branch_name,
+            employee_type: 'mobile',
+            mobile_role: 'inspector',
+            display_role: 'Inspector (Mobile)',
+            permissions: ['mobile_inspector']
+          }));
+          
+          allEmployees = [...allEmployees, ...inspectors];
+        }
+
+        // Process collectors (mobile staff)
+        if (collectorsData.success) {
+          let collectors = collectorsData.data || [];
+          
+          // Map collector data to employee format
+          collectors = collectors.map(col => ({
+            employee_id: `collector_${col.collector_id}`,
+            collector_id: col.collector_id,
+            first_name: col.first_name,
+            last_name: col.last_name,
+            email: col.email,
+            contact_no: col.contact_no,
+            employee_username: col.username,
+            status: col.status,
+            date_created: col.date_created,
+            date_hired: col.date_hired,
+            branch_id: col.branch_id,
+            branch_name: col.branch_name,
+            employee_type: 'mobile',
+            mobile_role: 'collector',
+            display_role: 'Collector (Mobile)',
+            permissions: ['mobile_collector']
+          }));
+          
+          allEmployees = [...allEmployees, ...collectors];
+        }
+
+        // Client-side verification: Filter employees to ensure they belong to current user's branch
+        if (userBranchId) {
+          const originalCount = allEmployees.length;
+          allEmployees = allEmployees.filter(emp => {
+            const empBranchId = emp.branch_id || emp.branchId;
+            // Include if no branch set (web employees without branch) or if matches
+            return !empBranchId || parseInt(empBranchId) === parseInt(userBranchId);
+          });
+          
+          if (originalCount !== allEmployees.length) {
+            console.warn(`⚠️ Filtered out ${originalCount - allEmployees.length} employees from different branches`);
           }
-          
-          this.employees = employees;
-          console.log(`✅ Loaded ${this.employees.length} employees for branch ${userBranchId}`);
+        }
+        
+        this.employees = allEmployees;
+        console.log(`✅ Loaded ${this.employees.length} total employees (web + mobile) for branch ${userBranchId}`);
 
-          // Provide user feedback based on role
-          if (this.employees.length === 0) {
-            if (currentUser.userType === "business_manager") {
-              console.log(
-                "ℹ️  No employees found - Business manager has not created any employees yet"
-              );
-            } else {
-              console.log("ℹ️  No employees found");
-            }
+        // Provide user feedback based on role
+        if (this.employees.length === 0) {
+          if (currentUser.userType === "business_manager") {
+            console.log(
+              "ℹ️  No employees found - Business manager has not created any employees yet"
+            );
           } else {
-            if (currentUser.userType === "business_manager") {
-              console.log(
-                `ℹ️  Showing ${this.employees.length} employees for branch ${userBranchId}`
-              );
-            }
+            console.log("ℹ️  No employees found");
           }
         } else {
-          throw new Error(data.message);
+          if (currentUser.userType === "business_manager") {
+            console.log(
+              `ℹ️  Showing ${this.employees.length} employees for branch ${userBranchId}`
+            );
+          }
         }
       } catch (error) {
         console.error("Error fetching employees:", error);
@@ -330,14 +451,6 @@ export default {
       this.saving = true;
 
       try {
-        // Check for duplicate email first (only for new employees)
-        if (!this.isEditMode) {
-          const emailExists = await this.checkEmailExists(employeeData.email);
-          if (emailExists) {
-            throw new Error(`An employee with email "${employeeData.email}" already exists. Please use a different email address.`);
-          }
-        }
-
         // Get authentication token first
         const token = sessionStorage.getItem("authToken");
         if (!token) {
@@ -347,7 +460,6 @@ export default {
         // Decode token to get user information
         let decodedToken;
         try {
-          // Simple base64 decode of JWT payload (between first and second dot)
           const base64Url = token.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
           const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
@@ -359,27 +471,35 @@ export default {
           throw new Error("Invalid authentication token. Please login again.");
         }
 
-        console.log("🔍 Debug - Token decoded successfully");
-
-        // Extract user information from token
         const branchManagerId = decodedToken.userId || decodedToken.branchManagerId;
         const branchId = decodedToken.branchId;
 
-        console.log("🔍 Debug - Token data extracted:");
-        console.log("  - Manager ID present:", !!branchManagerId);
-        console.log("  - Branch ID present:", !!branchId);
-
-        // Validation
-        if (!branchManagerId) {
-          throw new Error("Unable to identify the branch manager from token. Please login again.");
+        if (!branchManagerId || !branchId) {
+          throw new Error("Session information missing. Please login again.");
         }
 
-        if (!branchId) {
-          throw new Error("Branch ID not found in token. Please login again.");
+        // Determine account type from form data
+        const accountType = employeeData.accountType || 'web';
+        const mobileRole = employeeData.mobileRole;
+
+        console.log(`🔍 Creating ${accountType} account${mobileRole ? ` (${mobileRole})` : ''}`);
+
+        // Handle mobile account creation (Inspector or Collector)
+        if (accountType === 'mobile' && !this.isEditMode) {
+          await this.createMobileAccount(employeeData, token, branchId, branchManagerId);
+          return;
         }
 
-        console.log("🏪 Creating employee with branch manager ID:", branchManagerId);
-        console.log("🏢 Creating employee for branch ID:", branchId);
+        // Handle web employee creation/update
+        // Check for duplicate email first (only for new employees)
+        if (!this.isEditMode) {
+          const emailExists = await this.checkEmailExists(employeeData.email);
+          if (emailExists) {
+            throw new Error(`An employee with email "${employeeData.email}" already exists.`);
+          }
+        }
+
+        console.log("🏪 Creating web employee for branch ID:", branchId);
 
         const payload = {
           firstName: employeeData.firstName,
@@ -390,7 +510,6 @@ export default {
         };
 
         console.log("📤 Sending payload:", payload);
-        console.log("📤 Permissions being sent:", this.selectedPermissions);
 
         const url = this.isEditMode
           ? `${this.apiBaseUrl}/employees/${this.selectedEmployee.employee_id}`
@@ -410,34 +529,18 @@ export default {
         console.log("📡 Response status:", response.status);
         
         if (!response.ok) {
-          // Try to get error details from response
           const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
           const errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-          
-          // Provide more specific error messages
-          if (response.status === 400 && errorMessage.includes('email')) {
-            throw new Error(`Email validation failed: ${errorMessage}. Please try a different email address.`);
-          } else if (response.status === 400) {
-            throw new Error(`Invalid data: ${errorMessage}. Please check all required fields.`);
-          } else if (response.status === 401) {
-            throw new Error("Authentication expired. Please login again.");
-          } else if (response.status === 403) {
-            throw new Error("You don't have permission to create employees.");
-          } else {
-            throw new Error(errorMessage);
-          }
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
-        console.log("📡 Response received:", { success: data.success, hasData: !!data.data });
 
         if (data.success) {
           if (!this.isEditMode) {
-            // Backend generated credentials
             const backendCredentials = data.data.credentials;
-            console.log("✅ Employee created with credentials generated");
+            console.log("✅ Web employee created with credentials");
             
-            // Send email using EmailJS (same method as applicants)
             try {
               const employeeName = `${employeeData.firstName} ${employeeData.lastName}`;
               const emailResult = await sendEmployeeCredentialsEmail(
@@ -448,35 +551,27 @@ export default {
               );
               
               if (emailResult.success) {
-                console.log("📧 Welcome email sent successfully via EmailJS");
                 this.showToast(
-                  `✅ Employee created successfully! Welcome email with credentials sent to ${employeeData.email}`,
+                  `✅ Web Employee created! Welcome email sent to ${employeeData.email}`,
                   "success"
                 );
               } else {
-                console.warn("⚠️ Email sending failed:", emailResult.message);
                 this.showToast(
-                  `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed: ${emailResult.message})`,
+                  `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed)`,
                   "warning"
                 );
               }
             } catch (emailError) {
-              console.error("❌ Error sending email:", emailError);
               this.showToast(
-                `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send credentials manually to ${employeeData.email}`,
+                `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send manually.`,
                 "warning"
               );
             }
           } else {
-            this.showToast(
-              "✅ Employee updated successfully!",
-              "success"
-            );
+            this.showToast("✅ Employee updated successfully!", "success");
           }
 
           this.closeEmployeeDialog();
-          
-          // Clear cache and refresh data
           dataCacheService.invalidatePattern('employees');
           await this.fetchEmployees();
         } else {
@@ -484,22 +579,94 @@ export default {
         }
       } catch (error) {
         console.error("Error saving employee:", error);
-        
-        // Provide user-friendly error messages
-        let errorMessage = error.message;
-        if (error.message.includes('email address already exists') || error.message.includes('Email validation failed')) {
-          errorMessage = `⚠️ The email "${employeeData.email}" is already registered in the system (possibly in another branch). Please use a different email address.`;
-        } else if (error.message.includes('Authentication')) {
-          errorMessage = "Your session has expired. Please refresh the page and login again.";
-        } else if (error.message.includes('Branch ID not found')) {
-          errorMessage = "Session error: Branch information missing. Please refresh and login again.";
-        } else if (error.message.includes('Missing required fields')) {
-          errorMessage = "Please fill in all required fields (First Name, Last Name, Email).";
-        }
-        
-        this.showToast(`❌ ${errorMessage}`, "error");
+        this.showToast(`❌ ${error.message}`, "error");
       } finally {
         this.saving = false;
+      }
+    },
+
+    // Create mobile account (Inspector or Collector)
+    async createMobileAccount(employeeData, token, branchId, branchManagerId) {
+      const mobileRole = employeeData.mobileRole;
+      const endpoint = mobileRole === 'inspector' 
+        ? `${this.apiBaseUrl}/mobile-staff/inspectors`
+        : `${this.apiBaseUrl}/mobile-staff/collectors`;
+
+      console.log(`📱 Creating ${mobileRole} account...`);
+
+      const payload = {
+        firstName: employeeData.firstName,
+        lastName: employeeData.lastName,
+        email: employeeData.email,
+        phoneNumber: employeeData.phoneNumber,
+        branchId: branchId,
+        branchManagerId: branchManagerId,
+      };
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          throw new Error(errorData.message || `Failed to create ${mobileRole}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          const credentials = data.data.credentials;
+          const roleName = mobileRole === 'inspector' ? 'Inspector' : 'Collector';
+          
+          console.log(`✅ ${roleName} created with credentials:`, credentials.username);
+
+          // Send credentials email
+          try {
+            const employeeName = `${employeeData.firstName} ${employeeData.lastName}`;
+            const emailResult = await sendEmployeeCredentialsEmail(
+              employeeData.email,
+              employeeName,
+              credentials.username,
+              credentials.password,
+              `Mobile ${roleName}`
+            );
+            
+            if (emailResult.success) {
+              this.showToast(
+                `✅ ${roleName} created! Mobile app credentials sent to ${employeeData.email}`,
+                "success"
+              );
+            } else {
+              this.showToast(
+                `⚠️ ${roleName} created! Username: ${credentials.username}, Password: ${credentials.password}. (Email failed)`,
+                "warning"
+              );
+            }
+          } catch (emailError) {
+            this.showToast(
+              `⚠️ ${roleName} created! Username: ${credentials.username}, Password: ${credentials.password}. Send manually.`,
+              "warning"
+            );
+          }
+
+          this.closeEmployeeDialog();
+          dataCacheService.invalidatePattern('employees');
+          dataCacheService.invalidatePattern('mobile-staff');
+          dataCacheService.invalidatePattern('inspectors');
+          dataCacheService.invalidatePattern('collectors');
+          await this.fetchEmployees();
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (error) {
+        console.error(`Error creating ${mobileRole}:`, error);
+        throw error;
       }
     },
 
