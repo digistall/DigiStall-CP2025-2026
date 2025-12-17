@@ -8,6 +8,7 @@ export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   SERVERS: [
     // Current detected IP addresses
+    'http://192.168.100.241:3001', // Current Ethernet IP (December 10, 2025)
     'http://172.18.195.29:3001',   // Current Wi-Fi IP (November 7, 2025)
     'http://192.168.137.1:3001',   // Local Area Connection (successful)
     'http://192.168.1.101:3001',   // Previous Expo detected IP
