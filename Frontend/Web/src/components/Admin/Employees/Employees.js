@@ -3,6 +3,7 @@ import EmployeeTable from "./Components/EmployeeTable/EmployeeTable.vue";
 import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
+import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
@@ -18,6 +19,7 @@ export default {
     AddEmployee,
     ManagePermissions,
     ToastNotification,
+    ActivityLogDialog,
   },
   data() {
     return {
@@ -39,6 +41,7 @@ export default {
       // Dialog states
       employeeDialog: false,
       permissionsDialog: false,
+      activityLogDialog: false,
       isEditMode: false,
 
       // Selected employee and permissions
@@ -207,6 +210,15 @@ export default {
   },
 
   methods: {
+    // Activity Log Dialog Methods
+    openActivityLogDialog() {
+      this.activityLogDialog = true;
+    },
+    
+    closeActivityLogDialog() {
+      this.activityLogDialog = false;
+    },
+    
     // API Methods
     async fetchEmployees() {
       try {
@@ -305,6 +317,7 @@ export default {
             status: ins.status,
             date_created: ins.date_created,
             date_hired: ins.date_hired,
+            last_login: ins.last_login,
             branch_id: ins.branch_id,
             branch_name: ins.branch_name,
             employee_type: 'mobile',
@@ -332,6 +345,7 @@ export default {
             status: col.status,
             date_created: col.date_created,
             date_hired: col.date_hired,
+            last_login: col.last_login,
             branch_id: col.branch_id,
             branch_name: col.branch_name,
             employee_type: 'mobile',

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 09, 2025 at 05:20 AM
+-- Generation Time: Dec 17, 2025 at 04:02 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -149,13 +149,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `assignManagerToBusinessOwner` (IN `
         'Manager assigned successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CanCustomizeDocuments` (IN `p_business_manager_id` INT, OUT `can_customize` BOOLEAN)   BEGIN
-    -- Modified: business_manager is now responsible for document customization instead of owner
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CanCustomizeDocuments` (IN `p_owner_id` INT, OUT `can_customize` BOOLEAN)   BEGIN
     SELECT EXISTS(
         SELECT 1 
-        FROM business_manager 
-        WHERE business_manager_id = p_business_manager_id 
-          AND status = 'Active'
+        FROM stall_business_owner 
+        WHERE business_owner_id = p_owner_id 
+          AND status = 'active'
     ) INTO can_customize;
 END$$
 
@@ -498,6 +497,81 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createBusinessOwnerWithManagerConne
         'Business Owner created successfully with manager connections' as message;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createCollector` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
+    DECLARE new_collector_id INT;
+    DECLARE exit_handler BOOLEAN DEFAULT FALSE;
+    
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET exit_handler = TRUE;
+    
+    -- Insert collector
+    INSERT INTO collector (
+        username,
+        password_hash,
+        first_name,
+        last_name,
+        email,
+        contact_no,
+        date_hired,
+        status
+    ) VALUES (
+        p_username,
+        p_password_hash,
+        p_first_name,
+        p_last_name,
+        p_email,
+        p_contact_no,
+        IFNULL(p_date_hired, CURDATE()),
+        'active'
+    );
+    
+    IF exit_handler THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Failed to create collector';
+    END IF;
+    
+    SET new_collector_id = LAST_INSERT_ID();
+    
+    -- Create branch assignment
+    INSERT INTO collector_assignment (
+        collector_id,
+        branch_id,
+        start_date,
+        status,
+        remarks
+    ) VALUES (
+        new_collector_id,
+        p_branch_id,
+        CURDATE(),
+        'Active',
+        'Newly hired collector'
+    );
+    
+    -- Log the action
+    INSERT INTO collector_action_log (
+        collector_id,
+        branch_id,
+        business_manager_id,
+        action_type,
+        action_date,
+        remarks
+    ) VALUES (
+        new_collector_id,
+        p_branch_id,
+        p_branch_manager_id,
+        'New Hire',
+        NOW(),
+        CONCAT('Collector ', p_first_name, ' ', p_last_name, ' was hired and assigned to branch ID ', p_branch_id)
+    );
+    
+    -- Return the new collector
+    SELECT 
+        new_collector_id as collector_id,
+        p_username as username,
+        p_first_name as first_name,
+        p_last_name as last_name,
+        p_email as email,
+        'Collector created successfully' as message;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `createComplaint` (IN `p_complaint_type` VARCHAR(100), IN `p_sender_name` VARCHAR(255), IN `p_sender_contact` VARCHAR(50), IN `p_sender_email` VARCHAR(255), IN `p_stallholder_id` INT, IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_subject` VARCHAR(255), IN `p_description` TEXT, IN `p_evidence` TEXT, IN `p_priority` VARCHAR(20))   BEGIN
   INSERT INTO complaint (
     complaint_type,
@@ -558,6 +632,85 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createFloor` (IN `p_branch_id` INT,
     VALUES (p_branch_id, p_floor_name, p_floor_number);
     
     SELECT LAST_INSERT_ID() as floor_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createInspectorWithCredentials` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
+    DECLARE new_inspector_id INT;
+    DECLARE exit_handler BOOLEAN DEFAULT FALSE;
+    
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET exit_handler = TRUE;
+    
+    -- Insert inspector with username and hashed password
+    INSERT INTO inspector (
+        username,
+        first_name,
+        last_name,
+        middle_name,
+        email,
+        password,
+        password_hash,
+        contact_no,
+        date_hired,
+        status
+    ) VALUES (
+        p_username,
+        p_first_name,
+        p_last_name,
+        '',
+        p_email,
+        '',
+        p_password_hash,
+        p_contact_no,
+        IFNULL(p_date_hired, CURDATE()),
+        'active'
+    );
+    
+    IF exit_handler THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Failed to create inspector';
+    END IF;
+    
+    SET new_inspector_id = LAST_INSERT_ID();
+    
+    -- Create branch assignment
+    INSERT INTO inspector_assignment (
+        inspector_id,
+        branch_id,
+        start_date,
+        status,
+        remarks
+    ) VALUES (
+        new_inspector_id,
+        p_branch_id,
+        CURDATE(),
+        'Active',
+        'Newly hired inspector'
+    );
+    
+    -- Log the action
+    INSERT INTO inspector_action_log (
+        inspector_id,
+        branch_id,
+        business_manager_id,
+        action_type,
+        action_date,
+        remarks
+    ) VALUES (
+        new_inspector_id,
+        p_branch_id,
+        p_branch_manager_id,
+        'New Hire',
+        NOW(),
+        CONCAT('Inspector ', p_first_name, ' ', p_last_name, ' was hired and assigned to branch ID ', p_branch_id)
+    );
+    
+    -- Return the new inspector
+    SELECT 
+        new_inspector_id as inspector_id,
+        p_username as username,
+        p_first_name as first_name,
+        p_last_name as last_name,
+        p_email as email,
+        'Inspector created successfully' as message;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `createMobileApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_preferred_area` VARCHAR(255), IN `p_document_urls` TEXT)   BEGIN
@@ -1917,6 +2070,51 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerSubscription` (IN `
     LIMIT 1;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCollectorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+    SELECT 
+        c.collector_id,
+        c.username,
+        c.password_hash,
+        c.first_name,
+        c.last_name,
+        c.middle_name,
+        c.email,
+        c.contact_no,
+        c.date_created,
+        c.date_hired,
+        c.status,
+        c.last_login,
+        ca.branch_id,
+        b.branch_name
+    FROM collector c
+    LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+    LEFT JOIN branch b ON ca.branch_id = b.branch_id
+    WHERE c.username = p_username AND c.status = 'active'
+    LIMIT 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCollectorsByBranch` (IN `p_branch_id` INT)   BEGIN
+    SELECT 
+        c.collector_id,
+        c.username,
+        c.first_name,
+        c.last_name,
+        c.middle_name,
+        c.email,
+        c.contact_no,
+        c.date_created,
+        c.date_hired,
+        c.status,
+        c.last_login,
+        ca.branch_id,
+        b.branch_name
+    FROM collector c
+    LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+    LEFT JOIN branch b ON ca.branch_id = b.branch_id
+    WHERE ca.branch_id = p_branch_id
+    ORDER BY c.date_created DESC;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getComplaintById` (IN `p_complaint_id` INT)   BEGIN
   SELECT 
     c.complaint_id,
@@ -1978,6 +2176,49 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getFloorsByBranch` (IN `p_branch_id` INT)   BEGIN
     SELECT * FROM floor WHERE branch_id = p_branch_id ORDER BY floor_number;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getInspectorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+    SELECT 
+        i.inspector_id,
+        i.username,
+        i.password_hash,
+        i.first_name,
+        i.last_name,
+        i.middle_name,
+        i.email,
+        i.contact_no,
+        i.date_created,
+        i.date_hired,
+        i.status,
+        ia.branch_id,
+        b.branch_name
+    FROM inspector i
+    LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
+    LEFT JOIN branch b ON ia.branch_id = b.branch_id
+    WHERE i.username = p_username AND i.status = 'active'
+    LIMIT 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getInspectorsByBranch` (IN `p_branch_id` INT)   BEGIN
+    SELECT 
+        i.inspector_id,
+        i.username,
+        i.first_name,
+        i.last_name,
+        i.middle_name,
+        i.email,
+        i.contact_no,
+        i.date_created,
+        i.date_hired,
+        i.status,
+        ia.branch_id,
+        b.branch_name
+    FROM inspector i
+    LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
+    LEFT JOIN branch b ON ia.branch_id = b.branch_id
+    WHERE ia.branch_id = p_branch_id
+    ORDER BY i.date_created DESC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getManagerBusinessOwners` (IN `p_business_manager_id` INT)   BEGIN
@@ -2071,25 +2312,22 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOnsitePayments` (IN `p_branch_id
         LIMIT p_limit OFFSET p_offset;
     END$$
 
--- Modified: Now uses business_manager_id and branch_document_requirements table
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetOwnerDocumentRequirements` (IN `p_business_manager_id` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetOwnerDocumentRequirements` (IN `p_owner_id` INT)   BEGIN
     SELECT 
-        bdr.requirement_id,
-        bdr.branch_id,
-        dt.document_type_id,
-        dt.document_type_name as document_type,
-        dt.document_type_name as document_name,
-        dt.description,
-        bdr.is_required,
-        bdr.instructions,
-        bdr.created_by_business_manager,
-        bdr.created_at
-    FROM branch_document_requirements bdr
-    INNER JOIN document_type dt ON bdr.document_type_id = dt.document_type_id
-    INNER JOIN branch b ON bdr.branch_id = b.branch_id
-    INNER JOIN business_manager bm ON b.business_manager_id = bm.business_manager_id
-    WHERE bm.business_manager_id = p_business_manager_id
-    ORDER BY dt.document_type_name ASC;
+        requirement_id,
+        owner_id,
+        document_type,
+        document_name,
+        description,
+        is_required,
+        file_size_limit,
+        allowed_file_types,
+        display_order,
+        is_active
+    FROM owner_document_requirements
+    WHERE owner_id = p_owner_id
+      AND is_active = TRUE
+    ORDER BY display_order ASC, document_name ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getPaymentStats` (IN `p_branch_id` INT, IN `p_month` VARCHAR(7))   BEGIN
@@ -2202,31 +2440,28 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderById` (IN `p_stallhol
     WHERE sh.`stallholder_id` = p_stallholder_id;
 END$$
 
--- Modified: Now uses business_manager_id and branch_document_requirements for document management
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetStallholderDocuments` (IN `p_stallholder_id` INT, IN `p_branch_id` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetStallholderDocuments` (IN `p_stallholder_id` INT, IN `p_owner_id` INT)   BEGIN
     SELECT 
-        ad.document_id as submission_id,
-        bdr.requirement_id,
-        dt.document_type_name as document_type,
-        dt.document_type_name as document_name,
-        bdr.is_required,
-        ad.file_path as file_url,
-        ad.original_filename as file_name,
-        ad.mime_type as file_type,
-        ad.file_size,
-        ad.status,
-        ad.rejection_reason,
-        ad.uploaded_at,
-        ad.reviewed_at,
-        CONCAT(bm.first_name, ' ', bm.last_name) as reviewed_by_name
-    FROM applicant_documents ad
-    INNER JOIN branch_document_requirements bdr ON ad.document_type_id = bdr.document_type_id
-    INNER JOIN document_type dt ON bdr.document_type_id = dt.document_type_id
-    LEFT JOIN business_manager bm ON ad.reviewed_by = bm.business_manager_id
-    INNER JOIN stallholder sh ON ad.applicant_id = sh.applicant_id
-    WHERE sh.stallholder_id = p_stallholder_id
-      AND bdr.branch_id = p_branch_id
-    ORDER BY dt.document_type_name ASC;
+        sds.submission_id,
+        sds.requirement_id,
+        odr.document_type,
+        odr.document_name,
+        odr.is_required,
+        sds.file_url,
+        sds.file_name,
+        sds.file_type,
+        sds.file_size,
+        sds.status,
+        sds.rejection_reason,
+        sds.uploaded_at,
+        sds.reviewed_at,
+        sbo.owner_full_name as reviewed_by_name
+    FROM stallholder_document_submissions sds
+    INNER JOIN owner_document_requirements odr ON sds.requirement_id = odr.requirement_id
+    LEFT JOIN stall_business_owner sbo ON sds.reviewed_by = sbo.business_owner_id
+    WHERE sds.stallholder_id = p_stallholder_id
+      AND sds.owner_id = p_owner_id
+    ORDER BY odr.display_order ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholdersByBranch` (IN `p_branch_id` INT)   BEGIN
@@ -2398,6 +2633,118 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `loginBusinessEmployee` (IN `p_usern
         SELECT v_employee_id as business_employee_id, 'success' as status;
     ELSE
         SELECT NULL as business_employee_id, 'failed' as status;
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `loginCollector` (IN `p_username` VARCHAR(50), IN `p_update_login` BOOLEAN)   BEGIN
+    -- Get collector details
+    SELECT 
+        c.collector_id,
+        c.username,
+        c.password_hash,
+        c.first_name,
+        c.last_name,
+        c.middle_name,
+        c.email,
+        c.contact_no,
+        c.status,
+        ca.branch_id,
+        b.branch_name,
+        'collector' as role_type
+    FROM collector c
+    LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+    LEFT JOIN branch b ON ca.branch_id = b.branch_id
+    WHERE (c.username = p_username OR c.email = p_username)
+      AND c.status = 'active'
+    LIMIT 1;
+    
+    -- Update last login if requested
+    IF p_update_login THEN
+        UPDATE collector 
+        SET last_login = NOW() 
+        WHERE username = p_username OR email = p_username;
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `loginInspector` (IN `p_username` VARCHAR(50), IN `p_update_login` BOOLEAN)   BEGIN
+    -- Get inspector details
+    SELECT 
+        i.inspector_id,
+        i.username,
+        i.password_hash,
+        COALESCE(i.password_hash, i.password) as password_check,
+        i.first_name,
+        i.last_name,
+        i.middle_name,
+        i.email,
+        i.contact_no,
+        i.status,
+        ia.branch_id,
+        b.branch_name,
+        'inspector' as role_type
+    FROM inspector i
+    LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
+    LEFT JOIN branch b ON ia.branch_id = b.branch_id
+    WHERE (i.username = p_username OR i.email = p_username)
+      AND i.status = 'active'
+    LIMIT 1;
+    
+    -- Update last login if requested
+    IF p_update_login THEN
+        UPDATE inspector 
+        SET date_created = NOW() 
+        WHERE username = p_username OR email = p_username;
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `loginMobileStaff` (IN `p_username` VARCHAR(50))   BEGIN
+    DECLARE v_found INT DEFAULT 0;
+    
+    -- First try inspector
+    SELECT COUNT(*) INTO v_found
+    FROM inspector 
+    WHERE (username = p_username OR email = p_username) AND status = 'active';
+    
+    IF v_found > 0 THEN
+        -- Return inspector data
+        SELECT 
+            i.inspector_id as staff_id,
+            i.username,
+            COALESCE(i.password_hash, i.password) as password_hash,
+            i.first_name,
+            i.last_name,
+            i.email,
+            i.contact_no,
+            i.status,
+            ia.branch_id,
+            b.branch_name,
+            'inspector' as staff_type
+        FROM inspector i
+        LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
+        LEFT JOIN branch b ON ia.branch_id = b.branch_id
+        WHERE (i.username = p_username OR i.email = p_username)
+          AND i.status = 'active'
+        LIMIT 1;
+    ELSE
+        -- Try collector
+        SELECT 
+            c.collector_id as staff_id,
+            c.username,
+            c.password_hash,
+            c.first_name,
+            c.last_name,
+            c.email,
+            c.contact_no,
+            c.status,
+            ca.branch_id,
+            b.branch_name,
+            'collector' as staff_type
+        FROM collector c
+        LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+        LEFT JOIN branch b ON ca.branch_id = b.branch_id
+        WHERE (c.username = p_username OR c.email = p_username)
+          AND c.status = 'active'
+        LIMIT 1;
     END IF;
 END$$
 
@@ -4880,6 +5227,52 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_uploadStallImage` (IN `p_stall_i
     END IF;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateCollector` (IN `p_collector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
+    DECLARE v_branch_id INT;
+    DECLARE v_first_name VARCHAR(100);
+    DECLARE v_last_name VARCHAR(100);
+    
+    -- Get current assignment info
+    SELECT ca.branch_id, c.first_name, c.last_name 
+    INTO v_branch_id, v_first_name, v_last_name
+    FROM collector c
+    LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+    WHERE c.collector_id = p_collector_id
+    LIMIT 1;
+    
+    -- Update collector status
+    UPDATE collector 
+    SET status = 'inactive',
+        termination_date = CURDATE(),
+        termination_reason = p_reason
+    WHERE collector_id = p_collector_id;
+    
+    -- Update assignment status
+    UPDATE collector_assignment 
+    SET status = 'Inactive',
+        end_date = CURDATE()
+    WHERE collector_id = p_collector_id AND status = 'Active';
+    
+    -- Log the termination
+    INSERT INTO collector_action_log (
+        collector_id,
+        branch_id,
+        business_manager_id,
+        action_type,
+        action_date,
+        remarks
+    ) VALUES (
+        p_collector_id,
+        v_branch_id,
+        p_branch_manager_id,
+        'Termination',
+        NOW(),
+        CONCAT('Collector ', v_first_name, ' ', v_last_name, ' was terminated. Reason: ', p_reason)
+    );
+    
+    SELECT 'Collector terminated successfully' as message;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateInspector` (IN `p_inspector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
     DECLARE v_branch_id INT DEFAULT NULL;
 
@@ -5019,6 +5412,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBusinessManager` (IN `p_manag
     WHERE `business_manager_id` = p_manager_id;
     
     SELECT ROW_COUNT() as affected_rows;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCollectorLogin` (IN `p_collector_id` INT)   BEGIN
+    UPDATE collector 
+    SET last_login = CURRENT_TIMESTAMP 
+    WHERE collector_id = p_collector_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateComplaint` (IN `p_complaint_id` INT, IN `p_complaint_type` VARCHAR(100), IN `p_subject` VARCHAR(255), IN `p_description` TEXT, IN `p_priority` VARCHAR(20), IN `p_status` VARCHAR(20))   BEGIN
@@ -5272,318 +5671,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadApplicantDocument` (IN `p_app
     END IF;
     
     COMMIT;
-END$$
-
--- ============================================================
--- STALLHOLDER DOCUMENT MANAGEMENT PROCEDURES
--- For business_manager and business_employee to manage 
--- stallholder document requirements per branch
--- ============================================================
-
--- 1. ADD DOCUMENT REQUIREMENT TO BRANCH
-CREATE DEFINER=`root`@`localhost` PROCEDURE `addBranchDocumentRequirement` (
-    IN `p_branch_id` INT, 
-    IN `p_document_type_id` INT, 
-    IN `p_is_required` TINYINT,
-    IN `p_instructions` TEXT,
-    IN `p_created_by_manager` INT
-)   
-BEGIN
-    DECLARE v_existing INT DEFAULT 0;
-    
-    SELECT COUNT(*) INTO v_existing
-    FROM branch_document_requirements
-    WHERE branch_id = p_branch_id AND document_type_id = p_document_type_id;
-    
-    IF v_existing > 0 THEN
-        SELECT 0 as success, 'Document requirement already exists for this branch' as message;
-    ELSE
-        INSERT INTO branch_document_requirements (
-            branch_id, document_type_id, is_required, instructions,
-            created_by_business_manager, created_at
-        ) VALUES (
-            p_branch_id, p_document_type_id, COALESCE(p_is_required, 1),
-            p_instructions, p_created_by_manager, CURRENT_TIMESTAMP
-        );
-        
-        SELECT 1 as success, LAST_INSERT_ID() as requirement_id,
-               'Document requirement added successfully' as message;
-    END IF;
-END$$
-
--- 2. UPDATE DOCUMENT REQUIREMENT FOR BRANCH
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBranchDocumentRequirement` (
-    IN `p_requirement_id` INT,
-    IN `p_is_required` TINYINT,
-    IN `p_instructions` TEXT,
-    IN `p_updated_by_manager` INT
-)   
-BEGIN
-    UPDATE branch_document_requirements
-    SET is_required = COALESCE(p_is_required, is_required),
-        instructions = COALESCE(p_instructions, instructions),
-        created_by_business_manager = p_updated_by_manager,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE requirement_id = p_requirement_id;
-    
-    IF ROW_COUNT() > 0 THEN
-        SELECT 1 as success, 'Document requirement updated successfully' as message;
-    ELSE
-        SELECT 0 as success, 'Document requirement not found' as message;
-    END IF;
-END$$
-
--- 3. DELETE DOCUMENT REQUIREMENT FROM BRANCH
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteBranchDocumentRequirement` (
-    IN `p_requirement_id` INT,
-    IN `p_deleted_by_manager` INT
-)   
-BEGIN
-    DELETE FROM branch_document_requirements WHERE requirement_id = p_requirement_id;
-    
-    IF ROW_COUNT() > 0 THEN
-        SELECT 1 as success, 'Document requirement deleted successfully' as message;
-    ELSE
-        SELECT 0 as success, 'Document requirement not found' as message;
-    END IF;
-END$$
-
--- 4. GET AVAILABLE DOCUMENT TYPES FOR BRANCH (not yet added)
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableDocumentTypesForBranch` (
-    IN `p_branch_id` INT
-)   
-BEGIN
-    SELECT dt.document_type_id, dt.document_name, dt.description, dt.is_system_default
-    FROM document_types dt
-    WHERE dt.document_type_id NOT IN (
-        SELECT document_type_id FROM branch_document_requirements WHERE branch_id = p_branch_id
-    )
-    ORDER BY dt.is_system_default DESC, dt.document_name ASC;
-END$$
-
--- 5. CREATE CUSTOM DOCUMENT TYPE
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createCustomDocumentType` (
-    IN `p_document_name` VARCHAR(100),
-    IN `p_description` TEXT,
-    IN `p_created_by_manager` INT
-)   
-BEGIN
-    DECLARE v_existing INT DEFAULT 0;
-    
-    SELECT COUNT(*) INTO v_existing FROM document_types
-    WHERE LOWER(document_name) = LOWER(p_document_name);
-    
-    IF v_existing > 0 THEN
-        SELECT 0 as success, 'Document type with this name already exists' as message;
-    ELSE
-        INSERT INTO document_types (document_name, description, is_system_default, created_at)
-        VALUES (p_document_name, p_description, 0, CURRENT_TIMESTAMP);
-        
-        SELECT 1 as success, LAST_INSERT_ID() as document_type_id,
-               'Custom document type created successfully' as message;
-    END IF;
-END$$
-
--- 6. GET STALLHOLDER DOCUMENT SUBMISSIONS
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderDocumentSubmissions` (
-    IN `p_stallholder_id` INT,
-    IN `p_branch_id` INT
-)   
-BEGIN
-    SELECT 
-        ad.document_id, ad.applicant_id, sh.stallholder_id, sh.stallholder_name,
-        bdr.requirement_id, bdr.document_type_id, dt.document_name,
-        bdr.is_required, bdr.instructions, ad.file_path, ad.original_filename,
-        ad.file_size, ad.mime_type, ad.verification_status as status,
-        ad.rejection_reason, ad.uploaded_at, ad.verified_at as reviewed_at,
-        CONCAT(bm.first_name, ' ', bm.last_name) as reviewed_by_name
-    FROM branch_document_requirements bdr
-    INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-    INNER JOIN stallholder sh ON sh.branch_id = bdr.branch_id
-    LEFT JOIN applicant_documents ad ON sh.applicant_id = ad.applicant_id 
-        AND bdr.document_type_id = ad.document_type_id
-    LEFT JOIN business_manager bm ON ad.verified_by = bm.business_manager_id
-    WHERE sh.stallholder_id = p_stallholder_id AND bdr.branch_id = p_branch_id
-    ORDER BY bdr.is_required DESC, dt.document_name ASC;
-END$$
-
--- 7. GET ALL STALLHOLDERS WITH DOCUMENT STATUS
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholdersDocumentStatus` (
-    IN `p_branch_id` INT
-)   
-BEGIN
-    SELECT 
-        sh.stallholder_id, sh.stallholder_name, sh.business_name,
-        sh.contact_number, st.stall_no,
-        (SELECT COUNT(*) FROM branch_document_requirements 
-         WHERE branch_id = p_branch_id AND is_required = 1) as total_required_docs,
-        (SELECT COUNT(*) FROM applicant_documents ad 
-         WHERE ad.applicant_id = sh.applicant_id 
-           AND ad.document_type_id IN (
-               SELECT document_type_id FROM branch_document_requirements 
-               WHERE branch_id = p_branch_id AND is_required = 1
-           ) AND ad.verification_status = 'verified') as verified_docs,
-        CASE 
-            WHEN (SELECT COUNT(*) FROM applicant_documents ad 
-                  WHERE ad.applicant_id = sh.applicant_id 
-                    AND ad.document_type_id IN (
-                        SELECT document_type_id FROM branch_document_requirements 
-                        WHERE branch_id = p_branch_id AND is_required = 1
-                    ) AND ad.verification_status = 'verified') = 
-                 (SELECT COUNT(*) FROM branch_document_requirements 
-                  WHERE branch_id = p_branch_id AND is_required = 1)
-            THEN 'Complete' ELSE 'Incomplete'
-        END as document_status
-    FROM stallholder sh
-    LEFT JOIN stall st ON sh.stall_id = st.stall_id
-    WHERE sh.branch_id = p_branch_id
-    ORDER BY sh.stallholder_name ASC;
-END$$
-
--- 8. VERIFY STALLHOLDER DOCUMENT
-CREATE DEFINER=`root`@`localhost` PROCEDURE `verifyStallholderDocument` (
-    IN `p_document_id` INT,
-    IN `p_status` VARCHAR(20),
-    IN `p_rejection_reason` TEXT,
-    IN `p_verified_by` INT
-)   
-BEGIN
-    UPDATE applicant_documents
-    SET verification_status = p_status,
-        rejection_reason = CASE WHEN p_status = 'rejected' THEN p_rejection_reason ELSE NULL END,
-        verified_by = p_verified_by,
-        verified_at = CASE WHEN p_status IN ('verified', 'rejected') THEN CURRENT_TIMESTAMP ELSE verified_at END
-    WHERE document_id = p_document_id;
-    
-    IF ROW_COUNT() > 0 THEN
-        SELECT 1 as success, CONCAT('Document ', p_status, ' successfully') as message;
-    ELSE
-        SELECT 0 as success, 'Document not found' as message;
-    END IF;
-END$$
-
--- 9. ADD DEFAULT DOCUMENTS TO BRANCH
-CREATE DEFINER=`root`@`localhost` PROCEDURE `addDefaultDocumentsToBranch` (
-    IN `p_branch_id` INT,
-    IN `p_created_by_manager` INT
-)   
-BEGIN
-    INSERT INTO branch_document_requirements (
-        branch_id, document_type_id, is_required, instructions,
-        created_by_business_manager, created_at
-    )
-    SELECT p_branch_id, dt.document_type_id, 1, dt.description,
-           p_created_by_manager, CURRENT_TIMESTAMP
-    FROM document_types dt
-    WHERE dt.is_system_default = 1
-      AND dt.document_type_id NOT IN (
-          SELECT document_type_id FROM branch_document_requirements WHERE branch_id = p_branch_id
-      );
-    
-    SELECT 1 as success, ROW_COUNT() as documents_added,
-           'Default documents added to branch successfully' as message;
-END$$
-
--- 10. COPY DOCUMENT REQUIREMENTS FROM ANOTHER BRANCH
-CREATE DEFINER=`root`@`localhost` PROCEDURE `copyBranchDocumentRequirements` (
-    IN `p_source_branch_id` INT,
-    IN `p_target_branch_id` INT,
-    IN `p_created_by_manager` INT
-)   
-BEGIN
-    INSERT INTO branch_document_requirements (
-        branch_id, document_type_id, is_required, instructions,
-        created_by_business_manager, created_at
-    )
-    SELECT p_target_branch_id, bdr.document_type_id, bdr.is_required, bdr.instructions,
-           p_created_by_manager, CURRENT_TIMESTAMP
-    FROM branch_document_requirements bdr
-    WHERE bdr.branch_id = p_source_branch_id
-      AND bdr.document_type_id NOT IN (
-          SELECT document_type_id FROM branch_document_requirements WHERE branch_id = p_target_branch_id
-      );
-    
-    SELECT 1 as success, ROW_COUNT() as requirements_copied,
-           'Document requirements copied successfully' as message;
-END$$
-
--- 11. GET DOCUMENT REQUIREMENTS SUMMARY BY BRANCH
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getDocumentRequirementsSummary` ()   
-BEGIN
-    SELECT 
-        b.branch_id, b.branch_name, b.area,
-        COUNT(bdr.requirement_id) as total_requirements,
-        SUM(CASE WHEN bdr.is_required = 1 THEN 1 ELSE 0 END) as required_documents,
-        SUM(CASE WHEN bdr.is_required = 0 THEN 1 ELSE 0 END) as optional_documents,
-        CONCAT(bm.first_name, ' ', bm.last_name) as branch_manager
-    FROM branch b
-    LEFT JOIN branch_document_requirements bdr ON b.branch_id = bdr.branch_id
-    LEFT JOIN business_manager bm ON b.business_manager_id = bm.business_manager_id
-    GROUP BY b.branch_id, b.branch_name, b.area, bm.first_name, bm.last_name
-    ORDER BY b.branch_name ASC;
-END$$
-
--- 12. CHECK IF STALLHOLDER HAS COMPLETE DOCUMENTS
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStallholderDocumentCompletion` (
-    IN `p_stallholder_id` INT
-)   
-BEGIN
-    DECLARE v_branch_id INT;
-    DECLARE v_required_count INT DEFAULT 0;
-    DECLARE v_submitted_count INT DEFAULT 0;
-    DECLARE v_verified_count INT DEFAULT 0;
-    
-    SELECT branch_id INTO v_branch_id FROM stallholder WHERE stallholder_id = p_stallholder_id;
-    
-    SELECT COUNT(*) INTO v_required_count
-    FROM branch_document_requirements WHERE branch_id = v_branch_id AND is_required = 1;
-    
-    SELECT COUNT(*) INTO v_submitted_count
-    FROM applicant_documents ad
-    INNER JOIN stallholder sh ON ad.applicant_id = sh.applicant_id
-    WHERE sh.stallholder_id = p_stallholder_id
-      AND ad.document_type_id IN (
-          SELECT document_type_id FROM branch_document_requirements 
-          WHERE branch_id = v_branch_id AND is_required = 1
-      );
-    
-    SELECT COUNT(*) INTO v_verified_count
-    FROM applicant_documents ad
-    INNER JOIN stallholder sh ON ad.applicant_id = sh.applicant_id
-    WHERE sh.stallholder_id = p_stallholder_id
-      AND ad.document_type_id IN (
-          SELECT document_type_id FROM branch_document_requirements 
-          WHERE branch_id = v_branch_id AND is_required = 1
-      )
-      AND ad.verification_status = 'verified';
-    
-    SELECT 
-        p_stallholder_id as stallholder_id, v_branch_id as branch_id,
-        v_required_count as required_documents, v_submitted_count as submitted_documents,
-        v_verified_count as verified_documents,
-        CASE 
-            WHEN v_verified_count = v_required_count THEN 'Complete'
-            WHEN v_submitted_count = v_required_count THEN 'Pending Verification'
-            ELSE 'Incomplete'
-        END as status,
-        CASE WHEN v_verified_count = v_required_count THEN 1 ELSE 0 END as is_complete;
-END$$
-
--- 13. GET DOCUMENT REQUIREMENTS BY BUSINESS MANAGER
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getDocumentRequirementsByManager` (
-    IN `p_business_manager_id` INT
-)   
-BEGIN
-    SELECT 
-        bdr.requirement_id, bdr.branch_id, b.branch_name,
-        bdr.document_type_id, dt.document_name, dt.description as document_description,
-        bdr.is_required, bdr.instructions, bdr.created_at, bdr.updated_at
-    FROM branch_document_requirements bdr
-    INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-    INNER JOIN branch b ON bdr.branch_id = b.branch_id
-    WHERE b.business_manager_id = p_business_manager_id
-       OR bdr.created_by_business_manager = p_business_manager_id
-    ORDER BY b.branch_name ASC, bdr.is_required DESC, dt.document_name ASC;
 END$$
 
 DELIMITER ;
@@ -6168,6 +6255,82 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `collector`
+--
+
+CREATE TABLE `collector` (
+  `collector_id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `middle_name` varchar(100) DEFAULT NULL,
+  `email` varchar(255) NOT NULL,
+  `contact_no` varchar(20) DEFAULT NULL,
+  `date_created` datetime DEFAULT current_timestamp(),
+  `date_hired` date DEFAULT curdate(),
+  `status` enum('active','inactive') DEFAULT 'active',
+  `termination_date` date DEFAULT NULL,
+  `termination_reason` varchar(255) DEFAULT NULL,
+  `last_login` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `collector`
+--
+
+INSERT INTO `collector` (`collector_id`, `username`, `password_hash`, `first_name`, `last_name`, `middle_name`, `email`, `contact_no`, `date_created`, `date_hired`, `status`, `termination_date`, `termination_reason`, `last_login`) VALUES
+(1, 'COL6806', '$2a$12$daseDK99xoM1.O4XOVbMzeSXdYKYJ5JAQ9O0fR6TN852oUZooDOqS', 'Jeno Aldrei', 'Laurente', NULL, 'laurentejeno73@gmail.com', '09473430196', '2025-12-09 16:29:10', '2025-12-09', 'active', NULL, NULL, '2025-12-09 08:51:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `collector_action_log`
+--
+
+CREATE TABLE `collector_action_log` (
+  `action_id` int(11) NOT NULL,
+  `collector_id` int(11) NOT NULL,
+  `branch_id` int(11) DEFAULT NULL,
+  `business_manager_id` int(11) DEFAULT NULL,
+  `action_type` enum('New Hire','Termination','Rehire','Transfer') NOT NULL,
+  `action_date` datetime DEFAULT current_timestamp(),
+  `remarks` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `collector_action_log`
+--
+
+INSERT INTO `collector_action_log` (`action_id`, `collector_id`, `branch_id`, `business_manager_id`, `action_type`, `action_date`, `remarks`) VALUES
+(1, 1, 1, 1, 'New Hire', '2025-12-09 16:29:10', 'Collector Jeno Aldrei Laurente was hired');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `collector_assignment`
+--
+
+CREATE TABLE `collector_assignment` (
+  `assignment_id` int(11) NOT NULL,
+  `collector_id` int(11) NOT NULL,
+  `branch_id` int(11) NOT NULL,
+  `start_date` date DEFAULT curdate(),
+  `end_date` date DEFAULT NULL,
+  `status` enum('Active','Inactive','Transferred') DEFAULT 'Active',
+  `remarks` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `collector_assignment`
+--
+
+INSERT INTO `collector_assignment` (`assignment_id`, `collector_id`, `branch_id`, `start_date`, `end_date`, `status`, `remarks`) VALUES
+(1, 1, 1, '2025-12-09', NULL, 'Active', 'Newly hired collector');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `complaint`
 --
 
@@ -6478,29 +6641,29 @@ DELIMITER ;
 --
 
 CREATE TABLE `inspector` (
-  `inspector_id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(50) NOT NULL UNIQUE,
-  `password_hash` varchar(255) NOT NULL,
-  `first_name` varchar(100) NOT NULL,
-  `last_name` varchar(100) NOT NULL,
-  `middle_name` varchar(100) DEFAULT NULL,
-  `email` varchar(255) NOT NULL UNIQUE,
-  `contact_no` varchar(20) DEFAULT NULL,
+  `inspector_id` int(11) NOT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `first_name` varchar(50) NOT NULL,
+  `last_name` varchar(50) NOT NULL,
+  `middle_name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(100) NOT NULL,
+  `password_hash` varchar(255) DEFAULT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
-  `date_hired` date DEFAULT curdate(),
   `status` enum('active','inactive') DEFAULT 'active',
+  `date_hired` date DEFAULT curdate(),
+  `contact_no` varchar(20) DEFAULT NULL,
   `termination_date` date DEFAULT NULL,
   `termination_reason` varchar(255) DEFAULT NULL,
-  `last_login` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`inspector_id`)
+  `last_login` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inspector`
 --
 
--- Inspector data will be created via the Add Employee popup
--- with proper username and bcrypt password_hash credentials for mobile app login
+INSERT INTO `inspector` (`inspector_id`, `username`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `password_hash`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`) VALUES
+(4, 'INS9721', 'Voun Irish', 'Dejumo', '', 'josonglaurente@gmail.com', '', '$2a$12$YspzW.gMf6YZGEp8LXL1VeJyhbSD60UyM/Mm4f/3Dm1p7ta6nBjxe', '2025-12-17 10:46:51', 'active', '2025-12-09', '09473595468', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -6509,23 +6672,25 @@ CREATE TABLE `inspector` (
 --
 
 CREATE TABLE `inspector_action_log` (
-  `action_id` int(11) NOT NULL AUTO_INCREMENT,
+  `action_id` int(11) NOT NULL,
   `inspector_id` int(11) NOT NULL,
   `branch_id` int(11) DEFAULT NULL,
   `business_manager_id` int(11) DEFAULT NULL,
   `action_type` enum('New Hire','Termination','Rehire','Transfer') NOT NULL,
   `action_date` datetime DEFAULT current_timestamp(),
-  `remarks` text DEFAULT NULL,
-  PRIMARY KEY (`action_id`),
-  KEY `fk_inspector_action_log` (`inspector_id`),
-  CONSTRAINT `fk_inspector_action_log` FOREIGN KEY (`inspector_id`) REFERENCES `inspector` (`inspector_id`) ON DELETE CASCADE
+  `remarks` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inspector_action_log`
 --
 
--- Inspector action log data will be created when inspectors are added/terminated
+INSERT INTO `inspector_action_log` (`action_id`, `inspector_id`, `branch_id`, `business_manager_id`, `action_type`, `action_date`, `remarks`) VALUES
+(1, 1, 1, 1, 'New Hire', '2025-10-08 00:45:24', 'Inspector Ye Zhu was hired and assigned to branch ID 1'),
+(2, 2, 1, 1, 'New Hire', '2025-10-08 00:53:54', 'Inspector Rafael Domingo was hired and assigned to branch ID 1'),
+(3, 2, 1, 1, 'Termination', '2025-10-08 01:29:12', 'Inspector ID 3 terminated. Reason: Negligence of duty'),
+(4, 1, 1, 1, 'Termination', '2025-10-08 09:35:13', 'Inspector ID 2 terminated. Reason: Negligence of duty'),
+(5, 4, 1, 1, 'New Hire', '2025-12-09 15:55:05', 'Inspector Voun Irish Dejumo was hired and assigned to branch ID 1');
 
 -- --------------------------------------------------------
 
@@ -6534,26 +6699,24 @@ CREATE TABLE `inspector_action_log` (
 --
 
 CREATE TABLE `inspector_assignment` (
-  `assignment_id` int(11) NOT NULL AUTO_INCREMENT,
+  `assignment_id` int(11) NOT NULL,
   `inspector_id` int(11) NOT NULL,
   `branch_id` int(11) NOT NULL,
-  `start_date` date DEFAULT curdate(),
+  `start_date` date NOT NULL,
   `end_date` date DEFAULT NULL,
-  `status` enum('Active','Inactive','Transferred') DEFAULT 'Active',
-  `remarks` text DEFAULT NULL,
-  `date_assigned` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`assignment_id`),
-  KEY `fk_inspector_assignment` (`inspector_id`),
-  KEY `fk_inspector_branch` (`branch_id`),
-  CONSTRAINT `fk_inspector_assignment` FOREIGN KEY (`inspector_id`) REFERENCES `inspector` (`inspector_id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_inspector_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE CASCADE
+  `status` enum('Active','Inactive') DEFAULT 'Active',
+  `remarks` varchar(255) DEFAULT NULL,
+  `date_assigned` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inspector_assignment`
 --
 
--- Inspector assignment data will be created when inspectors are added
+INSERT INTO `inspector_assignment` (`assignment_id`, `inspector_id`, `branch_id`, `start_date`, `end_date`, `status`, `remarks`, `date_assigned`) VALUES
+(1, 1, 1, '2025-10-08', NULL, 'Active', NULL, '2025-10-07 08:45:24'),
+(2, 2, 1, '2025-10-08', '2025-10-08', 'Inactive', 'Terminated: Negligence of duty', '2025-10-07 08:53:54'),
+(3, 4, 1, '2025-12-09', NULL, 'Active', 'Newly hired inspector', '2025-12-09 07:55:05');
 
 -- --------------------------------------------------------
 
@@ -7789,6 +7952,29 @@ ALTER TABLE `business_owner_subscriptions`
   ADD KEY `idx_dates` (`start_date`,`end_date`);
 
 --
+-- Indexes for table `collector`
+--
+ALTER TABLE `collector`
+  ADD PRIMARY KEY (`collector_id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `collector_action_log`
+--
+ALTER TABLE `collector_action_log`
+  ADD PRIMARY KEY (`action_id`),
+  ADD KEY `fk_collector_action_log` (`collector_id`);
+
+--
+-- Indexes for table `collector_assignment`
+--
+ALTER TABLE `collector_assignment`
+  ADD PRIMARY KEY (`assignment_id`),
+  ADD KEY `fk_collector_assignment` (`collector_id`),
+  ADD KEY `fk_collector_branch` (`branch_id`);
+
+--
 -- Indexes for table `complaint`
 --
 ALTER TABLE `complaint`
@@ -7872,7 +8058,8 @@ ALTER TABLE `floor`
 -- Indexes for table `inspector`
 --
 ALTER TABLE `inspector`
-  ADD PRIMARY KEY (`inspector_id`);
+  ADD PRIMARY KEY (`inspector_id`),
+  ADD UNIQUE KEY `username` (`username`);
 
 --
 -- Indexes for table `inspector_action_log`
@@ -8186,6 +8373,24 @@ ALTER TABLE `business_owner_subscriptions`
   MODIFY `subscription_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
+-- AUTO_INCREMENT for table `collector`
+--
+ALTER TABLE `collector`
+  MODIFY `collector_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `collector_action_log`
+--
+ALTER TABLE `collector_action_log`
+  MODIFY `action_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `collector_assignment`
+--
+ALTER TABLE `collector_assignment`
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `complaint`
 --
 ALTER TABLE `complaint`
@@ -8243,19 +8448,19 @@ ALTER TABLE `floor`
 -- AUTO_INCREMENT for table `inspector`
 --
 ALTER TABLE `inspector`
-  MODIFY `inspector_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `inspector_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `inspector_action_log`
 --
 ALTER TABLE `inspector_action_log`
-  MODIFY `action_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `action_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `inspector_assignment`
 --
 ALTER TABLE `inspector_assignment`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -8489,6 +8694,19 @@ ALTER TABLE `business_owner_subscriptions`
   ADD CONSTRAINT `business_owner_subscriptions_ibfk_1` FOREIGN KEY (`business_owner_id`) REFERENCES `stall_business_owner` (`business_owner_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `business_owner_subscriptions_ibfk_2` FOREIGN KEY (`plan_id`) REFERENCES `subscription_plans` (`plan_id`),
   ADD CONSTRAINT `business_owner_subscriptions_ibfk_3` FOREIGN KEY (`created_by_system_admin`) REFERENCES `system_administrator` (`system_admin_id`);
+
+--
+-- Constraints for table `collector_action_log`
+--
+ALTER TABLE `collector_action_log`
+  ADD CONSTRAINT `fk_collector_action_log` FOREIGN KEY (`collector_id`) REFERENCES `collector` (`collector_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `collector_assignment`
+--
+ALTER TABLE `collector_assignment`
+  ADD CONSTRAINT `fk_collector_assignment` FOREIGN KEY (`collector_id`) REFERENCES `collector` (`collector_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_collector_branch` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `credential`

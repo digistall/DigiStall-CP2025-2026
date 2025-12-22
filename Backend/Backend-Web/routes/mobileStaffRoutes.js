@@ -5,7 +5,8 @@ import {
     getInspectorsByBranch,
     getCollectorsByBranch,
     terminateInspector,
-    terminateCollector
+    terminateCollector,
+    resetStaffPassword
 } from '../controllers/mobileStaff/mobileStaffController.js';
 
 const router = express.Router();
@@ -71,5 +72,17 @@ router.get('/collectors', getCollectorsByBranch);
  * @body    { reason }
  */
 router.delete('/collectors/:id', terminateCollector);
+
+// ========================================
+// PASSWORD MANAGEMENT
+// ========================================
+
+/**
+ * @route   POST /api/mobile-staff/reset-password
+ * @desc    Reset password for inspector or collector
+ * @access  Business Manager / Admin
+ * @body    { staffType: 'inspector' | 'collector', staffId: number, newPassword?: string }
+ */
+router.post('/reset-password', resetStaffPassword);
 
 export default router;
