@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 22, 2025 at 09:42 AM
+-- Generation Time: Dec 22, 2025 at 02:46 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -3322,7 +3322,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallImage` (IN `p_stall_id` 
     
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_stall INT DEFAULT 0;
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_branch_valid INT DEFAULT 0;
@@ -3341,11 +3341,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
 
     START TRANSACTION;
 
-    
+    -- Check user authorization
     IF p_user_type = 'business_manager' THEN
         SET v_business_manager_id = p_user_id;
         
-        
+        -- Verify manager belongs to this branch
         SELECT COUNT(*) INTO v_branch_valid
         FROM business_manager
         WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
@@ -3359,7 +3359,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         END IF;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
+        -- Get the manager for this branch
         SELECT bm.business_manager_id INTO v_business_manager_id
         FROM branch b
         LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
@@ -3381,7 +3381,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         LEAVE proc_label;
     END IF;
 
-    
+    -- Validate floor and section belong to the branch
     SELECT COUNT(*), MAX(f.floor_name), MAX(sec.section_name), MAX(b.branch_name)
     INTO v_floor_section_valid, v_floor_name, v_section_name, v_branch_name
     FROM section sec
@@ -3399,7 +3399,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for duplicate stall number in section
     SELECT COUNT(*) INTO v_existing_stall
     FROM stall
     WHERE stall_no = p_stall_no AND section_id = p_section_id;
@@ -3412,7 +3412,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         LEAVE proc_label;
     END IF;
 
-    
+    -- Insert the stall with new rental calculation fields
     INSERT INTO stall (
         stall_no, 
         stall_location, 
@@ -3420,6 +3420,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         floor_id, 
         section_id, 
         rental_price,
+        base_rate,
+        area_sqm,
+        rate_per_sqm,
         price_type, 
         status, 
         stamp, 
@@ -3437,6 +3440,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         p_floor_id,
         p_section_id,
         p_rental_price,
+        p_base_rate,
+        p_area_sqm,
+        p_rate_per_sqm,
         p_price_type,
         p_status,
         p_stamp,
@@ -3452,9 +3458,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         NOW()
     );
 
-    
+    -- Get the new stall ID
     SET p_stall_id = LAST_INSERT_ID();
-    
     
     SET p_success = TRUE;
     SET p_message = CONCAT('Stall ', p_stall_no, ' created successfully in ', v_section_name, ' section on ', v_floor_name);
@@ -5046,7 +5051,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStallRaffleAuctionStatus` 
   UPDATE stall SET raffle_auction_status = p_status WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_branch_id INT;
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_duplicate_stall INT DEFAULT 0;
@@ -5062,7 +5067,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
 
     START TRANSACTION;
 
-    
+    -- Get the branch the stall belongs to
     SELECT f.branch_id INTO v_existing_branch_id
     FROM stall s
     INNER JOIN section sec ON s.section_id = sec.section_id
@@ -5076,9 +5081,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Authorization check
     IF p_user_type = 'business_manager' THEN
-        
+        -- Verify manager belongs to this branch
         SELECT COUNT(*) INTO v_floor_section_valid
         FROM business_manager
         WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
@@ -5090,7 +5095,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        
+        -- Verify stall belongs to manager's branch
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -5101,7 +5106,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         SET v_business_manager_id = p_user_id;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
+        -- Verify stall belongs to employee's branch
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -5109,7 +5114,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        
+        -- Get manager for this branch
         SELECT business_manager_id INTO v_business_manager_id
         FROM business_manager
         WHERE branch_id = p_branch_id
@@ -5122,8 +5127,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
-    
+    -- Get correct floor_id for the section
     SELECT f.floor_id INTO v_correct_floor_id
     FROM section sec
     INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -5137,10 +5141,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
     
-    
+    -- Use the correct floor_id
     SET p_floor_id = v_correct_floor_id;
 
-    
+    -- Check for duplicate stall number
     SELECT COUNT(*) INTO v_duplicate_stall
     FROM stall
     WHERE stall_no = p_stall_no 
@@ -5154,7 +5158,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Update the stall with new rental calculation fields
     UPDATE stall SET
         stall_no = p_stall_no,
         stall_location = p_stall_location,
@@ -5162,6 +5166,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         floor_id = p_floor_id,
         section_id = p_section_id,
         rental_price = p_rental_price,
+        base_rate = p_base_rate,
+        area_sqm = p_area_sqm,
+        rate_per_sqm = p_rate_per_sqm,
         price_type = p_price_type,
         status = p_status,
         description = p_description,
@@ -7097,7 +7104,9 @@ INSERT INTO `staff_activity_log` (`log_id`, `staff_type`, `staff_id`, `staff_nam
 (8, 'business_owner', 1, 'Multi Manager Owner', NULL, 'LOGIN', 'Multi Manager Owner logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:31:31'),
 (9, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:35:01'),
 (10, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 06:40:01'),
-(11, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 07:19:00');
+(11, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 07:19:00'),
+(12, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 09:02:15'),
+(13, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 12:52:24');
 
 -- --------------------------------------------------------
 
@@ -7112,7 +7121,10 @@ CREATE TABLE `stall` (
   `stall_no` varchar(20) NOT NULL,
   `stall_location` varchar(100) NOT NULL,
   `size` varchar(50) DEFAULT NULL,
+  `area_sqm` decimal(8,2) DEFAULT NULL,
   `rental_price` decimal(10,2) DEFAULT NULL,
+  `base_rate` decimal(10,2) DEFAULT NULL,
+  `rate_per_sqm` decimal(10,2) DEFAULT NULL,
   `price_type` enum('Fixed Price','Auction','Raffle') DEFAULT 'Fixed Price',
   `status` enum('Active','Inactive','Maintenance','Occupied') DEFAULT 'Active',
   `stamp` varchar(100) DEFAULT NULL,
@@ -7132,11 +7144,9 @@ CREATE TABLE `stall` (
 -- Dumping data for table `stall`
 --
 
-INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `rental_price`, `price_type`, `status`, `stamp`, `description`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
-(12, 4, 4, 'NPM-001', 'Near MEPO Office', '3x4', 2510.00, 'Fixed Price', 'Active', 'APPROVED', 'Best area to sell meat', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 05:28:29', '2025-12-08 08:32:45'),
-(13, 3, 1, 'NPM-002', 'Back of the market', '4x5', 3500.00, 'Fixed Price', 'Occupied', 'APPROVED', 'Best area to sell flowers', 0, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 08:40:06', '2025-12-08 12:20:06'),
-(14, 5, 4, 'NPM-003', 'Near MEPO Office center in the candy section', '3x5', 3500.00, 'Raffle', 'Active', 'APPROVED', 'Best area for delivery', 1, '2025-12-12 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(16, 6, 5, 'NPM-004', 'Near parking area', '3x4', 2820.00, 'Auction', 'Active', 'APPROVED', 'The customer can see your stall after parking', 1, '2025-12-12 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-08 17:23:38', '2025-12-08 17:23:38');
+INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `area_sqm`, `rental_price`, `base_rate`, `rate_per_sqm`, `price_type`, `status`, `stamp`, `description`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
+(13, 3, 1, 'NPM-002', 'Back of the market', '4x5', NULL, 3500.00, 2333.33, NULL, 'Fixed Price', 'Occupied', 'APPROVED', 'Best area to sell flowers', 0, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 08:40:06', '2025-12-22 12:28:46'),
+(17, 3, 1, 'B1-S1', 'Main Entrance', '388.26 sq.m', NULL, 9993.84, NULL, NULL, 'Fixed Price', 'Active', 'APPROVED', 'Best Area to sell flower, easy access and near parking area on ground floors', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-22 12:52:15', '2025-12-22 13:12:26');
 
 -- --------------------------------------------------------
 
@@ -7385,19 +7395,11 @@ CREATE TABLE `stall_images` (
 --
 
 INSERT INTO `stall_images` (`id`, `stall_id`, `image_url`, `display_order`, `is_primary`, `created_at`, `updated_at`) VALUES
-(5, 12, '/digistall_uploads/stalls/1/NPM-001/1.png', 1, 1, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(6, 12, '/digistall_uploads/stalls/1/NPM-001/2.png', 2, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(7, 12, '/digistall_uploads/stalls/1/NPM-001/3.png', 3, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(8, 12, '/digistall_uploads/stalls/1/NPM-001/4.png', 4, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
 (9, 13, '/digistall_uploads/stalls/1/NPM-002/1.png', 1, 1, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
 (10, 13, '/digistall_uploads/stalls/1/NPM-002/2.png', 2, 0, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
 (11, 13, '/digistall_uploads/stalls/1/NPM-002/3.png', 3, 0, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
-(12, 14, '/digistall_uploads/stalls/1/NPM-003/1.png', 1, 1, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(13, 14, '/digistall_uploads/stalls/1/NPM-003/2.png', 2, 0, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(14, 14, '/digistall_uploads/stalls/1/NPM-003/3.png', 3, 0, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(18, 16, '/digistall_uploads/stalls/1/NPM-004/1.png', 1, 1, '2025-12-08 17:23:38', '2025-12-08 17:23:38'),
-(19, 16, '/digistall_uploads/stalls/1/NPM-004/2.png', 2, 0, '2025-12-08 17:23:38', '2025-12-08 17:23:38'),
-(20, 16, '/digistall_uploads/stalls/1/NPM-004/3.png', 3, 0, '2025-12-08 17:23:38', '2025-12-08 17:23:38');
+(21, 17, '/digistall_uploads/stalls/1/B1-S1/1.png', 1, 1, '2025-12-22 12:52:15', '2025-12-22 12:52:15'),
+(22, 17, '/digistall_uploads/stalls/1/B1-S1/2.png', 2, 0, '2025-12-22 12:52:15', '2025-12-22 12:52:15');
 
 --
 -- Triggers `stall_images`
@@ -8581,13 +8583,13 @@ ALTER TABLE `spouse`
 -- AUTO_INCREMENT for table `staff_activity_log`
 --
 ALTER TABLE `staff_activity_log`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `stallholder`
@@ -8623,7 +8625,7 @@ ALTER TABLE `stall_business_owner`
 -- AUTO_INCREMENT for table `stall_images`
 --
 ALTER TABLE `stall_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `subscription_payments`

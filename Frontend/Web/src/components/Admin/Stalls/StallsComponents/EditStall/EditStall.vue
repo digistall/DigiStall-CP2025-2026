@@ -44,9 +44,17 @@
                 <v-select v-model="editForm.section" label="Section" :items="getSectionOptions()" :rules="rules.section"
                   required variant="outlined" prepend-inner-icon="mdi-map-marker" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
 
-                <!-- Size -->
-                <v-text-field v-model="editForm.size" label="Size" :rules="rules.size" required variant="outlined"
-                  prepend-inner-icon="mdi-ruler" placeholder="3x3 meters"></v-text-field>
+                <!-- Area (Square Meters) - NEW FIELD (Optional) -->
+                <v-text-field v-model="editForm.areaSqm" label="NEW AREA OCCUPIED (sq.m)" :rules="rules.areaSqm"
+                  variant="outlined" prepend-inner-icon="mdi-ruler-square" type="number" step="0.01" min="0.01"
+                  placeholder="e.g., 17.16, 23.50" :readonly="isBusinessOwner"
+                  hint="Optional: Enter exact area in square meters"></v-text-field>
+
+                <!-- RENTAL RATE (2010) - Base rate input (Optional) -->
+                <v-text-field v-model="editForm.baseRate" label="RENTAL RATE (2010)" :rules="rules.baseRate"
+                  variant="outlined" prepend-inner-icon="mdi-cash" type="number" step="0.01" min="0.01"
+                  placeholder="e.g., 3331.28, 3685.75" :readonly="isBusinessOwner"
+                  hint="Optional: Monthly Rent = RENTAL RATE × 2" @input="calculateRentalPrice"></v-text-field>
               </v-col>
 
               <!-- Right Column -->

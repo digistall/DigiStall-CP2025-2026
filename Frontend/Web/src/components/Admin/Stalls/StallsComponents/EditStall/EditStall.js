@@ -25,6 +25,7 @@ export default {
       showDeleteConfirm: false,
       valid: false,
       loading: false,
+      calculatedMonthlyRent: '', // Auto-calculated NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
       // Multi-image gallery data
       stallImages: [],
       currentImageIndex: 0,
@@ -50,9 +51,13 @@ export default {
         ],
         floor: [(v) => !!v || 'Floor is required'],
         section: [(v) => !!v || 'Section is required'],
-        size: [
-          (v) => !!v || 'Size is required',
-          (v) => /^\d+x\d+/i.test(v) || 'Size format should be like "3x3" or "3x3 meters"',
+        areaSqm: [
+          // Optional - but if provided must be valid positive number
+          (v) => !v || (!isNaN(parseFloat(v)) && parseFloat(v) > 0) || 'Area must be a positive number',
+        ],
+        baseRate: [
+          // Optional - but if provided must be valid positive number
+          (v) => !v || (!isNaN(parseFloat(v)) && parseFloat(v) > 0) || 'Monthly rent must be a positive number',
         ],
         location: [(v) => !!v || 'Location is required'],
         description: [
@@ -128,12 +133,30 @@ export default {
         floorId: null, // Store floor ID separately
         section: '',
         sectionId: null, // Store section ID separately
-        size: '',
+        areaSqm: '', // Area in square meters (NEW)
+        baseRate: '', // Base rate from MASTERLIST (NEW)
         location: '',
         description: '',
         image: null,
         isAvailable: true,
         priceType: 'Fixed Price',
+      }
+    },
+
+    // Calculate rental price from RENTAL RATE (2010)
+    // Formula from MASTERLIST:
+    // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+    // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+    calculateRentalPrice() {
+      const rentalRate2010 = parseFloat(this.editForm.baseRate)
+      if (rentalRate2010 && rentalRate2010 > 0) {
+        // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+        const monthlyRent = Math.round(rentalRate2010 * 2 * 100) / 100
+        this.calculatedMonthlyRent = monthlyRent.toFixed(2)
+        this.editForm.price = monthlyRent.toString()
+        console.log(`📊 RENTAL RATE 2010: ${rentalRate2010} | Monthly Rent (×2): ${monthlyRent}`)
+      } else {
+        this.calculatedMonthlyRent = ''
       }
     },
 
@@ -148,15 +171,22 @@ export default {
       const extractedId = data.stall_id || data.ID || data.id
       console.log('Extracted ID:', extractedId)
 
+      // Get base rate: either from database, or calculate from existing price (price = baseRate × 2)
+      const existingPrice = this.extractNumericPrice(data.rental_price || data.price) || 0
+      const baseRateFromDb = data.base_rate || data.baseRate
+      // If no base_rate in DB, existing price IS the monthly rent, so base rate = price / 2
+      const calculatedBaseRate = baseRateFromDb || (existingPrice ? (existingPrice / 2).toFixed(2) : '')
+
       this.editForm = {
         id: extractedId,
         stallNumber: data.stall_no || data.stallNumber || '',
-        price: this.extractNumericPrice(data.rental_price || data.price) || '',
+        price: existingPrice || '',
         floor: data.floor_name || data.floor || '',
         floorId: data.floor_id || data.floorId || null,
         section: data.section_name || data.section || '',
         sectionId: data.section_id || data.sectionId || null,
-        size: data.size || data.dimensions || '',
+        areaSqm: data.area_sqm || data.areaSqm || this.extractAreaFromSize(data.size) || '', // NEW
+        baseRate: calculatedBaseRate, // RENTAL RATE (2010) - either from DB or price/2
         location: data.stall_location || data.location || '',
         description: data.description || '',
         image: data.stall_image || data.image || null,
@@ -164,11 +194,27 @@ export default {
         priceType: data.price_type || data.priceType || 'Fixed Price',
       }
 
+      // Auto-calculate monthly rent display
+      if (this.editForm.baseRate) {
+        this.calculatedMonthlyRent = (parseFloat(this.editForm.baseRate) * 2).toFixed(2)
+      } else {
+        this.calculatedMonthlyRent = ''
+      }
+
       // Don't set imagePreview from existing image - only set it for newly uploaded images
       // This allows the gallery to show instead of the upload preview
       this.imagePreview = null
       this.selectedImageFile = null
       console.log('Form populated:', this.editForm)
+    },
+
+    // Extract area from old size format (e.g., "17.16 sq.m" -> 17.16)
+    extractAreaFromSize(size) {
+      if (!size) return ''
+      // Try to extract number from size string (e.g., "17.16 sq.m" or "3x2m")
+      const sqmMatch = String(size).match(/^([\d.]+)\s*sq\.?m?$/i)
+      if (sqmMatch) return sqmMatch[1]
+      return ''
     },
 
     extractNumericPrice(priceString) {
@@ -214,6 +260,9 @@ export default {
           description: 'Description',
         }
 
+        // Optional fields (new stalls should have these, but existing ones may not)
+        // areaSqm and baseRate are optional for backward compatibility
+
         const missingFields = []
         for (const [field, label] of Object.entries(requiredFields)) {
           if (!this.editForm[field] || String(this.editForm[field]).trim() === '') {
@@ -226,9 +275,9 @@ export default {
           return
         }
 
-        // Validate size format
-        if (this.editForm.size && !/^\d+x\d+/i.test(this.editForm.size)) {
-          console.error('Invalid size format')
+        // Validate area (must be positive number)
+        if (this.editForm.areaSqm && (isNaN(parseFloat(this.editForm.areaSqm)) || parseFloat(this.editForm.areaSqm) <= 0)) {
+          console.error('Invalid area format')
           return
         }
 
@@ -267,12 +316,20 @@ export default {
           price: numericPrice,
           floor_id: this.editForm.floorId, // Send floor ID instead of name
           section_id: this.editForm.sectionId, // Send section ID instead of name
-          size: this.editForm.size ? this.editForm.size.trim() : null,
+          size: this.editForm.areaSqm ? `${this.editForm.areaSqm} sq.m` : null, // Format area as size
+          area_sqm: parseFloat(this.editForm.areaSqm) || null, // NEW: Area in square meters
+          base_rate: parseFloat(this.editForm.baseRate) || null, // NEW: Base rate
           location: this.editForm.location,
           description: this.editForm.description.trim(),
           image: imageData,
           isAvailable: this.editForm.isAvailable,
           priceType: this.editForm.priceType,
+        }
+
+        // Calculate rate per sq.m if area is provided
+        if (updateData.area_sqm > 0 && updateData.price > 0) {
+          updateData.rate_per_sqm = Math.round((updateData.price / updateData.area_sqm) * 100) / 100
+          console.log(`📊 Rate per Sq.m: ${updateData.price} / ${updateData.area_sqm} = ${updateData.rate_per_sqm}`)
         }
 
         console.log('Sending update data to API:', updateData)

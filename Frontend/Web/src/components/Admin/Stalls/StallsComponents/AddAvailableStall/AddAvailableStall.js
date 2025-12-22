@@ -16,7 +16,8 @@ export default {
         price: '',
         floorId: '',
         sectionId: '',
-        size: '',
+        areaSqm: '', // Changed from size to areaSqm (square meters like MASTERLIST)
+        baseRate: '', // NEW: Base rate from MASTERLIST (RENTAL RATE 2010)
         location: '',
         description: '',
         images: [], // Changed from image to images array
@@ -27,8 +28,8 @@ export default {
         deadlineTime: '23:00', // Time of day for deadline (11:00 PM)
         deadlineActivated: false, // Whether the deadline timer has been activated
       },
+      calculatedMonthlyRent: '', // NEW: Auto-calculated monthly rent
       imagePreviews: [], // Store image preview URLs
-      // Price type options
       priceTypeOptions: [
         {
           title: '🏷️ Fixed Price',
@@ -311,7 +312,8 @@ export default {
         price: '',
         floorId: '',
         sectionId: '',
-        size: '',
+        areaSqm: '', // Changed from size to areaSqm
+        baseRate: '', // Base rate for auto-calculation
         location: '',
         description: '',
         images: [],
@@ -322,6 +324,7 @@ export default {
         deadlineTime: '23:00', // Time of day for deadline (11:00 PM)
         deadlineActivated: false, // Whether the deadline timer has been activated
       }
+      this.calculatedMonthlyRent = '' // Reset calculated rent
       this.imagePreviews = [] // Clear image previews
       if (this.$refs.form) {
         this.$refs.form.resetValidation()
@@ -351,16 +354,25 @@ export default {
 
       try {
         // FIXED: Use the correct field names and include floor_id for new schema
+        // UPDATED: Changed size to areaSqm and added baseRate for auto-calculation
         const stallData = {
           stallNumber: this.newStall.stallNumber, // Backend expects 'stallNumber'
-          price: parseFloat(this.newStall.price), // Backend expects 'price'
+          price: parseFloat(this.newStall.price), // Backend expects 'price' (monthly rent)
           location: this.newStall.location, // Backend expects 'location'
-          size: this.newStall.size, // Send size directly
+          size: this.newStall.areaSqm ? `${this.newStall.areaSqm} sq.m` : '', // Format as "17.16 sq.m"
+          areaSqm: parseFloat(this.newStall.areaSqm) || 0, // NEW: Area in square meters
+          baseRate: parseFloat(this.newStall.baseRate) || 0, // NEW: Base rate (RENTAL RATE 2010)
           floorId: this.newStall.floorId, // FIXED: Send floorId for new schema
           sectionId: this.newStall.sectionId, // FIXED: Send sectionId instead of section
           description: this.newStall.description,
           isAvailable: this.newStall.isAvailable,
           priceType: this.newStall.priceType,
+        }
+
+        // Calculate rate per sq.m if area is provided
+        if (stallData.areaSqm > 0 && stallData.price > 0) {
+          stallData.ratePerSqm = Math.round((stallData.price / stallData.areaSqm) * 100) / 100
+          console.log(`📊 Rate per Sq.m: ${stallData.price} / ${stallData.areaSqm} = ${stallData.ratePerSqm}`)
         }
 
         // FIXED: Calculate deadline datetime for raffle/auction stalls
@@ -543,15 +555,53 @@ export default {
       return true
     },
 
-    // Validate size format
-    validateSize(value) {
-      if (!value) return 'Size is required'
-      // Allow formats like "3x2m", "3x2", "3 x 2m", etc.
-      const sizePattern = /^\d+\s*[x×]\s*\d+\s*m?$/i
-      if (!sizePattern.test(value)) {
-        return 'Invalid format. Use format like "3x2m" or "3x2"'
+    // Validate area in square meters (no longer dimension format)
+    validateAreaSqm(value) {
+      if (!value) return 'Area is required'
+      const numValue = parseFloat(value)
+      if (isNaN(numValue) || numValue <= 0) {
+        return 'Area must be a positive number (e.g., 17.16)'
+      }
+      if (numValue > 1000) {
+        return 'Area seems too large. Please verify the value.'
       }
       return true
+    },
+
+    // Calculate rental price from RENTAL RATE (2010)
+    // Formula from MASTERLIST:
+    // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+    // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+    calculateRentalPrice() {
+      const rentalRate2010 = parseFloat(this.newStall.baseRate)
+      if (rentalRate2010 && rentalRate2010 > 0) {
+        // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+        const monthlyRent = Math.round(rentalRate2010 * 2 * 100) / 100
+        // Discounted rate for early payment = Monthly Rent × 0.75
+        const discountedRate = Math.round(monthlyRent * 0.75 * 100) / 100
+        
+        this.calculatedMonthlyRent = monthlyRent.toFixed(2)
+        
+        // Auto-update price field for Fixed Price type (use full monthly rent)
+        if (this.newStall.priceType === 'Fixed Price') {
+          this.newStall.price = monthlyRent.toString()
+        }
+        
+        console.log(`📊 RENTAL RATE 2010: ${rentalRate2010} | Monthly Rent (×2): ${monthlyRent} | Discounted: ${discountedRate}`)
+      } else {
+        this.calculatedMonthlyRent = ''
+        if (this.newStall.priceType === 'Fixed Price') {
+          this.newStall.price = ''
+        }
+      }
+    },
+
+    // Calculate from area (optional - for rate per sq.m calculation)
+    calculateRentalFromArea() {
+      // Area change doesn't affect rental calculation directly
+      // Rental is calculated from Base Rate × 1.5
+      // Area is used for rate_per_sqm = Monthly Rent / Area
+      console.log(`📐 Area updated: ${this.newStall.areaSqm} sq.m`)
     },
 
     // Validate location text
@@ -624,7 +674,8 @@ export default {
         this.newStall.stallNumber &&
         this.newStall.price &&
         this.newStall.location &&
-        this.newStall.size &&
+        this.newStall.areaSqm && // Changed from size to areaSqm
+        this.newStall.baseRate && // Added baseRate check
         this.newStall.floorId &&
         this.newStall.sectionId
 
