@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 17, 2025 at 04:02 AM
+-- Generation Time: Dec 22, 2025 at 09:42 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -4547,20 +4547,24 @@ END$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStats` ()   BEGIN
     DECLARE v_total_stallholders INT DEFAULT 0;
     DECLARE v_total_stalls INT DEFAULT 0;
+    DECLARE v_available_stalls INT DEFAULT 0;
+    DECLARE v_occupied_stalls INT DEFAULT 0;
     
-    -- Count active stallholders (with active contracts)
     SELECT COUNT(*) INTO v_total_stallholders
-    FROM stallholder
-    WHERE contract_status = 'Active';
+    FROM stallholder WHERE contract_status = 'Active';
     
-    -- Count all stalls (regardless of status)
-    SELECT COUNT(*) INTO v_total_stalls
-    FROM stall;
+    SELECT COUNT(*) INTO v_total_stalls FROM stall;
     
-    -- Return the statistics
-    SELECT 
-        v_total_stallholders AS total_stallholders,
-        v_total_stalls AS total_stalls;
+    SELECT COUNT(*) INTO v_available_stalls
+    FROM stall WHERE is_available = 1;
+    
+    SELECT COUNT(*) INTO v_occupied_stalls
+    FROM stall WHERE is_available = 0;
+    
+    SELECT v_total_stallholders AS total_stallholders,
+           v_total_stalls AS total_stalls,
+           v_available_stalls AS available_stalls,
+           v_occupied_stalls AS occupied_stalls;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLocationsByArea` (IN `p_area` VARCHAR(100))   BEGIN
@@ -6089,8 +6093,8 @@ CREATE TABLE `business_employee` (
 --
 
 INSERT INTO `business_employee` (`business_employee_id`, `employee_username`, `employee_password_hash`, `first_name`, `last_name`, `email`, `phone_number`, `branch_id`, `created_by_manager`, `permissions`, `status`, `last_login`, `password_reset_required`, `created_at`, `updated_at`) VALUES
-(1, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 3, 3, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11'),
-(2, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'Jeno Aldrei', 'Laurente', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', NULL, 1, '2025-12-03 04:03:26', '2025-12-08 21:35:05');
+(1, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 3, 3, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', '2025-12-18 02:28:34', 1, '2025-11-06 05:36:23', '2025-12-18 02:28:34'),
+(2, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'Jeno Aldrei', 'Laurente', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', '2025-12-18 02:53:08', 1, '2025-12-03 04:03:26', '2025-12-18 02:53:08');
 
 --
 -- Triggers `business_employee`
@@ -6280,7 +6284,7 @@ CREATE TABLE `collector` (
 --
 
 INSERT INTO `collector` (`collector_id`, `username`, `password_hash`, `first_name`, `last_name`, `middle_name`, `email`, `contact_no`, `date_created`, `date_hired`, `status`, `termination_date`, `termination_reason`, `last_login`) VALUES
-(1, 'COL6806', '$2a$12$daseDK99xoM1.O4XOVbMzeSXdYKYJ5JAQ9O0fR6TN852oUZooDOqS', 'Jeno Aldrei', 'Laurente', NULL, 'laurentejeno73@gmail.com', '09473430196', '2025-12-09 16:29:10', '2025-12-09', 'active', NULL, NULL, '2025-12-09 08:51:23');
+(1, 'COL6806', '$2a$12$fyruXNao5wSK1v4DarRBLO03o/odeWS/P9Y9X98ml/RbYWTPNqZIK', 'Jeno Aldrei', 'Laurente', NULL, 'laurentejeno73@gmail.com', '09473430196', '2025-12-09 16:29:10', '2025-12-09', 'active', NULL, NULL, '2025-12-18 02:58:34');
 
 -- --------------------------------------------------------
 
@@ -6662,8 +6666,8 @@ CREATE TABLE `inspector` (
 -- Dumping data for table `inspector`
 --
 
-INSERT INTO `inspector` (`inspector_id`, `username`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `password_hash`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`) VALUES
-(4, 'INS9721', 'Voun Irish', 'Dejumo', '', 'josonglaurente@gmail.com', '', '$2a$12$YspzW.gMf6YZGEp8LXL1VeJyhbSD60UyM/Mm4f/3Dm1p7ta6nBjxe', '2025-12-17 10:46:51', 'active', '2025-12-09', '09473595468', NULL, NULL);
+INSERT INTO `inspector` (`inspector_id`, `username`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `password_hash`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`, `last_login`) VALUES
+(4, 'INS9721', 'Voun Irish', 'Dejumo', '', 'josonglaurente@gmail.com', '', '$2a$12$YspzW.gMf6YZGEp8LXL1VeJyhbSD60UyM/Mm4f/3Dm1p7ta6nBjxe', '2025-12-17 11:08:44', 'active', '2025-12-09', '09473595468', NULL, NULL, '2025-12-18 02:59:23');
 
 -- --------------------------------------------------------
 
@@ -7054,6 +7058,46 @@ CREATE TRIGGER `trg_spouse_reset_auto` AFTER DELETE ON `spouse` FOR EACH ROW BEG
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff_activity_log`
+--
+
+CREATE TABLE `staff_activity_log` (
+  `log_id` int(11) NOT NULL,
+  `staff_type` enum('business_employee','business_manager','business_owner','system_administrator','inspector','collector') NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `staff_name` varchar(200) NOT NULL,
+  `branch_id` int(11) DEFAULT NULL,
+  `action_type` varchar(100) NOT NULL,
+  `action_description` text DEFAULT NULL,
+  `module` varchar(100) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `request_method` varchar(10) DEFAULT NULL,
+  `request_path` varchar(255) DEFAULT NULL,
+  `status` enum('success','failed','pending') DEFAULT 'success',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `staff_activity_log`
+--
+
+INSERT INTO `staff_activity_log` (`log_id`, `staff_type`, `staff_id`, `staff_name`, `branch_id`, `action_type`, `action_description`, `module`, `ip_address`, `user_agent`, `request_method`, `request_path`, `status`, `created_at`) VALUES
+(1, 'inspector', 4, 'Voun Irish Dejumo', 1, 'LOGIN', 'inspector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:02:51'),
+(2, 'collector', 1, 'Jeno Aldrei Laurente', 1, 'LOGIN', 'collector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:11:09'),
+(3, 'business_employee', 2, 'Jeno Aldrei Laurente', NULL, 'LOGIN', 'Jeno Aldrei Laurente logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 02:53:08'),
+(4, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 02:53:19'),
+(5, 'collector', 1, 'Jeno Aldrei Laurente', 1, 'LOGIN', 'collector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:58:34'),
+(6, 'inspector', 4, 'Voun Irish Dejumo', 1, 'LOGIN', 'inspector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:59:23'),
+(7, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:14:21'),
+(8, 'business_owner', 1, 'Multi Manager Owner', NULL, 'LOGIN', 'Multi Manager Owner logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:31:31'),
+(9, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:35:01'),
+(10, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 06:40:01'),
+(11, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 07:19:00');
 
 -- --------------------------------------------------------
 
@@ -8166,6 +8210,17 @@ ALTER TABLE `spouse`
   ADD KEY `applicant_id` (`applicant_id`);
 
 --
+-- Indexes for table `staff_activity_log`
+--
+ALTER TABLE `staff_activity_log`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `idx_staff_type` (`staff_type`),
+  ADD KEY `idx_staff_id` (`staff_id`),
+  ADD KEY `idx_branch_id` (`branch_id`),
+  ADD KEY `idx_action_type` (`action_type`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
 -- Indexes for table `stall`
 --
 ALTER TABLE `stall`
@@ -8521,6 +8576,12 @@ ALTER TABLE `section`
 --
 ALTER TABLE `spouse`
   MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `staff_activity_log`
+--
+ALTER TABLE `staff_activity_log`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `stall`

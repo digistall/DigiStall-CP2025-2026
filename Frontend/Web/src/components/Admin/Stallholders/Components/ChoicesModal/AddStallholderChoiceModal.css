@@ -1,4 +1,5 @@
 /* ===== ADD STALLHOLDER CHOICE MODAL STYLES ===== */
+/* Primary color: rgb(0, 33, 129) / #002181 */
 
 .choice-modal-card {
   border-radius: 16px !important;
@@ -6,7 +7,7 @@
 }
 
 .choice-modal-header {
-  background: #1976d2 !important;
+  background: linear-gradient(135deg, rgb(0, 33, 129) 0%, rgb(0, 50, 160) 100%) !important;
   color: white !important;
   padding: 24px 28px !important;
   display: flex !important;
@@ -72,24 +73,30 @@
 .choice-icon-container {
   width: 60px !important;
   height: 60px !important;
-  border-radius: 50% !important;
+  min-width: 60px !important;
+  min-height: 60px !important;
+  max-width: 60px !important;
+  max-height: 60px !important;
+  border-radius: 12px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   margin: 0 auto 24px auto !important;
   transition: all 0.3s ease !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  flex-shrink: 0 !important;
 }
 
 .stallholder-icon {
-  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%) !important;
+  background: linear-gradient(135deg, rgb(0, 33, 129) 0%, rgb(0, 50, 160) 100%) !important;
 }
 
 .excel-icon {
-  background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%) !important;
+  background: linear-gradient(135deg, rgb(16, 124, 65) 0%, rgb(33, 150, 83) 100%) !important;
 }
 
 .document-icon {
-  background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%) !important;
+  background: linear-gradient(135deg, rgb(0, 33, 129) 0%, rgb(60, 80, 160) 100%) !important;
 }
 
 .choice-card:hover .choice-icon-container {
@@ -107,15 +114,15 @@
 }
 
 .stallholder-card:hover .choice-title {
-  color: #4caf50 !important;
+  color: rgb(0, 33, 129) !important;
 }
 
 .excel-card:hover .choice-title {
-  color: #2196f3 !important;
+  color: rgb(16, 124, 65) !important;
 }
 
 .document-card:hover .choice-title {
-  color: #ff9800 !important;
+  color: rgb(0, 33, 129) !important;
 }
 
 .choice-description {
@@ -167,12 +174,12 @@
 }
 
 .stallholder-card:hover {
-  border-color: #4caf50 !important;
-  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.15) !important;
+  border-color: rgb(0, 33, 129) !important;
+  box-shadow: 0 8px 24px rgba(0, 33, 129, 0.2) !important;
 }
 
 .stallholder-card .choice-btn {
-  background: #4caf50 !important;
+  background: linear-gradient(135deg, rgb(0, 33, 129) 0%, rgb(0, 60, 180) 100%) !important;
   color: white !important;
 }
 
@@ -182,12 +189,12 @@
 }
 
 .excel-card:hover {
-  border-color: #2196f3 !important;
-  box-shadow: 0 8px 20px rgba(33, 150, 243, 0.15) !important;
+  border-color: rgb(16, 124, 65) !important;
+  box-shadow: 0 8px 24px rgba(16, 124, 65, 0.2) !important;
 }
 
 .excel-card .choice-btn {
-  background: #2196f3 !important;
+  background: linear-gradient(135deg, rgb(16, 124, 65) 0%, rgb(33, 150, 83) 100%) !important;
   color: white !important;
 }
 
@@ -197,20 +204,20 @@
 }
 
 .document-card:hover {
-  border-color: #ff9800 !important;
-  box-shadow: 0 8px 20px rgba(255, 152, 0, 0.15) !important;
+  border-color: rgb(0, 33, 129) !important;
+  box-shadow: 0 8px 24px rgba(0, 33, 129, 0.2) !important;
 }
 
 .document-card .choice-btn {
-  background: #ff9800 !important;
+  background: linear-gradient(135deg, rgb(0, 33, 129) 0%, rgb(60, 80, 160) 100%) !important;
   color: white !important;
 }
 
 /* Helper Alert */
 .helper-alert {
-  background-color: rgba(33, 150, 243, 0.1) !important;
-  border: 1px solid rgba(33, 150, 243, 0.3) !important;
-  color: #1565c0 !important;
+  background-color: rgba(0, 33, 129, 0.08) !important;
+  border: 1px solid rgba(0, 33, 129, 0.2) !important;
+  color: rgb(0, 33, 129) !important;
 }
 
 /* Responsive Design */
@@ -255,7 +262,7 @@
 
 /* Accessibility */
 .choice-card:focus {
-  outline: 3px solid #2196f3 !important;
+  outline: 3px solid rgb(0, 33, 129) !important;
   outline-offset: 2px !important;
 }
 

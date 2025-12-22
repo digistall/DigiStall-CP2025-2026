@@ -13,6 +13,8 @@ export default {
       // Landing page statistics from database
       totalStallholders: 0,
       totalStalls: 0,
+      availableStallsCount: 0,
+      occupiedStallsCount: 0,
       statsLoading: true,
       
       // Stallholders Modal
@@ -67,6 +69,33 @@ export default {
     },
     formattedStalls() {
       return this.totalStalls.toLocaleString()
+    },
+    // Filter out occupied stalls - only show available ones
+    availableStallsList() {
+      return this.stallsList.filter(stall => 
+        stall.occupancy_status !== 'Occupied' && 
+        stall.occupancy_status?.toLowerCase() !== 'occupied'
+      )
+    },
+    // Compute available count from stalls list
+    computedAvailableCount() {
+      if (this.stallsList.length > 0) {
+        return this.stallsList.filter(stall => 
+          stall.occupancy_status !== 'Occupied' && 
+          stall.occupancy_status?.toLowerCase() !== 'occupied'
+        ).length
+      }
+      return this.availableStallsCount
+    },
+    // Compute occupied count from stalls list
+    computedOccupiedCount() {
+      if (this.stallsList.length > 0) {
+        return this.stallsList.filter(stall => 
+          stall.occupancy_status === 'Occupied' || 
+          stall.occupancy_status?.toLowerCase() === 'occupied'
+        ).length
+      }
+      return this.occupiedStallsCount
     }
   },
   mounted() {
@@ -87,9 +116,13 @@ export default {
         if (data.success) {
           this.totalStallholders = data.data.totalStallholders || 0
           this.totalStalls = data.data.totalStalls || 0
+          this.availableStallsCount = data.data.availableStalls || 0
+          this.occupiedStallsCount = data.data.occupiedStalls || (this.totalStalls - this.availableStallsCount)
           console.log('📊 Landing page stats loaded:', {
             stallholders: this.totalStallholders,
-            stalls: this.totalStalls
+            stalls: this.totalStalls,
+            available: this.availableStallsCount,
+            occupied: this.occupiedStallsCount
           })
         }
       } catch (error) {
