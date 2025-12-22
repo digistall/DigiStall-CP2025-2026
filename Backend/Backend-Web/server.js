@@ -29,6 +29,7 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
+import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
 
 const app = express();
 const PORT = process.env.WEB_PORT || 3001;
@@ -69,6 +70,10 @@ app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes
 app.use('/api/subscriptions', subscriptionRoutes); // Has its own auth middleware
 app.use('/api/mobile-staff', enhancedAuthMiddleware.authenticateToken, mobileStaffRoutes); // Mobile staff (inspectors/collectors)
 console.log('📱 Mobile staff routes registered at /api/mobile-staff');
+
+// Activity log routes (for monitoring staff activities)
+app.use('/api/activity-logs', staffActivityLogRoutes);
+console.log('📊 Activity log routes registered at /api/activity-logs');
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {

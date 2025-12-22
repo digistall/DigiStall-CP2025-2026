@@ -5,6 +5,7 @@ import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authMiddleware from './middleware/auth.js';
+import { activityLogger } from './Backend-Web/middleware/activityLogger.js';
 import './Backend-Web/services/cleanupScheduler.js'; // Initialize cleanup scheduler
 
 // Load environment variables
@@ -23,6 +24,8 @@ import paymentRoutes from './Backend-Web/routes/paymentRoutes.js';
 import complianceRoutes from './Backend-Web/routes/complianceRoutes.js';
 import complaintRoutes from './Backend-Web/routes/complaintRoutes.js';
 import subscriptionRoutes from './Backend-Web/routes/subscriptionRoutes.js';
+import mobileStaffRoutes from './Backend-Web/routes/mobileStaffRoutes.js';
+import staffActivityLogRoutes from './Backend-Web/routes/activityLog/staffActivityLogRoutes.js';
 
 // Import Mobile routes (from Backend-Mobile)
 import mobileAuthRoutes from './Backend-Mobile/routes/authRoutes.js';
@@ -64,13 +67,17 @@ app.use('/api/landing-applicants', webLandingApplicantRoutes); // Landing page a
 app.use('/api/employees', webEmployeeRoutes);     // Employee routes (login is public, others protected internally)
 
 // Management web routes (authentication required)
-app.use('/api/applicants', authMiddleware.authenticateToken, webApplicantRoutes);
-app.use('/api/branches', authMiddleware.authenticateToken, webBranchRoutes);
-app.use('/api/stallholders', authMiddleware.authenticateToken, stallholderRoutes);
-app.use('/api/payments', authMiddleware.authenticateToken, paymentRoutes);
-app.use('/api/compliances', authMiddleware.authenticateToken, complianceRoutes);
-app.use('/api/complaints', authMiddleware.authenticateToken, complaintRoutes);
-app.use('/api/subscriptions', subscriptionRoutes); // Subscription management (System Admin only - auth handled internally)
+app.use('/api/applicants', authMiddleware.authenticateToken, activityLogger, webApplicantRoutes);
+app.use('/api/branches', authMiddleware.authenticateToken, activityLogger, webBranchRoutes);
+app.use('/api/stallholders', authMiddleware.authenticateToken, activityLogger, stallholderRoutes);
+app.use('/api/payments', authMiddleware.authenticateToken, activityLogger, paymentRoutes);
+app.use('/api/compliances', authMiddleware.authenticateToken, activityLogger, complianceRoutes);
+app.use('/api/complaints', authMiddleware.authenticateToken, activityLogger, complaintRoutes);
+app.use('/api/subscriptions', activityLogger, subscriptionRoutes); // Subscription management (System Admin only - auth handled internally)
+app.use('/api/mobile-staff', authMiddleware.authenticateToken, activityLogger, mobileStaffRoutes); // Mobile staff (inspectors/collectors)
+app.use('/api/activity-logs', staffActivityLogRoutes); // Staff activity logs (auth handled internally)
+console.log('📊 Activity log routes registered at /api/activity-logs');
+console.log('📊 Activity logger middleware enabled for protected routes');
 
 // ===== MOBILE ROUTES (Backend-Mobile functionality) =====
 // Mobile API routes with /mobile prefix to differentiate

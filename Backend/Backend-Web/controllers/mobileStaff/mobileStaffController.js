@@ -292,43 +292,69 @@ export async function createCollector(req, res) {
 /**
  * Get all inspectors by branch
  * GET /api/mobile-staff/inspectors
+ * Query params: branchId (optional, overrides token branchId)
  */
 export async function getInspectorsByBranch(req, res) {
     let connection;
     try {
-        const branchId = req.user?.branchId;
+        // Get branchId from query param first, then from token
+        const branchId = req.query.branchId || req.user?.branchId;
         
         console.log('📱 Fetching inspectors for branch:', branchId);
-        
-        if (!branchId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Branch ID not found in session'
-            });
-        }
 
         connection = await createConnection();
 
-        const [inspectors] = await connection.execute(`
-            SELECT 
-                i.inspector_id,
-                i.first_name,
-                i.last_name,
-                i.email,
-                i.contact_no,
-                i.date_hired,
-                i.status,
-                i.date_created,
-                ia.branch_id,
-                b.branch_name
-            FROM inspector i
-            LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
-            LEFT JOIN branch b ON ia.branch_id = b.branch_id
-            WHERE ia.branch_id = ?
-            ORDER BY i.date_created DESC
-        `, [branchId]);
+        let query;
+        let params;
 
-        console.log(`✅ Found ${inspectors.length} inspectors for branch ${branchId}`);
+        if (branchId) {
+            // Filter by branch if branchId is provided
+            query = `
+                SELECT 
+                    i.inspector_id,
+                    i.first_name,
+                    i.last_name,
+                    i.email,
+                    i.contact_no,
+                    i.date_hired,
+                    i.status,
+                    i.date_created,
+                    i.last_login,
+                    ia.branch_id,
+                    b.branch_name
+                FROM inspector i
+                LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
+                LEFT JOIN branch b ON ia.branch_id = b.branch_id
+                WHERE ia.branch_id = ?
+                ORDER BY i.date_created DESC
+            `;
+            params = [branchId];
+        } else {
+            // Return all inspectors if no branchId (for admin view)
+            query = `
+                SELECT 
+                    i.inspector_id,
+                    i.first_name,
+                    i.last_name,
+                    i.email,
+                    i.contact_no,
+                    i.date_hired,
+                    i.status,
+                    i.date_created,
+                    i.last_login,
+                    ia.branch_id,
+                    b.branch_name
+                FROM inspector i
+                LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
+                LEFT JOIN branch b ON ia.branch_id = b.branch_id
+                ORDER BY i.date_created DESC
+            `;
+            params = [];
+        }
+
+        const [inspectors] = await connection.execute(query, params);
+
+        console.log(`✅ Found ${inspectors.length} inspectors${branchId ? ` for branch ${branchId}` : ''}`);
 
         res.json({
             success: true,
@@ -349,20 +375,15 @@ export async function getInspectorsByBranch(req, res) {
 /**
  * Get all collectors by branch
  * GET /api/mobile-staff/collectors
+ * Query params: branchId (optional, overrides token branchId)
  */
 export async function getCollectorsByBranch(req, res) {
     let connection;
     try {
-        const branchId = req.user?.branchId;
+        // Get branchId from query param first, then from token
+        const branchId = req.query.branchId || req.user?.branchId;
         
         console.log('📱 Fetching collectors for branch:', branchId);
-        
-        if (!branchId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Branch ID not found in session'
-            });
-        }
 
         connection = await createConnection();
 
@@ -380,26 +401,57 @@ export async function getCollectorsByBranch(req, res) {
             });
         }
 
-        const [collectors] = await connection.execute(`
-            SELECT 
-                c.collector_id,
-                c.first_name,
-                c.last_name,
-                c.email,
-                c.contact_no,
-                c.date_hired,
-                c.status,
-                c.date_created,
-                ca.branch_id,
-                b.branch_name
-            FROM collector c
-            LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
-            LEFT JOIN branch b ON ca.branch_id = b.branch_id
-            WHERE ca.branch_id = ?
-            ORDER BY c.date_created DESC
-        `, [branchId]);
+        let query;
+        let params;
 
-        console.log(`✅ Found ${collectors.length} collectors for branch ${branchId}`);
+        if (branchId) {
+            // Filter by branch if branchId is provided
+            query = `
+                SELECT 
+                    c.collector_id,
+                    c.first_name,
+                    c.last_name,
+                    c.email,
+                    c.contact_no,
+                    c.date_hired,
+                    c.status,
+                    c.date_created,
+                    c.last_login,
+                    ca.branch_id,
+                    b.branch_name
+                FROM collector c
+                LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+                LEFT JOIN branch b ON ca.branch_id = b.branch_id
+                WHERE ca.branch_id = ?
+                ORDER BY c.date_created DESC
+            `;
+            params = [branchId];
+        } else {
+            // Return all collectors if no branchId (for admin view)
+            query = `
+                SELECT 
+                    c.collector_id,
+                    c.first_name,
+                    c.last_name,
+                    c.email,
+                    c.contact_no,
+                    c.date_hired,
+                    c.status,
+                    c.date_created,
+                    c.last_login,
+                    ca.branch_id,
+                    b.branch_name
+                FROM collector c
+                LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
+                LEFT JOIN branch b ON ca.branch_id = b.branch_id
+                ORDER BY c.date_created DESC
+            `;
+            params = [];
+        }
+
+        const [collectors] = await connection.execute(query, params);
+
+        console.log(`✅ Found ${collectors.length} collectors${branchId ? ` for branch ${branchId}` : ''}`);
 
         res.json({
             success: true,
@@ -526,3 +578,73 @@ export async function terminateCollector(req, res) {
         if (connection) await connection.end();
     }
 }
+
+/**
+ * Reset password for Inspector or Collector
+ * POST /api/mobile-staff/reset-password
+ * Body: { staffType: 'inspector' | 'collector', staffId: number, newPassword?: string }
+ */
+export async function resetStaffPassword(req, res) {
+    let connection;
+    try {
+        const { staffType, staffId, newPassword } = req.body;
+        
+        if (!staffType || !staffId) {
+            return res.status(400).json({
+                success: false,
+                message: 'staffType and staffId are required'
+            });
+        }
+        
+        if (!['inspector', 'collector'].includes(staffType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'staffType must be either "inspector" or "collector"'
+            });
+        }
+        
+        connection = await createConnection();
+        
+        // Generate new password or use provided one
+        const password = newPassword || generateSecurePassword();
+        const hashedPassword = await bcrypt.hash(password, 12);
+        
+        // Update password based on staff type
+        const table = staffType === 'inspector' ? 'inspector' : 'collector';
+        const idColumn = staffType === 'inspector' ? 'inspector_id' : 'collector_id';
+        
+        const [result] = await connection.execute(
+            `UPDATE ${table} SET password_hash = ? WHERE ${idColumn} = ?`,
+            [hashedPassword, staffId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `${staffType} with ID ${staffId} not found`
+            });
+        }
+        
+        console.log(`✅ Password reset for ${staffType} ID: ${staffId}`);
+        
+        return res.json({
+            success: true,
+            message: `Password reset successfully for ${staffType}`,
+            data: {
+                staffType,
+                staffId,
+                newPassword: password
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error resetting password:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset password',
+            error: error.message
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+

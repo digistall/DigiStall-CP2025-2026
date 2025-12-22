@@ -1,5 +1,6 @@
 import express from 'express'
 import authMiddleware from '../middleware/auth.js'
+import activityLogger from '../middleware/activityLogger.js'
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js'
 import {
   // Core stall management (Admin)
@@ -87,6 +88,7 @@ router.get('/public/:id', getStallById)                 // GET /api/stalls/publi
 
 // ===== PROTECTED ROUTES (Authentication Required) =====
 router.use(authMiddleware.authenticateToken)
+router.use(activityLogger)  // Log all protected stall operations
 
 // Stall routes
 router.post('/', 
