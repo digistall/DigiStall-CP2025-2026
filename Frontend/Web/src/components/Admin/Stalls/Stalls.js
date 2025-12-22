@@ -289,6 +289,22 @@ export default {
         if (result.success) {
           // Transform backend data to match frontend format
           this.stallsData = result.data.map((stall) => this.transformStallData(stall))
+          
+          // FILTER OUT OCCUPIED STALLS for business_manager and business_employee
+          // These users should only see Available/Unavailable stalls, not Occupied ones
+          const userType = this.currentUser?.userType
+          if (userType === 'business_manager' || userType === 'business_employee') {
+            const originalCount = this.stallsData.length
+            this.stallsData = this.stallsData.filter(stall => {
+              // Keep stalls that are NOT occupied (is_available = true means Available/Unavailable)
+              // Occupied stalls have availabilityStatus = 'Occupied' and isAvailable = false with stallholder assigned
+              const isOccupied = stall.availabilityStatus === 'Occupied' || 
+                                 (stall.isAvailable === false && stall.stallholderId)
+              return !isOccupied
+            })
+            console.log(`🏪 Filtered out occupied stalls for ${userType}: ${originalCount} → ${this.stallsData.length} stalls visible`)
+          }
+          
           // Sort stalls: Available first, then Unavailable, then Occupied last
           this.stallsData = this.sortStallsByAvailability(this.stallsData)
           this.displayStalls = [...this.stallsData]

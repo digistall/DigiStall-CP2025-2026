@@ -673,7 +673,10 @@ const StallholderController = {
           sh.business_name,
           sh.business_type,
           st.size as stall_size,
+          st.area_sqm,
+          st.base_rate,
           st.rental_price,
+          st.rate_per_sqm,
           sh.monthly_rent,
           sh.lease_amount,
           sh.contract_start_date,
@@ -741,16 +744,17 @@ const StallholderController = {
         properties: { tabColor: { argb: '4472C4' } }
       });
       
-      // Define columns matching company's format with all information
+      // Define columns matching company's MASTERLIST format with rental calculation
       dataSheet.columns = [
         // Stall Info
         { header: 'B/S NO.', key: 'stall_no', width: 12 },
         { header: 'REGISTERED NAME', key: 'stallholder_name', width: 30 },
-        // Rental Calculation (matching company format)
+        // Rental Calculation (matching company MASTERLIST format)
         { header: 'NEW AREA OCCUPIED', key: 'area_occupied', width: 18 },
+        { header: 'RENTAL RATE (2010)', key: 'base_rate', width: 18 },  // Base rate for calculation
         { header: 'RATE PER SQ. METER', key: 'rate_per_sqm', width: 18 },
-        { header: 'MONTHLY RENT', key: 'monthly_rent', width: 15 },
-        { header: 'DISCOUNTED RATE (25% OFF)', key: 'discounted_rate', width: 22 },
+        { header: 'MONTHLY RENT', key: 'monthly_rent', width: 15 },  // = BASE RATE × 2
+        { header: 'DISCOUNTED RATE (25% OFF)', key: 'discounted_rate', width: 22 },  // For early payment
         // Contact Info
         { header: 'CONTACT NUMBER', key: 'contact_number', width: 18 },
         { header: 'EMAIL', key: 'email', width: 30 },
@@ -793,27 +797,42 @@ const StallholderController = {
       headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       headerRow.height = 35;
       
-      // Add existing stallholders data with discount calculation
+      // Add existing stallholders data with rental calculation (MASTERLIST formula)
       if (existingStallholders.length > 0) {
         existingStallholders.forEach((sh) => {
-          // Calculate area and rate
-          let areaOccupied = '';
-          let ratePerSqm = sh.rental_price || '';
-          let monthlyRent = sh.monthly_rent || 0;
+          // Get values from database
+          let areaOccupied = sh.area_sqm || '';
+          let monthlyRent = sh.monthly_rent || sh.rental_price || 0;
           
-          // Try to calculate area from monthly rent and rate
-          if (monthlyRent && ratePerSqm) {
+          // RENTAL CALCULATION FORMULA (based on MASTERLIST):
+          // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+          // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+          // So: Base Rate = Monthly Rent / 2
+          let baseRate = sh.base_rate || '';
+          if (!baseRate && monthlyRent > 0) {
+            baseRate = (monthlyRent / 2).toFixed(2);
+          }
+          
+          // Rate per sq.m = Monthly Rent / Area
+          let ratePerSqm = sh.rate_per_sqm || '';
+          if (!ratePerSqm && monthlyRent && areaOccupied) {
+            ratePerSqm = (monthlyRent / areaOccupied).toFixed(2);
+          }
+          
+          // If area not set, try to calculate from monthly rent and rate
+          if (!areaOccupied && monthlyRent && ratePerSqm) {
             areaOccupied = (monthlyRent / ratePerSqm).toFixed(2);
           }
           
-          // DISCOUNT CALCULATION: 25% off = pay 75% of monthly rent
-          // Based on masterlist: DISCOUNTED = MONTHLY_RENT × 0.75
+          // DISCOUNTED RATE: For early payment (additional 25% off from monthly rent)
+          // This is separate from the formula calculation
           const discountedRate = monthlyRent ? (monthlyRent * 0.75).toFixed(2) : '';
           
           dataSheet.addRow({
             stall_no: sh.stall_no || '',
             stallholder_name: sh.stallholder_name || '',
             area_occupied: areaOccupied,
+            base_rate: baseRate,  // RENTAL RATE (2010)
             rate_per_sqm: ratePerSqm,
             monthly_rent: monthlyRent,
             discounted_rate: discountedRate,
@@ -1072,21 +1091,59 @@ const StallholderController = {
           return cell.value;
         };
 
-        // Extract data from row
+        // Extract data from row - Support both MASTERLIST format and standard format
+        // MASTERLIST format: B/S NO., REGISTERED NAME, NEW AREA OCCUPIED, RENTAL RATE (2010)...
+        const rawBaseRate = parseFloat(getCellValue('RENTAL RATE (2010)') || getCellValue('BASE RATE') || getCellValue('RENTAL RATE') || 0);
+        const rawAreaOccupied = parseFloat(getCellValue('NEW AREA OCCUPIED') || getCellValue('AREA OCCUPIED (SQM)') || getCellValue('AREA OCCUPIED') || 0);
+        
+        // ===== RENTAL CALCULATION FORMULA =====
+        // Based on MASTERLIST:
+        // NEW RATE FOR 2013 = This IS the monthly rent (direct from Excel)
+        // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+        let calculatedMonthlyRent = 0;
+        let calculatedRatePerSqm = 0;
+        
+        // Check if MASTERLIST format (has B/S NO. header)
+        const isMasterlistFormat = headers['B/S NO.'] !== undefined;
+        
+        // Try to get NEW RATE FOR 2013 directly first
+        const newRate2013 = parseFloat(getCellValue('NEW RATE FOR 2013') || 0);
+        
+        if (newRate2013 > 0) {
+          // NEW RATE FOR 2013 IS the monthly rent
+          calculatedMonthlyRent = Math.round(newRate2013 * 100) / 100;
+          if (rawAreaOccupied > 0) {
+            calculatedRatePerSqm = Math.round((calculatedMonthlyRent / rawAreaOccupied) * 100) / 100;
+          }
+          console.log(`📊 Monthly Rent (NEW RATE 2013): ${calculatedMonthlyRent}`);
+        } else if (isMasterlistFormat && rawBaseRate > 0) {
+          // Fallback: Calculate from RENTAL RATE (2010) × 2
+          calculatedMonthlyRent = Math.round(rawBaseRate * 2 * 100) / 100;
+          if (rawAreaOccupied > 0) {
+            calculatedRatePerSqm = Math.round((calculatedMonthlyRent / rawAreaOccupied) * 100) / 100;
+          }
+          console.log(`📊 MASTERLIST Rental Calc: Base Rate ${rawBaseRate} × 2 = ${calculatedMonthlyRent}`);
+        } else {
+          // Standard format: Use provided monthly rent directly
+          calculatedMonthlyRent = parseFloat(getCellValue('MONTHLY RENT') || getCellValue('NEW RATE FOR 2013') || getCellValue('DISCOUNTED') || 0);
+          calculatedRatePerSqm = parseFloat(getCellValue('RATE PER SQ. METER') || getCellValue('RATE PER SQ METER') || 0);
+        }
+
         const rowData = {
           row_number: rowNumber,
-          stall_no: getCellValue('STALL NO.') || getCellValue('STALL NO') || '',
-          stallholder_name: getCellValue('STALLHOLDER NAME') || getCellValue('REGISTERED NAME') || '',
+          stall_no: getCellValue('B/S NO.') || getCellValue('STALL NO.') || getCellValue('STALL NO') || '',
+          stallholder_name: getCellValue('REGISTERED NAME') || getCellValue('STALLHOLDER NAME') || '',
           contact_number: getCellValue('CONTACT NUMBER') || getCellValue('CONTACT') || '',
           email: getCellValue('EMAIL') || '',
           address: getCellValue('ADDRESS') || '',
           business_name: getCellValue('BUSINESS NAME') || '',
-          business_type: getCellValue('BUSINESS TYPE') || getCellValue('NATURE OF BUSSINESS 2025') || getCellValue('NATURE OF BUSINESS 2025') || '',
-          area_occupied: parseFloat(getCellValue('AREA OCCUPIED (SQM)') || getCellValue('NEW AREA OCCUPIED') || getCellValue('AREA OCCUPIED') || 0),
-          rate_per_sqm: parseFloat(getCellValue('RATE PER SQ. METER') || getCellValue('RATE PER SQ METER') || 0),
-          monthly_rent: parseFloat(getCellValue('MONTHLY RENT') || getCellValue('NEW RATE FOR 2013') || getCellValue('DISCOUNTED') || 0),
-          discounted_rate: parseFloat(getCellValue('DISCOUNTED RATE') || getCellValue('DISCOUNTED') || 0),
-          lease_amount: parseFloat(getCellValue('LEASE AMOUNT') || getCellValue('LEASE') || 0),
+          business_type: getCellValue('NATURE OF BUSSINESS 2025') || getCellValue('NATURE OF BUSSINESS') || getCellValue('NATURE OF BUSINESS 2025') || getCellValue('BUSINESS TYPE') || '',
+          area_occupied: rawAreaOccupied,
+          base_rate: rawBaseRate,
+          rate_per_sqm: calculatedRatePerSqm,
+          monthly_rent: calculatedMonthlyRent,
+          discounted_rate: parseFloat(getCellValue('DISCOUNTED RATE') || getCellValue('DISCOUNTED') || calculatedMonthlyRent),
+          lease_amount: parseFloat(getCellValue('LEASE AMOUNT') || getCellValue('LEASE') || calculatedMonthlyRent),
           contract_start_date: getCellValue('CONTRACT START (YYYY-MM-DD)') || getCellValue('CONTRACT START') || null,
           contract_end_date: getCellValue('CONTRACT END (YYYY-MM-DD)') || getCellValue('CONTRACT END') || null,
           floor_name: getCellValue('FLOOR') || 'GROUND FLOOR',
@@ -1364,17 +1421,21 @@ const StallholderController = {
             if (existingStall.length > 0) {
               stallId = existingStall[0].stall_id;
               
-              // Update stall with new rental information
+              // Update stall with new rental information (including base_rate and area_sqm)
               await connection.execute(
                 `UPDATE stall SET 
+                   base_rate = COALESCE(?, base_rate),
                    rental_price = ?,
+                   rate_per_sqm = COALESCE(?, rate_per_sqm),
+                   area_sqm = COALESCE(?, area_sqm),
                    size = COALESCE(?, size),
                    stall_location = COALESCE(?, stall_location),
                    is_available = 0,
                    status = 'Occupied',
                    updated_at = NOW()
                  WHERE stall_id = ?`,
-                [row.monthly_rent, row.stall_size, row.stall_location, stallId]
+                [row.base_rate || null, row.monthly_rent, row.rate_per_sqm || null, 
+                 row.area_occupied || null, row.stall_size, row.stall_location, stallId]
               );
             } else {
               // Determine floor and section
@@ -1411,15 +1472,16 @@ const StallholderController = {
                 }
               }
 
-              // Create new stall
+              // Create new stall with rental calculation fields
               const [newStall] = await connection.execute(
                 `INSERT INTO stall (
-                   section_id, floor_id, stall_no, stall_location, size, 
-                   rental_price, price_type, status, is_available,
+                   section_id, floor_id, stall_no, stall_location, size, area_sqm,
+                   base_rate, rental_price, rate_per_sqm, price_type, status, is_available,
                    created_by_business_manager, created_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, 'Fixed Price', 'Occupied', 0, ?, NOW())`,
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Fixed Price', 'Occupied', 0, ?, NOW())`,
                 [sectionId, floorId, row.stall_no, row.stall_location || '', row.stall_size || '', 
-                 row.monthly_rent, managerId]
+                 row.area_occupied || null, row.base_rate || null, row.monthly_rent, 
+                 row.rate_per_sqm || null, managerId]
               );
               stallId = newStall.insertId;
               stallsCreated++;
