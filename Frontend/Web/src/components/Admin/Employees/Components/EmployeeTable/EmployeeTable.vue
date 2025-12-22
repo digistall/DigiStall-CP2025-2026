@@ -61,7 +61,7 @@
                 size="small"
                 variant="flat"
               >
-                {{ employee.status }}
+                {{ capitalizeStatus(employee.status) }}
               </v-chip>
             </div>
 

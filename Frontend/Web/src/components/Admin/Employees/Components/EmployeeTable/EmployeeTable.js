@@ -51,7 +51,12 @@
     },
 
     getStatusColor(status) {
-      return status === 'active' ? 'success' : 'warning'
+      return status?.toLowerCase() === 'active' ? 'success' : 'warning'
+    },
+
+    capitalizeStatus(status) {
+      if (!status) return 'Unknown'
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
     },
 
     getRoleColor(employee) {
