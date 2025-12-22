@@ -36,13 +36,15 @@
 
             <!-- Content Section -->
             <div class="employee-content">
-              <!-- Search and Filters -->
+              <!-- Search, Filters, and Activity Log Button -->
               <EmployeeSearch
                 v-model:search="searchQuery"
                 v-model:statusFilter="statusFilter"
                 v-model:permissionFilter="permissionFilter"
                 :permission-options="permissionOptions"
+                :show-activity-log="!isBusinessOwner"
                 @reset="resetFilters"
+                @open-activity-log="openActivityLogDialog"
               />
 
               <!-- Employee Table -->
@@ -70,6 +72,12 @@
               <div class="pulse-ring pulse-ring-3"></div>
               <div class="pulse-ring pulse-ring-4"></div>
             </div>
+
+            <!-- Activity Log Dialog -->
+            <ActivityLogDialog
+              v-model="activityLogDialog"
+              @close="closeActivityLogDialog"
+            />
 
             <!-- Add/Edit Employee Dialog -->
             <AddEmployee

@@ -208,6 +208,46 @@ export const login = async (req, res) => {
       ...additionalUserInfo
     };
     
+    // Update last_login for the user
+    try {
+      await connection.execute(
+        `UPDATE ${tableName} SET last_login = NOW() WHERE ${userIdField} = ?`,
+        [user[userIdField]]
+      );
+      console.log(`✅ Updated last_login for ${userType}: ${userUsername}`);
+    } catch (updateError) {
+      console.error('⚠️ Failed to update last_login:', updateError.message);
+    }
+    
+    // Log activity to staff_activity_log
+    try {
+      // Map userType to staff_type for activity log
+      const staffTypeMap = {
+        'system_administrator': 'system_administrator',
+        'stall_business_owner': 'business_owner',
+        'business_manager': 'business_manager',
+        'business_employee': 'business_employee'
+      };
+      const staffType = staffTypeMap[userType.toLowerCase()] || userType.toLowerCase();
+      const staffName = `${user.first_name} ${user.last_name}`;
+      
+      await connection.execute(
+        `INSERT INTO staff_activity_log 
+         (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, status) 
+         VALUES (?, ?, ?, 'LOGIN', ?, 'authentication', ?, 'success')`,
+        [
+          staffType,
+          user[userIdField],
+          staffName,
+          `${staffName} logged in via web`,
+          req.ip || req.connection?.remoteAddress || 'unknown'
+        ]
+      );
+      console.log(`✅ Activity logged for ${userType}: ${userUsername}`);
+    } catch (logError) {
+      console.error('⚠️ Failed to log activity:', logError.message);
+    }
+    
     console.log(`✅ ${userType} login successful:`, userUsername);
     console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     

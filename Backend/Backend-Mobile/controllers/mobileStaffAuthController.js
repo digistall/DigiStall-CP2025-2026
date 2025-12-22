@@ -7,6 +7,53 @@ import jwt from 'jsonwebtoken';
  * Handles authentication for Inspectors and Collectors on mobile app
  */
 
+// ===== LOG STAFF ACTIVITY =====
+async function logStaffActivity(activityData) {
+    let connection;
+    try {
+        connection = await createConnection();
+        
+        const {
+            staffType,
+            staffId,
+            staffName,
+            branchId,
+            actionType,
+            actionDescription,
+            module,
+            ipAddress,
+            userAgent,
+            status = 'success'
+        } = activityData;
+
+        await connection.execute(`
+            INSERT INTO staff_activity_log 
+            (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
+             module, ip_address, user_agent, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            staffType,
+            staffId,
+            staffName,
+            branchId || null,
+            actionType,
+            actionDescription || null,
+            module || 'mobile_app',
+            ipAddress || null,
+            userAgent || null,
+            status
+        ]);
+
+        console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error logging activity:', error);
+        return false;
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+
 // ===== MOBILE STAFF LOGIN =====
 export const mobileStaffLogin = async (req, res) => {
     let connection;
@@ -96,11 +143,17 @@ export const mobileStaffLogin = async (req, res) => {
         let isValidPassword = false;
         const storedPassword = staffData.password_hash;
         
+        console.log('🔐 Password verification debug:');
+        console.log('   - Stored password hash (first 20 chars):', storedPassword ? storedPassword.substring(0, 20) + '...' : 'NULL');
+        console.log('   - Password length entered:', password.length);
+        console.log('   - Is bcrypt hash:', storedPassword?.startsWith('$2b$') || storedPassword?.startsWith('$2a$'));
+        
         try {
             // Try bcrypt comparison
-            if (storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2a$')) {
+            if (storedPassword && (storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2a$'))) {
                 isValidPassword = await bcrypt.compare(password, storedPassword);
-            } else {
+                console.log('   - Bcrypt comparison result:', isValidPassword);
+            } else if (storedPassword) {
                 // Fallback for SHA256 hashed passwords (legacy inspector)
                 const crypto = await import('crypto');
                 const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
@@ -144,7 +197,7 @@ export const mobileStaffLogin = async (req, res) => {
         // Update last login
         if (staffType === 'inspector') {
             await connection.execute(
-                'UPDATE inspector SET date_created = NOW() WHERE inspector_id = ?',
+                'UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?',
                 [staffData.staff_id]
             );
         } else {
@@ -153,6 +206,20 @@ export const mobileStaffLogin = async (req, res) => {
                 [staffData.staff_id]
             );
         }
+        
+        // Log the login activity
+        await logStaffActivity({
+            staffType: staffType,
+            staffId: staffData.staff_id,
+            staffName: `${staffData.first_name} ${staffData.last_name}`,
+            branchId: staffData.branch_id,
+            actionType: 'LOGIN',
+            actionDescription: `${staffType} logged in via mobile app`,
+            module: 'mobile_app',
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            status: 'success'
+        });
         
         console.log(`✅ ${staffType} login successful:`, staffData.first_name);
         
