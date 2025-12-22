@@ -104,27 +104,35 @@
             <div class="preview-section">
               <!-- Summary -->
               <v-row class="mb-4">
-                <v-col cols="12" sm="4">
+                <v-col cols="6" sm="3">
                   <v-card outlined>
-                    <v-card-text class="text-center">
-                      <div class="summary-number text-h4 primary--text">{{ previewData.length }}</div>
-                      <div class="summary-label">Total Records</div>
+                    <v-card-text class="text-center pa-2">
+                      <div class="summary-number text-h5 primary--text">{{ previewData.length }}</div>
+                      <div class="summary-label caption">Total Records</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
-                <v-col cols="12" sm="4">
+                <v-col cols="6" sm="3">
                   <v-card outlined>
-                    <v-card-text class="text-center">
-                      <div class="summary-number text-h4 success--text">{{ validRecords }}</div>
-                      <div class="summary-label">Valid Records</div>
+                    <v-card-text class="text-center pa-2">
+                      <div class="summary-number text-h5 success--text">{{ validRecords }}</div>
+                      <div class="summary-label caption">Valid Records</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
-                <v-col cols="12" sm="4">
+                <v-col cols="6" sm="3">
                   <v-card outlined>
-                    <v-card-text class="text-center">
-                      <div class="summary-number text-h4 error--text">{{ invalidRecords }}</div>
-                      <div class="summary-label">Invalid Records</div>
+                    <v-card-text class="text-center pa-2">
+                      <div class="summary-number text-h5 warning--text">{{ newStallsCount }}</div>
+                      <div class="summary-label caption">New Stalls</div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="6" sm="3">
+                  <v-card outlined>
+                    <v-card-text class="text-center pa-2">
+                      <div class="summary-number text-h5 error--text">{{ invalidRecords }}</div>
+                      <div class="summary-label caption">Invalid</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
@@ -136,14 +144,15 @@
                 type="warning" 
                 outlined 
                 class="mb-4"
+                dense
               >
-                <div class="alert-title">
-                  <v-icon left>mdi-alert</v-icon>
+                <div class="alert-title font-weight-bold">
+                  <v-icon left small>mdi-alert</v-icon>
                   Validation Issues Found
                 </div>
-                <ul class="validation-list">
-                  <li v-for="error in validationErrors.slice(0, 5)" :key="error">{{ error }}</li>
-                  <li v-if="validationErrors.length > 5">
+                <ul class="validation-list mt-2">
+                  <li v-for="(error, idx) in validationErrors.slice(0, 5)" :key="idx" class="caption">{{ error }}</li>
+                  <li v-if="validationErrors.length > 5" class="caption">
                     ... and {{ validationErrors.length - 5 }} more issues
                   </li>
                 </ul>
@@ -152,7 +161,7 @@
               <!-- Data Preview Table -->
               <v-card outlined>
                 <v-card-title class="py-2">
-                  <v-icon left>mdi-table</v-icon>
+                  <v-icon left small>mdi-table</v-icon>
                   Data Preview
                   <v-spacer></v-spacer>
                   <v-chip :color="validRecords === previewData.length ? 'success' : 'warning'" small>
@@ -161,20 +170,39 @@
                 </v-card-title>
                 <v-data-table
                   :headers="previewHeaders"
-                  :items="previewData.slice(0, 10)"
+                  :items="previewData.slice(0, 15)"
                   hide-default-footer
                   dense
                   class="preview-table"
                 >
                   <template v-slot:item="{ item }">
                     <tr :class="{ 'invalid-row': !item._isValid }">
+                      <td class="text-truncate" style="max-width: 100px;">
+                        <v-chip x-small :color="item._stallExists ? 'info' : 'success'" outlined>
+                          {{ item.stall_no }}
+                        </v-chip>
+                      </td>
                       <td class="text-truncate" style="max-width: 150px;">{{ item.stallholder_name }}</td>
-                      <td class="text-truncate" style="max-width: 180px;">{{ item.email }}</td>
-                      <td class="text-truncate" style="max-width: 120px;">{{ item.phone }}</td>
-                      <td class="text-truncate" style="max-width: 150px;">{{ item.business_name }}</td>
-                      <td class="text-truncate" style="max-width: 120px;">{{ item.business_type }}</td>
+                      <td class="text-truncate" style="max-width: 150px;">{{ item.business_type }}</td>
+                      <td class="text-right" style="width: 80px;">{{ item.area_occupied || '-' }}</td>
+                      <td class="text-right" style="width: 100px;">
+                        <span v-if="item.monthly_rent">₱{{ parseFloat(item.monthly_rent).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</span>
+                        <span v-else>-</span>
+                      </td>
                       <td class="text-center">
+                        <v-tooltip bottom v-if="!item._isValid && item._rowErrors">
+                          <template v-slot:activator="{ on, attrs }">
+                            <v-icon 
+                              color="error" 
+                              size="16"
+                              v-bind="attrs"
+                              v-on="on"
+                            >mdi-alert-circle</v-icon>
+                          </template>
+                          <span>{{ item._rowErrors.join(', ') }}</span>
+                        </v-tooltip>
                         <v-icon 
+                          v-else
                           :color="item._isValid ? 'success' : 'error'" 
                           size="16"
                         >
@@ -184,8 +212,8 @@
                     </tr>
                   </template>
                 </v-data-table>
-                <v-card-text v-if="previewData.length > 10" class="text-center text-caption">
-                  Showing first 10 of {{ previewData.length }} records
+                <v-card-text v-if="previewData.length > 15" class="text-center text-caption py-2">
+                  Showing first 15 of {{ previewData.length }} records
                 </v-card-text>
               </v-card>
 
