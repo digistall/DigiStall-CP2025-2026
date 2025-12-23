@@ -640,6 +640,11 @@ const StallholderController = {
    * - Spouse info (name, birthdate, contact, occupation)
    * - Business info (nature, capitalization, source of capital)
    * - Discount calculation: 25% off for early payment (DISCOUNTED = MONTHLY_RENT × 0.75)
+   * 
+   * Sheet structure:
+   * 1. Instructions - How to use the template
+   * 2. Reference Data - Available branches, floors, sections
+   * 3. [Section Name] sheets - One sheet per section with floor info (e.g., "Flowers", "Dry Goods")
    */
   downloadExcelTemplate: async (req, res) => {
     let connection;
@@ -739,148 +744,7 @@ const StallholderController = {
       workbook.creator = 'DigiStall System';
       workbook.created = new Date();
       
-      // ========== MAIN DATA SHEET (MASTER LIST FORMAT) ==========
-      const dataSheet = workbook.addWorksheet('MASTER LIST', {
-        properties: { tabColor: { argb: '4472C4' } }
-      });
-      
-      // Define columns matching company's MASTERLIST format with rental calculation
-      dataSheet.columns = [
-        // Stall Info
-        { header: 'B/S NO.', key: 'stall_no', width: 12 },
-        { header: 'REGISTERED NAME', key: 'stallholder_name', width: 30 },
-        // Rental Calculation (matching company MASTERLIST format)
-        { header: 'NEW AREA OCCUPIED', key: 'area_occupied', width: 18 },
-        { header: 'RENTAL RATE (2010)', key: 'base_rate', width: 18 },  // Base rate for calculation
-        { header: 'RATE PER SQ. METER', key: 'rate_per_sqm', width: 18 },
-        { header: 'MONTHLY RENT', key: 'monthly_rent', width: 15 },  // = BASE RATE × 2
-        { header: 'DISCOUNTED RATE (25% OFF)', key: 'discounted_rate', width: 22 },  // For early payment
-        // Contact Info
-        { header: 'CONTACT NUMBER', key: 'contact_number', width: 18 },
-        { header: 'EMAIL', key: 'email', width: 30 },
-        { header: 'ADDRESS', key: 'address', width: 40 },
-        // Applicant Personal Info
-        { header: 'BIRTHDATE', key: 'birthdate', width: 14 },
-        { header: 'CIVIL STATUS', key: 'civil_status', width: 14 },
-        { header: 'EDUCATIONAL ATTAINMENT', key: 'education', width: 25 },
-        // Spouse Info
-        { header: 'SPOUSE NAME', key: 'spouse_name', width: 30 },
-        { header: 'SPOUSE BIRTHDATE', key: 'spouse_birthdate', width: 16 },
-        { header: 'SPOUSE CONTACT', key: 'spouse_contact', width: 18 },
-        { header: 'SPOUSE OCCUPATION', key: 'spouse_occupation', width: 20 },
-        { header: 'SPOUSE EDUCATION', key: 'spouse_education', width: 22 },
-        // Business Info
-        { header: 'NATURE OF BUSINESS', key: 'nature_of_business', width: 40 },
-        { header: 'CAPITALIZATION', key: 'capitalization', width: 18 },
-        { header: 'SOURCE OF CAPITAL', key: 'source_of_capital', width: 25 },
-        { header: 'PREVIOUS BUSINESS EXP.', key: 'prev_business_exp', width: 30 },
-        { header: 'RELATIVE STALL OWNER', key: 'relative_stall_owner', width: 20 },
-        // Contract Info
-        { header: 'CONTRACT START', key: 'contract_start_date', width: 16 },
-        { header: 'CONTRACT END', key: 'contract_end_date', width: 16 },
-        { header: 'PAYMENT STATUS', key: 'payment_status', width: 16 },
-        // Location Info
-        { header: 'FLOOR', key: 'floor_name', width: 15 },
-        { header: 'SECTION', key: 'section_name', width: 20 },
-        { header: 'STALL LOCATION', key: 'stall_location', width: 25 },
-        { header: 'STALL SIZE', key: 'stall_size', width: 12 }
-      ];
-      
-      // Style header row
-      const headerRow = dataSheet.getRow(1);
-      headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 10 };
-      headerRow.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: '4472C4' }
-      };
-      headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      headerRow.height = 35;
-      
-      // Add existing stallholders data with rental calculation (MASTERLIST formula)
-      if (existingStallholders.length > 0) {
-        existingStallholders.forEach((sh) => {
-          // Get values from database
-          let areaOccupied = sh.area_sqm || '';
-          let monthlyRent = sh.monthly_rent || sh.rental_price || 0;
-          
-          // RENTAL CALCULATION FORMULA (based on MASTERLIST):
-          // MONTHLY RENT = RENTAL RATE (2010) × 2
-          // RATE PER SQ. METER = MONTHLY RENT ÷ NEW AREA OCCUPIED
-          // DISCOUNTED = MONTHLY RENT × 0.75 (25% off for early payment)
-          // So: Base Rate = Monthly Rent / 2
-          let baseRate = sh.base_rate || '';
-          if (!baseRate && monthlyRent > 0) {
-            baseRate = (monthlyRent / 2).toFixed(2);
-          }
-          
-          // Rate per sq.m = Monthly Rent / Area
-          let ratePerSqm = sh.rate_per_sqm || '';
-          if (!ratePerSqm && monthlyRent && areaOccupied) {
-            ratePerSqm = (monthlyRent / areaOccupied).toFixed(2);
-          }
-          
-          // If area not set, try to calculate from monthly rent and rate
-          if (!areaOccupied && monthlyRent && ratePerSqm) {
-            areaOccupied = (monthlyRent / ratePerSqm).toFixed(2);
-          }
-          
-          // DISCOUNTED RATE: For early payment (25% off from monthly rent)
-          const discountedRate = monthlyRent ? (monthlyRent * 0.75).toFixed(2) : '';
-          
-          dataSheet.addRow({
-            stall_no: sh.stall_no || '',
-            stallholder_name: sh.stallholder_name || '',
-            area_occupied: areaOccupied,
-            base_rate: baseRate,  // RENTAL RATE (2010)
-            rate_per_sqm: ratePerSqm,
-            monthly_rent: monthlyRent,
-            discounted_rate: discountedRate,
-            contact_number: sh.contact_number || '',
-            email: sh.email || '',
-            address: sh.address || '',
-            // Applicant info
-            birthdate: sh.applicant_birthdate ? new Date(sh.applicant_birthdate).toISOString().split('T')[0] : '',
-            civil_status: sh.applicant_civil_status || '',
-            education: sh.applicant_educational_attainment || '',
-            // Spouse info
-            spouse_name: sh.spouse_full_name || '',
-            spouse_birthdate: sh.spouse_birthdate ? new Date(sh.spouse_birthdate).toISOString().split('T')[0] : '',
-            spouse_contact: sh.spouse_contact_number || '',
-            spouse_occupation: sh.spouse_occupation || '',
-            spouse_education: sh.spouse_educational_attainment || '',
-            // Business info
-            nature_of_business: sh.nature_of_business || sh.business_type || '',
-            capitalization: sh.capitalization || '',
-            source_of_capital: sh.source_of_capital || '',
-            prev_business_exp: sh.previous_business_experience || '',
-            relative_stall_owner: sh.relative_stall_owner || '',
-            // Contract info
-            contract_start_date: sh.contract_start_date ? new Date(sh.contract_start_date).toISOString().split('T')[0] : '',
-            contract_end_date: sh.contract_end_date ? new Date(sh.contract_end_date).toISOString().split('T')[0] : '',
-            payment_status: sh.payment_status || '',
-            // Location info
-            floor_name: sh.floor_name || '',
-            section_name: sh.section_name || '',
-            stall_location: sh.stall_location || '',
-            stall_size: sh.stall_size || ''
-          });
-        });
-      }
-      
-      // Add data validation and formatting
-      const lastRow = Math.max(existingStallholders.length + 1, 100);
-      for (let i = 2; i <= lastRow; i++) {
-        // Currency columns (C, D, E, F, S)
-        ['C', 'D', 'E', 'F', 'S'].forEach(col => {
-          dataSheet.getCell(`${col}${i}`).numFmt = '#,##0.00';
-        });
-      }
-      
-      // Freeze header row
-      dataSheet.views = [{ state: 'frozen', ySplit: 1 }];
-      
-      // ========== INSTRUCTIONS SHEET ==========
+      // ========== 1. INSTRUCTIONS SHEET (First tab) ==========
       const instructionSheet = workbook.addWorksheet('Instructions', {
         properties: { tabColor: { argb: '70AD47' } }
       });
@@ -897,6 +761,15 @@ const StallholderController = {
         '',
         '═══════════════════════════════════════════════════════════════════════════',
         '',
+        '📂 SHEET STRUCTURE:',
+        '   • Instructions - This guide',
+        '   • Reference Data - Available branches, floors, sections',
+        '   • [Section Name] sheets - One sheet per section (e.g., "Flowers", "Dry Goods")',
+        '     - Each section sheet shows stallholders grouped by FLOOR',
+        '     - B1-S1 = Building 1, Section 1 (Floor info shown in header)',
+        '',
+        '═══════════════════════════════════════════════════════════════════════════',
+        '',
         '💰 RENTAL CALCULATION FORMULA (Based on MASTERLIST):',
         '   • MONTHLY RENT = RENTAL RATE (2010) × 2',
         '   • RATE PER SQ. METER = MONTHLY RENT ÷ NEW AREA OCCUPIED',
@@ -905,10 +778,10 @@ const StallholderController = {
         '',
         '═══════════════════════════════════════════════════════════════════════════',
         '',
-        '📁 DATA INCLUDED:',
+        '📁 DATA COLUMNS:',
         '',
         '🏪 STALL INFORMATION:',
-        '   • B/S NO. - Stall number (e.g., B1-S1)',
+        '   • B/S NO. - Stall number (e.g., B1-S1 = Building 1, Section 1)',
         '   • REGISTERED NAME - Full name of stallholder',
         '   • NEW AREA OCCUPIED - Area in square meters',
         '   • RENTAL RATE (2010) - Base rate for calculation',
@@ -916,32 +789,17 @@ const StallholderController = {
         '   • MONTHLY RENT - Calculated: RENTAL RATE (2010) × 2',
         '   • DISCOUNTED RATE - 25% early payment discount (×0.75)',
         '',
-        '👤 PERSONAL INFORMATION:',
-        '   • CONTACT NUMBER - Phone number',
-        '   • EMAIL - Email address',
-        '   • ADDRESS - Complete address',
-        '   • BIRTHDATE - Date of birth',
-        '   • CIVIL STATUS - Single/Married/Divorced/Widowed',
-        '   • EDUCATIONAL ATTAINMENT - Highest education',
+        '👤 PERSONAL & CONTACT:',
+        '   • CONTACT NUMBER, EMAIL, ADDRESS, BIRTHDATE, CIVIL STATUS, EDUCATION',
         '',
         '💑 SPOUSE INFORMATION (if married):',
-        '   • SPOUSE NAME - Full name',
-        '   • SPOUSE BIRTHDATE - Date of birth',
-        '   • SPOUSE CONTACT - Contact number',
-        '   • SPOUSE OCCUPATION - Job/Profession',
-        '   • SPOUSE EDUCATION - Educational attainment',
+        '   • SPOUSE NAME, BIRTHDATE, CONTACT, OCCUPATION, EDUCATION',
         '',
         '💼 BUSINESS INFORMATION:',
-        '   • NATURE OF BUSINESS - Type of business',
-        '   • CAPITALIZATION - Initial capital amount',
-        '   • SOURCE OF CAPITAL - Where capital came from',
-        '   • PREVIOUS BUSINESS EXP. - Past business experience',
-        '   • RELATIVE STALL OWNER - If related to existing stallholder',
+        '   • NATURE OF BUSINESS, CAPITALIZATION, SOURCE OF CAPITAL, PREV. EXPERIENCE',
         '',
         '📝 CONTRACT INFORMATION:',
-        '   • CONTRACT START - Start date',
-        '   • CONTRACT END - End date',
-        '   • PAYMENT STATUS - current/paid/overdue/pending',
+        '   • CONTRACT START, CONTRACT END, PAYMENT STATUS',
         '',
         '═══════════════════════════════════════════════════════════════════════════',
         '',
@@ -960,14 +818,14 @@ const StallholderController = {
           row.font = { bold: true, size: 12, color: { argb: '70AD47' } };
         } else if (text.startsWith('💰')) {
           row.font = { bold: true, size: 12, color: { argb: 'FF0000' } };
-        } else if (text.startsWith('🏪') || text.startsWith('👤') || text.startsWith('💑') || text.startsWith('💼') || text.startsWith('📝') || text.startsWith('⚠️') || text.startsWith('📁')) {
+        } else if (text.startsWith('📂') || text.startsWith('🏪') || text.startsWith('👤') || text.startsWith('💑') || text.startsWith('💼') || text.startsWith('📝') || text.startsWith('⚠️') || text.startsWith('📁')) {
           row.font = { bold: true, size: 12 };
         } else if (text.startsWith('═')) {
           row.font = { color: { argb: '808080' } };
         }
       });
       
-      // ========== REFERENCE DATA SHEET ==========
+      // ========== 2. REFERENCE DATA SHEET (Second tab) ==========
       const refSheet = workbook.addWorksheet('Reference Data', {
         properties: { tabColor: { argb: 'FFC000' } }
       });
@@ -1004,8 +862,225 @@ const StallholderController = {
         });
       });
       
+      // ========== 3. SECTION SHEETS (One per section, grouped by floor) ==========
+      // Get ALL sections from database (not just those with stallholders)
+      const allSections = [...new Set(floorsAndSections.map(f => f.section_name).filter(Boolean))];
+      
+      // Group stallholders by section
+      const stallholdersBySection = {};
+      
+      // Initialize all sections (even empty ones)
+      allSections.forEach(sectionName => {
+        stallholdersBySection[sectionName] = [];
+      });
+      
+      // Add stallholders to their sections
+      existingStallholders.forEach(sh => {
+        const sectionName = sh.section_name || 'Unassigned';
+        if (!stallholdersBySection[sectionName]) {
+          stallholdersBySection[sectionName] = [];
+        }
+        stallholdersBySection[sectionName].push(sh);
+      });
+      
+      // Also add 'Unassigned' if there are stallholders without section
+      if (!stallholdersBySection['Unassigned']) {
+        const unassigned = existingStallholders.filter(sh => !sh.section_name);
+        if (unassigned.length > 0) {
+          stallholdersBySection['Unassigned'] = unassigned;
+        }
+      }
+      
+      // Create a sheet for each section
+      const tabColors = ['4472C4', 'ED7D31', '70AD47', 'FFC000', '5B9BD5', 'A5A5A5', '7030A0', 'C00000'];
+      let colorIndex = 0;
+      
+      Object.keys(stallholdersBySection).sort().forEach(sectionName => {
+        const sectionStallholders = stallholdersBySection[sectionName];
+        
+        // Clean section name for sheet (Excel sheet names have restrictions)
+        const sheetName = sectionName.substring(0, 31).replace(/[*?:/\\[\]]/g, '-');
+        
+        const sectionSheet = workbook.addWorksheet(sheetName, {
+          properties: { tabColor: { argb: tabColors[colorIndex % tabColors.length] } }
+        });
+        colorIndex++;
+        
+        // Group by floor within section
+        const stallholdersByFloor = {};
+        sectionStallholders.forEach(sh => {
+          const floorName = sh.floor_name || '1st Floor';
+          if (!stallholdersByFloor[floorName]) {
+            stallholdersByFloor[floorName] = [];
+          }
+          stallholdersByFloor[floorName].push(sh);
+        });
+        
+        // If section is empty, get floors from floorsAndSections data
+        if (Object.keys(stallholdersByFloor).length === 0) {
+          // Find floors that have this section
+          const floorsWithSection = floorsAndSections.filter(f => f.section_name === sectionName);
+          floorsWithSection.forEach(f => {
+            if (f.floor_name && !stallholdersByFloor[f.floor_name]) {
+              stallholdersByFloor[f.floor_name] = [];
+            }
+          });
+          // If still no floors, add a default
+          if (Object.keys(stallholdersByFloor).length === 0) {
+            stallholdersByFloor['Unassigned Floor'] = [];
+          }
+        }
+        
+        // Define columns
+        sectionSheet.columns = [
+          { header: 'B/S NO.', key: 'stall_no', width: 12 },
+          { header: 'REGISTERED NAME', key: 'stallholder_name', width: 30 },
+          { header: 'NEW AREA OCCUPIED', key: 'area_occupied', width: 18 },
+          { header: 'RENTAL RATE (2010)', key: 'base_rate', width: 18 },
+          { header: 'RATE PER SQ. METER', key: 'rate_per_sqm', width: 18 },
+          { header: 'MONTHLY RENT', key: 'monthly_rent', width: 15 },
+          { header: 'DISCOUNTED RATE', key: 'discounted_rate', width: 18 },
+          { header: 'CONTACT NUMBER', key: 'contact_number', width: 18 },
+          { header: 'EMAIL', key: 'email', width: 30 },
+          { header: 'ADDRESS', key: 'address', width: 40 },
+          { header: 'BIRTHDATE', key: 'birthdate', width: 14 },
+          { header: 'CIVIL STATUS', key: 'civil_status', width: 14 },
+          { header: 'EDUCATION', key: 'education', width: 25 },
+          { header: 'SPOUSE NAME', key: 'spouse_name', width: 30 },
+          { header: 'SPOUSE CONTACT', key: 'spouse_contact', width: 18 },
+          { header: 'NATURE OF BUSINESS', key: 'nature_of_business', width: 30 },
+          { header: 'CAPITALIZATION', key: 'capitalization', width: 18 },
+          { header: 'CONTRACT START', key: 'contract_start_date', width: 16 },
+          { header: 'CONTRACT END', key: 'contract_end_date', width: 16 },
+          { header: 'PAYMENT STATUS', key: 'payment_status', width: 16 }
+        ];
+        
+        let currentRow = 1;
+        
+        // Add section title
+        sectionSheet.mergeCells(`A${currentRow}:T${currentRow}`);
+        const titleCell = sectionSheet.getCell(`A${currentRow}`);
+        titleCell.value = `📍 SECTION: ${sectionName}`;
+        titleCell.font = { bold: true, size: 16, color: { argb: '4472C4' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        titleCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'D9E2F3' }
+        };
+        sectionSheet.getRow(currentRow).height = 30;
+        currentRow++;
+        
+        // Add floor groups
+        Object.keys(stallholdersByFloor).sort().forEach(floorName => {
+          const floorStallholders = stallholdersByFloor[floorName];
+          
+          // Floor header row
+          sectionSheet.mergeCells(`A${currentRow}:T${currentRow}`);
+          const floorCell = sectionSheet.getCell(`A${currentRow}`);
+          floorCell.value = `🏢 ${floorName} (${floorStallholders.length} stallholders)`;
+          floorCell.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
+          floorCell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: tabColors[colorIndex % tabColors.length] }
+          };
+          floorCell.alignment = { horizontal: 'left', vertical: 'middle' };
+          sectionSheet.getRow(currentRow).height = 25;
+          currentRow++;
+          
+          // Column headers for this floor group
+          const headerRowNum = currentRow;
+          const colHeaders = ['B/S NO.', 'REGISTERED NAME', 'NEW AREA OCCUPIED', 'RENTAL RATE (2010)', 
+            'RATE PER SQ. METER', 'MONTHLY RENT', 'DISCOUNTED RATE', 'CONTACT NUMBER', 'EMAIL', 
+            'ADDRESS', 'BIRTHDATE', 'CIVIL STATUS', 'EDUCATION', 'SPOUSE NAME', 'SPOUSE CONTACT',
+            'NATURE OF BUSINESS', 'CAPITALIZATION', 'CONTRACT START', 'CONTRACT END', 'PAYMENT STATUS'];
+          
+          colHeaders.forEach((header, idx) => {
+            const cell = sectionSheet.getCell(currentRow, idx + 1);
+            cell.value = header;
+            cell.font = { bold: true, size: 9, color: { argb: 'FFFFFF' } };
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: '4472C4' }
+            };
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          });
+          sectionSheet.getRow(currentRow).height = 30;
+          currentRow++;
+          
+          // Add stallholder data OR empty message
+          if (floorStallholders.length === 0) {
+            // No stallholders in this floor
+            sectionSheet.mergeCells(`A${currentRow}:T${currentRow}`);
+            const emptyCell = sectionSheet.getCell(`A${currentRow}`);
+            emptyCell.value = '📋 No stallholders assigned to this floor yet';
+            emptyCell.font = { italic: true, size: 10, color: { argb: '808080' } };
+            emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            sectionSheet.getRow(currentRow).height = 25;
+            currentRow++;
+          } else {
+            // Add stallholder data
+            floorStallholders.forEach(sh => {
+            let areaOccupied = sh.area_sqm || '';
+            let monthlyRent = sh.monthly_rent || sh.rental_price || 0;
+            let baseRate = sh.base_rate || '';
+            if (!baseRate && monthlyRent > 0) {
+              baseRate = (monthlyRent / 2).toFixed(2);
+            }
+            let ratePerSqm = sh.rate_per_sqm || '';
+            if (!ratePerSqm && monthlyRent && areaOccupied) {
+              ratePerSqm = (monthlyRent / areaOccupied).toFixed(2);
+            }
+            const discountedRate = monthlyRent ? (monthlyRent * 0.75).toFixed(2) : '';
+            
+            const rowData = [
+              sh.stall_no || '',
+              sh.stallholder_name || '',
+              areaOccupied,
+              baseRate,
+              ratePerSqm,
+              monthlyRent,
+              discountedRate,
+              sh.contact_number || '',
+              sh.email || '',
+              sh.address || '',
+              sh.applicant_birthdate ? new Date(sh.applicant_birthdate).toISOString().split('T')[0] : '',
+              sh.applicant_civil_status || '',
+              sh.applicant_educational_attainment || '',
+              sh.spouse_full_name || '',
+              sh.spouse_contact_number || '',
+              sh.nature_of_business || sh.business_type || '',
+              sh.capitalization || '',
+              sh.contract_start_date ? new Date(sh.contract_start_date).toISOString().split('T')[0] : '',
+              sh.contract_end_date ? new Date(sh.contract_end_date).toISOString().split('T')[0] : '',
+              sh.payment_status || ''
+            ];
+            
+            rowData.forEach((value, idx) => {
+              const cell = sectionSheet.getCell(currentRow, idx + 1);
+              cell.value = value;
+              cell.alignment = { vertical: 'middle' };
+              // Number format for currency columns
+              if ([2, 3, 4, 5, 6, 16].includes(idx)) {
+                cell.numFmt = '#,##0.00';
+              }
+            });
+            currentRow++;
+          });
+          } // End of else block (stallholders exist)
+          
+          // Add empty row between floor groups
+          currentRow++;
+        });
+        
+        // Freeze first two rows
+        sectionSheet.views = [{ state: 'frozen', ySplit: 2 }];
+      });
+      
       // Set response headers
-      const filename = `MASTER_LIST_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const filename = `STALLHOLDER_MASTERLIST_${new Date().toISOString().split('T')[0]}.xlsx`;
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
       
