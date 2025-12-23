@@ -104,6 +104,9 @@ export default {
       if (!this.floorFormValid) return
 
       this.loading = true
+      
+      // Store floor name before reset for success message
+      const floorName = this.newFloor.floorName
 
       try {
         const token = sessionStorage.getItem('authToken')
@@ -128,10 +131,9 @@ export default {
         const result = await response.json()
 
         // Show success snackbar notification
-        this.successMessage = `Floor "${this.newFloor.floorName}" added successfully!`
+        this.successMessage = `Floor "${floorName}" added successfully!`
         this.showSuccessSnackbar = true
 
-        this.resetFloorForm()
         await this.loadFloors()
         this.$emit('floor-added', result)
         this.$emit('refresh-data')
@@ -139,13 +141,16 @@ export default {
         // Emit global event for real-time updates
         eventBus.emit(EVENTS.FLOOR_ADDED, {
           floorData: result,
-          message: `Floor "${this.newFloor.floorName}" added successfully!`
+          message: `Floor "${floorName}" added successfully!`
         })
         eventBus.emit(EVENTS.FLOORS_SECTIONS_UPDATED, {
           type: 'floor',
           action: 'added',
           data: result
         })
+        
+        // Close modal after successful add
+        this.closeModal()
       } catch (error) {
         console.error('Error adding floor:', error)
         // Show error snackbar notification
@@ -160,6 +165,10 @@ export default {
     async submitSection() {
       if (!this.sectionFormValid) return
       this.loading = true
+      
+      // Store section name before reset for success message
+      const sectionName = this.newSection.sectionName
+      
       try {
         const token = sessionStorage.getItem('authToken')
         // Use only the correct endpoint for sections
@@ -183,23 +192,25 @@ export default {
         const result = await response.json()
 
         // Show success snackbar notification
-        this.successMessage = `Section "${this.newSection.sectionName}" added successfully!`
+        this.successMessage = `Section "${sectionName}" added successfully!`
         this.showSuccessSnackbar = true
 
-        this.resetSectionForm()
         this.$emit('section-added', result)
         this.$emit('refresh-data')
         
         // Emit global event for real-time updates
         eventBus.emit(EVENTS.SECTION_ADDED, {
           sectionData: result,
-          message: `Section "${this.newSection.sectionName}" added successfully!`
+          message: `Section "${sectionName}" added successfully!`
         })
         eventBus.emit(EVENTS.FLOORS_SECTIONS_UPDATED, {
           type: 'section',
           action: 'added',
           data: result
         })
+        
+        // Close modal after successful add
+        this.closeModal()
       } catch (error) {
         console.error('Error adding section:', error)
         // Show error snackbar notification
