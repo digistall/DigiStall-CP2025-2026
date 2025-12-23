@@ -805,8 +805,9 @@ const StallholderController = {
           let monthlyRent = sh.monthly_rent || sh.rental_price || 0;
           
           // RENTAL CALCULATION FORMULA (based on MASTERLIST):
-          // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
-          // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+          // MONTHLY RENT = RENTAL RATE (2010) × 2
+          // RATE PER SQ. METER = MONTHLY RENT ÷ NEW AREA OCCUPIED
+          // DISCOUNTED = MONTHLY RENT × 0.75 (25% off for early payment)
           // So: Base Rate = Monthly Rent / 2
           let baseRate = sh.base_rate || '';
           if (!baseRate && monthlyRent > 0) {
@@ -824,8 +825,7 @@ const StallholderController = {
             areaOccupied = (monthlyRent / ratePerSqm).toFixed(2);
           }
           
-          // DISCOUNTED RATE: For early payment (additional 25% off from monthly rent)
-          // This is separate from the formula calculation
+          // DISCOUNTED RATE: For early payment (25% off from monthly rent)
           const discountedRate = monthlyRent ? (monthlyRent * 0.75).toFixed(2) : '';
           
           dataSheet.addRow({
@@ -897,10 +897,11 @@ const StallholderController = {
         '',
         '═══════════════════════════════════════════════════════════════════════════',
         '',
-        '💰 DISCOUNT CALCULATION (25% Early Payment Discount):',
-        '   • MONTHLY RENT = AREA OCCUPIED × RATE PER SQ. METER',
-        '   • DISCOUNTED RATE = MONTHLY RENT × 0.75 (25% discount)',
-        '   • Example: ₱4,996.92 × 0.75 = ₱3,747.69',
+        '💰 RENTAL CALCULATION FORMULA (Based on MASTERLIST):',
+        '   • MONTHLY RENT = RENTAL RATE (2010) × 2',
+        '   • RATE PER SQ. METER = MONTHLY RENT ÷ NEW AREA OCCUPIED',
+        '   • DISCOUNTED RATE = MONTHLY RENT × 0.75 (25% early payment discount)',
+        '   • Example: RENTAL RATE (2010) = ₱2,498.46 → MONTHLY RENT = ₱4,996.92 → DISCOUNTED = ₱3,747.69',
         '',
         '═══════════════════════════════════════════════════════════════════════════',
         '',
@@ -910,9 +911,10 @@ const StallholderController = {
         '   • B/S NO. - Stall number (e.g., B1-S1)',
         '   • REGISTERED NAME - Full name of stallholder',
         '   • NEW AREA OCCUPIED - Area in square meters',
-        '   • RATE PER SQ. METER - Rental rate per sqm',
-        '   • MONTHLY RENT - Total monthly rental',
-        '   • DISCOUNTED RATE - 25% early payment discount',
+        '   • RENTAL RATE (2010) - Base rate for calculation',
+        '   • RATE PER SQ. METER - Calculated: MONTHLY RENT ÷ AREA',
+        '   • MONTHLY RENT - Calculated: RENTAL RATE (2010) × 2',
+        '   • DISCOUNTED RATE - 25% early payment discount (×0.75)',
         '',
         '👤 PERSONAL INFORMATION:',
         '   • CONTACT NUMBER - Phone number',
@@ -1098,35 +1100,31 @@ const StallholderController = {
         
         // ===== RENTAL CALCULATION FORMULA =====
         // Based on MASTERLIST:
-        // NEW RATE FOR 2013 = This IS the monthly rent (direct from Excel)
-        // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+        // MONTHLY RENT = RENTAL RATE (2010) × 2
+        // RATE PER SQ. METER = MONTHLY RENT ÷ NEW AREA OCCUPIED
+        // DISCOUNTED = MONTHLY RENT × 0.75 (25% off for early payment)
         let calculatedMonthlyRent = 0;
         let calculatedRatePerSqm = 0;
         
         // Check if MASTERLIST format (has B/S NO. header)
         const isMasterlistFormat = headers['B/S NO.'] !== undefined;
         
-        // Try to get NEW RATE FOR 2013 directly first
-        const newRate2013 = parseFloat(getCellValue('NEW RATE FOR 2013') || 0);
-        
-        if (newRate2013 > 0) {
-          // NEW RATE FOR 2013 IS the monthly rent
-          calculatedMonthlyRent = Math.round(newRate2013 * 100) / 100;
-          if (rawAreaOccupied > 0) {
-            calculatedRatePerSqm = Math.round((calculatedMonthlyRent / rawAreaOccupied) * 100) / 100;
-          }
-          console.log(`📊 Monthly Rent (NEW RATE 2013): ${calculatedMonthlyRent}`);
-        } else if (isMasterlistFormat && rawBaseRate > 0) {
-          // Fallback: Calculate from RENTAL RATE (2010) × 2
+        // Priority 1: Calculate from RENTAL RATE (2010) × 2 (preferred method)
+        if (rawBaseRate > 0) {
           calculatedMonthlyRent = Math.round(rawBaseRate * 2 * 100) / 100;
           if (rawAreaOccupied > 0) {
             calculatedRatePerSqm = Math.round((calculatedMonthlyRent / rawAreaOccupied) * 100) / 100;
           }
           console.log(`📊 MASTERLIST Rental Calc: Base Rate ${rawBaseRate} × 2 = ${calculatedMonthlyRent}`);
         } else {
-          // Standard format: Use provided monthly rent directly
-          calculatedMonthlyRent = parseFloat(getCellValue('MONTHLY RENT') || getCellValue('NEW RATE FOR 2013') || getCellValue('DISCOUNTED') || 0);
+          // Priority 2: Try to get MONTHLY RENT directly
+          calculatedMonthlyRent = parseFloat(getCellValue('MONTHLY RENT') || getCellValue('NEW RATE FOR 2013') || 0);
           calculatedRatePerSqm = parseFloat(getCellValue('RATE PER SQ. METER') || getCellValue('RATE PER SQ METER') || 0);
+          
+          // If we have monthly rent but no rate per sqm, calculate it
+          if (calculatedMonthlyRent > 0 && rawAreaOccupied > 0 && !calculatedRatePerSqm) {
+            calculatedRatePerSqm = Math.round((calculatedMonthlyRent / rawAreaOccupied) * 100) / 100;
+          }
         }
 
         const rowData = {

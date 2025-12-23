@@ -253,8 +253,12 @@ const PaymentController = {
         message: paymentResult.message || 'Payment added successfully',
         paymentId: paymentResult.payment_id,
         amountPaid: paymentResult.amount_paid,
+        monthlyRent: paymentResult.monthly_rent || 0,
+        earlyDiscount: paymentResult.early_discount || 0,
         lateFee: paymentResult.late_fee || 0,
+        daysEarly: paymentResult.days_early || 0,
         daysOverdue: paymentResult.days_overdue || 0,
+        dueDate: paymentResult.due_date,
         receiptNumber: paymentResult.receipt_number
       });
       
