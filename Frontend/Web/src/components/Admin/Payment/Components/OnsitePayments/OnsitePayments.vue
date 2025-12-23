@@ -179,18 +179,8 @@
                   density="comfortable"
                   :rules="[(v) => !!v || 'Required']"
                   prepend-inner-icon="mdi-receipt"
-                  readonly
-                >
-                  <template #append>
-                    <v-btn
-                      icon="mdi-refresh"
-                      size="small"
-                      variant="text"
-                      @click="generateReceiptNumber"
-                      :loading="loading"
-                    ></v-btn>
-                  </template>
-                </v-text-field>
+                  placeholder="Enter receipt number (e.g., RCP-001)"
+                ></v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-textarea
