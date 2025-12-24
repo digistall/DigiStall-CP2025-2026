@@ -454,10 +454,13 @@ export default {
         price_type: stall.price_type || 'Fixed Price',
 
         // Image - Convert relative path to full URL
+        // BLOB images use /api/stalls/images/blob/* format
         image: stall.stall_image 
           ? (stall.stall_image.startsWith('http') 
               ? stall.stall_image 
-              : `http://localhost${stall.stall_image}`)
+              : stall.stall_image.startsWith('/api/') 
+                ? `${this.apiBaseUrl.replace('/api', '')}${stall.stall_image}`
+                : `http://localhost${stall.stall_image}`)
           : this.getDefaultImage(stall.section_name),
 
         // Manager info

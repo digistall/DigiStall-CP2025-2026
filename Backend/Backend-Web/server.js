@@ -35,8 +35,9 @@ const app = express();
 const PORT = process.env.WEB_PORT || 3001;
 
 // ===== MIDDLEWARE =====
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Increased limits to handle large base64 images (100MB = ~75MB actual data)
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
 

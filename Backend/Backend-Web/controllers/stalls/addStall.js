@@ -361,7 +361,7 @@ export const addStall = async (req, res) => {
       status: isAvailable !== false ? "Active" : "Inactive",
       stamp: "APPROVED",
       description: description || null,
-      stall_image: image_final || null,
+      stall_image: null, // Images now stored in BLOB storage (stall_images table), not in stall table
       is_available: isAvailable !== false ? 1 : 0,
       raffle_auction_deadline: (priceType_final === "Raffle" || priceType_final === "Auction") ? parsedDeadline : null,
       deadline_active: 0,
@@ -404,6 +404,37 @@ export const addStall = async (req, res) => {
 
     const stallId = result.insertId;
     console.log("✅ Stall created with ID:", stallId);
+
+    // Handle BLOB image uploads if base64Images provided
+    if (req.body.base64Images) {
+      try {
+        const base64Images = JSON.parse(req.body.base64Images)
+        console.log(`📸 Processing ${base64Images.length} images for BLOB storage...`)
+        
+        for (let i = 0; i < base64Images.length; i++) {
+          const imgData = base64Images[i]
+          const base64Data = imgData.image_data.replace(/^data:image\/\w+;base64,/, '')
+          const imageBuffer = Buffer.from(base64Data, 'base64')
+          const mimeType = imgData.mime_type || 'image/jpeg'
+          const fileName = imgData.file_name || `stall_${stallId}_${Date.now()}_${i}.jpg`
+          const imageUrl = `/api/stalls/images/blob/${stallId}/${i + 1}`
+          const isPrimary = i === 0 ? 1 : 0
+          
+          console.log(`  📸 Uploading image ${i + 1}: ${fileName} (${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
+          
+          await connection.execute(
+            `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [stallId, imageUrl, imageBuffer, mimeType, fileName, i + 1, isPrimary]
+          )
+        }
+        
+        console.log(`✅ ${base64Images.length} images uploaded to BLOB storage`)
+      } catch (imgError) {
+        console.error('⚠️ Error uploading images to BLOB:', imgError.message)
+        // Don't fail the whole operation if images fail
+      }
+    }
 
     // Create raffle or auction record if needed
     let additionalInfo = {};

@@ -264,6 +264,70 @@
       <!-- Delete Stall Component -->
       <DeleteStall :stallData="editForm" :showModal="showDeleteConfirm" @close="cancelDelete"
         @deleted="handleStallDeleted" @error="handleDeleteError" />
+
+      <!-- Image Delete Confirmation Dialog -->
+      <v-dialog v-model="showImageDeleteDialog" max-width="500" persistent>
+        <v-card class="image-delete-dialog" elevation="8">
+          <v-card-title class="d-flex align-center bg-error pa-4">
+            <v-icon size="32" color="white" class="mr-3">mdi-alert-circle</v-icon>
+            <span class="text-h6 text-white">Delete Image</span>
+          </v-card-title>
+
+          <v-card-text class="pt-6 pb-4">
+            <div class="text-center mb-4">
+              <v-icon size="80" color="error" class="mb-3">mdi-image-remove</v-icon>
+              <p class="text-h6 mb-2">Are you sure you want to delete this image?</p>
+              <p class="text-body-2 text-grey-darken-1">
+                This action cannot be undone. The image will be permanently removed from the stall.
+              </p>
+            </div>
+
+            <!-- Image Preview -->
+            <v-card v-if="imageToDelete" class="mx-auto" max-width="300" elevation="2">
+              <v-img 
+                :src="getCurrentImage()" 
+                height="200" 
+                cover
+                class="rounded"
+              >
+                <template v-slot:placeholder>
+                  <div class="d-flex align-center justify-center fill-height">
+                    <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
+                  </div>
+                </template>
+              </v-img>
+              <v-card-subtitle class="text-center pa-2">
+                <v-icon size="small">mdi-image</v-icon>
+                Image {{ imageToDelete.index + 1 }} of {{ stallImages.length }}
+              </v-card-subtitle>
+            </v-card>
+          </v-card-text>
+
+          <v-divider></v-divider>
+
+          <v-card-actions class="pa-4">
+            <v-btn 
+              variant="text" 
+              color="grey-darken-1" 
+              @click="cancelDeleteImage"
+              :disabled="deletingImage"
+            >
+              <v-icon left>mdi-close</v-icon>
+              Cancel
+            </v-btn>
+            <v-spacer></v-spacer>
+            <v-btn 
+              color="error" 
+              variant="elevated"
+              @click="deleteStallImage"
+              :loading="deletingImage"
+            >
+              <v-icon left>mdi-delete</v-icon>
+              Delete Image
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-dialog>
   </div>
 </template>

@@ -25,9 +25,12 @@ export default {
       imagePreview: null,
       imagePreviews: [], // NEW: Support multiple previews
       showDeleteConfirm: false,
+      showImageDeleteDialog: false, // NEW: Image delete confirmation modal
+      imageToDelete: null, // NEW: Track which image to delete
       valid: false,
       loading: false,
       uploadingImages: false, // NEW: Track image upload state
+      deletingImage: false, // NEW: Track image deletion state
       calculatedMonthlyRent: '', // Auto-calculated NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
       // Multi-image gallery data
       stallImages: [],
@@ -70,10 +73,27 @@ export default {
       },
       imageRules: [
         // NO SIZE LIMIT - LONGBLOB supports up to 4GB
-        (v) =>
-          !v ||
-          ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(v.type) ||
-          'Only JPEG, PNG, GIF, and WebP images are allowed!',
+        // Handle both single file and array of files from multiple input
+        // Accept by MIME type OR file extension
+        (v) => {
+          if (!v) return true
+          const files = Array.isArray(v) ? v : [v]
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg']
+          const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+          
+          const invalidFiles = files.filter(f => {
+            if (!f || !f.name) return false
+            const ext = f.name.toLowerCase().substring(f.name.lastIndexOf('.'))
+            const isValidType = f.type && (allowedTypes.includes(f.type) || f.type.startsWith('image/'))
+            const isValidExt = allowedExtensions.includes(ext)
+            return !isValidType && !isValidExt
+          })
+          
+          if (invalidFiles.length > 0) {
+            return `Invalid files: ${invalidFiles.map(f => f.name).join(', ')}`
+          }
+          return true
+        },
       ],
       // API base URL
       apiBaseUrl: (() => {
@@ -513,7 +533,10 @@ export default {
       this.imagePreview = null
       this.imagePreviews = []
       this.uploadingImages = false
+      this.deletingImage = false
       this.showDeleteConfirm = false
+      this.showImageDeleteDialog = false
+      this.imageToDelete = null
       this.stallImages = []
       this.currentImageIndex = 0
       if (this.$refs.editForm) this.$refs.editForm.resetValidation()
@@ -692,19 +715,36 @@ export default {
       return this.editForm.image || null
     },
 
-    async deleteStallImage(imageData, index) {
+    confirmDeleteImage(index) {
+      // Store the image to delete and show modal
+      this.imageToDelete = { index, data: this.stallImages[index] }
+      this.showImageDeleteDialog = true
+    },
+
+    cancelDeleteImage() {
+      this.showImageDeleteDialog = false
+      this.imageToDelete = null
+    },
+
+    async deleteStallImage() {
+      if (!this.imageToDelete) return
+
+      const { index, data: imageData } = this.imageToDelete
+      
       // Handle both object format (BLOB) and string format (legacy)
       const imageId = typeof imageData === 'object' ? imageData.id : null
       const imageUrl = typeof imageData === 'object' ? imageData.url : imageData
       
       console.log(`🗑️ Deleting image at index ${index}`, imageId ? `ID: ${imageId}` : `URL: ${imageUrl}`)
 
+      this.deletingImage = true
+
       try {
         const token = sessionStorage.getItem('authToken')
         const apiUrl = this.apiBaseUrl.replace('/api', '')
         
         if (imageId && imageId !== 'legacy') {
-          // Use BLOB API delete endpoint
+          // Use BLOB API delete endpoint for BLOB images
           const response = await fetch(`${apiUrl}/api/stalls/images/blob/${imageId}`, {
             method: 'DELETE',
             headers: {
@@ -713,7 +753,9 @@ export default {
             }
           })
 
-          if (response.ok) {
+          const result = await response.json().catch(() => ({ success: false, message: 'Failed to parse response' }))
+
+          if (response.ok && result.success) {
             // Remove image from local array
             this.stallImages.splice(index, 1)
             
@@ -723,59 +765,63 @@ export default {
             }
             
             console.log(`✅ Image deleted successfully via BLOB API`)
+            this.$emit('success', '🗑️ Image deleted successfully!')
             this.$emit('image-deleted', { imageId })
+            
+            // Close modal
+            this.showImageDeleteDialog = false
+            this.imageToDelete = null
           } else {
-            const result = await response.json().catch(() => ({ message: 'Failed to delete image' }))
             console.error('Failed to delete image:', result.message)
-            this.$emit('error', `Failed to delete image: ${result.message}`)
+            this.$emit('error', `❌ Failed to delete image: ${result.message}`)
           }
-        } else {
-          // Legacy file-based delete (fallback)
-          const urlParts = imageUrl.split('/')
-          const filename = urlParts[urlParts.length - 1]
-          const stallNo = this.editForm.stallNumber
-          const branchId = this.stallData.branch_id || this.stallData.branchId || 1
-
-          const response = await fetch(`${apiUrl}/api/stalls/${this.editForm.id}/images/${filename}`, {
+        } else if (imageId === 'legacy') {
+          // Delete legacy image from stall table
+          const stallId = this.editForm.id
+          const response = await fetch(`${apiUrl}/api/stalls/${stallId}/legacy-image`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              stall_no: stallNo,
-              branch_id: branchId,
-              filename: filename
-            })
+            }
           })
 
-          if (response.ok) {
+          const result = await response.json().catch(() => ({ success: false, message: 'Failed to parse response' }))
+
+          if (response.ok && result.success) {
+            // Remove image from local array
             this.stallImages.splice(index, 1)
+            
+            // Adjust current index if needed
             if (this.currentImageIndex >= this.stallImages.length) {
               this.currentImageIndex = Math.max(0, this.stallImages.length - 1)
             }
-            console.log(`✅ Image ${filename} deleted successfully`)
-            this.$emit('image-deleted', { filename, stallNo })
+            
+            console.log(`✅ Legacy image deleted successfully`)
+            this.$emit('success', '🗑️ Legacy image deleted successfully!')
+            this.$emit('image-deleted', { stallId, legacy: true })
+            
+            // Close modal
+            this.showImageDeleteDialog = false
+            this.imageToDelete = null
           } else {
-            const result = await response.json().catch(() => ({ message: 'Failed to delete image' }))
-            console.error('Failed to delete image:', result.message)
-            this.$emit('error', `Failed to delete image: ${result.message}`)
+            console.error('Failed to delete legacy image:', result.message)
+            this.$emit('error', `❌ Failed to delete legacy image: ${result.message}`)
           }
+        } else {
+          console.warn('Unknown image format - cannot delete')
+          this.$emit('error', '⚠️ Unknown image format. Cannot delete.')
         }
       } catch (error) {
         console.error('Error deleting image:', error)
-        this.$emit('error', `Error deleting image: ${error.message}`)
-      }
-    },
-
-    confirmDeleteImage(index) {
-      if (confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
-        this.deleteStallImage(this.stallImages[index], index)
+        this.$emit('error', `❌ Error deleting image: ${error.message}`)
+      } finally {
+        this.deletingImage = false
       }
     },
 
     handleImageUpload(event) {
-      const files = event.target.files || [event]
+      const files = event.target.files || event
       if (!files || files.length === 0) return
 
       // Check remaining slots
@@ -793,9 +839,16 @@ export default {
       filesToProcess.forEach((file, index) => {
         console.log(`Processing image ${index + 1}:`, file.name, this.formatFileSize(file.size), file.type)
 
-        // Validate file type (no size limit)
-        if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
-          console.error(`Invalid image type for ${file.name}:`, file.type)
+        // Validate file type - accept common image types and also check file extension
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg']
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+        const isValidType = allowedTypes.includes(file.type) || file.type.startsWith('image/')
+        const isValidExt = allowedExtensions.includes(fileExt)
+        
+        if (!isValidType && !isValidExt) {
+          console.error(`Invalid image for ${file.name}: type=${file.type}, ext=${fileExt}`)
+          this.$emit('error', `⚠️ Skipped ${file.name} - not a valid image file`)
           return
         }
 
@@ -806,7 +859,7 @@ export default {
           this.imagePreviews.push({
             name: file.name,
             size: file.size,
-            type: file.type,
+            type: file.type || `image/${fileExt.replace('.', '')}`,
             dataUrl: e.target.result
           })
           console.log(`✅ Image ${file.name} added. Total pending: ${this.selectedImageFiles.length}`)
