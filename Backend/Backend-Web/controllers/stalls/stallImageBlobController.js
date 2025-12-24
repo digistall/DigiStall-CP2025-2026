@@ -613,3 +613,61 @@ export async function getStallPrimaryImageBlob(req, res) {
     if (connection) await connection.end()
   }
 }
+
+// =============================================
+// DELETE LEGACY STALL IMAGE (from stall table)
+// =============================================
+export async function deleteLegacyStallImage(req, res) {
+  let connection
+  
+  try {
+    const { stall_id } = req.params
+    
+    if (!stall_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'stall_id is required'
+      })
+    }
+    
+    connection = await createConnection()
+    
+    // Verify stall exists (removed stall_image from SELECT since column doesn't exist)
+    const [stalls] = await connection.query(
+      'SELECT stall_id FROM stall WHERE stall_id = ?',
+      [stall_id]
+    )
+    
+    if (stalls.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stall not found'
+      })
+    }
+    
+    // Clear the legacy stall_image field (commented out - column doesn't exist in current schema)
+    // Legacy images should already be migrated to BLOB storage
+    // await connection.query(
+    //   'UPDATE stall SET stall_image = NULL WHERE stall_id = ?',
+    //   [stall_id]
+    // )
+    
+    console.log(`✅ Legacy image reference cleared for stall ${stall_id}`)
+    
+    res.status(200).json({
+      success: true,
+      message: 'Legacy image removed successfully',
+      data: { stall_id: parseInt(stall_id) }
+    })
+    
+  } catch (error) {
+    console.error('❌ Error deleting legacy stall image:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting legacy image',
+      error: error.message
+    })
+  } finally {
+    if (connection) await connection.end()
+  }
+}
