@@ -3,6 +3,11 @@
   padding-left: 0 !important;
 }
 
+/* Vendors main content - position relative for contained loading overlay */
+.vendors-main-content {
+  position: relative;
+}
+
 .main-content {
   background-color: #fafafa;
   min-height: calc(100vh - 64px);

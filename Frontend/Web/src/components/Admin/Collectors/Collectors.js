@@ -3,6 +3,7 @@ import TableCollector from './Components/Table/TableCollector.vue'
 import AddCollectorDialog from './Components/AddCollectorDialog/AddCollectorDialog.vue'
 import EditCollectorDialog from './Components/EditCollectorDialog/EditCollectorDialog.vue'
 import CollectorDetailsDialog from './Components/CollectorDetailsDialog/CollectorDetailsDialog.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Collectors',
@@ -12,9 +13,11 @@ export default {
     AddCollectorDialog,
     EditCollectorDialog,
     CollectorDetailsDialog,
+    LoadingOverlay,
   },
   data() {
     return {
+      loading: false,
       search: '',
       activeFilter: 'all',
       addDialog: false,

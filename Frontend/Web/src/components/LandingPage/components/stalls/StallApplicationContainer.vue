@@ -1,29 +1,31 @@
 <template>
-    <div class="overlay" v-if="showForm">
-        <!-- Enhanced Loading Overlay -->
-        <ApplicationLoadingOverlay v-if="isSubmitting" :state="loadingState" :error-message="loadingErrorMessage"
-            @retry="retrySubmission" />
+    <Teleport to="body">
+        <div class="overlay" v-if="showForm">
+            <!-- Enhanced Loading Overlay -->
+            <ApplicationLoadingOverlay v-if="isSubmitting" :state="loadingState" :error-message="loadingErrorMessage"
+                @retry="retrySubmission" />
 
-        <!-- Step 1: Personal Information -->
-        <PersonalInformation v-if="currentStep === 1 && !isSubmitting" :stall="stall" 
-            :savedData="personalInfo" :currentStep="currentStep" :totalSteps="4"
-            @close="closeForm" @next="handlePersonalInfoNext" />
+            <!-- Step 1: Personal Information -->
+            <PersonalInformation v-if="currentStep === 1 && !isSubmitting" :stall="stall" 
+                :savedData="personalInfo" :currentStep="currentStep" :totalSteps="4"
+                @close="closeForm" @next="handlePersonalInfoNext" />
 
-        <!-- Step 2: Spouse Information -->
-        <SpouseInformation v-if="currentStep === 2 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
-            :savedData="spouseInfo" :currentStep="currentStep" :totalSteps="4"
-            @previous="goToPreviousStep" @next="handleSpouseInfoNext" />
+            <!-- Step 2: Spouse Information -->
+            <SpouseInformation v-if="currentStep === 2 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+                :savedData="spouseInfo" :currentStep="currentStep" :totalSteps="4"
+                @previous="goToPreviousStep" @next="handleSpouseInfoNext" />
 
-        <!-- Step 3: Business Information -->
-        <BusinessInformation v-if="currentStep === 3 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
-            :spouseInfo="spouseInfo" :savedData="businessInfo" :currentStep="currentStep" :totalSteps="4"
-            @previous="goToPreviousStep" @next="handleBusinessInfoNext" @close="closeForm" />
+            <!-- Step 3: Business Information -->
+            <BusinessInformation v-if="currentStep === 3 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+                :spouseInfo="spouseInfo" :savedData="businessInfo" :currentStep="currentStep" :totalSteps="4"
+                @previous="goToPreviousStep" @next="handleBusinessInfoNext" @close="closeForm" />
 
-        <!-- Step 4: Other Information -->
-        <OtherInformation v-if="currentStep === 4 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
-            :spouseInfo="spouseInfo" :savedData="otherInfo" :currentStep="currentStep" :totalSteps="4"
-            @previous="goToPreviousStep" @next="handleOtherInfoNext" />
-    </div>
+            <!-- Step 4: Other Information -->
+            <OtherInformation v-if="currentStep === 4 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+                :spouseInfo="spouseInfo" :savedData="otherInfo" :currentStep="currentStep" :totalSteps="4"
+                @previous="goToPreviousStep" @next="handleOtherInfoNext" />
+        </div>
+    </Teleport>
 </template>
 
 <script>

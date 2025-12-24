@@ -1,6 +1,7 @@
 import ComplaintsTable from './ComplaintsComponents/ComplaintsTable/ComplaintsTable.vue'
 import ComplaintsSearch from './ComplaintsComponents/ComplaintsSearch/ComplaintsSearch.vue'
 import ViewComplaints from './ComplaintsComponents/ViewComplaints/ViewComplaints.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 import axios from 'axios'
 
 const API_BASE_URL = 'http://localhost:3001/api'
@@ -11,6 +12,7 @@ export default {
     ComplaintsTable,
     ComplaintsSearch,
     ViewComplaints,
+    LoadingOverlay,
   },
   data() {
     return {

@@ -853,7 +853,9 @@ export const getStallImages = async (req, res) => {
         si.image_url,
         si.is_primary,
         si.display_order,
-        si.created_at
+        si.created_at,
+        si.mime_type,
+        si.file_name
       FROM stall_images si
       WHERE si.stall_id = ?
       ORDER BY si.is_primary DESC, si.display_order ASC, si.id ASC
@@ -880,31 +882,34 @@ export const getStallImages = async (req, res) => {
     }
 
     const stall = stallInfo[0]
-    const baseImageUrl = 'http://localhost/digistall_uploads/stalls'
+    
+    // Use API endpoint for BLOB images (works with cloud database)
+    const baseImageUrl = `${req.protocol}://${req.get('host')}/api/stalls/images/blob/id`
 
-    // Format images with full URLs
+    // Format images with full URLs pointing to BLOB endpoint
     const formattedImages = images.map(img => ({
       id: img.id,
       stall_id: img.stall_id,
-      image_url: img.image_url.startsWith('http') 
-        ? img.image_url 
-        : `${baseImageUrl}/${stall.branch_id}/${stall.stall_no}/${img.image_url}`,
+      image_url: `${baseImageUrl}/${img.id}`,  // Use BLOB serving endpoint
+      original_url: img.image_url,
       is_primary: img.is_primary === 1,
-      display_order: img.display_order
+      display_order: img.display_order,
+      mime_type: img.mime_type,
+      file_name: img.file_name
     }))
 
-    // If no images in database, try to detect from file system pattern
+    // If no images in database, return empty with API endpoint info
     if (formattedImages.length === 0) {
-      // Return empty but with suggested path for client-side detection
       return res.json({
         success: true,
-        message: 'No images found in database. Client can try file system detection.',
+        message: 'No images found for this stall.',
         data: {
           images: [],
           stall_id: stall.stall_id,
           stall_no: stall.stall_no,
           branch_id: stall.branch_id,
-          image_base_path: `${baseImageUrl}/${stall.branch_id}/${stall.stall_no}`
+          upload_endpoint: '/api/stalls/images/blob/upload',
+          note: 'Images are stored in cloud database. Use the upload endpoint to add images.'
         }
       })
     }
@@ -916,7 +921,8 @@ export const getStallImages = async (req, res) => {
         images: formattedImages,
         stall_id: stall.stall_id,
         stall_no: stall.stall_no,
-        total_count: formattedImages.length
+        total_count: formattedImages.length,
+        primary_image: formattedImages.find(img => img.is_primary) || formattedImages[0] || null
       }
     })
 

@@ -82,6 +82,8 @@
             :key="filterKey"
             @modal-opened="modalOpen = true"
             @modal-closed="modalOpen = false; lastScrollY = window.scrollY"
+            @application-form-opened="applicationFormOpen = true"
+            @application-form-closed="applicationFormOpen = false"
           />
         </div>
       </div>
@@ -134,6 +136,7 @@ export default {
       lastScrollY: 0,
       scrollThreshold: 100, // Pixels to scroll before auto-closing
       modalOpen: false, // Track if stall details modal is open
+      applicationFormOpen: false, // Track if application form is open
     };
   },
 
@@ -196,6 +199,8 @@ export default {
     },
 
     async handleBranchFilter(branch) {
+      console.log('🏢 Branch clicked:', branch);
+      
       const selectionResult = UIHelperService.handleBranchSelection(
         this.selectedBranch,
         branch,
@@ -205,20 +210,25 @@ export default {
       this.selectedBranch = selectionResult.selectedBranch;
       this.showStallsContainer = selectionResult.showStallsContainer;
 
-      // Reset scroll tracking when opening stalls container
-      if (this.showStallsContainer && this.selectedBranch) {
-        this.lastScrollY = window.scrollY;
-      }
-
       if (selectionResult.shouldReset) {
         this.resetFilters();
       }
 
       if (this.selectedBranch) {
-        await Promise.all([
-          this.fetchLocationsByBranch(this.selectedBranch),
-          this.fetchStallsByBranch(this.selectedBranch),
-        ]);
+        console.log('📥 Fetching stalls for branch:', this.selectedBranch);
+        
+        try {
+          await Promise.all([
+            this.fetchLocationsByBranch(this.selectedBranch),
+            this.fetchStallsByBranch(this.selectedBranch),
+          ]);
+          console.log('✅ Stalls loaded successfully');
+        } catch (error) {
+          console.error('❌ Error loading stalls:', error);
+        }
+        
+        // Reset scroll tracking AFTER data is loaded to prevent auto-close
+        this.lastScrollY = window.scrollY;
       }
     },
 
@@ -367,12 +377,14 @@ export default {
     setupWindowScrollListener() {
       this.windowScrollListener = () => {
         // Only auto-close if stalls container is open AND modal is NOT open
-        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen) {
+        // AND application form is NOT open AND stallsLoading is false (to prevent closing while loading)
+        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen && !this.applicationFormOpen && !this.stallsLoading) {
           const currentScrollY = window.scrollY;
           const scrollDifference = currentScrollY - this.lastScrollY;
           
           // Check if user has scrolled down more than the threshold
           if (scrollDifference > this.scrollThreshold) {
+            console.log('🔻 Auto-closing stalls container due to scroll');
             this.closeStallsContainer();
           }
         }

@@ -11,7 +11,7 @@ export default {
   },
   data() {
     return {
-      activeTab: 'online',
+      activeTab: 'onsite', // Default to onsite (online payment hidden per boss requirement)
       onlineCount: 0,
       onsiteCount: 0,
       toast: {
@@ -125,7 +125,7 @@ export default {
     },
     handlePaymentAdded(payment) {
       console.log('Payment added:', payment)
-      this.showToast('✅ Onsite payment added successfully!', 'success')
+      // Don't show toast here - OnsitePayments already shows detailed success message with discount info
       // Refresh onsite count after adding payment
       setTimeout(() => this.fetchOnsitePaymentsCount(), 500);
     },

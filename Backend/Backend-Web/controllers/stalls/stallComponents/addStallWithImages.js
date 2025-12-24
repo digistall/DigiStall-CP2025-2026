@@ -7,7 +7,7 @@ const BASE_UPLOAD_DIR = process.env.UPLOAD_DIR_STALLS || 'C:/xampp/htdocs/digist
 
 /**
  * Add new stall with multi-image upload support
- * This replaces the old single-image approach
+ * Uses direct SQL instead of stored procedure for flexibility
  */
 export const addStallWithImages = async (req, res) => {
   let connection;
@@ -29,6 +29,10 @@ export const addStallWithImages = async (req, res) => {
       stallNo,
       price,
       rental_price,
+      base_rate,
+      baseRate,
+      area_sqm,
+      areaSqm,
       floor_id,
       floor,
       floorId,
@@ -50,26 +54,116 @@ export const addStallWithImages = async (req, res) => {
 
     // Map frontend fields to backend
     const stallNo_final = stallNo || stallNumber;
-    const price_final = rental_price || price;
     const location_final = stall_location || location;
     const priceType_final = price_type || priceType || "Fixed Price";
     const floor_id_final = floor_id || floor || floorId;
     const section_id_final = section_id || section || sectionId;
     const deadline_final = deadline || applicationDeadline;
+    const parsedDeadline = deadline_final ? new Date(deadline_final) : null;
+    
+    // NEW: Rental calculation fields
+    const baseRate_final = parseFloat(base_rate || baseRate || 0);
+    const areaSqm_final = parseFloat(area_sqm || areaSqm || 0);
+    
+    // Calculate rental price and rate per sqm
+    // Formula: Monthly Rent = RENTAL RATE (2010) × 2
+    let calculatedRentalPrice;
+    let calculatedRatePerSqm = null;
+    
+    if (baseRate_final > 0) {
+      calculatedRentalPrice = Math.round(baseRate_final * 2 * 100) / 100;
+      if (areaSqm_final > 0) {
+        calculatedRatePerSqm = Math.round((calculatedRentalPrice / areaSqm_final) * 100) / 100;
+      }
+      console.log(`📊 RENTAL RATE 2010: ${baseRate_final} | Monthly Rent (×2): ${calculatedRentalPrice} | Rate/sqm: ${calculatedRatePerSqm}`);
+    } else {
+      calculatedRentalPrice = parseFloat(rental_price || price || 0);
+    }
+    
     const finalPrice = priceType_final === "Auction" && startingPrice 
       ? parseFloat(startingPrice) 
-      : parseFloat(price_final);
-    const parsedDeadline = deadline_final ? new Date(deadline_final) : null;
+      : calculatedRentalPrice;
 
     connection = await createConnection();
 
-    console.log('🔍 Calling sp_addStall_complete with params:', {
+    // Authorization check
+    let businessManagerId = null;
+    
+    if (userType === "business_manager") {
+      const [managerCheck] = await connection.execute(
+        `SELECT business_manager_id FROM business_manager WHERE business_manager_id = ? AND branch_id = ?`,
+        [userId, branchId]
+      );
+      
+      if (managerCheck.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Manager does not belong to this branch'
+        });
+      }
+      businessManagerId = userId;
+      
+    } else if (userType === "business_employee") {
+      const [managerInfo] = await connection.execute(
+        `SELECT business_manager_id FROM business_manager WHERE branch_id = ? LIMIT 1`,
+        [branchId]
+      );
+      
+      if (managerInfo.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Branch does not have an assigned manager'
+        });
+      }
+      businessManagerId = managerInfo[0].business_manager_id;
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. User type '${userType}' cannot create stalls`
+      });
+    }
+
+    // Validate floor and section belong to the branch
+    const [floorSectionCheck] = await connection.execute(
+      `SELECT f.floor_name, sec.section_name 
+       FROM section sec
+       INNER JOIN floor f ON sec.floor_id = f.floor_id
+       WHERE sec.section_id = ? AND f.floor_id = ? AND f.branch_id = ?`,
+      [section_id_final, floor_id_final, branchId]
+    );
+
+    if (floorSectionCheck.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid floor or section for your branch`
+      });
+    }
+
+    const { floor_name, section_name } = floorSectionCheck[0];
+
+    // Check for duplicate stall number in section
+    const [duplicateCheck] = await connection.execute(
+      `SELECT stall_id FROM stall WHERE stall_no = ? AND section_id = ?`,
+      [stallNo_final, section_id_final]
+    );
+
+    if (duplicateCheck.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Stall number ${stallNo_final} already exists in ${section_name} section`
+      });
+    }
+
+    console.log('🔍 Creating stall with params:', {
       stallNo_final,
       location_final,
       size,
+      areaSqm_final,
       floor_id_final,
       section_id_final,
       finalPrice,
+      baseRate_final,
+      calculatedRatePerSqm,
       priceType_final,
       status: isAvailable !== false ? "Active" : "Inactive",
       userId,
@@ -77,68 +171,93 @@ export const addStallWithImages = async (req, res) => {
       branchId
     });
 
-    // 1. Create stall record first (without image)
-    const [result] = await connection.execute(
-      `CALL sp_addStall_complete(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, @stall_id, @success, @message)`,
+    // 1. Create stall record using direct SQL
+    const [insertResult] = await connection.execute(
+      `INSERT INTO stall (
+        stall_no, 
+        stall_location, 
+        size, 
+        area_sqm,
+        floor_id, 
+        section_id, 
+        rental_price,
+        base_rate,
+        rate_per_sqm,
+        price_type, 
+        status, 
+        stamp, 
+        description, 
+        is_available,
+        raffle_auction_deadline,
+        deadline_active,
+        raffle_auction_status,
+        created_by_business_manager,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         stallNo_final,
         location_final,
         size,
+        areaSqm_final || null,
         floor_id_final,
         section_id_final,
         finalPrice,
+        baseRate_final || null,
+        calculatedRatePerSqm,
         priceType_final,
         isAvailable !== false ? "Active" : "Inactive",
         "APPROVED",
         description || null,
-        // NULL for image - we'll add via stall_images table
         isAvailable !== false ? 1 : 0,
         parsedDeadline,
-        userId,
-        userType,
-        branchId
+        0,
+        priceType_final === 'Raffle' || priceType_final === 'Auction' ? 'Not Started' : null,
+        businessManagerId
       ]
     );
 
-    // Get the created stall ID
-    const [outParams] = await connection.execute(
-      `SELECT @stall_id as stall_id, @success as success, @message as message`
-    );
+    const stallId = insertResult.insertId;
 
-    const { stall_id: stallId, success, message } = outParams[0];
+    console.log('📊 Stall created with ID:', stallId);
 
-    console.log('📊 Stored procedure result:', { stallId, success, message });
-
-    if (!success) {
-      console.error('❌ Stored procedure failed:', message);
-      return res.status(400).json({
-        success: false,
-        message: message
-      });
-    }
-
-    // 2. Handle image uploads if files exist
+    // 2. Handle image uploads if files exist OR if base64 images are provided
     const uploadedImages = [];
-    if (req.files && req.files.length > 0) {
-      // Get branch_id for folder structure
-      const [branchInfo] = await connection.execute(
-        `SELECT b.branch_id 
-         FROM stall s
-         INNER JOIN section sec ON s.section_id = sec.section_id
-         INNER JOIN floor f ON sec.floor_id = f.floor_id
-         INNER JOIN branch b ON f.branch_id = b.branch_id
-         WHERE s.stall_id = ?`,
-        [stallId]
-      );
-
-      if (branchInfo.length === 0) {
-        throw new Error('Could not determine branch for stall');
-      }
-
-      const stallBranchId = branchInfo[0].branch_id;
+    
+    // Check for base64 images in request body (BLOB storage for cloud deployment)
+    const base64Images = req.body.base64Images ? JSON.parse(req.body.base64Images) : null;
+    
+    if (base64Images && Array.isArray(base64Images) && base64Images.length > 0) {
+      // BLOB Storage: Store images as binary data in database
+      console.log(`📸 Processing ${base64Images.length} base64 images for BLOB storage...`);
       
+      for (let i = 0; i < base64Images.length && i < 10; i++) {
+        const imgData = base64Images[i];
+        const base64String = imgData.image_data.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64String, 'base64');
+        const mimeType = imgData.mime_type || 'image/jpeg';
+        const fileName = imgData.file_name || `stall_${stallId}_${i + 1}.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
+        const displayOrder = i + 1;
+        const imageUrl = `/api/stalls/images/blob/${stallId}/${displayOrder}`;
+        
+        // Insert into stall_images with BLOB data
+        await connection.execute(
+          `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [stallId, imageUrl, imageBuffer, mimeType, fileName, displayOrder, i === 0 ? 1 : 0]
+        );
+        
+        uploadedImages.push({
+          url: imageUrl,
+          file_name: fileName,
+          display_order: displayOrder,
+          is_primary: i === 0
+        });
+        console.log(`✅ Added BLOB image ${i + 1}: ${fileName} (primary: ${i === 0})`);
+      }
+    } else if (req.files && req.files.length > 0) {
+      // Legacy file-based storage (for local development)
       // Create upload directory
-      const uploadPath = path.join(BASE_UPLOAD_DIR, String(stallBranchId), String(stallNo_final));
+      const uploadPath = path.join(BASE_UPLOAD_DIR, String(branchId), String(stallNo_final));
       if (!fs.existsSync(uploadPath)) {
         fs.mkdirSync(uploadPath, { recursive: true });
       }
@@ -154,20 +273,16 @@ export const addStallWithImages = async (req, res) => {
         fs.renameSync(file.path, filePath);
         
         // Generate URL
-        const imageUrl = `/digistall_uploads/stalls/${stallBranchId}/${stallNo_final}/${fileName}`;
+        const imageUrl = `/digistall_uploads/stalls/${branchId}/${stallNo_final}/${fileName}`;
         
         // Insert into stall_images table
-        // First image (i=0) is set as primary, others are non-primary
-        // The stored procedure sp_addStallImage handles this automatically:
-        // - First image for a stall is always set as primary
-        // - Subsequent images are non-primary unless explicitly requested
         await connection.execute(
-          `CALL sp_addStallImage(?, ?, ?)`,
-          [stallId, imageUrl, i === 0 ? 1 : 0] // First image is primary
+          `INSERT INTO stall_images (stall_id, image_url, display_order, is_primary, created_at) VALUES (?, ?, ?, ?, NOW())`,
+          [stallId, imageUrl, i + 1, i === 0 ? 1 : 0]
         );
         
-        uploadedImages.push(imageUrl);
-        console.log(`✅ Added image ${i + 1}: ${imageUrl} (primary: ${i === 0})`);
+        uploadedImages.push({ url: imageUrl, is_primary: i === 0 });
+        console.log(`✅ Added file image ${i + 1}: ${imageUrl} (primary: ${i === 0})`);
       }
     }
 
@@ -178,6 +293,9 @@ export const addStallWithImages = async (req, res) => {
         s.stall_no,
         s.stall_location,
         s.size,
+        s.area_sqm,
+        s.base_rate,
+        s.rate_per_sqm,
         s.floor_id,
         s.section_id,
         s.rental_price,
@@ -209,7 +327,7 @@ export const addStallWithImages = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Stall created successfully${uploadedImages.length > 0 ? ` with ${uploadedImages.length} image(s)` : ''}`,
+      message: `Stall ${stallNo_final} created successfully in ${section_name} section on ${floor_name}${uploadedImages.length > 0 ? ` with ${uploadedImages.length} image(s)` : ''}`,
       data: {
         ...stallData[0],
         uploaded_images: uploadedImages
