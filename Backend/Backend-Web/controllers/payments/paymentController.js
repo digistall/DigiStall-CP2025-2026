@@ -379,7 +379,8 @@ const PaymentController = {
         queryParams = [...branchFilter, search, search, search, search, limit, offset];
       }
       
-      const [payments] = await connection.execute(onsiteQuery, queryParams);
+      // Use query() instead of execute() for better compatibility with IN clauses
+      const [payments] = await connection.query(onsiteQuery, queryParams);
       
       console.log('📋 Onsite payments found:', payments.length);
       
@@ -514,7 +515,8 @@ const PaymentController = {
         queryParams = [...branchFilter, search, search, search, search, limit, offset];
       }
       
-      const [onlinePayments] = await connection.execute(onlineQuery, queryParams);
+      // Use query() instead of execute() for better compatibility with IN clauses
+      const [onlinePayments] = await connection.query(onlineQuery, queryParams);
       
       console.log('📋 Online payments found:', onlinePayments.length);
       

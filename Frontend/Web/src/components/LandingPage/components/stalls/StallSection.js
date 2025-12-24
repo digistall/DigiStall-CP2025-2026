@@ -295,8 +295,7 @@ export default {
     },
     
     buildImageUrl(imagePath) {
-      // Build full URL for images stored in XAMPP htdocs
-      // imagePath format: /digistall_uploads/stalls/{branch_id}/{stall_no}/{filename}
+      // Build full URL for images
       if (!imagePath) return null
       
       // If it's already a full URL (http:// or https://), return as-is
@@ -304,7 +303,13 @@ export default {
         return imagePath
       }
       
-      // Build URL for XAMPP hosted images (localhost:80)
+      // Check if it's a BLOB API URL path
+      if (imagePath.includes('/api/stalls/images/blob/')) {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        return `${apiBaseUrl}${imagePath.startsWith('/api') ? '' : '/api'}${imagePath.replace('/api', '')}`
+      }
+      
+      // Legacy: Build URL for file-based images
       const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
       return `${imageBaseUrl}${imagePath}`
     },

@@ -92,7 +92,7 @@ export const selectAuctionWinner = async (req, res) => {
 
     // Update stall status
     await connection.execute(
-      'UPDATE stall SET raffle_auction_status = "Ended" WHERE stall_id = ?',
+      `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
       [auction.stall_id]
     );
 
@@ -113,7 +113,7 @@ export const selectAuctionWinner = async (req, res) => {
 
     // Update application status to approved
     await connection.execute(
-      'UPDATE application SET application_status = "Approved" WHERE application_id = ?',
+      `UPDATE application SET application_status = 'Approved' WHERE application_id = ?`,
       [winner.application_id]
     );
 
@@ -186,11 +186,11 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
         if (auction.total_bids === 0) {
           // No bids - just end the auction
           await connection.execute(
-            'UPDATE auction SET auction_status = "Ended" WHERE auction_id = ?',
+            `UPDATE auction SET auction_status = 'Ended' WHERE auction_id = ?`,
             [auction.auction_id]
           );
           await connection.execute(
-            'UPDATE stall SET raffle_auction_status = "Ended" WHERE stall_id = ?',
+            `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
             [auction.stall_id]
           );
 
@@ -232,7 +232,7 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
 
         // Update stall status
         await connection.execute(
-          'UPDATE stall SET raffle_auction_status = "Ended" WHERE stall_id = ?',
+          `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
           [auction.stall_id]
         );
 
@@ -253,7 +253,7 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
 
         // Update application status
         await connection.execute(
-          'UPDATE application SET application_status = "Approved" WHERE application_id = ?',
+          `UPDATE application SET application_status = 'Approved' WHERE application_id = ?`,
           [winner.application_id]
         );
 

@@ -419,13 +419,31 @@ export default {
           formData.append(key, stallData[key])
         })
 
-        // Append images if any
+        // Convert images to base64 for BLOB storage (cloud deployment)
         if (this.newStall.images && this.newStall.images.length > 0) {
-          console.log('📸 Appending images to FormData:', this.newStall.images.length)
-          this.newStall.images.forEach((file, index) => {
-            formData.append('images', file)
-            console.log(`  Image ${index + 1}: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`)
-          })
+          console.log('📸 Converting images to base64 for BLOB storage:', this.newStall.images.length)
+          const base64Images = []
+          
+          for (let i = 0; i < this.newStall.images.length; i++) {
+            const file = this.newStall.images[i]
+            try {
+              const base64Data = await this.convertImageToBase64(file)
+              base64Images.push({
+                image_data: base64Data,
+                mime_type: file.type,
+                file_name: file.name
+              })
+              console.log(`  ✅ Image ${i + 1}: ${file.name} converted to base64`)
+            } catch (err) {
+              console.error(`  ❌ Failed to convert image ${i + 1}:`, err)
+            }
+          }
+          
+          // Send base64 images as JSON string
+          if (base64Images.length > 0) {
+            formData.append('base64Images', JSON.stringify(base64Images))
+            console.log(`📸 ${base64Images.length} images prepared for BLOB storage`)
+          }
         }
 
         console.log('Making API request to:', `${this.apiBaseUrl}/stalls`)

@@ -220,9 +220,42 @@ export const addStallWithImages = async (req, res) => {
 
     console.log('📊 Stall created with ID:', stallId);
 
-    // 2. Handle image uploads if files exist
+    // 2. Handle image uploads if files exist OR if base64 images are provided
     const uploadedImages = [];
-    if (req.files && req.files.length > 0) {
+    
+    // Check for base64 images in request body (BLOB storage for cloud deployment)
+    const base64Images = req.body.base64Images ? JSON.parse(req.body.base64Images) : null;
+    
+    if (base64Images && Array.isArray(base64Images) && base64Images.length > 0) {
+      // BLOB Storage: Store images as binary data in database
+      console.log(`📸 Processing ${base64Images.length} base64 images for BLOB storage...`);
+      
+      for (let i = 0; i < base64Images.length && i < 10; i++) {
+        const imgData = base64Images[i];
+        const base64String = imgData.image_data.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64String, 'base64');
+        const mimeType = imgData.mime_type || 'image/jpeg';
+        const fileName = imgData.file_name || `stall_${stallId}_${i + 1}.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
+        const displayOrder = i + 1;
+        const imageUrl = `/api/stalls/images/blob/${stallId}/${displayOrder}`;
+        
+        // Insert into stall_images with BLOB data
+        await connection.execute(
+          `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [stallId, imageUrl, imageBuffer, mimeType, fileName, displayOrder, i === 0 ? 1 : 0]
+        );
+        
+        uploadedImages.push({
+          url: imageUrl,
+          file_name: fileName,
+          display_order: displayOrder,
+          is_primary: i === 0
+        });
+        console.log(`✅ Added BLOB image ${i + 1}: ${fileName} (primary: ${i === 0})`);
+      }
+    } else if (req.files && req.files.length > 0) {
+      // Legacy file-based storage (for local development)
       // Create upload directory
       const uploadPath = path.join(BASE_UPLOAD_DIR, String(branchId), String(stallNo_final));
       if (!fs.existsSync(uploadPath)) {
@@ -244,12 +277,12 @@ export const addStallWithImages = async (req, res) => {
         
         // Insert into stall_images table
         await connection.execute(
-          `INSERT INTO stall_images (stall_id, image_url, is_primary, created_at) VALUES (?, ?, ?, NOW())`,
-          [stallId, imageUrl, i === 0 ? 1 : 0]
+          `INSERT INTO stall_images (stall_id, image_url, display_order, is_primary, created_at) VALUES (?, ?, ?, ?, NOW())`,
+          [stallId, imageUrl, i + 1, i === 0 ? 1 : 0]
         );
         
-        uploadedImages.push(imageUrl);
-        console.log(`✅ Added image ${i + 1}: ${imageUrl} (primary: ${i === 0})`);
+        uploadedImages.push({ url: imageUrl, is_primary: i === 0 });
+        console.log(`✅ Added file image ${i + 1}: ${imageUrl} (primary: ${i === 0})`);
       }
     }
 

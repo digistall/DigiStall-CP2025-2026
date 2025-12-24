@@ -1,21 +1,37 @@
 import mysql from 'mysql2/promise'
 import process from 'process'
+import dotenv from 'dotenv'
+dotenv.config()
+
+// Check if using DigitalOcean (cloud) database
+const isCloudDB = process.env.DB_SSL === 'true' || process.env.DB_HOST?.includes('ondigitalocean.com')
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'naga_stall',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // Set charset for MySQL 8 compatibility
+  charset: 'utf8mb4',
+  // SSL is required for DigitalOcean managed databases
+  ...(isCloudDB && {
+    ssl: {
+      rejectUnauthorized: false
+    }
+  })
 }
 
 console.log('🔧 Database Config:', {
   host: dbConfig.host,
+  port: dbConfig.port,
   user: dbConfig.user,
   database: dbConfig.database,
   passwordSet: !!dbConfig.password,
+  ssl: isCloudDB ? 'enabled' : 'disabled'
 })
 
 export const createConnection = async () => {

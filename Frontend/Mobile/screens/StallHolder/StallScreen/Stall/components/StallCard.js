@@ -99,85 +99,60 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
     return NetworkUtils.getStaticFileServer();
   };
 
-  // Convert relative image URL to absolute URL with static file server
-  const getAbsoluteImageUrl = (imageUrl) => {
-    if (!imageUrl) return DEFAULT_STALL_IMAGE;
-    
-    // If it's already an absolute URL (http:// or https://), return as-is
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      // Check if it's using localhost - need to replace with actual server IP for mobile
-      if (imageUrl.includes('localhost') || imageUrl.includes('127.0.0.1')) {
-        const baseUrl = getImageBaseUrl();
-        // Extract the path part after the host
-        const urlMatch = imageUrl.match(/https?:\/\/[^\/]+(\/.*)/);
-        if (urlMatch && urlMatch[1]) {
-          return baseUrl + urlMatch[1];
-        }
-      }
-      return imageUrl;
-    }
-    
-    // If it's a relative path, prepend the static file server
-    const baseUrl = getImageBaseUrl();
-    return baseUrl + imageUrl;
+  // Get API base URL for BLOB images
+  const getApiBaseUrl = () => {
+    return NetworkUtils.getApiUrl();
   };
 
-  // Fetch all images from file system (like landing page approach)
+  // Fetch stall images from BLOB storage API
   const fetchStallImages = async () => {
     try {
       setLoadingImages(true);
       
-      const imageBaseUrl = getImageBaseUrl();
-      console.log(`📁 Static file server: ${imageBaseUrl}`);
+      const apiBaseUrl = getApiBaseUrl();
+      const stallId = stall.id || stall.stall_id;
       
-      const branchId = getBranchId();
-      const stallNumber = stall.stallNumber || stall.stall_no;
+      console.log(`📷 Card: Fetching images for stall ${stallId} from BLOB API...`);
 
-      if (!stallNumber) {
+      if (!stallId) {
         setImages([{ id: 'default', image_url: stall.image || DEFAULT_STALL_IMAGE, is_primary: true }]);
         setLoadingImages(false);
         return;
       }
 
-      const foundImages = [];
-      const extensions = ['png', 'jpg', 'jpeg'];
-
-      // Check for images 1-10 (like landing page approach)
-      for (let i = 1; i <= 10; i++) {
-        let found = false;
-        for (const ext of extensions) {
-          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`;
+      try {
+        // Use BLOB API endpoint to get images
+        const response = await ApiService.get(`/stalls/${stallId}/images/blob`);
+        
+        if (response.success && response.data?.images && response.data.images.length > 0) {
+          // Map images to use BLOB serving endpoint
+          const blobImages = response.data.images.map(img => ({
+            id: img.id,
+            stall_id: stallId,
+            image_url: `${apiBaseUrl}/stalls/images/blob/id/${img.id}`,
+            display_order: img.display_order,
+            is_primary: img.is_primary,
+          }));
           
-          try {
-            const exists = await testImage(imageUrl);
-            if (exists) {
-              foundImages.push({
-                id: `img_${i}`,
-                stall_id: stall.id,
-                image_url: imageUrl,
-                display_order: i,
-                is_primary: i === 1,
-              });
-              found = true;
-              break;
-            }
-          } catch (e) {
-            // Image doesn't exist, continue
+          console.log(`📷 Card: Found ${blobImages.length} images in BLOB storage for stall ${stallId}`);
+          setImages(blobImages);
+        } else {
+          console.log(`📷 Card: No BLOB images found for stall ${stallId}, using fallback`);
+          // Use stall's primary image or default
+          if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
+            setImages([{ id: 'primary', image_url: stall.image, is_primary: true }]);
+          } else {
+            setImages([{ id: 'default', image_url: DEFAULT_STALL_IMAGE, is_primary: true }]);
           }
         }
-        // Stop if no image found for this number and we have some images
-        if (!found && foundImages.length > 0) break;
-      }
-
-      if (foundImages.length > 0) {
-        console.log(`📷 Card: Found ${foundImages.length} images for stall ${stallNumber}`);
-        setImages(foundImages);
-      } else if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
-        // Use stall's primary image
-        setImages([{ id: 'primary', image_url: getAbsoluteImageUrl(stall.image), is_primary: true }]);
-      } else {
-        // Use default
-        setImages([{ id: 'default', image_url: DEFAULT_STALL_IMAGE, is_primary: true }]);
+      } catch (apiError) {
+        console.log(`📷 Card: BLOB API error for stall ${stallId}:`, apiError.message);
+        // Fallback to default image
+        if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
+          setImages([{ id: 'primary', image_url: stall.image, is_primary: true }]);
+        } else {
+          setImages([{ id: 'default', image_url: DEFAULT_STALL_IMAGE, is_primary: true }]);
+        }
       }
     } catch (error) {
       console.error('Error setting up stall images:', error);
