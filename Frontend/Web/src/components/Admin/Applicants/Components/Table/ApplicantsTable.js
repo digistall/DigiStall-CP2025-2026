@@ -70,8 +70,9 @@ export default {
     // Fetch documents from BLOB API (cloud storage)
     async fetchDocumentsFromBlobApi(applicantId, businessOwnerId) {
       try {
-        // API base URL
-        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        // API base URL - remove /api suffix if present to avoid double /api/api/
+        let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        apiBase = apiBase.replace(/\/api\/?$/, '') // Remove trailing /api if present
         
         // Get token for authenticated requests
         const token = localStorage.getItem('token')

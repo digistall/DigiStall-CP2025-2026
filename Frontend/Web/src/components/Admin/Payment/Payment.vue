@@ -3,7 +3,14 @@
   <v-app>
     <div class="payment-page">
       <!-- Main Content -->
-      <v-main>
+      <v-main class="payment-main-content">
+        <!-- Standardized Loading Overlay - contained within main content -->
+        <LoadingOverlay 
+          :loading="loading" 
+          text="Loading payment data..."
+          :full-page="false"
+        />
+
         <v-container fluid class="main-content">
           <v-row>
             <v-col cols="12">

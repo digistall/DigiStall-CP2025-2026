@@ -97,12 +97,23 @@
 
     formatDate(date) {
       if (!date) return 'Never'
-      return new Date(date).toLocaleDateString()
+      const d = new Date(date)
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
     },
 
     formatTime(date) {
-      if (!date) return 'Never'
-      return new Date(date).toLocaleTimeString()
+      if (!date) return ''
+      const d = new Date(date)
+      return d.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      })
     },
 
     showPermissionsPopup(employee, event) {

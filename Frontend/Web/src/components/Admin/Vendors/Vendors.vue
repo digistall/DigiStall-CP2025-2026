@@ -5,7 +5,14 @@
   <v-app>
     <div>
       <!-- Main Content -->
-      <v-main>
+      <v-main class="vendors-main-content">
+        <!-- Standardized Loading Overlay - contained within main content -->
+        <LoadingOverlay 
+          :loading="loading" 
+          text="Loading vendors..."
+          :full-page="false"
+        />
+
         <v-container fluid class="main-content">
           <v-row>
             <v-col cols="12">

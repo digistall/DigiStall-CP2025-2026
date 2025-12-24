@@ -736,6 +736,7 @@ export default {
       this.selectedStall = this.selectedStallDetails
       this.showStallDetails = false
       this.showApplyForm = true
+      this.$emit('application-form-opened')
     },
 
     openApplyForm(stall) {
@@ -747,11 +748,13 @@ export default {
       })
       this.selectedStall = stall
       this.showApplyForm = true
+      this.$emit('application-form-opened')
     },
 
     closeApplyForm() {
       this.showApplyForm = false
       this.selectedStall = null
+      this.$emit('application-form-closed')
     },
 
     nextPage() {
