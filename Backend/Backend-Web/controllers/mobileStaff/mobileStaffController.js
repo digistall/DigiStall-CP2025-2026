@@ -318,7 +318,6 @@ export async function getInspectorsByBranch(req, res) {
                     i.contact_no,
                     i.date_hired,
                     i.status,
-                    i.date_created,
                     i.last_login,
                     ia.branch_id,
                     b.branch_name
@@ -326,7 +325,7 @@ export async function getInspectorsByBranch(req, res) {
                 LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
                 LEFT JOIN branch b ON ia.branch_id = b.branch_id
                 WHERE ia.branch_id = ?
-                ORDER BY i.date_created DESC
+                ORDER BY i.date_hired DESC
             `;
             params = [branchId];
         } else {
@@ -340,14 +339,13 @@ export async function getInspectorsByBranch(req, res) {
                     i.contact_no,
                     i.date_hired,
                     i.status,
-                    i.date_created,
                     i.last_login,
                     ia.branch_id,
                     b.branch_name
                 FROM inspector i
                 LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
                 LEFT JOIN branch b ON ia.branch_id = b.branch_id
-                ORDER BY i.date_created DESC
+                ORDER BY i.date_hired DESC
             `;
             params = [];
         }

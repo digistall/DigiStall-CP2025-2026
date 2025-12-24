@@ -68,10 +68,11 @@
                 <v-textarea v-model="editForm.description" label="Description" :rules="rules.description" required
                   variant="outlined" prepend-inner-icon="mdi-text" rows="3" counter="200" maxlength="200"></v-textarea>
 
-                <!-- Image Upload -->
-                <v-file-input v-model="selectedImageFile" label="Upload New Image" variant="outlined"
+                <!-- Image Upload - Multiple files supported -->
+                <v-file-input v-model="selectedImageFiles" label="Upload Images (up to 10)" variant="outlined"
                   prepend-inner-icon="mdi-camera" accept="image/*" @change="handleImageUpload" :rules="imageRules"
-                  show-size counter>
+                  show-size counter multiple :hint="`${remainingImageSlots} more images can be uploaded`"
+                  persistent-hint>
                   <template v-slot:selection="{ fileNames }">
                     <template v-for="fileName in fileNames" :key="fileName">
                       <v-chip size="small" color="primary" class="me-2">
@@ -80,6 +81,27 @@
                     </template>
                   </template>
                 </v-file-input>
+
+                <!-- Pending Uploads Preview -->
+                <div v-if="imagePreviews.length > 0" class="mt-3">
+                  <p class="text-caption text-grey-darken-1 mb-2">
+                    Pending Uploads ({{ imagePreviews.length }}):
+                  </p>
+                  <div class="d-flex flex-wrap ga-2">
+                    <v-card v-for="(preview, index) in imagePreviews" :key="index" 
+                      class="pending-image-card" elevation="1" width="100" height="100">
+                      <v-img :src="preview.dataUrl" height="80" cover class="rounded-t">
+                        <v-btn icon size="x-small" class="remove-pending-btn" color="error"
+                          @click.stop="removeSelectedImage(index)">
+                          <v-icon size="14">mdi-close</v-icon>
+                        </v-btn>
+                      </v-img>
+                      <div class="text-caption text-center text-truncate pa-1">
+                        {{ formatFileSize(preview.size) }}
+                      </div>
+                    </v-card>
+                  </div>
+                </div>
 
                 <!-- Image Gallery (Multi-image display) -->
                 <div class="mt-3">
@@ -232,9 +254,9 @@
             Cancel
           </v-btn>
 
-          <v-btn color="primary" variant="elevated" @click="handleSave" :loading="loading" class="ml-2">
+          <v-btn color="primary" variant="elevated" @click="handleSave" :loading="loading || uploadingImages" class="ml-2">
             <v-icon left>mdi-content-save</v-icon>
-            Update Stall
+            {{ uploadingImages ? 'Uploading Images...' : 'Update Stall' }}
           </v-btn>
         </v-card-actions>
       </v-card>

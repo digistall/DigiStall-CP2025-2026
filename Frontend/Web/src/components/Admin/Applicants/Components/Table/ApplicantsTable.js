@@ -18,7 +18,7 @@ export default {
       confirmAction: '',
       selectedApplicant: null,
       activeTab: 'personal',
-      // Applicant documents from htdocs
+      // Applicant documents - now from BLOB API
       applicantDocuments: {
         signature: null,
         house_location: null,
@@ -28,7 +28,9 @@ export default {
         show: false,
         url: '',
         title: ''
-      }
+      },
+      // Flag to toggle between BLOB API and legacy file system
+      useBlobStorage: true
     }
   },
   watch: {
@@ -45,16 +47,102 @@ export default {
     }
   },
   methods: {
-    // Fetch documents from htdocs for the selected applicant
+    // Fetch documents for the selected applicant
     async fetchApplicantDocuments(applicant) {
       this.resetApplicantDocuments()
       
       if (!applicant) return
       
       const applicantId = applicant.applicant_id || applicant.id
+      const businessOwnerId = applicant.business_owner_id || applicant.stall_info?.business_owner_id
+      
+      console.log(`📄 Fetching documents for applicant ${applicantId}`)
+      
+      if (this.useBlobStorage) {
+        // Use BLOB API for cloud storage
+        await this.fetchDocumentsFromBlobApi(applicantId, businessOwnerId)
+      } else {
+        // Fallback to legacy file system
+        await this.fetchDocumentsFromFileSystem(applicant)
+      }
+    },
+    
+    // Fetch documents from BLOB API (cloud storage)
+    async fetchDocumentsFromBlobApi(applicantId, businessOwnerId) {
+      try {
+        // API base URL
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        
+        // Get token for authenticated requests
+        const token = localStorage.getItem('token')
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+        
+        // Try to fetch all documents for this applicant with base64 data
+        let url = `${apiBase}/api/applicants/${applicantId}/documents/blob?include_data=true`
+        if (businessOwnerId) {
+          url += `&business_owner_id=${businessOwnerId}`
+        }
+        
+        const response = await fetch(url, { headers })
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            // Map document types to our display
+            const documentTypeMap = {
+              1: 'signature',
+              2: 'house_location',
+              3: 'valid_id'
+            }
+            
+            // Also map by document name
+            const documentNameMap = {
+              'signature': 'signature',
+              'house location': 'house_location',
+              'house_location': 'house_location',
+              'valid id': 'valid_id',
+              'valid_id': 'valid_id',
+              'government id': 'valid_id'
+            }
+            
+            for (const doc of result.data) {
+              // Determine document type from type_id or name
+              let docType = documentTypeMap[doc.document_type_id]
+              if (!docType && doc.document_name) {
+                docType = documentNameMap[doc.document_name.toLowerCase()]
+              }
+              
+              if (docType && this.applicantDocuments.hasOwnProperty(docType)) {
+                // Use base64 data if available, otherwise use BLOB URL
+                if (doc.document_data_base64) {
+                  this.applicantDocuments[docType] = doc.document_data_base64
+                  console.log(`✅ Found ${docType} from BLOB API (base64)`)
+                } else if (doc.blob_url) {
+                  // Use the BLOB API endpoint directly
+                  this.applicantDocuments[docType] = `${apiBase}${doc.blob_url}`
+                  console.log(`✅ Found ${docType} from BLOB API (URL)`)
+                }
+              }
+            }
+          }
+        } else {
+          console.warn('📄 BLOB API returned non-OK, trying legacy file system...')
+          // Fallback to file system if BLOB API fails
+          await this.fetchDocumentsFromFileSystem({ applicant_id: applicantId })
+        }
+      } catch (error) {
+        console.error('❌ Error fetching documents from BLOB API:', error)
+        // Fallback to file system on error
+        await this.fetchDocumentsFromFileSystem({ applicant_id: applicantId })
+      }
+    },
+    
+    // Legacy: Fetch documents from htdocs file system
+    async fetchDocumentsFromFileSystem(applicant) {
+      const applicantId = applicant.applicant_id || applicant.id
       const branchId = applicant.branch_id || applicant.stall_info?.branch_id || '1'
       
-      console.log(`📄 Fetching documents for applicant ${applicantId}, branch ${branchId}`)
+      console.log(`📄 Fetching documents from file system for applicant ${applicantId}, branch ${branchId}`)
       
       // Base URL for applicant documents in htdocs
       const baseUrl = `http://localhost/digistall_uploads/applicants/${branchId}/${applicantId}`

@@ -482,6 +482,35 @@
   opacity: 1;
 }
 
+/* Pending Image Upload Cards */
+.pending-image-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px !important;
+}
+
+.pending-image-card .v-img {
+  border-radius: 8px 8px 0 0;
+}
+
+.remove-pending-btn {
+  position: absolute !important;
+  top: 2px !important;
+  right: 2px !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.pending-image-card:hover .remove-pending-btn {
+  opacity: 1;
+}
+
+.pending-image-card .text-caption {
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 10px !important;
+}
+
 /* Mobile Responsiveness for Gallery */
 @media (max-width: 600px) {
   .gallery-navigation .nav-btn {

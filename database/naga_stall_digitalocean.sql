@@ -1,3 +1,7 @@
+﻿SET SESSION sql_require_primary_key = 0;
+
+SET SESSION sql_require_primary_key = 0;
+
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
@@ -7,7 +11,7 @@
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+-- SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -25,7 +29,7 @@ DELIMITER $$
 --
 -- Procedures
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `addInspector` (IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_password_plain` VARCHAR(255), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
+CREATE PROCEDURE `addInspector` (IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_password_plain` VARCHAR(255), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
     DECLARE new_inspector_id INT;
 
     INSERT INTO inspector (first_name, last_name, email, contact_no, password, date_hired, status)
@@ -43,7 +47,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `addInspector` (IN `p_first_name` VA
     SELECT CONCAT('âœ… Inspector ', p_first_name, ' ', p_last_name, ' successfully added and logged as New Hire under branch ID ', p_branch_id) AS message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `addOnsitePayment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` VARCHAR(50), IN `p_reference_number` VARCHAR(100), IN `p_collected_by` VARCHAR(100), IN `p_notes` TEXT, IN `p_branch_id` INT, IN `p_created_by` INT)   BEGIN
+CREATE PROCEDURE `addOnsitePayment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` VARCHAR(50), IN `p_reference_number` VARCHAR(100), IN `p_collected_by` VARCHAR(100), IN `p_notes` TEXT, IN `p_branch_id` INT, IN `p_created_by` INT)   BEGIN
     DECLARE payment_id INT;
     DECLARE v_days_overdue INT DEFAULT 0;
     DECLARE v_days_early INT DEFAULT 0;
@@ -172,7 +176,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `addOnsitePayment` (IN `p_stallholde
         END as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `assignManagerToBusinessOwner` (IN `p_business_owner_id` INT, IN `p_business_manager_id` INT, IN `p_access_level` VARCHAR(20), IN `p_assigned_by_system_admin` INT, IN `p_notes` TEXT)   BEGIN
+CREATE PROCEDURE `assignManagerToBusinessOwner` (IN `p_business_owner_id` INT, IN `p_business_manager_id` INT, IN `p_access_level` VARCHAR(20), IN `p_assigned_by_system_admin` INT, IN `p_notes` TEXT)   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -204,7 +208,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `assignManagerToBusinessOwner` (IN `
         'Manager assigned successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CanCustomizeDocuments` (IN `p_owner_id` INT, OUT `can_customize` BOOLEAN)   BEGIN
+CREATE PROCEDURE `CanCustomizeDocuments` (IN `p_owner_id` INT, OUT `can_customize` BOOLEAN)   BEGIN
     SELECT EXISTS(
         SELECT 1 
         FROM stall_business_owner 
@@ -213,30 +217,30 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CanCustomizeDocuments` (IN `p_owner
     ) INTO can_customize;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkComplianceRecordExists` (IN `p_report_id` INT)   BEGIN
+CREATE PROCEDURE `checkComplianceRecordExists` (IN `p_report_id` INT)   BEGIN
   SELECT COUNT(*) AS record_exists
   FROM violation_report
   WHERE report_id = p_report_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkExistingApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `checkExistingApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT)   BEGIN
     SELECT application_id 
     FROM application 
     WHERE applicant_id = p_applicant_id AND stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkExistingApplicationByStall` (IN `p_applicant_id` INT, IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `checkExistingApplicationByStall` (IN `p_applicant_id` INT, IN `p_stall_id` INT)   BEGIN
     SELECT application_id 
     FROM applications 
     WHERE applicant_id = p_applicant_id AND stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkExistingMobileUser` (IN `p_username` VARCHAR(100), IN `p_email` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `checkExistingMobileUser` (IN `p_username` VARCHAR(100), IN `p_email` VARCHAR(255))   BEGIN
     SELECT * FROM applicant 
     WHERE applicant_username = p_username OR applicant_email = p_email;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CheckExistingOwnerStalls` (IN `p_stallholder_id` INT)   BEGIN
+CREATE PROCEDURE `CheckExistingOwnerStalls` (IN `p_stallholder_id` INT)   BEGIN
     SELECT 
         s.business_owner_id as owner_id,
         sbo.owner_full_name as owner_name,
@@ -250,20 +254,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CheckExistingOwnerStalls` (IN `p_st
     GROUP BY s.business_owner_id, sbo.owner_full_name, sbo.owner_email;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkPendingApplication` (IN `p_application_id` INT, IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `checkPendingApplication` (IN `p_application_id` INT, IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM applications 
     WHERE application_id = p_application_id 
       AND applicant_id = p_applicant_id 
       AND status = 'pending';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStallAvailability` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `checkStallAvailability` (IN `p_stall_id` INT)   BEGIN
     SELECT stall_id, stall_name, area, branch_id, is_available 
     FROM stalls 
     WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `countApplicationsByBranch` (IN `p_applicant_id` INT, IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `countApplicationsByBranch` (IN `p_applicant_id` INT, IN `p_branch_id` INT)   BEGIN
     SELECT COUNT(*) as count 
     FROM application app
     JOIN stall st ON app.stall_id = st.stall_id
@@ -273,7 +277,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `countApplicationsByBranch` (IN `p_a
     WHERE app.applicant_id = p_applicant_id AND b.branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `countBranchApplications` (IN `p_applicant_id` INT, IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `countBranchApplications` (IN `p_applicant_id` INT, IN `p_branch_id` INT)   BEGIN
     SELECT COUNT(*) as count 
     FROM applications a 
     JOIN stalls s ON a.stall_id = s.stall_id 
@@ -282,14 +286,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `countBranchApplications` (IN `p_app
       AND a.status != 'rejected';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createApplicant` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `createApplicant` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100))   BEGIN
     INSERT INTO applicant (applicant_full_name, applicant_contact_number, applicant_address, applicant_birthdate, applicant_civil_status, applicant_educational_attainment)
     VALUES (p_full_name, p_contact_number, p_address, p_birthdate, p_civil_status, p_educational_attainment);
     
     SELECT LAST_INSERT_ID() as applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createApplicantComplete` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100), IN `p_nature_of_business` VARCHAR(255), IN `p_capitalization` DECIMAL(15,2), IN `p_source_of_capital` VARCHAR(255), IN `p_previous_business_experience` TEXT, IN `p_relative_stall_owner` ENUM('Yes','No'), IN `p_spouse_full_name` VARCHAR(255), IN `p_spouse_birthdate` DATE, IN `p_spouse_educational_attainment` VARCHAR(100), IN `p_spouse_contact_number` VARCHAR(20), IN `p_spouse_occupation` VARCHAR(100), IN `p_signature_of_applicant` VARCHAR(500), IN `p_house_sketch_location` VARCHAR(500), IN `p_valid_id` VARCHAR(500), IN `p_email_address` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `createApplicantComplete` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100), IN `p_nature_of_business` VARCHAR(255), IN `p_capitalization` DECIMAL(15,2), IN `p_source_of_capital` VARCHAR(255), IN `p_previous_business_experience` TEXT, IN `p_relative_stall_owner` ENUM('Yes','No'), IN `p_spouse_full_name` VARCHAR(255), IN `p_spouse_birthdate` DATE, IN `p_spouse_educational_attainment` VARCHAR(100), IN `p_spouse_contact_number` VARCHAR(20), IN `p_spouse_occupation` VARCHAR(100), IN `p_signature_of_applicant` VARCHAR(500), IN `p_house_sketch_location` VARCHAR(500), IN `p_valid_id` VARCHAR(500), IN `p_email_address` VARCHAR(255))   BEGIN
     DECLARE new_applicant_id INT;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -379,14 +383,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createApplicantComplete` (IN `p_ful
     SELECT new_applicant_id as new_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createApplication` (IN `p_stall_id` INT, IN `p_applicant_id` INT, IN `p_application_date` DATE, IN `p_application_status` ENUM('Pending','Under Review','Approved','Rejected','Cancelled'))   BEGIN
+CREATE PROCEDURE `createApplication` (IN `p_stall_id` INT, IN `p_applicant_id` INT, IN `p_application_date` DATE, IN `p_application_status` ENUM('Pending','Under Review','Approved','Rejected','Cancelled'))   BEGIN
     INSERT INTO application (stall_id, applicant_id, application_date, application_status)
     VALUES (p_stall_id, p_applicant_id, p_application_date, p_application_status);
     
     SELECT LAST_INSERT_ID() as application_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createBranch` (IN `p_business_owner_id` INT, IN `p_branch_name` VARCHAR(100), IN `p_area` VARCHAR(100), IN `p_location` VARCHAR(255), IN `p_address` TEXT, IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
+CREATE PROCEDURE `createBranch` (IN `p_business_owner_id` INT, IN `p_branch_name` VARCHAR(100), IN `p_area` VARCHAR(100), IN `p_location` VARCHAR(255), IN `p_address` TEXT, IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
     INSERT INTO `branch` (
         `business_owner_id`, 
         `branch_name`, 
@@ -411,7 +415,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createBranch` (IN `p_business_owner
     SELECT LAST_INSERT_ID() as branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createBusinessEmployee` (IN `p_username` VARCHAR(20), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_phone_number` VARCHAR(20), IN `p_branch_id` INT, IN `p_created_by_manager` INT, IN `p_permissions` JSON)   BEGIN
+CREATE PROCEDURE `createBusinessEmployee` (IN `p_username` VARCHAR(20), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_phone_number` VARCHAR(20), IN `p_branch_id` INT, IN `p_created_by_manager` INT, IN `p_permissions` JSON)   BEGIN
     INSERT INTO `business_employee` (
         `employee_username`, `employee_password_hash`, `first_name`, `last_name`, `email`, 
         `phone_number`, `branch_id`, `created_by_manager`, `permissions`, `status`, `password_reset_required`
@@ -424,7 +428,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createBusinessEmployee` (IN `p_user
     SELECT LAST_INSERT_ID() as business_employee_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createBusinessOwnerWithManagerConnection` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_contact_number` VARCHAR(20), IN `p_plan_id` INT, IN `p_primary_manager_id` INT, IN `p_additional_manager_ids` JSON, IN `p_created_by_system_admin` INT)   BEGIN
+CREATE PROCEDURE `createBusinessOwnerWithManagerConnection` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_contact_number` VARCHAR(20), IN `p_plan_id` INT, IN `p_primary_manager_id` INT, IN `p_additional_manager_ids` JSON, IN `p_created_by_system_admin` INT)   BEGIN
     DECLARE v_business_owner_id INT;
     DECLARE v_subscription_id INT;
     DECLARE v_start_date DATE;
@@ -552,7 +556,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createBusinessOwnerWithManagerConne
         'Business Owner created successfully with manager connections' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createCollector` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
+CREATE PROCEDURE `createCollector` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
     DECLARE new_collector_id INT;
     DECLARE exit_handler BOOLEAN DEFAULT FALSE;
     
@@ -627,7 +631,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createCollector` (IN `p_username` V
         'Collector created successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createComplaint` (IN `p_complaint_type` VARCHAR(100), IN `p_sender_name` VARCHAR(255), IN `p_sender_contact` VARCHAR(50), IN `p_sender_email` VARCHAR(255), IN `p_stallholder_id` INT, IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_subject` VARCHAR(255), IN `p_description` TEXT, IN `p_evidence` TEXT, IN `p_priority` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `createComplaint` (IN `p_complaint_type` VARCHAR(100), IN `p_sender_name` VARCHAR(255), IN `p_sender_contact` VARCHAR(50), IN `p_sender_email` VARCHAR(255), IN `p_stallholder_id` INT, IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_subject` VARCHAR(255), IN `p_description` TEXT, IN `p_evidence` TEXT, IN `p_priority` VARCHAR(20))   BEGIN
   INSERT INTO complaint (
     complaint_type,
     sender_name,
@@ -659,7 +663,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createComplaint` (IN `p_complaint_t
   SELECT LAST_INSERT_ID() AS complaint_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createComplianceRecord` (IN `p_inspector_id` INT, IN `p_stallholder_id` INT, IN `p_violation_id` INT, IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_compliance_type` VARCHAR(100), IN `p_severity` VARCHAR(20), IN `p_remarks` TEXT, IN `p_offense_no` INT, IN `p_penalty_id` INT)   BEGIN
+CREATE PROCEDURE `createComplianceRecord` (IN `p_inspector_id` INT, IN `p_stallholder_id` INT, IN `p_violation_id` INT, IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_compliance_type` VARCHAR(100), IN `p_severity` VARCHAR(20), IN `p_remarks` TEXT, IN `p_offense_no` INT, IN `p_penalty_id` INT)   BEGIN
   INSERT INTO `violation_report` (
     inspector_id, stallholder_id, violation_id, stall_id, branch_id,
     compliance_type, severity, remarks, offense_no, penalty_id, 
@@ -682,14 +686,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createComplianceRecord` (IN `p_insp
   SELECT LAST_INSERT_ID() AS report_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createFloor` (IN `p_branch_id` INT, IN `p_floor_name` VARCHAR(50), IN `p_floor_number` INT, IN `p_branch_id_duplicate` INT)   BEGIN
+CREATE PROCEDURE `createFloor` (IN `p_branch_id` INT, IN `p_floor_name` VARCHAR(50), IN `p_floor_number` INT, IN `p_branch_id_duplicate` INT)   BEGIN
     INSERT INTO floor (branch_id, floor_name, floor_number)
     VALUES (p_branch_id, p_floor_name, p_floor_number);
     
     SELECT LAST_INSERT_ID() as floor_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createInspectorWithCredentials` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
+CREATE PROCEDURE `createInspectorWithCredentials` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_contact_no` VARCHAR(20), IN `p_branch_id` INT, IN `p_date_hired` DATE, IN `p_branch_manager_id` INT)   BEGIN
     DECLARE new_inspector_id INT;
     DECLARE exit_handler BOOLEAN DEFAULT FALSE;
     
@@ -768,7 +772,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createInspectorWithCredentials` (IN
         'Inspector created successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createMobileApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_preferred_area` VARCHAR(255), IN `p_document_urls` TEXT)   BEGIN
+CREATE PROCEDURE `createMobileApplication` (IN `p_applicant_id` INT, IN `p_stall_id` INT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_preferred_area` VARCHAR(255), IN `p_document_urls` TEXT)   BEGIN
     INSERT INTO applications 
     (applicant_id, stall_id, business_name, business_type, preferred_area, 
      document_urls, status, created_at) 
@@ -778,7 +782,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createMobileApplication` (IN `p_app
     SELECT LAST_INSERT_ID() as application_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateOwnerWithThreeManagers` ()   BEGIN
+CREATE PROCEDURE `CreateOwnerWithThreeManagers` ()   BEGIN
     DECLARE v_business_owner_id INT;
     DECLARE v_subscription_id INT;
     DECLARE v_manager1_id INT DEFAULT 1;   
@@ -828,14 +832,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateOwnerWithThreeManagers` ()   
     
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createSection` (IN `p_floor_id` INT, IN `p_section_name` VARCHAR(100), IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `createSection` (IN `p_floor_id` INT, IN `p_section_name` VARCHAR(100), IN `p_branch_id` INT)   BEGIN
     INSERT INTO section (floor_id, section_name)
     VALUES (p_floor_id, p_section_name);
     
     SELECT LAST_INSERT_ID() as section_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createStallApplicationComplete` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100), IN `p_nature_of_business` VARCHAR(255), IN `p_capitalization` DECIMAL(15,2), IN `p_source_of_capital` VARCHAR(255), IN `p_previous_business_experience` TEXT, IN `p_relative_stall_owner` ENUM('Yes','No'), IN `p_spouse_full_name` VARCHAR(255), IN `p_spouse_birthdate` DATE, IN `p_spouse_educational_attainment` VARCHAR(100), IN `p_spouse_contact_number` VARCHAR(20), IN `p_spouse_occupation` VARCHAR(100), IN `p_signature_of_applicant` VARCHAR(500), IN `p_house_sketch_location` VARCHAR(500), IN `p_valid_id` VARCHAR(500), IN `p_email_address` VARCHAR(255), IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `createStallApplicationComplete` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100), IN `p_nature_of_business` VARCHAR(255), IN `p_capitalization` DECIMAL(15,2), IN `p_source_of_capital` VARCHAR(255), IN `p_previous_business_experience` TEXT, IN `p_relative_stall_owner` ENUM('Yes','No'), IN `p_spouse_full_name` VARCHAR(255), IN `p_spouse_birthdate` DATE, IN `p_spouse_educational_attainment` VARCHAR(100), IN `p_spouse_contact_number` VARCHAR(20), IN `p_spouse_occupation` VARCHAR(100), IN `p_signature_of_applicant` VARCHAR(500), IN `p_house_sketch_location` VARCHAR(500), IN `p_valid_id` VARCHAR(500), IN `p_email_address` VARCHAR(255), IN `p_stall_id` INT)   BEGIN
     DECLARE new_applicant_id INT;
     DECLARE new_application_id INT;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -945,7 +949,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createStallApplicationComplete` (IN
            new_application_id as application_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createStallBusinessOwner` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_created_by_system_admin` INT)   BEGIN
+CREATE PROCEDURE `createStallBusinessOwner` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_created_by_system_admin` INT)   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -973,7 +977,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createStallBusinessOwner` (IN `p_us
            LAST_INSERT_ID() as business_owner_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createStallholder` (IN `p_applicant_id` INT, IN `p_stallholder_name` VARCHAR(150), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(255), IN `p_address` TEXT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_branch_id` INT, IN `p_stall_id` INT, IN `p_contract_start_date` DATE, IN `p_contract_end_date` DATE, IN `p_lease_amount` DECIMAL(10,2), IN `p_monthly_rent` DECIMAL(10,2), IN `p_notes` TEXT, IN `p_created_by_business_manager` INT)   BEGIN
+CREATE PROCEDURE `createStallholder` (IN `p_applicant_id` INT, IN `p_stallholder_name` VARCHAR(150), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(255), IN `p_address` TEXT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_branch_id` INT, IN `p_stall_id` INT, IN `p_contract_start_date` DATE, IN `p_contract_end_date` DATE, IN `p_lease_amount` DECIMAL(10,2), IN `p_monthly_rent` DECIMAL(10,2), IN `p_notes` TEXT, IN `p_created_by_business_manager` INT)   BEGIN
     DECLARE new_stallholder_id INT;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -1011,7 +1015,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createStallholder` (IN `p_applicant
     SELECT 1 as success, 'Stallholder created successfully' AS message, new_stallholder_id as stallholder_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createSystemAdministrator` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `createSystemAdministrator` (IN `p_username` VARCHAR(50), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -1039,14 +1043,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createSystemAdministrator` (IN `p_u
            LAST_INSERT_ID() as system_admin_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteApplicant` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `deleteApplicant` (IN `p_applicant_id` INT)   BEGIN
     -- Archive or mark as deleted
     UPDATE applicant SET updated_at = NOW() WHERE applicant_id = p_applicant_id;
     DELETE FROM applicant WHERE applicant_id = p_applicant_id;
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteApplicantDocument` (IN `p_document_id` INT, IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `deleteApplicantDocument` (IN `p_document_id` INT, IN `p_applicant_id` INT)   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -1068,12 +1072,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteApplicantDocument` (IN `p_doc
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteApplication` (IN `p_application_id` INT)   BEGIN
+CREATE PROCEDURE `deleteApplication` (IN `p_application_id` INT)   BEGIN
     DELETE FROM application WHERE application_id = p_application_id;
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `deleteBranch` (IN `p_branch_id` INT)   BEGIN
     DECLARE branch_exists INT DEFAULT 0;
     DECLARE rows_deleted INT DEFAULT 0;
     
@@ -1129,7 +1133,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteBranch` (IN `p_branch_id` INT
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteBusinessEmployee` (IN `p_employee_id` INT)   BEGIN
+CREATE PROCEDURE `deleteBusinessEmployee` (IN `p_employee_id` INT)   BEGIN
     UPDATE `business_employee` 
     SET `status` = 'Inactive', `updated_at` = NOW()
     WHERE `business_employee_id` = p_employee_id;
@@ -1142,17 +1146,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteBusinessEmployee` (IN `p_empl
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteComplaint` (IN `p_complaint_id` INT)   BEGIN
+CREATE PROCEDURE `deleteComplaint` (IN `p_complaint_id` INT)   BEGIN
   DELETE FROM complaint WHERE complaint_id = p_complaint_id;
   SELECT ROW_COUNT() AS affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteComplianceRecord` (IN `p_report_id` INT)   BEGIN
+CREATE PROCEDURE `deleteComplianceRecord` (IN `p_report_id` INT)   BEGIN
   DELETE FROM `violation_report` WHERE report_id = p_report_id;
   SELECT ROW_COUNT() AS affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteFloor` (IN `p_floor_id` INT)   BEGIN
+CREATE PROCEDURE `deleteFloor` (IN `p_floor_id` INT)   BEGIN
     DECLARE v_section_count INT;
     DECLARE v_stall_count INT;
     DECLARE v_floor_exists INT DEFAULT 0;
@@ -1196,7 +1200,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteFloor` (IN `p_floor_id` INT) 
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteSection` (IN `p_section_id` INT)   BEGIN
+CREATE PROCEDURE `deleteSection` (IN `p_section_id` INT)   BEGIN
     DECLARE v_stall_count INT;
     DECLARE v_section_exists INT DEFAULT 0;
     
@@ -1229,14 +1233,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteSection` (IN `p_section_id` I
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStall` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `deleteStall` (IN `p_stall_id` INT)   BEGIN
     UPDATE stall SET status = 'Inactive', updated_at = NOW()
     WHERE stall_id = p_stall_id;
     
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStallBusinessOwner` (IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `deleteStallBusinessOwner` (IN `p_business_owner_id` INT)   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -1261,7 +1265,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStallBusinessOwner` (IN `p_bu
            ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStallholder` (IN `p_stallholder_id` INT)   BEGIN
+CREATE PROCEDURE `deleteStallholder` (IN `p_stallholder_id` INT)   BEGIN
     DECLARE stall_to_free INT DEFAULT NULL;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -1292,7 +1296,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStallholder` (IN `p_stallhold
     SELECT 1 as success, 'Stallholder contract terminated successfully' AS message, ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteSystemAdministrator` (IN `p_system_admin_id` INT)   BEGIN
+CREATE PROCEDURE `deleteSystemAdministrator` (IN `p_system_admin_id` INT)   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -1317,7 +1321,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteSystemAdministrator` (IN `p_s
            ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveBranches` ()   BEGIN
+CREATE PROCEDURE `getAllActiveBranches` ()   BEGIN
     SELECT 
         branch_id,
         branch_name,
@@ -1328,7 +1332,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveBranches` ()   BEGIN
     ORDER BY area, branch_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveInspectors` ()   BEGIN
+CREATE PROCEDURE `getAllActiveInspectors` ()   BEGIN
   SELECT 
     inspector_id,
     CONCAT(first_name, ' ', last_name) AS inspector_name,
@@ -1343,11 +1347,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveInspectors` ()   BEGIN
   ORDER BY first_name, last_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllApplicants` ()   BEGIN
+CREATE PROCEDURE `getAllApplicants` ()   BEGIN
     SELECT * FROM applicant ORDER BY created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllApplications` ()   BEGIN
+CREATE PROCEDURE `getAllApplications` ()   BEGIN
     SELECT 
         a.*,
         ap.applicant_full_name,
@@ -1364,7 +1368,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllApplications` ()   BEGIN
     ORDER BY a.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBranchesDetailed` ()   BEGIN
+CREATE PROCEDURE `getAllBranchesDetailed` ()   BEGIN
     SELECT 
         b.`branch_id`,
         b.`business_owner_id`,
@@ -1392,7 +1396,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBranchesDetailed` ()   BEGIN
     ORDER BY b.`branch_name`;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessEmployees` (IN `p_status` VARCHAR(20), IN `p_branch_id` INT, IN `p_limit` INT, IN `p_offset` INT)   BEGIN
+CREATE PROCEDURE `getAllBusinessEmployees` (IN `p_status` VARCHAR(20), IN `p_branch_id` INT, IN `p_limit` INT, IN `p_offset` INT)   BEGIN
     SET @sql = 'SELECT 
         e.business_employee_id,
         e.employee_username,
@@ -1437,7 +1441,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessEmployees` (IN `p_sta
     DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessOwnersWithSubscription` ()   BEGIN
+CREATE PROCEDURE `getAllBusinessOwnersWithSubscription` ()   BEGIN
     SELECT 
         bo.business_owner_id,
         bo.owner_username,
@@ -1465,7 +1469,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessOwnersWithSubscriptio
     ORDER BY bo.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllComplaints` (IN `p_branch_id` INT, IN `p_status` VARCHAR(20), IN `p_search` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `getAllComplaints` (IN `p_branch_id` INT, IN `p_status` VARCHAR(20), IN `p_search` VARCHAR(255))   BEGIN
   SELECT 
     c.complaint_id,
     c.complaint_type,
@@ -1507,7 +1511,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllComplaints` (IN `p_branch_id`
   ORDER BY c.date_submitted DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllComplianceRecords` (IN `p_branch_id` INT, IN `p_status` VARCHAR(20), IN `p_search` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `getAllComplianceRecords` (IN `p_branch_id` INT, IN `p_status` VARCHAR(20), IN `p_search` VARCHAR(255))   BEGIN
   SELECT * FROM `view_compliance_records`
   WHERE 
     (p_branch_id IS NULL OR branch_id = p_branch_id)
@@ -1522,7 +1526,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllComplianceRecords` (IN `p_bra
   ORDER BY date DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllDocumentTypes` ()   BEGIN
+CREATE PROCEDURE `getAllDocumentTypes` ()   BEGIN
     SELECT 
         document_type_id,
         document_name,
@@ -1533,7 +1537,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllDocumentTypes` ()   BEGIN
     ORDER BY document_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllPayments` (IN `p_branch_id` INT, IN `p_start_date` DATE, IN `p_end_date` DATE, IN `p_payment_method` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_limit` INT, IN `p_offset` INT)   BEGIN
+CREATE PROCEDURE `getAllPayments` (IN `p_branch_id` INT, IN `p_start_date` DATE, IN `p_end_date` DATE, IN `p_payment_method` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_limit` INT, IN `p_offset` INT)   BEGIN
         SELECT 
             p.payment_id,
             p.stallholder_id,
@@ -1559,7 +1563,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllPayments` (IN `p_branch_id` I
         LIMIT p_limit OFFSET p_offset;
     END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallBusinessOwners` ()   BEGIN
+CREATE PROCEDURE `getAllStallBusinessOwners` ()   BEGIN
     SELECT 
         sbo.`business_owner_id`,
         sbo.`owner_username`,
@@ -1576,7 +1580,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallBusinessOwners` ()   BEG
     ORDER BY sbo.`created_at` DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallholdersDetailed` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getAllStallholdersDetailed` (IN `p_branch_id` INT)   BEGIN
     IF p_branch_id IS NULL THEN
         SELECT
             sh.`stallholder_id`,
@@ -1648,7 +1652,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallholdersDetailed` (IN `p_
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallsDetailed` ()   BEGIN
+CREATE PROCEDURE `getAllStallsDetailed` ()   BEGIN
     SELECT 
         s.*,
         sec.section_name,
@@ -1662,7 +1666,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllStallsDetailed` ()   BEGIN
     ORDER BY b.branch_name, f.floor_name, sec.section_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllSubscriptionPlans` ()   BEGIN
+CREATE PROCEDURE `getAllSubscriptionPlans` ()   BEGIN
     SELECT 
         plan_id,
         plan_name,
@@ -1678,7 +1682,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllSubscriptionPlans` ()   BEGIN
     ORDER BY monthly_fee ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllSystemAdministrators` ()   BEGIN
+CREATE PROCEDURE `getAllSystemAdministrators` ()   BEGIN
     SELECT 
         `system_admin_id`,
         `username`,
@@ -1693,7 +1697,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllSystemAdministrators` ()   BE
     ORDER BY `created_at` DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllViolationTypes` ()   BEGIN
+CREATE PROCEDURE `getAllViolationTypes` ()   BEGIN
   SELECT 
     violation_id,
     ordinance_no,
@@ -1703,7 +1707,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllViolationTypes` ()   BEGIN
   ORDER BY violation_type;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantAdditionalInfo` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantAdditionalInfo` (IN `p_applicant_id` INT)   BEGIN
     SELECT 
         
         oi.email_address,
@@ -1730,7 +1734,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantAdditionalInfo` (IN `p_
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantApplicationsDetailed` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantApplicationsDetailed` (IN `p_applicant_id` INT)   BEGIN
     SELECT 
         app.application_id,
         app.applicant_id,
@@ -1755,7 +1759,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantApplicationsDetailed` (
     ORDER BY app.application_date DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantBusinessOwners` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantBusinessOwners` (IN `p_applicant_id` INT)   BEGIN
     SELECT DISTINCT
         b.business_owner_id,
         CONCAT(bo.first_name, ' ', bo.last_name) as business_owner_name,
@@ -1797,19 +1801,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantBusinessOwners` (IN `p_
     ORDER BY business_owner_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantByEmail` (IN `p_email` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `getApplicantByEmail` (IN `p_email` VARCHAR(100))   BEGIN
     SELECT * FROM applicant WHERE applicant_email = p_email;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantById` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantById` (IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM applicant WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getApplicantByUsername` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT * FROM applicant WHERE applicant_username = p_username;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantComplete` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantComplete` (IN `p_applicant_id` INT)   BEGIN
     IF p_applicant_id IS NULL THEN
         SELECT 
             a.*,
@@ -1839,7 +1843,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantComplete` (IN `p_applic
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantDocumentStatus` (IN `p_applicant_id` INT, IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantDocumentStatus` (IN `p_applicant_id` INT, IN `p_business_owner_id` INT)   BEGIN
     SELECT 
         COUNT(DISTINCT bdr.document_type_id) as total_required_documents,
         COUNT(DISTINCT CASE 
@@ -1881,7 +1885,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantDocumentStatus` (IN `p_
         AND bdr.is_required = 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantLoginCredentials` (IN `p_username` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `getApplicantLoginCredentials` (IN `p_username` VARCHAR(255))   BEGIN
     SELECT 
         c.registrationid,
         c.applicant_id,
@@ -1905,7 +1909,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantLoginCredentials` (IN `
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantRequiredDocuments` (IN `p_applicant_id` INT, IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicantRequiredDocuments` (IN `p_applicant_id` INT, IN `p_business_owner_id` INT)   BEGIN
     SELECT DISTINCT
         dt.document_type_id,
         dt.document_name,
@@ -1949,7 +1953,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicantRequiredDocuments` (IN 
     ORDER BY MAX(bdr.is_required) DESC, dt.document_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicationById` (IN `p_application_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicationById` (IN `p_application_id` INT)   BEGIN
     SELECT 
         a.*,
         ap.applicant_full_name,
@@ -1968,7 +1972,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicationById` (IN `p_applicat
     WHERE a.application_id = p_application_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicationsByApplicant` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getApplicationsByApplicant` (IN `p_applicant_id` INT)   BEGIN
     SELECT 
         a.*,
         s.stall_no,
@@ -1984,7 +1988,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getApplicationsByApplicant` (IN `p_
     ORDER BY a.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppliedAreasByApplicant` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getAppliedAreasByApplicant` (IN `p_applicant_id` INT)   BEGIN
     SELECT DISTINCT 
         b.area,
         b.branch_id,
@@ -1998,7 +2002,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppliedAreasByApplicant` (IN `p_
       AND app.application_status IN ('Pending', 'Approved');
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableStalls` ()   BEGIN
+CREATE PROCEDURE `getAvailableStalls` ()   BEGIN
     SELECT 
         s.*,
         sec.section_name,
@@ -2013,7 +2017,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableStalls` ()   BEGIN
     ORDER BY b.branch_name, f.floor_name, sec.section_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableStallsByApplicant` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getAvailableStallsByApplicant` (IN `p_applicant_id` INT)   BEGIN
     SELECT 
         s.stall_id,
         s.stall_no as stall_number,
@@ -2040,11 +2044,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableStallsByApplicant` (IN 
     ORDER BY b.area, b.branch_name, s.stall_no;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBranchById` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getBranchById` (IN `p_branch_id` INT)   BEGIN
     SELECT * FROM branch WHERE branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBranchDocumentRequirements` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getBranchDocumentRequirements` (IN `p_branch_id` INT)   BEGIN
     SELECT 
         bdr.requirement_id,
         bdr.branch_id,
@@ -2068,7 +2072,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBranchDocumentRequirements` (IN 
     ORDER BY dt.document_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessEmployeeById` (IN `p_employee_id` INT)   BEGIN
+CREATE PROCEDURE `getBusinessEmployeeById` (IN `p_employee_id` INT)   BEGIN
     SELECT 
         e.*,
         b.`branch_name`,
@@ -2080,7 +2084,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessEmployeeById` (IN `p_emp
     WHERE e.`business_employee_id` = p_employee_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessEmployeeByUsername` (IN `p_username` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `getBusinessEmployeeByUsername` (IN `p_username` VARCHAR(20))   BEGIN
     SELECT 
         e.*,
         b.`branch_name`
@@ -2089,7 +2093,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessEmployeeByUsername` (IN 
     WHERE e.`employee_username` = p_username;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessEmployeesByBranch` (IN `p_branch_id` INT, IN `p_status` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `getBusinessEmployeesByBranch` (IN `p_branch_id` INT, IN `p_status` VARCHAR(20))   BEGIN
     IF p_status IS NOT NULL THEN
         SELECT 
             e.`business_employee_id`,
@@ -2121,7 +2125,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessEmployeesByBranch` (IN `
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessManagerByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getBusinessManagerByUsername` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT 
         bm.*,
         b.`branch_name`,
@@ -2132,7 +2136,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessManagerByUsername` (IN `
     WHERE bm.`manager_username` = p_username AND bm.`status` = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerManagers` (IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `getBusinessOwnerManagers` (IN `p_business_owner_id` INT)   BEGIN
     SELECT 
         bom.relationship_id,
         bom.business_owner_id,
@@ -2158,7 +2162,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerManagers` (IN `p_bu
     ORDER BY bom.is_primary DESC, bom.assigned_date ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerPaymentHistory` (IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `getBusinessOwnerPaymentHistory` (IN `p_business_owner_id` INT)   BEGIN
     SELECT 
         p.payment_id,
         p.amount,
@@ -2178,7 +2182,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerPaymentHistory` (IN
     ORDER BY p.payment_date DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerSubscription` (IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `getBusinessOwnerSubscription` (IN `p_business_owner_id` INT)   BEGIN
     SELECT 
         s.subscription_id,
         s.subscription_status,
@@ -2202,7 +2206,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getBusinessOwnerSubscription` (IN `
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getCollectorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getCollectorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT 
         c.collector_id,
         c.username,
@@ -2225,7 +2229,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCollectorByUsername` (IN `p_user
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getCollectorsByBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getCollectorsByBranch` (IN `p_branch_id` INT)   BEGIN
     SELECT 
         c.collector_id,
         c.username,
@@ -2247,7 +2251,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCollectorsByBranch` (IN `p_branc
     ORDER BY c.date_created DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getComplaintById` (IN `p_complaint_id` INT)   BEGIN
+CREATE PROCEDURE `getComplaintById` (IN `p_complaint_id` INT)   BEGIN
   SELECT 
     c.complaint_id,
     c.complaint_type,
@@ -2279,12 +2283,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getComplaintById` (IN `p_complaint_
   WHERE c.complaint_id = p_complaint_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getComplianceRecordById` (IN `p_report_id` INT)   BEGIN
+CREATE PROCEDURE `getComplianceRecordById` (IN `p_report_id` INT)   BEGIN
   SELECT * FROM `view_compliance_records`
   WHERE compliance_id = p_report_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getComplianceStatistics` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getComplianceStatistics` (IN `p_branch_id` INT)   BEGIN
   SELECT 
     COUNT(*) AS total_records,
     SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
@@ -2297,20 +2301,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getComplianceStatistics` (IN `p_bra
   WHERE p_branch_id IS NULL OR branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getCredentialByApplicantId` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `getCredentialByApplicantId` (IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM credential WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getEmailTemplate` (IN `p_template_name` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `getEmailTemplate` (IN `p_template_name` VARCHAR(100))   BEGIN
     SELECT * FROM employee_email_template 
     WHERE template_name = p_template_name AND is_active = 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getFloorsByBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getFloorsByBranch` (IN `p_branch_id` INT)   BEGIN
     SELECT * FROM floor WHERE branch_id = p_branch_id ORDER BY floor_number;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getInspectorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getInspectorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT 
         i.inspector_id,
         i.username,
@@ -2332,7 +2336,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getInspectorByUsername` (IN `p_user
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getInspectorsByBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getInspectorsByBranch` (IN `p_branch_id` INT)   BEGIN
     SELECT 
         i.inspector_id,
         i.username,
@@ -2353,7 +2357,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getInspectorsByBranch` (IN `p_branc
     ORDER BY i.date_created DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getManagerBusinessOwners` (IN `p_business_manager_id` INT)   BEGIN
+CREATE PROCEDURE `getManagerBusinessOwners` (IN `p_business_manager_id` INT)   BEGIN
     SELECT 
         bom.relationship_id,
         bom.business_owner_id,
@@ -2380,14 +2384,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getManagerBusinessOwners` (IN `p_bu
     ORDER BY bom.is_primary DESC, sbo.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getMobileApplicationStatus` (IN `p_application_id` INT, IN `p_user_id` INT)   BEGIN
+CREATE PROCEDURE `getMobileApplicationStatus` (IN `p_application_id` INT, IN `p_user_id` INT)   BEGIN
     SELECT a.*, s.stall_name, s.area, s.location 
     FROM applications a 
     LEFT JOIN stalls s ON a.stall_id = s.stall_id 
     WHERE a.application_id = p_application_id AND a.applicant_id = p_user_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getMobileUserApplications` (IN `p_user_id` INT)   BEGIN
+CREATE PROCEDURE `getMobileUserApplications` (IN `p_user_id` INT)   BEGIN
     SELECT a.*, s.stall_name, s.area, s.location 
     FROM applications a 
     LEFT JOIN stalls s ON a.stall_id = s.stall_id 
@@ -2395,7 +2399,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getMobileUserApplications` (IN `p_u
     ORDER BY a.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getMobileUserByUsername` (IN `p_username` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `getMobileUserByUsername` (IN `p_username` VARCHAR(100))   BEGIN
     SELECT 
         c.registrationid,
         c.applicant_id, 
@@ -2411,7 +2415,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getMobileUserByUsername` (IN `p_use
     WHERE c.user_name = p_username AND c.is_active = 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getOnsitePayments` (IN `p_branch_id` INT, IN `p_start_date` DATE, IN `p_end_date` DATE, IN `p_limit` INT, IN `p_offset` INT)   BEGIN
+CREATE PROCEDURE `getOnsitePayments` (IN `p_branch_id` INT, IN `p_start_date` DATE, IN `p_end_date` DATE, IN `p_limit` INT, IN `p_offset` INT)   BEGIN
         SELECT 
             p.payment_id,
             p.amount,
@@ -2444,7 +2448,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOnsitePayments` (IN `p_branch_id
         LIMIT p_limit OFFSET p_offset;
     END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetOwnerDocumentRequirements` (IN `p_owner_id` INT)   BEGIN
+CREATE PROCEDURE `GetOwnerDocumentRequirements` (IN `p_owner_id` INT)   BEGIN
     SELECT 
         requirement_id,
         owner_id,
@@ -2462,7 +2466,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `GetOwnerDocumentRequirements` (IN `
     ORDER BY display_order ASC, document_name ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getPaymentStats` (IN `p_branch_id` INT, IN `p_month` VARCHAR(7))   BEGIN
+CREATE PROCEDURE `getPaymentStats` (IN `p_branch_id` INT, IN `p_month` VARCHAR(7))   BEGIN
         SELECT 
             p.payment_method,
             COUNT(p.payment_id) as total_payments,
@@ -2477,21 +2481,21 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getPaymentStats` (IN `p_branch_id` 
         ORDER BY p.payment_method, p.payment_status;
     END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getSectionsByFloor` (IN `p_floor_id` INT)   BEGIN
+CREATE PROCEDURE `getSectionsByFloor` (IN `p_floor_id` INT)   BEGIN
     SELECT * FROM section WHERE floor_id = p_floor_id ORDER BY section_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallBusinessOwnerById` (IN `p_business_owner_id` INT)   BEGIN
+CREATE PROCEDURE `getStallBusinessOwnerById` (IN `p_business_owner_id` INT)   BEGIN
     SELECT * FROM `stall_business_owner` 
     WHERE `business_owner_id` = p_business_owner_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallBusinessOwnerByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getStallBusinessOwnerByUsername` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT * FROM `stall_business_owner` 
     WHERE `owner_username` = p_username;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallBusinessOwnerByUsernameLogin` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getStallBusinessOwnerByUsernameLogin` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT 
         `business_owner_id`,
         `owner_username`,
@@ -2507,7 +2511,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallBusinessOwnerByUsernameLogi
     AND `status` = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallById` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `getStallById` (IN `p_stall_id` INT)   BEGIN
     SELECT 
         s.*,
         sec.section_name,
@@ -2524,13 +2528,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallById` (IN `p_stall_id` INT)
     WHERE s.stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderBranchId` (IN `p_stallholder_id` INT)   BEGIN
+CREATE PROCEDURE `getStallholderBranchId` (IN `p_stallholder_id` INT)   BEGIN
   SELECT branch_id
   FROM stallholder
   WHERE stallholder_id = p_stallholder_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderById` (IN `p_stallholder_id` INT)   BEGIN
+CREATE PROCEDURE `getStallholderById` (IN `p_stallholder_id` INT)   BEGIN
     SELECT 
         sh.`stallholder_id`,
         sh.`applicant_id`,
@@ -2572,7 +2576,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholderById` (IN `p_stallhol
     WHERE sh.`stallholder_id` = p_stallholder_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetStallholderDocuments` (IN `p_stallholder_id` INT, IN `p_owner_id` INT)   BEGIN
+CREATE PROCEDURE `GetStallholderDocuments` (IN `p_stallholder_id` INT, IN `p_owner_id` INT)   BEGIN
     SELECT 
         sds.submission_id,
         sds.requirement_id,
@@ -2596,7 +2600,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `GetStallholderDocuments` (IN `p_sta
     ORDER BY odr.display_order ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholdersByBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `getStallholdersByBranch` (IN `p_branch_id` INT)   BEGIN
         IF p_branch_id IS NULL THEN
             SELECT 
                 s.stallholder_id,
@@ -2634,7 +2638,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallholdersByBranch` (IN `p_bra
         END IF;
     END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallsFiltered` (IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_price_type` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_is_available` TINYINT)   BEGIN
+CREATE PROCEDURE `getStallsFiltered` (IN `p_stall_id` INT, IN `p_branch_id` INT, IN `p_price_type` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_is_available` TINYINT)   BEGIN
     SET @sql = 'SELECT 
         s.*,
         sec.section_name,
@@ -2675,7 +2679,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallsFiltered` (IN `p_stall_id`
     DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallWithBranchInfo` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `getStallWithBranchInfo` (IN `p_stall_id` INT)   BEGIN
     SELECT st.stall_id, st.is_available, st.status, b.branch_id, b.branch_name
     FROM stall st
     JOIN section sec ON st.section_id = sec.section_id
@@ -2684,7 +2688,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStallWithBranchInfo` (IN `p_stal
     WHERE st.stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getSystemAdminDashboardStats` ()   BEGIN
+CREATE PROCEDURE `getSystemAdminDashboardStats` ()   BEGIN
     -- Total business owners
     SELECT COUNT(*) as total_business_owners FROM stall_business_owner;
     
@@ -2723,18 +2727,18 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getSystemAdminDashboardStats` ()   
     WHERE subscription_status = 'Pending';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getSystemAdministratorById` (IN `p_system_admin_id` INT)   BEGIN
+CREATE PROCEDURE `getSystemAdministratorById` (IN `p_system_admin_id` INT)   BEGIN
     SELECT * FROM `system_administrator` 
     WHERE `system_admin_id` = p_system_admin_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getSystemAdministratorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `getSystemAdministratorByUsername` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT * FROM `system_administrator` 
     WHERE `username` = p_username 
     AND `status` = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getViolationPenaltiesByViolationId` (IN `p_violation_id` INT)   BEGIN
+CREATE PROCEDURE `getViolationPenaltiesByViolationId` (IN `p_violation_id` INT)   BEGIN
   SELECT 
     penalty_id,
     violation_id,
@@ -2746,7 +2750,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getViolationPenaltiesByViolationId`
   ORDER BY offense_no;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `loginBusinessEmployee` (IN `p_username` VARCHAR(20), IN `p_session_token` VARCHAR(255), IN `p_ip_address` VARCHAR(45), IN `p_user_agent` TEXT)   BEGIN
+CREATE PROCEDURE `loginBusinessEmployee` (IN `p_username` VARCHAR(20), IN `p_session_token` VARCHAR(255), IN `p_ip_address` VARCHAR(45), IN `p_user_agent` TEXT)   BEGIN
     DECLARE v_employee_id INT DEFAULT NULL;
     
     -- Get employee ID
@@ -2768,7 +2772,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `loginBusinessEmployee` (IN `p_usern
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `loginCollector` (IN `p_username` VARCHAR(50), IN `p_update_login` BOOLEAN)   BEGIN
+CREATE PROCEDURE `loginCollector` (IN `p_username` VARCHAR(50), IN `p_update_login` BOOLEAN)   BEGIN
     -- Get collector details
     SELECT 
         c.collector_id,
@@ -2798,7 +2802,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `loginCollector` (IN `p_username` VA
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `loginInspector` (IN `p_username` VARCHAR(50), IN `p_update_login` BOOLEAN)   BEGIN
+CREATE PROCEDURE `loginInspector` (IN `p_username` VARCHAR(50), IN `p_update_login` BOOLEAN)   BEGIN
     -- Get inspector details
     SELECT 
         i.inspector_id,
@@ -2829,7 +2833,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `loginInspector` (IN `p_username` VA
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `loginMobileStaff` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `loginMobileStaff` (IN `p_username` VARCHAR(50))   BEGIN
     DECLARE v_found INT DEFAULT 0;
     
     -- First try inspector
@@ -2880,7 +2884,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `loginMobileStaff` (IN `p_username` 
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `loginSystemAdministrator` (IN `p_username` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `loginSystemAdministrator` (IN `p_username` VARCHAR(50))   BEGIN
     SELECT 
         `system_admin_id`,
         `username`,
@@ -2897,7 +2901,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `loginSystemAdministrator` (IN `p_us
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `logoutBusinessEmployee` (IN `p_session_token` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `logoutBusinessEmployee` (IN `p_session_token` VARCHAR(255))   BEGIN
     UPDATE `employee_session` 
     SET `is_active` = false, `logout_time` = NOW()
     WHERE `session_token` = p_session_token AND `is_active` = true;
@@ -2905,7 +2909,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `logoutBusinessEmployee` (IN `p_sess
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `manual_reset_payment_status` ()   BEGIN
+CREATE PROCEDURE `manual_reset_payment_status` ()   BEGIN
                 DECLARE reset_count INT DEFAULT 0;
                 
                 SELECT COUNT(*) INTO reset_count
@@ -2936,7 +2940,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `manual_reset_payment_status` ()   B
                     'Payment statuses reset from paid to pending' as message;
             END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `recordSubscriptionPayment` (IN `p_subscription_id` INT, IN `p_business_owner_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_method` VARCHAR(50), IN `p_reference_number` VARCHAR(100), IN `p_payment_period_start` DATE, IN `p_payment_period_end` DATE, IN `p_notes` TEXT, IN `p_processed_by_system_admin` INT)   BEGIN
+CREATE PROCEDURE `recordSubscriptionPayment` (IN `p_subscription_id` INT, IN `p_business_owner_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_method` VARCHAR(50), IN `p_reference_number` VARCHAR(100), IN `p_payment_period_start` DATE, IN `p_payment_period_end` DATE, IN `p_notes` TEXT, IN `p_processed_by_system_admin` INT)   BEGIN
     DECLARE v_payment_id INT;
     DECLARE v_receipt_number VARCHAR(100);
     
@@ -3004,7 +3008,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `recordSubscriptionPayment` (IN `p_s
         'Payment recorded successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `registerMobileUser` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_username` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_password_hash` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `registerMobileUser` (IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_username` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_password_hash` VARCHAR(255))   BEGIN
     INSERT INTO applicant (
         applicant_full_name, 
         applicant_contact_number, 
@@ -3028,7 +3032,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerMobileUser` (IN `p_full_nam
     SELECT LAST_INSERT_ID() as applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `removeBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT)   BEGIN
+CREATE PROCEDURE `removeBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT)   BEGIN
     DECLARE v_affected_rows INT DEFAULT 0;
     
     DELETE FROM branch_document_requirements
@@ -3045,7 +3049,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `removeBranchDocumentRequirement` (I
         END as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `removeBranchDocumentRequirementById` (IN `p_requirement_id` INT)   BEGIN
+CREATE PROCEDURE `removeBranchDocumentRequirementById` (IN `p_requirement_id` INT)   BEGIN
     DECLARE v_affected_rows INT DEFAULT 0;
     
     DELETE FROM branch_document_requirements
@@ -3062,7 +3066,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `removeBranchDocumentRequirementById
         END as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `removeManagerFromBusinessOwner` (IN `p_relationship_id` INT)   BEGIN
+CREATE PROCEDURE `removeManagerFromBusinessOwner` (IN `p_relationship_id` INT)   BEGIN
     DECLARE v_is_primary TINYINT(1);
     
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -3096,7 +3100,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `removeManagerFromBusinessOwner` (IN
         'Manager removed successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `reportStallholder` (IN `p_inspector_id` INT, IN `p_stallholder_id` INT, IN `p_violation_id` INT, IN `p_branch_id` INT, IN `p_stall_id` INT, IN `p_evidence` TEXT, IN `p_remarks` TEXT)   BEGIN
+CREATE PROCEDURE `reportStallholder` (IN `p_inspector_id` INT, IN `p_stallholder_id` INT, IN `p_violation_id` INT, IN `p_branch_id` INT, IN `p_stall_id` INT, IN `p_evidence` TEXT, IN `p_remarks` TEXT)   BEGIN
     DECLARE v_offense_no INT;
     DECLARE v_penalty_amount DECIMAL(10,2);
     DECLARE v_penalty_remarks VARCHAR(255);
@@ -3134,7 +3138,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `reportStallholder` (IN `p_inspector
     WHERE stallholder_id = p_stallholder_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAllAutoIncrements` ()   BEGIN
+CREATE PROCEDURE `ResetAllAutoIncrements` ()   BEGIN
     -- Core tables
     CALL ResetAutoIncrement('applicant', 'applicant_id');
     CALL ResetAutoIncrement('applicant_documents', 'document_id');
@@ -3205,7 +3209,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAllAutoIncrements` ()   BEGIN
     SELECT '✅ All auto_increments have been reset!' AS result;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAutoIncrement` (IN `tableName` VARCHAR(64), IN `columnName` VARCHAR(64))   BEGIN
+CREATE PROCEDURE `ResetAutoIncrement` (IN `tableName` VARCHAR(64), IN `columnName` VARCHAR(64))   BEGIN
     DECLARE maxId INT;
     DECLARE sqlStatement VARCHAR(255);
     
@@ -3223,7 +3227,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAutoIncrement` (IN `tableName`
     DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `resetBusinessEmployeePassword` (IN `p_employee_id` INT, IN `p_new_password_hash` VARCHAR(255), IN `p_reset_by` INT)   BEGIN
+CREATE PROCEDURE `resetBusinessEmployeePassword` (IN `p_employee_id` INT, IN `p_new_password_hash` VARCHAR(255), IN `p_reset_by` INT)   BEGIN
     UPDATE `business_employee` 
     SET 
         `employee_password_hash` = p_new_password_hash,
@@ -3239,7 +3243,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `resetBusinessEmployeePassword` (IN 
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `resetStallBusinessOwnerPassword` (IN `p_business_owner_id` INT, IN `p_new_password_hash` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `resetStallBusinessOwnerPassword` (IN `p_business_owner_id` INT, IN `p_new_password_hash` VARCHAR(255))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -3265,7 +3269,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `resetStallBusinessOwnerPassword` (I
            ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `resetSystemAdministratorPassword` (IN `p_system_admin_id` INT, IN `p_new_password_hash` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `resetSystemAdministratorPassword` (IN `p_system_admin_id` INT, IN `p_new_password_hash` VARCHAR(255))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -3291,7 +3295,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `resetSystemAdministratorPassword` (
            ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetTableAutoIncrement` (IN `tableName` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `ResetTableAutoIncrement` (IN `tableName` VARCHAR(255))   BEGIN
     DECLARE maxId INT DEFAULT 0;
     DECLARE newAutoInc INT DEFAULT 1;
     
@@ -3318,7 +3322,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetTableAutoIncrement` (IN `table
     SELECT CONCAT('✅ Reset ', tableName, ' AUTO_INCREMENT to ', newAutoInc) AS result;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `resolveComplaint` (IN `p_complaint_id` INT, IN `p_resolution_notes` TEXT, IN `p_status` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `resolveComplaint` (IN `p_complaint_id` INT, IN `p_resolution_notes` TEXT, IN `p_status` VARCHAR(20))   BEGIN
   UPDATE complaint
   SET
     status = COALESCE(p_status, 'resolved'),
@@ -3329,13 +3333,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `resolveComplaint` (IN `p_complaint_
   SELECT ROW_COUNT() AS affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `revokeAllUserTokens` (IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_reason` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `revokeAllUserTokens` (IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_reason` VARCHAR(255))   BEGIN
     
     
     SELECT p_user_id as user_id, p_user_type as user_type, 'tokens_revoked' as status;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `setBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_is_required` TINYINT, IN `p_instructions` TEXT, IN `p_created_by_manager` INT)   BEGIN
+CREATE PROCEDURE `setBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_is_required` TINYINT, IN `p_instructions` TEXT, IN `p_created_by_manager` INT)   BEGIN
     DECLARE v_requirement_id INT DEFAULT 0;
     DECLARE v_affected_rows INT DEFAULT 0;
     
@@ -3388,14 +3392,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `setBranchDocumentRequirement` (IN `
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_is_required` TINYINT)   BEGIN
+CREATE PROCEDURE `sp_addBranchDocumentRequirement` (IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_is_required` TINYINT)   BEGIN
   INSERT INTO branch_document_requirements (branch_id, document_type_id, is_required)
   VALUES (p_branch_id, p_document_type_id, p_is_required);
   
   SELECT LAST_INSERT_ID() as requirement_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addRaffleParticipant` (IN `p_raffle_id` INT, IN `p_applicant_id` INT, IN `p_application_id` INT)   BEGIN
+CREATE PROCEDURE `sp_addRaffleParticipant` (IN `p_raffle_id` INT, IN `p_applicant_id` INT, IN `p_application_id` INT)   BEGIN
   INSERT INTO raffle_participants (raffle_id, applicant_id, application_id) 
   VALUES (p_raffle_id, p_applicant_id, p_application_id);
   
@@ -3404,7 +3408,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addRaffleParticipant` (IN `p_raf
   SELECT LAST_INSERT_ID() as participant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall` (IN `p_stall_no` VARCHAR(50), IN `p_rental_price` DECIMAL(10,2), IN `p_size` VARCHAR(50), IN `p_stall_location` VARCHAR(200), IN `p_stall_type` VARCHAR(100), IN `p_section_id` INT, IN `p_stall_image` VARCHAR(500), IN `p_stall_description` TEXT, IN `p_raffle_auction_status` VARCHAR(50), IN `p_auction_type` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_is_available` TINYINT)   BEGIN
+CREATE PROCEDURE `sp_addStall` (IN `p_stall_no` VARCHAR(50), IN `p_rental_price` DECIMAL(10,2), IN `p_size` VARCHAR(50), IN `p_stall_location` VARCHAR(200), IN `p_stall_type` VARCHAR(100), IN `p_section_id` INT, IN `p_stall_image` VARCHAR(500), IN `p_stall_description` TEXT, IN `p_raffle_auction_status` VARCHAR(50), IN `p_auction_type` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_is_available` TINYINT)   BEGIN
   INSERT INTO stall (
     stall_no, rental_price, size, stall_location, stall_type, section_id,
     stall_image, stall_description, raffle_auction_status, auction_type,
@@ -3418,7 +3422,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall` (IN `p_stall_no` VARCH
   SELECT LAST_INSERT_ID() as stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallComplete` (IN `p_stall_no` VARCHAR(50), IN `p_stall_location` VARCHAR(200), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_stamp` VARCHAR(50), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT, IN `p_raffle_auction_deadline` DATETIME, IN `p_deadline_active` TINYINT, IN `p_raffle_auction_status` VARCHAR(50), IN `p_created_by_manager` INT)   BEGIN
+CREATE PROCEDURE `sp_addStallComplete` (IN `p_stall_no` VARCHAR(50), IN `p_stall_location` VARCHAR(200), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` VARCHAR(50), IN `p_status` VARCHAR(50), IN `p_stamp` VARCHAR(50), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT, IN `p_raffle_auction_deadline` DATETIME, IN `p_deadline_active` TINYINT, IN `p_raffle_auction_status` VARCHAR(50), IN `p_created_by_manager` INT)   BEGIN
   INSERT INTO stall (
     stall_no, stall_location, size, floor_id, section_id, rental_price, 
     price_type, status, stamp, description, stall_image, is_available, 
@@ -3432,7 +3436,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallComplete` (IN `p_stall_n
   SELECT LAST_INSERT_ID() as stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallImage` (IN `p_stall_id` INT, IN `p_image_url` VARCHAR(500), IN `p_is_primary` TINYINT)   BEGIN
+CREATE PROCEDURE `sp_addStallImage` (IN `p_stall_id` INT, IN `p_image_url` VARCHAR(500), IN `p_is_primary` TINYINT)   BEGIN
     DECLARE image_count INT DEFAULT 0;
     DECLARE new_display_order INT DEFAULT 1;
     DECLARE should_be_primary TINYINT DEFAULT 0;
@@ -3472,7 +3476,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallImage` (IN `p_stall_id` 
     
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_stall INT DEFAULT 0;
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_branch_valid INT DEFAULT 0;
@@ -3617,7 +3621,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
     COMMIT;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` ENUM('rental','utilities','maintenance','penalty','other'), IN `p_payment_method` ENUM('cash','gcash','maya','paymaya','bank_transfer','check'), IN `p_reference_number` VARCHAR(100), IN `p_collected_by_user_id` INT, IN `p_notes` TEXT)   BEGIN
+CREATE PROCEDURE `sp_add_payment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` ENUM('rental','utilities','maintenance','penalty','other'), IN `p_payment_method` ENUM('cash','gcash','maya','paymaya','bank_transfer','check'), IN `p_reference_number` VARCHAR(100), IN `p_collected_by_user_id` INT, IN `p_notes` TEXT)   BEGIN
     DECLARE payment_id INT;
     DECLARE collected_by_name VARCHAR(200);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -3692,7 +3696,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_add_payment` (IN `p_stallholder_
       collected_by_name as collectedBy;
   END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_approvePayment` (IN `p_payment_id` INT, IN `p_approved_by` INT)   BEGIN
+CREATE PROCEDURE `sp_approvePayment` (IN `p_payment_id` INT, IN `p_approved_by` INT)   BEGIN
   UPDATE payment 
   SET payment_status = 'Approved', approved_by = p_approved_by, approved_at = NOW() 
   WHERE payment_id = p_payment_id;
@@ -3700,82 +3704,82 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_approvePayment` (IN `p_payment_i
   SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_cancelAuction` (IN `p_auction_id` INT)   BEGIN
+CREATE PROCEDURE `sp_cancelAuction` (IN `p_auction_id` INT)   BEGIN
   UPDATE auction SET auction_status = 'Cancelled', updated_at = NOW() WHERE auction_id = p_auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_cancelRaffle` (IN `p_raffle_id` INT)   BEGIN
+CREATE PROCEDURE `sp_cancelRaffle` (IN `p_raffle_id` INT)   BEGIN
   UPDATE raffle SET raffle_status = 'Cancelled', updated_at = NOW() WHERE raffle_id = p_raffle_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkBranchExists` (IN `p_branch_name` VARCHAR(100), IN `p_area` VARCHAR(100), IN `p_location` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_checkBranchExists` (IN `p_branch_name` VARCHAR(100), IN `p_area` VARCHAR(100), IN `p_location` VARCHAR(100))   BEGIN
   SELECT branch_id FROM branch 
   WHERE branch_name = p_branch_name 
     OR (area = p_area AND location = p_location);
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkExistingAuction` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkExistingAuction` (IN `p_stall_id` INT)   BEGIN
   SELECT auction_id FROM auction WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkExistingRaffle` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkExistingRaffle` (IN `p_stall_id` INT)   BEGIN
   SELECT raffle_id FROM raffle WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkManagerExistsForBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkManagerExistsForBranch` (IN `p_branch_id` INT)   BEGIN
   SELECT branch_manager_id FROM branch_manager WHERE branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkManagerExistsForDifferentBranch` (IN `p_username` VARCHAR(100), IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkManagerExistsForDifferentBranch` (IN `p_username` VARCHAR(100), IN `p_branch_id` INT)   BEGIN
   SELECT branch_manager_id, branch_id 
   FROM branch_manager 
   WHERE manager_username = p_username AND branch_id != p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkManagerUsernameExists` (IN `p_username` VARCHAR(100), IN `p_exclude_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkManagerUsernameExists` (IN `p_username` VARCHAR(100), IN `p_exclude_manager_id` INT)   BEGIN
   SELECT branch_manager_id 
   FROM branch_manager 
   WHERE manager_username = p_username 
     AND branch_manager_id != p_exclude_manager_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkManagerUsernameGlobal` (IN `p_username` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_checkManagerUsernameGlobal` (IN `p_username` VARCHAR(100))   BEGIN
   SELECT branch_manager_id FROM branch_manager WHERE manager_username = p_username;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkRaffleParticipant` (IN `p_raffle_id` INT, IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkRaffleParticipant` (IN `p_raffle_id` INT, IN `p_applicant_id` INT)   BEGIN
   SELECT participant_id FROM raffle_participants 
   WHERE raffle_id = p_raffle_id AND applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_checkStallAvailability` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `sp_checkStallAvailability` (IN `p_stall_id` INT)   BEGIN
     SELECT stall_id, is_available, status FROM stall WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_countAuctionBids` (IN `p_auction_id` INT)   BEGIN
+CREATE PROCEDURE `sp_countAuctionBids` (IN `p_auction_id` INT)   BEGIN
   SELECT COUNT(*) as count FROM auction_bids WHERE auction_id = p_auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_countDistinctBidders` (IN `p_auction_id` INT)   BEGIN
+CREATE PROCEDURE `sp_countDistinctBidders` (IN `p_auction_id` INT)   BEGIN
   SELECT COUNT(DISTINCT applicant_id) as bidders FROM auction_bids WHERE auction_id = p_auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_countManagersForBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_countManagersForBranch` (IN `p_branch_id` INT)   BEGIN
   SELECT COUNT(*) as count FROM branch_manager WHERE branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_countRaffleParticipants` (IN `p_raffle_id` INT)   BEGIN
+CREATE PROCEDURE `sp_countRaffleParticipants` (IN `p_raffle_id` INT)   BEGIN
   SELECT COUNT(*) as count FROM raffle_participants WHERE raffle_id = p_raffle_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createApplication` (IN `p_stall_id` INT, IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_createApplication` (IN `p_stall_id` INT, IN `p_applicant_id` INT)   BEGIN
     INSERT INTO application (stall_id, applicant_id, application_date, application_status)
     VALUES (p_stall_id, p_applicant_id, CURDATE(), 'Pending');
     
     SELECT LAST_INSERT_ID() as application_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createAuctionForStall` (IN `p_stall_id` INT, IN `p_starting_bid` DECIMAL(10,2), IN `p_bid_increment` DECIMAL(10,2), IN `p_start_date` DATETIME, IN `p_end_date` DATETIME)   BEGIN
+CREATE PROCEDURE `sp_createAuctionForStall` (IN `p_stall_id` INT, IN `p_starting_bid` DECIMAL(10,2), IN `p_bid_increment` DECIMAL(10,2), IN `p_start_date` DATETIME, IN `p_end_date` DATETIME)   BEGIN
   INSERT INTO auction (
     stall_id, starting_bid, bid_increment, start_date, end_date, auction_status, created_at
   ) VALUES (
@@ -3785,7 +3789,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createAuctionForStall` (IN `p_st
   SELECT LAST_INSERT_ID() as auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createAuctionResult` (IN `p_auction_id` INT, IN `p_winner_applicant_id` INT, IN `p_winner_application_id` INT, IN `p_winning_bid` DECIMAL(10,2), IN `p_total_bidders` INT)   BEGIN
+CREATE PROCEDURE `sp_createAuctionResult` (IN `p_auction_id` INT, IN `p_winner_applicant_id` INT, IN `p_winner_application_id` INT, IN `p_winning_bid` DECIMAL(10,2), IN `p_total_bidders` INT)   BEGIN
   INSERT INTO auction_result (
     auction_id, winner_applicant_id, winner_application_id, winning_bid, total_bidders, result_date
   ) VALUES (
@@ -3795,7 +3799,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createAuctionResult` (IN `p_auct
   SELECT LAST_INSERT_ID() as result_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createAuctionWaiting` (IN `p_stall_id` INT, IN `p_starting_price` DECIMAL(10,2), IN `p_created_by_manager` INT)   BEGIN
+CREATE PROCEDURE `sp_createAuctionWaiting` (IN `p_stall_id` INT, IN `p_starting_price` DECIMAL(10,2), IN `p_created_by_manager` INT)   BEGIN
   INSERT INTO auction (
     stall_id, starting_price, auction_status, created_by_manager, created_at
   ) VALUES (
@@ -3805,7 +3809,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createAuctionWaiting` (IN `p_sta
   SELECT LAST_INSERT_ID() as auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createBranchManager` (IN `p_branch_id` INT, IN `p_manager_username` VARCHAR(100), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(150), IN `p_contact_number` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `sp_createBranchManager` (IN `p_branch_id` INT, IN `p_manager_username` VARCHAR(100), IN `p_password_hash` VARCHAR(255), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(150), IN `p_contact_number` VARCHAR(20))   BEGIN
   INSERT INTO branch_manager (
     branch_id, manager_username, password, first_name, last_name, email, contact_number, status, created_at
   ) VALUES (
@@ -3815,7 +3819,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createBranchManager` (IN `p_bran
   SELECT LAST_INSERT_ID() as branch_manager_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createRaffleForStall` (IN `p_stall_id` INT, IN `p_start_date` DATETIME, IN `p_end_date` DATETIME, IN `p_min_participants` INT)   BEGIN
+CREATE PROCEDURE `sp_createRaffleForStall` (IN `p_stall_id` INT, IN `p_start_date` DATETIME, IN `p_end_date` DATETIME, IN `p_min_participants` INT)   BEGIN
   INSERT INTO raffle (
     stall_id, start_date, end_date, min_participants, raffle_status, created_at
   ) VALUES (
@@ -3825,7 +3829,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createRaffleForStall` (IN `p_sta
   SELECT LAST_INSERT_ID() as raffle_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createRaffleResult` (IN `p_raffle_id` INT, IN `p_winner_applicant_id` INT, IN `p_winner_application_id` INT, IN `p_total_participants` INT)   BEGIN
+CREATE PROCEDURE `sp_createRaffleResult` (IN `p_raffle_id` INT, IN `p_winner_applicant_id` INT, IN `p_winner_application_id` INT, IN `p_total_participants` INT)   BEGIN
   INSERT INTO raffle_result (
     raffle_id, winner_applicant_id, winner_application_id, total_participants, result_date
   ) VALUES (
@@ -3835,7 +3839,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createRaffleResult` (IN `p_raffl
   SELECT LAST_INSERT_ID() as result_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createRaffleWaiting` (IN `p_stall_id` INT, IN `p_created_by_manager` INT)   BEGIN
+CREATE PROCEDURE `sp_createRaffleWaiting` (IN `p_stall_id` INT, IN `p_created_by_manager` INT)   BEGIN
   INSERT INTO raffle (
     stall_id, raffle_status, created_by_manager, created_at
   ) VALUES (
@@ -3845,7 +3849,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_createRaffleWaiting` (IN `p_stal
   SELECT LAST_INSERT_ID() as raffle_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_declinePayment` (IN `p_payment_id` INT, IN `p_declined_by` INT, IN `p_decline_reason` TEXT)   BEGIN
+CREATE PROCEDURE `sp_declinePayment` (IN `p_payment_id` INT, IN `p_declined_by` INT, IN `p_decline_reason` TEXT)   BEGIN
   UPDATE payment 
   SET payment_status = 'Declined', declined_by = p_declined_by, declined_at = NOW(), decline_reason = p_decline_reason 
   WHERE payment_id = p_payment_id;
@@ -3853,7 +3857,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_declinePayment` (IN `p_payment_i
   SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteApplicantCascade` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_deleteApplicantCascade` (IN `p_applicant_id` INT)   BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     ROLLBACK;
@@ -3888,22 +3892,22 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteApplicantCascade` (IN `p_a
   SELECT p_applicant_id as deleted_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_deleteBranch` (IN `p_branch_id` INT)   BEGIN
   DELETE FROM branch WHERE branch_id = p_branch_id;
   SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteBranchDocumentRequirements` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_deleteBranchDocumentRequirements` (IN `p_branch_id` INT)   BEGIN
   DELETE FROM branch_document_requirements WHERE branch_id = p_branch_id;
   SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteBranchManager` (IN `p_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_deleteBranchManager` (IN `p_manager_id` INT)   BEGIN
   DELETE FROM branch_manager WHERE branch_manager_id = p_manager_id;
   SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall` (IN `p_stall_id` INT, IN `p_deleted_by_business_manager` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
+CREATE PROCEDURE `sp_deleteStall` (IN `p_stall_id` INT, IN `p_deleted_by_business_manager` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
     DECLARE v_stall_exists INT DEFAULT 0;
     DECLARE v_has_active_applications INT DEFAULT 0;
     DECLARE v_has_stallholder INT DEFAULT 0;
@@ -3967,7 +3971,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall` (IN `p_stall_id` IN
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStallImage` (IN `p_image_id` INT)   BEGIN
+CREATE PROCEDURE `sp_deleteStallImage` (IN `p_image_id` INT)   BEGIN
   DECLARE v_stall_id INT;
   DECLARE v_image_url VARCHAR(255);
   
@@ -3988,7 +3992,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStallImage` (IN `p_image_i
   SELECT v_stall_id AS stall_id, v_image_url AS image_url, p_image_id AS id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_stall_id` INT, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE PROCEDURE `sp_deleteStall_complete` (IN `p_stall_id` INT, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_branch_id INT DEFAULT NULL;
     DECLARE v_has_active_subscription INT DEFAULT 0;
     DECLARE v_has_applications INT DEFAULT 0;
@@ -4114,15 +4118,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_deleteStall_complete` (IN `p_sta
     COMMIT;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_endAuction` (IN `p_auction_id` INT)   BEGIN
+CREATE PROCEDURE `sp_endAuction` (IN `p_auction_id` INT)   BEGIN
   UPDATE auction SET auction_status = 'Ended' WHERE auction_id = p_auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_endRaffle` (IN `p_raffle_id` INT)   BEGIN
+CREATE PROCEDURE `sp_endRaffle` (IN `p_raffle_id` INT)   BEGIN
   UPDATE raffle SET raffle_status = 'Ended' WHERE raffle_id = p_raffle_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BEGIN
+CREATE PROCEDURE `sp_generate_receipt_number` ()   BEGIN
     DECLARE current_date_str VARCHAR(8);
     DECLARE last_reference VARCHAR(20);
     DECLARE sequence_number INT;
@@ -4156,15 +4160,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_generate_receipt_number` ()   BE
     SELECT new_receipt_number as receiptNumber, 'success' as status;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getActiveAdmin` ()   BEGIN
+CREATE PROCEDURE `sp_getActiveAdmin` ()   BEGIN
   SELECT admin_id FROM admin WHERE status = 'Active' LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAdminByEmail` (IN `p_email` VARCHAR(150))   BEGIN
+CREATE PROCEDURE `sp_getAdminByEmail` (IN `p_email` VARCHAR(150))   BEGIN
   SELECT * FROM admin WHERE email = p_email AND status = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllActiveEmployees` (IN `p_status` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `sp_getAllActiveEmployees` (IN `p_status` VARCHAR(50))   BEGIN
   SELECT be.*, b.branch_name, 
          bm.first_name as manager_first_name, bm.last_name as manager_last_name 
   FROM business_employee be 
@@ -4174,15 +4178,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllActiveEmployees` (IN `p_st
   ORDER BY be.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllFloors` ()   BEGIN
+CREATE PROCEDURE `sp_getAllFloors` ()   BEGIN
   SELECT f.* FROM floor f;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllSections` ()   BEGIN
+CREATE PROCEDURE `sp_getAllSections` ()   BEGIN
   SELECT s.* FROM section s;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getAllStallsByBranch` (IN `p_branch_id` INT)   BEGIN
     SELECT 
         s.stall_id,
         s.stall_no,
@@ -4224,7 +4228,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByBranch` (IN `p_bra
     ORDER BY s.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByManager` (IN `p_business_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getAllStallsByManager` (IN `p_business_manager_id` INT)   BEGIN
     SELECT 
         s.stall_id,
         s.stall_no,
@@ -4267,7 +4271,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStallsByManager` (IN `p_bu
     ORDER BY s.created_at DESC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStalls_complete` (IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getAllStalls_complete` (IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT)   BEGIN
     IF p_user_type = 'stall_business_owner' THEN
         
         SELECT 
@@ -4451,15 +4455,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAllStalls_complete` (IN `p_us
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getApplicantById` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getApplicantById` (IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM applicant WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getApplicantName` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getApplicantName` (IN `p_applicant_id` INT)   BEGIN
   SELECT applicant_full_name FROM applicant WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getApplicationByApplicantId` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getApplicationByApplicantId` (IN `p_applicant_id` INT)   BEGIN
     SELECT 
         app.application_id,
         app.stall_id,
@@ -4483,7 +4487,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getApplicationByApplicantId` (IN
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAvailableStallsByBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getAvailableStallsByBranch` (IN `p_branch_id` INT)   BEGIN
     SELECT 
         s.stall_id,
         s.stall_no,
@@ -4519,49 +4523,49 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getAvailableStallsByBranch` (IN 
     ORDER BY s.stall_no ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBranchById` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getBranchById` (IN `p_branch_id` INT)   BEGIN
   SELECT branch_id, branch_name FROM branch WHERE branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBranchIdFromBusinessManager` (IN `p_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getBranchIdFromBusinessManager` (IN `p_manager_id` INT)   BEGIN
   SELECT branch_id FROM business_manager WHERE business_manager_id = p_manager_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBranchManagerByEmail` (IN `p_email` VARCHAR(150))   BEGIN
+CREATE PROCEDURE `sp_getBranchManagerByEmail` (IN `p_email` VARCHAR(150))   BEGIN
   SELECT * FROM branch_manager WHERE email = p_email AND status = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBranchManagerById` (IN `p_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getBranchManagerById` (IN `p_manager_id` INT)   BEGIN
   SELECT branch_manager_id, branch_id, manager_username 
   FROM branch_manager 
   WHERE branch_manager_id = p_manager_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBusinessEmployeeByEmail` (IN `p_email` VARCHAR(150))   BEGIN
+CREATE PROCEDURE `sp_getBusinessEmployeeByEmail` (IN `p_email` VARCHAR(150))   BEGIN
   SELECT * FROM business_employee WHERE email = p_email AND status = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBusinessInfoByApplicantId` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getBusinessInfoByApplicantId` (IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM business_information WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getBusinessManagerByEmail` (IN `p_email` VARCHAR(150))   BEGIN
+CREATE PROCEDURE `sp_getBusinessManagerByEmail` (IN `p_email` VARCHAR(150))   BEGIN
   SELECT * FROM business_manager WHERE email = p_email AND status = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getDistinctAreas` ()   BEGIN
+CREATE PROCEDURE `sp_getDistinctAreas` ()   BEGIN
   SELECT DISTINCT area FROM branch WHERE status = 'Active' ORDER BY area ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getDistinctBranches` ()   BEGIN
+CREATE PROCEDURE `sp_getDistinctBranches` ()   BEGIN
   SELECT DISTINCT branch_name as branch FROM branch WHERE status = 'Active' ORDER BY branch_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getDocumentTypeByRequirementId` (IN `p_requirement_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getDocumentTypeByRequirementId` (IN `p_requirement_id` INT)   BEGIN
   SELECT document_type_id FROM branch_document_requirements WHERE requirement_id = p_requirement_id LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getEmployeesByBranchIds` (IN `p_status` VARCHAR(50), IN `p_branch_ids` VARCHAR(500))   BEGIN
+CREATE PROCEDURE `sp_getEmployeesByBranchIds` (IN `p_status` VARCHAR(50), IN `p_branch_ids` VARCHAR(500))   BEGIN
   SET @sql = CONCAT(
     'SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name ',
     'FROM business_employee be ',
@@ -4575,41 +4579,41 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getEmployeesByBranchIds` (IN `p_
   DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getExistingManagerForBranch` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getExistingManagerForBranch` (IN `p_branch_id` INT)   BEGIN
   SELECT branch_manager_id, first_name, last_name 
   FROM branch_manager 
   WHERE branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getFloorByBranchWithDetails` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getFloorByBranchWithDetails` (IN `p_branch_id` INT)   BEGIN
   SELECT f.* FROM floor f
   JOIN branch b ON f.branch_id = b.branch_id
   WHERE f.branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getFloorByManagerWithDetails` (IN `p_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getFloorByManagerWithDetails` (IN `p_manager_id` INT)   BEGIN
   SELECT f.* FROM floor f
   JOIN branch b ON f.branch_id = b.branch_id
   JOIN business_manager bm ON b.branch_id = bm.branch_id
   WHERE bm.business_manager_id = p_manager_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getFloorCountByManager` (IN `p_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getFloorCountByManager` (IN `p_manager_id` INT)   BEGIN
   SELECT COUNT(*) as floor_count FROM floor WHERE branch_manager_id = p_manager_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getFloorsByBranchId` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getFloorsByBranchId` (IN `p_branch_id` INT)   BEGIN
   SELECT f.* FROM floor f WHERE f.branch_id = p_branch_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getFloorsByBranchIds` (IN `p_branch_ids` VARCHAR(500))   BEGIN
+CREATE PROCEDURE `sp_getFloorsByBranchIds` (IN `p_branch_ids` VARCHAR(500))   BEGIN
   SET @sql = CONCAT('SELECT f.* FROM floor f WHERE f.branch_id IN (', p_branch_ids, ')');
   PREPARE stmt FROM @sql;
   EXECUTE stmt;
   DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageFilterOptions` ()   BEGIN
+CREATE PROCEDURE `sp_getLandingPageFilterOptions` ()   BEGIN
     -- Return branches
     SELECT branch_id, branch_name FROM branch ORDER BY branch_name;
     
@@ -4623,7 +4627,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageFilterOptions` () 
     SELECT 'Fixed Price' as price_type UNION SELECT 'Auction' UNION SELECT 'Raffle';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStallholders` (IN `p_search` VARCHAR(255), IN `p_branch_filter` INT, IN `p_business_type_filter` VARCHAR(100), IN `p_page` INT, IN `p_limit` INT)   BEGIN
+CREATE PROCEDURE `sp_getLandingPageStallholders` (IN `p_search` VARCHAR(255), IN `p_branch_filter` INT, IN `p_business_type_filter` VARCHAR(100), IN `p_page` INT, IN `p_limit` INT)   BEGIN
     DECLARE v_offset INT;
     SET v_offset = (p_page - 1) * p_limit;
     
@@ -4657,7 +4661,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStallholders` (IN 
     LIMIT p_limit OFFSET v_offset;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStalls` (IN `p_search` VARCHAR(255), IN `p_branch_filter` INT, IN `p_status_filter` VARCHAR(50), IN `p_price_type_filter` VARCHAR(50), IN `p_page` INT, IN `p_limit` INT)   BEGIN
+CREATE PROCEDURE `sp_getLandingPageStalls` (IN `p_search` VARCHAR(255), IN `p_branch_filter` INT, IN `p_status_filter` VARCHAR(50), IN `p_price_type_filter` VARCHAR(50), IN `p_page` INT, IN `p_limit` INT)   BEGIN
     DECLARE v_offset INT;
     SET v_offset = (p_page - 1) * p_limit;
     
@@ -4699,7 +4703,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStalls` (IN `p_sea
     LIMIT p_limit OFFSET v_offset;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStats` ()   BEGIN
+CREATE PROCEDURE `sp_getLandingPageStats` ()   BEGIN
     DECLARE v_total_stallholders INT DEFAULT 0;
     DECLARE v_total_stalls INT DEFAULT 0;
     DECLARE v_available_stalls INT DEFAULT 0;
@@ -4722,28 +4726,28 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStats` ()   BEGIN
            v_occupied_stalls AS occupied_stalls;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLocationsByArea` (IN `p_area` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_getLocationsByArea` (IN `p_area` VARCHAR(100))   BEGIN
   SELECT DISTINCT location, branch_name as branch 
   FROM branch 
   WHERE area = p_area AND status = 'Active' 
   ORDER BY location;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLocationsByBranch` (IN `p_branch_name` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_getLocationsByBranch` (IN `p_branch_name` VARCHAR(100))   BEGIN
   SELECT DISTINCT location, branch_name as branch 
   FROM branch 
   WHERE branch_name = p_branch_name AND status = 'Active' 
   ORDER BY location;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLocationsByCity` (IN `p_city` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_getLocationsByCity` (IN `p_city` VARCHAR(100))   BEGIN
   SELECT DISTINCT location, branch_name as branch 
   FROM branch 
   WHERE city = p_city AND status = 'Active' 
   ORDER BY location;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getMobileUserByUsername` (IN `p_username` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_getMobileUserByUsername` (IN `p_username` VARCHAR(100))   BEGIN
   SELECT 
     c.credential_id,
     c.applicant_id,
@@ -4766,17 +4770,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getMobileUserByUsername` (IN `p_
   WHERE c.username = p_username AND c.status = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getOtherInfoByApplicantId` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getOtherInfoByApplicantId` (IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM other_information WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getSectionsByFloorId` (IN `p_floor_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getSectionsByFloorId` (IN `p_floor_id` INT)   BEGIN
   SELECT s.* FROM section s
   JOIN floor f ON s.floor_id = f.floor_id
   WHERE s.floor_id = p_floor_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getSectionsByFloorIds` (IN `p_floor_ids` VARCHAR(500))   BEGIN
+CREATE PROCEDURE `sp_getSectionsByFloorIds` (IN `p_floor_ids` VARCHAR(500))   BEGIN
   SET @sql = CONCAT('SELECT s.* FROM section s
     JOIN floor f ON s.floor_id = f.floor_id
     WHERE s.floor_id IN (', p_floor_ids, ')');
@@ -4785,11 +4789,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getSectionsByFloorIds` (IN `p_fl
   DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getSpouseByApplicantId` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getSpouseByApplicantId` (IN `p_applicant_id` INT)   BEGIN
     SELECT * FROM spouse WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallById` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getStallById` (IN `p_stall_id` INT)   BEGIN
     SELECT 
         s.stall_id,
         s.stall_no,
@@ -4829,7 +4833,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallById` (IN `p_stall_id` I
     WHERE s.stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallholderByApplicantId` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getStallholderByApplicantId` (IN `p_applicant_id` INT)   BEGIN
     SELECT 
         sh.stallholder_id,
         sh.stallholder_name,
@@ -4857,7 +4861,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallholderByApplicantId` (IN
     WHERE sh.applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallImage` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getStallImage` (IN `p_stall_id` INT)   BEGIN
     SELECT 
         s.stall_id,
         s.stall_no,
@@ -4878,7 +4882,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallImage` (IN `p_stall_id` 
     WHERE s.stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallImages` (IN `p_stall_id` INT)   BEGIN
+CREATE PROCEDURE `sp_getStallImages` (IN `p_stall_id` INT)   BEGIN
   SELECT 
     id,
     stall_id,
@@ -4892,7 +4896,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallImages` (IN `p_stall_id`
   ORDER BY is_primary DESC, display_order ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_all_stallholders` (IN `p_branch_id` INT)   BEGIN
+CREATE PROCEDURE `sp_get_all_stallholders` (IN `p_branch_id` INT)   BEGIN
     SELECT 
         sh.stallholder_id as id,
         sh.stallholder_name as name,
@@ -4915,7 +4919,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_all_stallholders` (IN `p_bra
     ORDER BY sh.stallholder_name ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_payments_for_manager` (IN `p_manager_id` INT, IN `p_limit` INT, IN `p_offset` INT, IN `p_search` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `sp_get_payments_for_manager` (IN `p_manager_id` INT, IN `p_limit` INT, IN `p_offset` INT, IN `p_search` VARCHAR(255))   BEGIN
             SELECT 
                 p.payment_id as id,
                 p.stallholder_id as stallholderId,
@@ -4950,7 +4954,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_payments_for_manager` (IN `p
             LIMIT p_limit OFFSET p_offset;
         END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_stallholders_for_manager` (IN `p_manager_id` INT)   BEGIN
+CREATE PROCEDURE `sp_get_stallholders_for_manager` (IN `p_manager_id` INT)   BEGIN
     DECLARE manager_branch_id INT DEFAULT NULL;
     
     -- Get the branch ID for the manager
@@ -4978,7 +4982,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_stallholders_for_manager` (I
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_stallholder_details` (IN `p_stallholder_id` INT)   BEGIN
+CREATE PROCEDURE `sp_get_stallholder_details` (IN `p_stallholder_id` INT)   BEGIN
     SELECT
         sh.stallholder_id as id,
         sh.stallholder_name as name,
@@ -5001,7 +5005,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_stallholder_details` (IN `p_
       AND sh.contract_status = 'Active';
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_logRaffleAuctionActivity` (IN `p_stall_id` INT, IN `p_event_type` VARCHAR(100), IN `p_raffle_id` INT, IN `p_auction_id` INT, IN `p_applicant_id` INT, IN `p_application_id` INT, IN `p_bid_amount` DECIMAL(10,2), IN `p_notes` TEXT)   BEGIN
+CREATE PROCEDURE `sp_logRaffleAuctionActivity` (IN `p_stall_id` INT, IN `p_event_type` VARCHAR(100), IN `p_raffle_id` INT, IN `p_auction_id` INT, IN `p_applicant_id` INT, IN `p_application_id` INT, IN `p_bid_amount` DECIMAL(10,2), IN `p_notes` TEXT)   BEGIN
   INSERT INTO raffle_auction_log (
     stall_id, event_type, raffle_id, auction_id, applicant_id, application_id, bid_amount, notes, created_at
   ) VALUES (
@@ -5011,12 +5015,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_logRaffleAuctionActivity` (IN `p
   SELECT LAST_INSERT_ID() as log_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_logTokenActivity` (IN `p_token_id` VARCHAR(255), IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_activity_type` VARCHAR(50), IN `p_ip_address` VARCHAR(50), IN `p_user_agent` VARCHAR(255), IN `p_success` TINYINT)   BEGIN
+CREATE PROCEDURE `sp_logTokenActivity` (IN `p_token_id` VARCHAR(255), IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_activity_type` VARCHAR(50), IN `p_ip_address` VARCHAR(50), IN `p_user_agent` VARCHAR(255), IN `p_success` TINYINT)   BEGIN
   INSERT INTO token_activity_log (token_id, user_id, user_type, activity_type, ip_address, user_agent, success, created_at)
   VALUES (p_token_id, p_user_id, p_user_type, p_activity_type, p_ip_address, p_user_agent, p_success, NOW());
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_placeAuctionBid` (IN `p_auction_id` INT, IN `p_applicant_id` INT, IN `p_application_id` INT, IN `p_bid_amount` DECIMAL(10,2))   BEGIN
+CREATE PROCEDURE `sp_placeAuctionBid` (IN `p_auction_id` INT, IN `p_applicant_id` INT, IN `p_application_id` INT, IN `p_bid_amount` DECIMAL(10,2))   BEGIN
   -- Reset existing winning bids
   UPDATE auction_bids SET is_winning_bid = 0 WHERE auction_id = p_auction_id;
   
@@ -5030,15 +5034,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_placeAuctionBid` (IN `p_auction_
   SELECT LAST_INSERT_ID() as bid_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_resetWinningBids` (IN `p_auction_id` INT)   BEGIN
+CREATE PROCEDURE `sp_resetWinningBids` (IN `p_auction_id` INT)   BEGIN
   UPDATE auction_bids SET is_winning_bid = 0 WHERE auction_id = p_auction_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_setRaffleWinner` (IN `p_participant_id` INT)   BEGIN
+CREATE PROCEDURE `sp_setRaffleWinner` (IN `p_participant_id` INT)   BEGIN
   UPDATE raffle_participants SET is_winner = 1 WHERE participant_id = p_participant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_setStallPrimaryImage` (IN `p_image_id` INT)   BEGIN
+CREATE PROCEDURE `sp_setStallPrimaryImage` (IN `p_image_id` INT)   BEGIN
     DECLARE v_stall_id INT;
     
     
@@ -5059,16 +5063,16 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_setStallPrimaryImage` (IN `p_ima
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_storeRefreshToken` (IN `p_token_id` VARCHAR(255), IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_token_hash` VARCHAR(255), IN `p_device_info` VARCHAR(255), IN `p_ip_address` VARCHAR(50), IN `p_expires_at` DATETIME)   BEGIN
+CREATE PROCEDURE `sp_storeRefreshToken` (IN `p_token_id` VARCHAR(255), IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_token_hash` VARCHAR(255), IN `p_device_info` VARCHAR(255), IN `p_ip_address` VARCHAR(50), IN `p_expires_at` DATETIME)   BEGIN
   INSERT INTO refresh_tokens (token_id, user_id, user_type, token_hash, device_info, ip_address, expires_at, created_at)
   VALUES (p_token_id, p_user_id, p_user_type, p_token_hash, p_device_info, p_ip_address, p_expires_at, NOW());
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateApplicationStatus` (IN `p_application_id` INT, IN `p_status` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `sp_updateApplicationStatus` (IN `p_application_id` INT, IN `p_status` VARCHAR(50))   BEGIN
   UPDATE application SET application_status = p_status WHERE application_id = p_application_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateBranchManager` (IN `p_manager_id` INT, IN `p_branch_id` INT, IN `p_manager_username` VARCHAR(100), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(150), IN `p_contact_number` VARCHAR(20), IN `p_password_hash` VARCHAR(255))   BEGIN
+CREATE PROCEDURE `sp_updateBranchManager` (IN `p_manager_id` INT, IN `p_branch_id` INT, IN `p_manager_username` VARCHAR(100), IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(150), IN `p_contact_number` VARCHAR(20), IN `p_password_hash` VARCHAR(255))   BEGIN
   UPDATE branch_manager 
   SET 
     branch_id = COALESCE(p_branch_id, branch_id),
@@ -5084,14 +5088,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateBranchManager` (IN `p_mana
   SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateLastLogin` (IN `p_table_name` VARCHAR(50), IN `p_user_id_field` VARCHAR(50), IN `p_user_id` INT)   BEGIN
+CREATE PROCEDURE `sp_updateLastLogin` (IN `p_table_name` VARCHAR(50), IN `p_user_id_field` VARCHAR(50), IN `p_user_id` INT)   BEGIN
   SET @sql = CONCAT('UPDATE ', p_table_name, ' SET last_login = NOW() WHERE ', p_user_id_field, ' = ', p_user_id);
   PREPARE stmt FROM @sql;
   EXECUTE stmt;
   DEALLOCATE PREPARE stmt;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_updated_by_business_manager` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
+CREATE PROCEDURE `sp_updateStall` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_updated_by_business_manager` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   BEGIN
     DECLARE v_stall_exists INT DEFAULT 0;
     DECLARE v_duplicate_stall INT DEFAULT 0;
     DECLARE v_floor_section_valid INT DEFAULT 0;
@@ -5201,11 +5205,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall` (IN `p_stall_id` IN
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStallRaffleAuctionStatus` (IN `p_stall_id` INT, IN `p_status` VARCHAR(50))   BEGIN
+CREATE PROCEDURE `sp_updateStallRaffleAuctionStatus` (IN `p_stall_id` INT, IN `p_status` VARCHAR(50))   BEGIN
   UPDATE stall SET raffle_auction_status = p_status WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_branch_id INT;
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_duplicate_stall INT DEFAULT 0;
@@ -5337,7 +5341,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
     COMMIT;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_uploadApplicantDocument` (IN `p_applicant_id` INT, IN `p_document_type` VARCHAR(50), IN `p_file_path` VARCHAR(500), IN `p_original_filename` VARCHAR(255), IN `p_file_size` BIGINT, IN `p_mime_type` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `sp_uploadApplicantDocument` (IN `p_applicant_id` INT, IN `p_document_type` VARCHAR(50), IN `p_file_path` VARCHAR(500), IN `p_original_filename` VARCHAR(255), IN `p_file_size` BIGINT, IN `p_mime_type` VARCHAR(100))   BEGIN
     DECLARE v_other_info_id INT DEFAULT NULL;
     
     SELECT other_info_id INTO v_other_info_id
@@ -5372,7 +5376,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_uploadApplicantDocument` (IN `p_
            p_file_path as file_path;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_uploadStallImage` (IN `p_stall_id` INT, IN `p_image_path` VARCHAR(500), IN `p_updated_by` INT)   BEGIN
+CREATE PROCEDURE `sp_uploadStallImage` (IN `p_stall_id` INT, IN `p_image_path` VARCHAR(500), IN `p_updated_by` INT)   BEGIN
     DECLARE v_exists INT DEFAULT 0;
     
     SELECT COUNT(*) INTO v_exists FROM stall WHERE stall_id = p_stall_id;
@@ -5392,7 +5396,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_uploadStallImage` (IN `p_stall_i
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateCollector` (IN `p_collector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
+CREATE PROCEDURE `terminateCollector` (IN `p_collector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
     DECLARE v_branch_id INT;
     DECLARE v_first_name VARCHAR(100);
     DECLARE v_last_name VARCHAR(100);
@@ -5438,7 +5442,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateCollector` (IN `p_collecto
     SELECT 'Collector terminated successfully' as message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateInspector` (IN `p_inspector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
+CREATE PROCEDURE `terminateInspector` (IN `p_inspector_id` INT, IN `p_reason` VARCHAR(255), IN `p_branch_manager_id` INT)   BEGIN
     DECLARE v_branch_id INT DEFAULT NULL;
 
     SELECT branch_id INTO v_branch_id FROM inspector_assignment
@@ -5457,7 +5461,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `terminateInspector` (IN `p_inspecto
     SELECT CONCAT('Inspector ID ', p_inspector_id, ' has been terminated for reason: ', p_reason) AS message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateApplicant` (IN `p_applicant_id` INT, IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `updateApplicant` (IN `p_applicant_id` INT, IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100))   BEGIN
     UPDATE applicant
     SET 
         applicant_full_name = COALESCE(p_full_name, applicant_full_name),
@@ -5472,7 +5476,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateApplicant` (IN `p_applicant_i
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateApplicantComplete` (IN `p_applicant_id` INT, IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100), IN `p_nature_of_business` VARCHAR(255), IN `p_capitalization` DECIMAL(15,2), IN `p_source_of_capital` VARCHAR(255), IN `p_previous_business_experience` TEXT, IN `p_email_address` VARCHAR(255), IN `p_spouse_full_name` VARCHAR(255), IN `p_spouse_birthdate` DATE, IN `p_spouse_educational_attainment` VARCHAR(100), IN `p_spouse_contact_number` VARCHAR(20), IN `p_spouse_occupation` VARCHAR(100))   BEGIN
+CREATE PROCEDURE `updateApplicantComplete` (IN `p_applicant_id` INT, IN `p_full_name` VARCHAR(255), IN `p_contact_number` VARCHAR(20), IN `p_address` TEXT, IN `p_birthdate` DATE, IN `p_civil_status` ENUM('Single','Married','Divorced','Widowed'), IN `p_educational_attainment` VARCHAR(100), IN `p_nature_of_business` VARCHAR(255), IN `p_capitalization` DECIMAL(15,2), IN `p_source_of_capital` VARCHAR(255), IN `p_previous_business_experience` TEXT, IN `p_email_address` VARCHAR(255), IN `p_spouse_full_name` VARCHAR(255), IN `p_spouse_birthdate` DATE, IN `p_spouse_educational_attainment` VARCHAR(100), IN `p_spouse_contact_number` VARCHAR(20), IN `p_spouse_occupation` VARCHAR(100))   BEGIN
     
     UPDATE applicant
     SET 
@@ -5526,7 +5530,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateApplicantComplete` (IN `p_app
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateApplicationStatus` (IN `p_application_id` INT, IN `p_status` ENUM('Pending','Under Review','Approved','Rejected','Cancelled'))   BEGIN
+CREATE PROCEDURE `updateApplicationStatus` (IN `p_application_id` INT, IN `p_status` ENUM('Pending','Under Review','Approved','Rejected','Cancelled'))   BEGIN
     UPDATE application
     SET application_status = p_status, updated_at = NOW()
     WHERE application_id = p_application_id;
@@ -5534,7 +5538,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateApplicationStatus` (IN `p_app
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBranch` (IN `p_branch_id` INT, IN `p_branch_name` VARCHAR(100), IN `p_area` VARCHAR(100), IN `p_location` VARCHAR(255), IN `p_address` TEXT, IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
+CREATE PROCEDURE `updateBranch` (IN `p_branch_id` INT, IN `p_branch_name` VARCHAR(100), IN `p_area` VARCHAR(100), IN `p_location` VARCHAR(255), IN `p_address` TEXT, IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
     UPDATE branch
     SET 
         branch_name = COALESCE(p_branch_name, branch_name),
@@ -5550,7 +5554,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBranch` (IN `p_branch_id` INT
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBusinessEmployee` (IN `p_employee_id` INT, IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_phone_number` VARCHAR(20), IN `p_permissions` JSON, IN `p_status` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `updateBusinessEmployee` (IN `p_employee_id` INT, IN `p_first_name` VARCHAR(100), IN `p_last_name` VARCHAR(100), IN `p_email` VARCHAR(255), IN `p_phone_number` VARCHAR(20), IN `p_permissions` JSON, IN `p_status` VARCHAR(20))   BEGIN
     UPDATE `business_employee` 
     SET 
         `first_name` = COALESCE(p_first_name, `first_name`),
@@ -5565,7 +5569,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBusinessEmployee` (IN `p_empl
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBusinessManager` (IN `p_manager_id` INT, IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_contact_number` VARCHAR(20), IN `p_status` ENUM('Active','Inactive'))   BEGIN
+CREATE PROCEDURE `updateBusinessManager` (IN `p_manager_id` INT, IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_contact_number` VARCHAR(20), IN `p_status` ENUM('Active','Inactive'))   BEGIN
     UPDATE `business_manager`
     SET 
         `first_name` = COALESCE(p_first_name, `first_name`),
@@ -5579,13 +5583,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateBusinessManager` (IN `p_manag
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCollectorLogin` (IN `p_collector_id` INT)   BEGIN
+CREATE PROCEDURE `updateCollectorLogin` (IN `p_collector_id` INT)   BEGIN
     UPDATE collector 
     SET last_login = CURRENT_TIMESTAMP 
     WHERE collector_id = p_collector_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateComplaint` (IN `p_complaint_id` INT, IN `p_complaint_type` VARCHAR(100), IN `p_subject` VARCHAR(255), IN `p_description` TEXT, IN `p_priority` VARCHAR(20), IN `p_status` VARCHAR(20))   BEGIN
+CREATE PROCEDURE `updateComplaint` (IN `p_complaint_id` INT, IN `p_complaint_type` VARCHAR(100), IN `p_subject` VARCHAR(255), IN `p_description` TEXT, IN `p_priority` VARCHAR(20), IN `p_status` VARCHAR(20))   BEGIN
   UPDATE complaint
   SET
     complaint_type = COALESCE(p_complaint_type, complaint_type),
@@ -5598,7 +5602,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateComplaint` (IN `p_complaint_i
   SELECT ROW_COUNT() AS affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateComplianceRecord` (IN `p_report_id` INT, IN `p_status` VARCHAR(20), IN `p_remarks` TEXT, IN `p_resolved_by` INT)   BEGIN
+CREATE PROCEDURE `updateComplianceRecord` (IN `p_report_id` INT, IN `p_status` VARCHAR(20), IN `p_remarks` TEXT, IN `p_resolved_by` INT)   BEGIN
   DECLARE v_resolved_date DATETIME;
   
   -- If status is complete, set resolved date
@@ -5636,13 +5640,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateComplianceRecord` (IN `p_repo
   SELECT ROW_COUNT() AS affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCredentialLastLogin` (IN `p_applicant_id` INT)   BEGIN
+CREATE PROCEDURE `updateCredentialLastLogin` (IN `p_applicant_id` INT)   BEGIN
     UPDATE credential 
     SET last_login = NOW()
     WHERE applicant_id = p_applicant_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateFloor` (IN `p_floor_id` INT, IN `p_floor_name` VARCHAR(50), IN `p_floor_number` INT, IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
+CREATE PROCEDURE `updateFloor` (IN `p_floor_id` INT, IN `p_floor_name` VARCHAR(50), IN `p_floor_number` INT, IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -5670,7 +5674,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateFloor` (IN `p_floor_id` INT, 
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateMobileApplication` (IN `p_application_id` INT, IN `p_applicant_id` INT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_preferred_area` VARCHAR(255), IN `p_document_urls` TEXT)   BEGIN
+CREATE PROCEDURE `updateMobileApplication` (IN `p_application_id` INT, IN `p_applicant_id` INT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_preferred_area` VARCHAR(255), IN `p_document_urls` TEXT)   BEGIN
     UPDATE applications 
     SET business_name = p_business_name, 
         business_type = p_business_type, 
@@ -5683,7 +5687,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateMobileApplication` (IN `p_app
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateSection` (IN `p_section_id` INT, IN `p_section_name` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
+CREATE PROCEDURE `updateSection` (IN `p_section_id` INT, IN `p_section_name` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -5710,7 +5714,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateSection` (IN `p_section_id` I
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStall` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_rental_price` DECIMAL(10,2), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT)   BEGIN
+CREATE PROCEDURE `updateStall` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_rental_price` DECIMAL(10,2), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT)   BEGIN
     UPDATE stall
     SET 
         stall_no = COALESCE(p_stall_no, stall_no),
@@ -5725,7 +5729,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStall` (IN `p_stall_id` INT, 
     SELECT ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStallBusinessOwner` (IN `p_business_owner_id` INT, IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive'))   BEGIN
+CREATE PROCEDURE `updateStallBusinessOwner` (IN `p_business_owner_id` INT, IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive'))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -5755,7 +5759,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStallBusinessOwner` (IN `p_bu
            ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStallholder` (IN `p_stallholder_id` INT, IN `p_stallholder_name` VARCHAR(150), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(255), IN `p_address` TEXT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_stall_id` INT, IN `p_contract_start_date` DATE, IN `p_contract_end_date` DATE, IN `p_contract_status` ENUM('Active','Expired','Terminated'), IN `p_lease_amount` DECIMAL(10,2), IN `p_monthly_rent` DECIMAL(10,2), IN `p_payment_status` ENUM('current','overdue','grace_period'), IN `p_notes` TEXT)   BEGIN
+CREATE PROCEDURE `updateStallholder` (IN `p_stallholder_id` INT, IN `p_stallholder_name` VARCHAR(150), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(255), IN `p_address` TEXT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_stall_id` INT, IN `p_contract_start_date` DATE, IN `p_contract_end_date` DATE, IN `p_contract_status` ENUM('Active','Expired','Terminated'), IN `p_lease_amount` DECIMAL(10,2), IN `p_monthly_rent` DECIMAL(10,2), IN `p_payment_status` ENUM('current','overdue','grace_period'), IN `p_notes` TEXT)   BEGIN
     DECLARE old_stall_id INT DEFAULT NULL;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -5807,7 +5811,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStallholder` (IN `p_stallhold
     SELECT 1 as success, 'Stallholder updated successfully' AS message, ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateSystemAdministrator` (IN `p_system_admin_id` INT, IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive'))   BEGIN
+CREATE PROCEDURE `updateSystemAdministrator` (IN `p_system_admin_id` INT, IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_contact_number` VARCHAR(20), IN `p_email` VARCHAR(100), IN `p_status` ENUM('Active','Inactive'))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -5837,7 +5841,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateSystemAdministrator` (IN `p_s
            ROW_COUNT() as affected_rows;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadApplicantDocument` (IN `p_applicant_id` INT, IN `p_business_owner_id` INT, IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_file_path` VARCHAR(500), IN `p_original_filename` VARCHAR(255), IN `p_file_size` BIGINT, IN `p_mime_type` VARCHAR(100), IN `p_expiry_date` DATE, IN `p_notes` TEXT)   BEGIN
+CREATE PROCEDURE `uploadApplicantDocument` (IN `p_applicant_id` INT, IN `p_business_owner_id` INT, IN `p_branch_id` INT, IN `p_document_type_id` INT, IN `p_file_path` VARCHAR(500), IN `p_original_filename` VARCHAR(255), IN `p_file_size` BIGINT, IN `p_mime_type` VARCHAR(100), IN `p_expiry_date` DATE, IN `p_notes` TEXT)   BEGIN
     DECLARE v_document_id INT;
     
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -7947,7 +7951,7 @@ DELIMITER ;
 --
 DROP TABLE IF EXISTS `active_auctions_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_auctions_view`  AS SELECT `a`.`auction_id` AS `auction_id`, `a`.`stall_id` AS `stall_id`, `s`.`stall_no` AS `stall_no`, `s`.`stall_location` AS `stall_location`, `a`.`starting_price` AS `starting_price`, `a`.`current_highest_bid` AS `current_highest_bid`, `a`.`total_bids` AS `total_bids`, `b`.`branch_name` AS `branch_name`, `f`.`floor_name` AS `floor_name`, `sec`.`section_name` AS `section_name`, `a`.`start_time` AS `start_time`, `a`.`end_time` AS `end_time`, `a`.`application_deadline` AS `application_deadline`, `a`.`auction_status` AS `auction_status`, CASE WHEN `a`.`end_time` is null THEN NULL ELSE timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) END AS `seconds_remaining`, CASE WHEN `a`.`end_time` is null THEN 'Waiting for bidders' WHEN current_timestamp() >= `a`.`end_time` THEN 'Expired' ELSE concat(floor(timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) / 3600),'h ',floor(timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) MOD 3600 / 60),'m ',timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) MOD 60,'s') END AS `time_remaining_formatted`, `hb`.`applicant_full_name` AS `highest_bidder_name`, `bm`.`first_name` AS `manager_first_name`, `bm`.`last_name` AS `manager_last_name` FROM ((((((`auction` `a` join `stall` `s` on(`a`.`stall_id` = `s`.`stall_id`)) join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`s`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) join `business_manager` `bm` on(`a`.`created_by_business_manager` = `bm`.`business_manager_id`)) left join `applicant` `hb` on(`a`.`highest_bidder_id` = `hb`.`applicant_id`)) WHERE `a`.`auction_status` in ('Waiting for Bidders','Active') ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `active_auctions_view`  AS SELECT `a`.`auction_id` AS `auction_id`, `a`.`stall_id` AS `stall_id`, `s`.`stall_no` AS `stall_no`, `s`.`stall_location` AS `stall_location`, `a`.`starting_price` AS `starting_price`, `a`.`current_highest_bid` AS `current_highest_bid`, `a`.`total_bids` AS `total_bids`, `b`.`branch_name` AS `branch_name`, `f`.`floor_name` AS `floor_name`, `sec`.`section_name` AS `section_name`, `a`.`start_time` AS `start_time`, `a`.`end_time` AS `end_time`, `a`.`application_deadline` AS `application_deadline`, `a`.`auction_status` AS `auction_status`, CASE WHEN `a`.`end_time` is null THEN NULL ELSE timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) END AS `seconds_remaining`, CASE WHEN `a`.`end_time` is null THEN 'Waiting for bidders' WHEN current_timestamp() >= `a`.`end_time` THEN 'Expired' ELSE concat(floor(timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) / 3600),'h ',floor(timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) MOD 3600 / 60),'m ',timestampdiff(SECOND,current_timestamp(),`a`.`end_time`) MOD 60,'s') END AS `time_remaining_formatted`, `hb`.`applicant_full_name` AS `highest_bidder_name`, `bm`.`first_name` AS `manager_first_name`, `bm`.`last_name` AS `manager_last_name` FROM ((((((`auction` `a` join `stall` `s` on(`a`.`stall_id` = `s`.`stall_id`)) join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`s`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) join `business_manager` `bm` on(`a`.`created_by_business_manager` = `bm`.`business_manager_id`)) left join `applicant` `hb` on(`a`.`highest_bidder_id` = `hb`.`applicant_id`)) WHERE `a`.`auction_status` in ('Waiting for Bidders','Active') ;
 
 -- --------------------------------------------------------
 
@@ -7956,7 +7960,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `active_raffles_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_raffles_view`  AS SELECT `r`.`raffle_id` AS `raffle_id`, `r`.`stall_id` AS `stall_id`, `s`.`stall_no` AS `stall_no`, `s`.`stall_location` AS `stall_location`, `s`.`rental_price` AS `rental_price`, `b`.`branch_name` AS `branch_name`, `f`.`floor_name` AS `floor_name`, `sec`.`section_name` AS `section_name`, `r`.`start_time` AS `start_time`, `r`.`end_time` AS `end_time`, `r`.`application_deadline` AS `application_deadline`, `r`.`total_participants` AS `total_participants`, `r`.`raffle_status` AS `raffle_status`, CASE WHEN `r`.`end_time` is null THEN NULL ELSE timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) END AS `seconds_remaining`, CASE WHEN `r`.`end_time` is null THEN 'Waiting for participants' WHEN current_timestamp() >= `r`.`end_time` THEN 'Expired' ELSE concat(floor(timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) / 3600),'h ',floor(timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) MOD 3600 / 60),'m ',timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) MOD 60,'s') END AS `time_remaining_formatted`, `bm`.`first_name` AS `manager_first_name`, `bm`.`last_name` AS `manager_last_name` FROM (((((`raffle` `r` join `stall` `s` on(`r`.`stall_id` = `s`.`stall_id`)) join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`s`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) join `business_manager` `bm` on(`r`.`created_by_business_manager` = `bm`.`business_manager_id`)) WHERE `r`.`raffle_status` in ('Waiting for Participants','Active') ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `active_raffles_view`  AS SELECT `r`.`raffle_id` AS `raffle_id`, `r`.`stall_id` AS `stall_id`, `s`.`stall_no` AS `stall_no`, `s`.`stall_location` AS `stall_location`, `s`.`rental_price` AS `rental_price`, `b`.`branch_name` AS `branch_name`, `f`.`floor_name` AS `floor_name`, `sec`.`section_name` AS `section_name`, `r`.`start_time` AS `start_time`, `r`.`end_time` AS `end_time`, `r`.`application_deadline` AS `application_deadline`, `r`.`total_participants` AS `total_participants`, `r`.`raffle_status` AS `raffle_status`, CASE WHEN `r`.`end_time` is null THEN NULL ELSE timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) END AS `seconds_remaining`, CASE WHEN `r`.`end_time` is null THEN 'Waiting for participants' WHEN current_timestamp() >= `r`.`end_time` THEN 'Expired' ELSE concat(floor(timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) / 3600),'h ',floor(timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) MOD 3600 / 60),'m ',timestampdiff(SECOND,current_timestamp(),`r`.`end_time`) MOD 60,'s') END AS `time_remaining_formatted`, `bm`.`first_name` AS `manager_first_name`, `bm`.`last_name` AS `manager_last_name` FROM (((((`raffle` `r` join `stall` `s` on(`r`.`stall_id` = `s`.`stall_id`)) join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`s`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) join `business_manager` `bm` on(`r`.`created_by_business_manager` = `bm`.`business_manager_id`)) WHERE `r`.`raffle_status` in ('Waiting for Participants','Active') ;
 
 -- --------------------------------------------------------
 
@@ -7965,7 +7969,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `stalls_with_raffle_auction_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `stalls_with_raffle_auction_view`  AS SELECT `s`.`stall_id` AS `stall_id`, `s`.`stall_no` AS `stall_no`, `s`.`stall_location` AS `stall_location`, `s`.`size` AS `size`, `s`.`rental_price` AS `rental_price`, `s`.`price_type` AS `price_type`, `s`.`status` AS `status`, `s`.`raffle_auction_status` AS `raffle_auction_status`, `s`.`raffle_auction_start_time` AS `raffle_auction_start_time`, `s`.`raffle_auction_end_time` AS `raffle_auction_end_time`, `s`.`raffle_auction_deadline` AS `raffle_auction_deadline`, `s`.`deadline_active` AS `deadline_active`, `b`.`branch_name` AS `branch_name`, `f`.`floor_name` AS `floor_name`, `sec`.`section_name` AS `section_name`, `bm`.`first_name` AS `manager_first_name`, `bm`.`last_name` AS `manager_last_name`, `r`.`raffle_id` AS `raffle_id`, `r`.`total_participants` AS `raffle_participants`, `r`.`winner_applicant_id` AS `raffle_winner_id`, `rw`.`applicant_full_name` AS `raffle_winner_name`, `au`.`auction_id` AS `auction_id`, `au`.`starting_price` AS `auction_starting_price`, `au`.`current_highest_bid` AS `current_highest_bid`, `au`.`total_bids` AS `total_bids`, `au`.`highest_bidder_id` AS `highest_bidder_id`, `ab`.`applicant_full_name` AS `highest_bidder_name`, `au`.`winner_applicant_id` AS `auction_winner_id`, `aw`.`applicant_full_name` AS `auction_winner_name`, CASE WHEN `s`.`raffle_auction_end_time` is null THEN 'Not Started' WHEN current_timestamp() >= `s`.`raffle_auction_end_time` THEN 'Expired' ELSE concat(floor(timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) / 3600),'h ',floor(timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) MOD 3600 / 60),'m ',timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) MOD 60,'s') END AS `time_remaining_formatted`, timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) AS `seconds_remaining` FROM (((((((((`stall` `s` join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`s`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) left join `business_manager` `bm` on(`s`.`created_by_business_manager` = `bm`.`business_manager_id`)) left join `raffle` `r` on(`s`.`stall_id` = `r`.`stall_id`)) left join `applicant` `rw` on(`r`.`winner_applicant_id` = `rw`.`applicant_id`)) left join `auction` `au` on(`s`.`stall_id` = `au`.`stall_id`)) left join `applicant` `ab` on(`au`.`highest_bidder_id` = `ab`.`applicant_id`)) left join `applicant` `aw` on(`au`.`winner_applicant_id` = `aw`.`applicant_id`)) WHERE `s`.`price_type` in ('Raffle','Auction') ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `stalls_with_raffle_auction_view`  AS SELECT `s`.`stall_id` AS `stall_id`, `s`.`stall_no` AS `stall_no`, `s`.`stall_location` AS `stall_location`, `s`.`size` AS `size`, `s`.`rental_price` AS `rental_price`, `s`.`price_type` AS `price_type`, `s`.`status` AS `status`, `s`.`raffle_auction_status` AS `raffle_auction_status`, `s`.`raffle_auction_start_time` AS `raffle_auction_start_time`, `s`.`raffle_auction_end_time` AS `raffle_auction_end_time`, `s`.`raffle_auction_deadline` AS `raffle_auction_deadline`, `s`.`deadline_active` AS `deadline_active`, `b`.`branch_name` AS `branch_name`, `f`.`floor_name` AS `floor_name`, `sec`.`section_name` AS `section_name`, `bm`.`first_name` AS `manager_first_name`, `bm`.`last_name` AS `manager_last_name`, `r`.`raffle_id` AS `raffle_id`, `r`.`total_participants` AS `raffle_participants`, `r`.`winner_applicant_id` AS `raffle_winner_id`, `rw`.`applicant_full_name` AS `raffle_winner_name`, `au`.`auction_id` AS `auction_id`, `au`.`starting_price` AS `auction_starting_price`, `au`.`current_highest_bid` AS `current_highest_bid`, `au`.`total_bids` AS `total_bids`, `au`.`highest_bidder_id` AS `highest_bidder_id`, `ab`.`applicant_full_name` AS `highest_bidder_name`, `au`.`winner_applicant_id` AS `auction_winner_id`, `aw`.`applicant_full_name` AS `auction_winner_name`, CASE WHEN `s`.`raffle_auction_end_time` is null THEN 'Not Started' WHEN current_timestamp() >= `s`.`raffle_auction_end_time` THEN 'Expired' ELSE concat(floor(timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) / 3600),'h ',floor(timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) MOD 3600 / 60),'m ',timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) MOD 60,'s') END AS `time_remaining_formatted`, timestampdiff(SECOND,current_timestamp(),`s`.`raffle_auction_end_time`) AS `seconds_remaining` FROM (((((((((`stall` `s` join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`s`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) left join `business_manager` `bm` on(`s`.`created_by_business_manager` = `bm`.`business_manager_id`)) left join `raffle` `r` on(`s`.`stall_id` = `r`.`stall_id`)) left join `applicant` `rw` on(`r`.`winner_applicant_id` = `rw`.`applicant_id`)) left join `auction` `au` on(`s`.`stall_id` = `au`.`stall_id`)) left join `applicant` `ab` on(`au`.`highest_bidder_id` = `ab`.`applicant_id`)) left join `applicant` `aw` on(`au`.`winner_applicant_id` = `aw`.`applicant_id`)) WHERE `s`.`price_type` in ('Raffle','Auction') ;
 
 -- --------------------------------------------------------
 
@@ -7974,7 +7978,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `view_applicant_documents_by_owner`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_applicant_documents_by_owner`  AS SELECT `ad`.`document_id` AS `document_id`, `ad`.`applicant_id` AS `applicant_id`, `a`.`applicant_full_name` AS `applicant_full_name`, `a`.`applicant_contact_number` AS `applicant_contact_number`, `ad`.`business_owner_id` AS `business_owner_id`, concat(`bo`.`first_name`,' ',`bo`.`last_name`) AS `business_owner_name`, `bo`.`owner_username` AS `owner_username`, `ad`.`branch_id` AS `branch_id`, `b`.`branch_name` AS `branch_name`, `ad`.`document_type_id` AS `document_type_id`, `dt`.`document_name` AS `document_name`, `dt`.`description` AS `document_description`, `ad`.`file_path` AS `file_path`, `ad`.`original_filename` AS `original_filename`, `ad`.`file_size` AS `file_size`, `ad`.`mime_type` AS `mime_type`, `ad`.`upload_date` AS `upload_date`, `ad`.`verification_status` AS `verification_status`, `ad`.`verified_at` AS `verified_at`, `ad`.`expiry_date` AS `expiry_date`, `ad`.`notes` AS `notes`, CASE WHEN `ad`.`expiry_date` is not null AND `ad`.`expiry_date` < curdate() THEN 'expired' WHEN `ad`.`verification_status` = 'verified' THEN 'valid' WHEN `ad`.`verification_status` = 'rejected' THEN 'rejected' ELSE 'pending' END AS `document_status` FROM ((((`applicant_documents` `ad` join `applicant` `a` on(`ad`.`applicant_id` = `a`.`applicant_id`)) join `stall_business_owner` `bo` on(`ad`.`business_owner_id` = `bo`.`business_owner_id`)) join `document_types` `dt` on(`ad`.`document_type_id` = `dt`.`document_type_id`)) left join `branch` `b` on(`ad`.`branch_id` = `b`.`branch_id`)) ORDER BY `ad`.`business_owner_id` ASC, `ad`.`upload_date` DESC ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `view_applicant_documents_by_owner`  AS SELECT `ad`.`document_id` AS `document_id`, `ad`.`applicant_id` AS `applicant_id`, `a`.`applicant_full_name` AS `applicant_full_name`, `a`.`applicant_contact_number` AS `applicant_contact_number`, `ad`.`business_owner_id` AS `business_owner_id`, concat(`bo`.`first_name`,' ',`bo`.`last_name`) AS `business_owner_name`, `bo`.`owner_username` AS `owner_username`, `ad`.`branch_id` AS `branch_id`, `b`.`branch_name` AS `branch_name`, `ad`.`document_type_id` AS `document_type_id`, `dt`.`document_name` AS `document_name`, `dt`.`description` AS `document_description`, `ad`.`file_path` AS `file_path`, `ad`.`original_filename` AS `original_filename`, `ad`.`file_size` AS `file_size`, `ad`.`mime_type` AS `mime_type`, `ad`.`upload_date` AS `upload_date`, `ad`.`verification_status` AS `verification_status`, `ad`.`verified_at` AS `verified_at`, `ad`.`expiry_date` AS `expiry_date`, `ad`.`notes` AS `notes`, CASE WHEN `ad`.`expiry_date` is not null AND `ad`.`expiry_date` < curdate() THEN 'expired' WHEN `ad`.`verification_status` = 'verified' THEN 'valid' WHEN `ad`.`verification_status` = 'rejected' THEN 'rejected' ELSE 'pending' END AS `document_status` FROM ((((`applicant_documents` `ad` join `applicant` `a` on(`ad`.`applicant_id` = `a`.`applicant_id`)) join `stall_business_owner` `bo` on(`ad`.`business_owner_id` = `bo`.`business_owner_id`)) join `document_types` `dt` on(`ad`.`document_type_id` = `dt`.`document_type_id`)) left join `branch` `b` on(`ad`.`branch_id` = `b`.`branch_id`)) ORDER BY `ad`.`business_owner_id` ASC, `ad`.`upload_date` DESC ;
 
 -- --------------------------------------------------------
 
@@ -7983,7 +7987,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `view_applicant_required_documents`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_applicant_required_documents`  AS SELECT DISTINCT `a`.`applicant_id` AS `applicant_id`, `app`.`application_id` AS `application_id`, `b`.`branch_id` AS `branch_id`, `b`.`branch_name` AS `branch_name`, `b`.`business_owner_id` AS `business_owner_id`, concat(`bo`.`first_name`,' ',`bo`.`last_name`) AS `business_owner_name`, `dt`.`document_type_id` AS `document_type_id`, `dt`.`document_name` AS `document_name`, `dt`.`description` AS `document_description`, `bdr`.`is_required` AS `is_required`, `bdr`.`instructions` AS `instructions`, `ad`.`document_id` AS `document_id`, `ad`.`verification_status` AS `verification_status`, `ad`.`upload_date` AS `upload_date`, `ad`.`expiry_date` AS `expiry_date`, CASE WHEN `ad`.`document_id` is null THEN 'not_uploaded' WHEN `ad`.`expiry_date` is not null AND `ad`.`expiry_date` < curdate() THEN 'expired' WHEN `ad`.`verification_status` = 'verified' THEN 'verified' WHEN `ad`.`verification_status` = 'rejected' THEN 'rejected' ELSE 'pending' END AS `status` FROM (((((((((`application` `app` join `applicant` `a` on(`app`.`applicant_id` = `a`.`applicant_id`)) join `stall` `s` on(`app`.`stall_id` = `s`.`stall_id`)) join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`sec`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) join `branch_document_requirements` `bdr` on(`b`.`branch_id` = `bdr`.`branch_id`)) join `document_types` `dt` on(`bdr`.`document_type_id` = `dt`.`document_type_id`)) join `stall_business_owner` `bo` on(`b`.`business_owner_id` = `bo`.`business_owner_id`)) left join `applicant_documents` `ad` on(`a`.`applicant_id` = `ad`.`applicant_id` and `b`.`business_owner_id` = `ad`.`business_owner_id` and `dt`.`document_type_id` = `ad`.`document_type_id`)) ORDER BY `a`.`applicant_id` ASC, `b`.`business_owner_id` ASC, `bdr`.`is_required` DESC, `dt`.`document_name` ASC ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `view_applicant_required_documents`  AS SELECT DISTINCT `a`.`applicant_id` AS `applicant_id`, `app`.`application_id` AS `application_id`, `b`.`branch_id` AS `branch_id`, `b`.`branch_name` AS `branch_name`, `b`.`business_owner_id` AS `business_owner_id`, concat(`bo`.`first_name`,' ',`bo`.`last_name`) AS `business_owner_name`, `dt`.`document_type_id` AS `document_type_id`, `dt`.`document_name` AS `document_name`, `dt`.`description` AS `document_description`, `bdr`.`is_required` AS `is_required`, `bdr`.`instructions` AS `instructions`, `ad`.`document_id` AS `document_id`, `ad`.`verification_status` AS `verification_status`, `ad`.`upload_date` AS `upload_date`, `ad`.`expiry_date` AS `expiry_date`, CASE WHEN `ad`.`document_id` is null THEN 'not_uploaded' WHEN `ad`.`expiry_date` is not null AND `ad`.`expiry_date` < curdate() THEN 'expired' WHEN `ad`.`verification_status` = 'verified' THEN 'verified' WHEN `ad`.`verification_status` = 'rejected' THEN 'rejected' ELSE 'pending' END AS `status` FROM (((((((((`application` `app` join `applicant` `a` on(`app`.`applicant_id` = `a`.`applicant_id`)) join `stall` `s` on(`app`.`stall_id` = `s`.`stall_id`)) join `section` `sec` on(`s`.`section_id` = `sec`.`section_id`)) join `floor` `f` on(`sec`.`floor_id` = `f`.`floor_id`)) join `branch` `b` on(`f`.`branch_id` = `b`.`branch_id`)) join `branch_document_requirements` `bdr` on(`b`.`branch_id` = `bdr`.`branch_id`)) join `document_types` `dt` on(`bdr`.`document_type_id` = `dt`.`document_type_id`)) join `stall_business_owner` `bo` on(`b`.`business_owner_id` = `bo`.`business_owner_id`)) left join `applicant_documents` `ad` on(`a`.`applicant_id` = `ad`.`applicant_id` and `b`.`business_owner_id` = `ad`.`business_owner_id` and `dt`.`document_type_id` = `ad`.`document_type_id`)) ORDER BY `a`.`applicant_id` ASC, `b`.`business_owner_id` ASC, `bdr`.`is_required` DESC, `dt`.`document_name` ASC ;
 
 -- --------------------------------------------------------
 
@@ -7992,7 +7996,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `view_compliance_records`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_compliance_records`  AS SELECT `vr`.`report_id` AS `compliance_id`, `vr`.`date_reported` AS `date`, coalesce(`vr`.`compliance_type`,`v`.`violation_type`) AS `type`, concat(`i`.`first_name`,' ',`i`.`last_name`) AS `inspector`, `sh`.`stallholder_name` AS `stallholder`, `vr`.`status` AS `status`, `vr`.`severity` AS `severity`, `vr`.`remarks` AS `notes`, `vr`.`resolved_date` AS `resolved_date`, `b`.`branch_name` AS `branch_name`, `b`.`branch_id` AS `branch_id`, `s`.`stall_no` AS `stall_no`, `vr`.`offense_no` AS `offense_no`, `vp`.`penalty_amount` AS `penalty_amount`, `vr`.`stallholder_id` AS `stallholder_id`, `vr`.`stall_id` AS `stall_id`, `vr`.`inspector_id` AS `inspector_id`, `vr`.`violation_id` AS `violation_id` FROM ((((((`violation_report` `vr` left join `inspector` `i` on(`vr`.`inspector_id` = `i`.`inspector_id`)) left join `stallholder` `sh` on(`vr`.`stallholder_id` = `sh`.`stallholder_id`)) left join `violation` `v` on(`vr`.`violation_id` = `v`.`violation_id`)) left join `branch` `b` on(`vr`.`branch_id` = `b`.`branch_id`)) left join `stall` `s` on(`vr`.`stall_id` = `s`.`stall_id`)) left join `violation_penalty` `vp` on(`vr`.`penalty_id` = `vp`.`penalty_id`)) ORDER BY `vr`.`date_reported` DESC ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `view_compliance_records`  AS SELECT `vr`.`report_id` AS `compliance_id`, `vr`.`date_reported` AS `date`, coalesce(`vr`.`compliance_type`,`v`.`violation_type`) AS `type`, concat(`i`.`first_name`,' ',`i`.`last_name`) AS `inspector`, `sh`.`stallholder_name` AS `stallholder`, `vr`.`status` AS `status`, `vr`.`severity` AS `severity`, `vr`.`remarks` AS `notes`, `vr`.`resolved_date` AS `resolved_date`, `b`.`branch_name` AS `branch_name`, `b`.`branch_id` AS `branch_id`, `s`.`stall_no` AS `stall_no`, `vr`.`offense_no` AS `offense_no`, `vp`.`penalty_amount` AS `penalty_amount`, `vr`.`stallholder_id` AS `stallholder_id`, `vr`.`stall_id` AS `stall_id`, `vr`.`inspector_id` AS `inspector_id`, `vr`.`violation_id` AS `violation_id` FROM ((((((`violation_report` `vr` left join `inspector` `i` on(`vr`.`inspector_id` = `i`.`inspector_id`)) left join `stallholder` `sh` on(`vr`.`stallholder_id` = `sh`.`stallholder_id`)) left join `violation` `v` on(`vr`.`violation_id` = `v`.`violation_id`)) left join `branch` `b` on(`vr`.`branch_id` = `b`.`branch_id`)) left join `stall` `s` on(`vr`.`stall_id` = `s`.`stall_id`)) left join `violation_penalty` `vp` on(`vr`.`penalty_id` = `vp`.`penalty_id`)) ORDER BY `vr`.`date_reported` DESC ;
 
 -- --------------------------------------------------------
 
@@ -8001,7 +8005,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `view_compliant_stallholders`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_compliant_stallholders`  AS SELECT `stallholder`.`stallholder_id` AS `stallholder_id`, `stallholder`.`stallholder_name` AS `stallholder_name`, `stallholder`.`branch_id` AS `branch_id`, `stallholder`.`compliance_status` AS `compliance_status`, `stallholder`.`date_created` AS `date_created` FROM `stallholder` WHERE `stallholder`.`compliance_status` = 'Compliant' ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `view_compliant_stallholders`  AS SELECT `stallholder`.`stallholder_id` AS `stallholder_id`, `stallholder`.`stallholder_name` AS `stallholder_name`, `stallholder`.`branch_id` AS `branch_id`, `stallholder`.`compliance_status` AS `compliance_status`, `stallholder`.`date_created` AS `date_created` FROM `stallholder` WHERE `stallholder`.`compliance_status` = 'Compliant' ;
 
 -- --------------------------------------------------------
 
@@ -8010,7 +8014,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `view_inspector_activity_log`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_inspector_activity_log`  AS SELECT `ial`.`action_id` AS `action_id`, concat(`i`.`first_name`,' ',`i`.`last_name`) AS `inspector_name`, concat(`bm`.`first_name`,' ',`bm`.`last_name`) AS `branch_manager_name`, `ial`.`action_type` AS `action_type`, `ial`.`action_date` AS `action_date`, `ial`.`remarks` AS `remarks` FROM ((`inspector_action_log` `ial` left join `inspector` `i` on(`ial`.`inspector_id` = `i`.`inspector_id`)) left join `business_manager` `bm` on(`ial`.`business_manager_id` = `bm`.`business_manager_id`)) ORDER BY `ial`.`action_date` DESC ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `view_inspector_activity_log`  AS SELECT `ial`.`action_id` AS `action_id`, concat(`i`.`first_name`,' ',`i`.`last_name`) AS `inspector_name`, concat(`bm`.`first_name`,' ',`bm`.`last_name`) AS `branch_manager_name`, `ial`.`action_type` AS `action_type`, `ial`.`action_date` AS `action_date`, `ial`.`remarks` AS `remarks` FROM ((`inspector_action_log` `ial` left join `inspector` `i` on(`ial`.`inspector_id` = `i`.`inspector_id`)) left join `business_manager` `bm` on(`ial`.`business_manager_id` = `bm`.`business_manager_id`)) ORDER BY `ial`.`action_date` DESC ;
 
 -- --------------------------------------------------------
 
@@ -8019,7 +8023,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `view_violation_penalty`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_violation_penalty`  AS SELECT `vp`.`penalty_id` AS `penalty_id`, `v`.`violation_type` AS `violation_type`, `vp`.`offense_no` AS `offense_no`, `vp`.`penalty_amount` AS `penalty_amount`, `vp`.`remarks` AS `remarks` FROM (`violation_penalty` `vp` join `violation` `v` on(`vp`.`violation_id` = `v`.`violation_id`)) ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `view_violation_penalty`  AS SELECT `vp`.`penalty_id` AS `penalty_id`, `v`.`violation_type` AS `violation_type`, `vp`.`offense_no` AS `offense_no`, `vp`.`penalty_amount` AS `penalty_amount`, `vp`.`remarks` AS `remarks` FROM (`violation_penalty` `vp` join `violation` `v` on(`vp`.`violation_id` = `v`.`violation_id`)) ;
 
 --
 -- Indexes for dumped tables
@@ -9123,7 +9127,7 @@ DELIMITER $$
 --
 -- Events
 --
-CREATE DEFINER=`root`@`localhost` EVENT `reset_monthly_payment_status` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-01 00:01:00' ON COMPLETION PRESERVE ENABLE COMMENT 'Resets stallholder payment status from paid to pending on the 1s' DO BEGIN
+CREATE EVENT `reset_monthly_payment_status` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-01 00:01:00' ON COMPLETION PRESERVE ENABLE COMMENT 'Resets stallholder payment status from paid to pending on the 1s' DO BEGIN
                 DECLARE reset_count INT DEFAULT 0;
                 
                 SELECT COUNT(*) INTO reset_count
@@ -9156,3 +9160,6 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+

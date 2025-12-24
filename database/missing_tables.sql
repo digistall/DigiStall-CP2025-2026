@@ -1,0 +1,12 @@
+﻿SET SESSION sql_require_primary_key = 0;
+SET FOREIGN_KEY_CHECKS = 0;
+
+SET SESSION sql_require_primary_key = 0;
+SET FOREIGN_KEY_CHECKS = 0;
+
+
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+
+SET FOREIGN_KEY_CHECKS = 1;

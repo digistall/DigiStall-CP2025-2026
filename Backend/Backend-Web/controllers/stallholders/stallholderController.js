@@ -364,33 +364,33 @@ const StallholderController = {
       let defaultFloorId, defaultSectionId;
       
       const [floors] = await connection.execute(
-        'SELECT floor_id FROM floor WHERE branch_id = ? AND status = "Active" LIMIT 1',
+        `SELECT floor_id FROM floor WHERE branch_id = ? AND status = 'Active' LIMIT 1`,
         [branchId]
       );
       
       if (floors.length > 0) {
         defaultFloorId = floors[0].floor_id;
         const [sections] = await connection.execute(
-          'SELECT section_id FROM section WHERE floor_id = ? AND status = "Active" LIMIT 1',
+          `SELECT section_id FROM section WHERE floor_id = ? AND status = 'Active' LIMIT 1`,
           [defaultFloorId]
         );
         if (sections.length > 0) {
           defaultSectionId = sections[0].section_id;
         } else {
           const [sectionResult] = await connection.execute(
-            'INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, "Active")',
+            `INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, 'Active')`,
             [defaultFloorId, 'General']
           );
           defaultSectionId = sectionResult.insertId;
         }
       } else {
         const [floorResult] = await connection.execute(
-          'INSERT INTO floor (branch_id, floor_name, floor_number, status) VALUES (?, ?, 1, "Active")',
+          `INSERT INTO floor (branch_id, floor_name, floor_number, status) VALUES (?, ?, 1, 'Active')`,
           [branchId, 'Ground Floor']
         );
         defaultFloorId = floorResult.insertId;
         const [sectionResult] = await connection.execute(
-          'INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, "Active")',
+          `INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, 'Active')`,
           [defaultFloorId, 'General']
         );
         defaultSectionId = sectionResult.insertId;
@@ -1379,7 +1379,7 @@ const StallholderController = {
       
       // Try to get existing floor
       const [floors] = await connection.execute(
-        'SELECT floor_id, floor_name FROM floor WHERE branch_id = ? AND status = "Active" LIMIT 1',
+        `SELECT floor_id, floor_name FROM floor WHERE branch_id = ? AND status = 'Active' LIMIT 1`,
         [branchId]
       );
       
@@ -1388,7 +1388,7 @@ const StallholderController = {
         
         // Get default section for this floor
         const [sections] = await connection.execute(
-          'SELECT section_id FROM section WHERE floor_id = ? AND status = "Active" LIMIT 1',
+          `SELECT section_id FROM section WHERE floor_id = ? AND status = 'Active' LIMIT 1`,
           [defaultFloorId]
         );
         
@@ -1397,7 +1397,7 @@ const StallholderController = {
         } else {
           // Create default section
           const [sectionResult] = await connection.execute(
-            'INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, "Active")',
+            `INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, 'Active')`,
             [defaultFloorId, 'General']
           );
           defaultSectionId = sectionResult.insertId;
@@ -1405,14 +1405,14 @@ const StallholderController = {
       } else {
         // Create default floor
         const [floorResult] = await connection.execute(
-          'INSERT INTO floor (branch_id, floor_name, floor_number, status) VALUES (?, ?, 1, "Active")',
+          `INSERT INTO floor (branch_id, floor_name, floor_number, status) VALUES (?, ?, 1, 'Active')`,
           [branchId, 'Ground Floor']
         );
         defaultFloorId = floorResult.insertId;
         
         // Create default section
         const [sectionResult] = await connection.execute(
-          'INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, "Active")',
+          `INSERT INTO section (floor_id, section_name, status) VALUES (?, ?, 'Active')`,
           [defaultFloorId, 'General']
         );
         defaultSectionId = sectionResult.insertId;
@@ -1420,7 +1420,7 @@ const StallholderController = {
 
       // Build floor/section lookup
       const [floorsData] = await connection.execute(
-        'SELECT f.floor_id, UPPER(f.floor_name) as floor_name FROM floor f WHERE f.branch_id = ? AND f.status = "Active"',
+        `SELECT f.floor_id, UPPER(f.floor_name) as floor_name FROM floor f WHERE f.branch_id = ? AND f.status = 'Active'`,
         [branchId]
       );
       const floorLookup = {};
@@ -1432,7 +1432,7 @@ const StallholderController = {
         `SELECT s.section_id, s.floor_id, UPPER(s.section_name) as section_name 
          FROM section s 
          JOIN floor f ON s.floor_id = f.floor_id 
-         WHERE f.branch_id = ? AND s.status = "Active"`,
+         WHERE f.branch_id = ? AND s.status = 'Active'`,
         [branchId]
       );
       const sectionLookup = {};

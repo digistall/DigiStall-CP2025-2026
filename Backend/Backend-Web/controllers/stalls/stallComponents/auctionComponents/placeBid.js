@@ -60,11 +60,11 @@ export const placeBid = async (req, res) => {
     if (auction.end_time && new Date() > new Date(auction.end_time)) {
       // Auto-update status to ended
       await connection.execute(
-        'UPDATE auction SET auction_status = "Ended" WHERE auction_id = ?',
+        `UPDATE auction SET auction_status = 'Ended' WHERE auction_id = ?`,
         [auction.auction_id]
       );
       await connection.execute(
-        'UPDATE stall SET raffle_auction_status = "Ended" WHERE stall_id = ?',
+        `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
         [stallId]
       );
       
