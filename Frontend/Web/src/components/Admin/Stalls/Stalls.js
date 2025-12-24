@@ -3,6 +3,7 @@ import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFi
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
 import dataCacheService from '../../../services/dataCacheService.js'
 
@@ -14,6 +15,7 @@ export default {
     AddChoiceModal,
     EditStall,
     ToastNotification,
+    LoadingOverlay,
   },
   data() {
     return {
@@ -289,6 +291,22 @@ export default {
         if (result.success) {
           // Transform backend data to match frontend format
           this.stallsData = result.data.map((stall) => this.transformStallData(stall))
+          
+          // FILTER OUT OCCUPIED STALLS for business_manager and business_employee
+          // These users should only see Available/Unavailable stalls, not Occupied ones
+          const userType = this.currentUser?.userType
+          if (userType === 'business_manager' || userType === 'business_employee') {
+            const originalCount = this.stallsData.length
+            this.stallsData = this.stallsData.filter(stall => {
+              // Keep stalls that are NOT occupied (is_available = true means Available/Unavailable)
+              // Occupied stalls have availabilityStatus = 'Occupied' and isAvailable = false with stallholder assigned
+              const isOccupied = stall.availabilityStatus === 'Occupied' || 
+                                 (stall.isAvailable === false && stall.stallholderId)
+              return !isOccupied
+            })
+            console.log(`🏪 Filtered out occupied stalls for ${userType}: ${originalCount} → ${this.stallsData.length} stalls visible`)
+          }
+          
           // Sort stalls: Available first, then Unavailable, then Occupied last
           this.stallsData = this.sortStallsByAvailability(this.stallsData)
           this.displayStalls = [...this.stallsData]
@@ -438,10 +456,13 @@ export default {
         price_type: stall.price_type || 'Fixed Price',
 
         // Image - Convert relative path to full URL
+        // BLOB images use /api/stalls/images/blob/* format
         image: stall.stall_image 
           ? (stall.stall_image.startsWith('http') 
               ? stall.stall_image 
-              : `http://localhost${stall.stall_image}`)
+              : stall.stall_image.startsWith('/api/') 
+                ? `${this.apiBaseUrl.replace(/\/api$/, '')}${stall.stall_image}`
+                : `http://localhost${stall.stall_image}`)
           : this.getDefaultImage(stall.section_name),
 
         // Manager info

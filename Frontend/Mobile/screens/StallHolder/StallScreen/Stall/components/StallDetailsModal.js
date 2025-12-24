@@ -12,6 +12,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { NetworkUtils } from '../../../../../config/networkConfig';
+import ApiService from '../../../../../services/ApiService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -45,94 +46,61 @@ const StallDetailsModal = ({
     primary: '#002181',
   };
 
-  // Get static file server URL for images
-  const getImageBaseUrl = () => {
-    return NetworkUtils.getStaticFileServer();
+  // Get API base URL for BLOB images
+  const getApiBaseUrl = () => {
+    return NetworkUtils.getApiUrl();
   };
 
-  // Convert relative image URL to absolute URL
-  const getAbsoluteImageUrl = (imageUrl) => {
-    if (!imageUrl) return DEFAULT_STALL_IMAGE;
-    
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      if (imageUrl.includes('localhost') || imageUrl.includes('127.0.0.1')) {
-        const baseUrl = getImageBaseUrl();
-        const urlMatch = imageUrl.match(/https?:\/\/[^\/]+(\/.*)/);
-        if (urlMatch && urlMatch[1]) {
-          return baseUrl + urlMatch[1];
-        }
-      }
-      return imageUrl;
-    }
-    
-    const baseUrl = getImageBaseUrl();
-    return baseUrl + imageUrl;
-  };
-
-  // Test if an image URL is accessible
-  const testImage = (url) => {
-    return new Promise((resolve) => {
-      Image.prefetch(url)
-        .then(() => resolve(true))
-        .catch(() => resolve(false));
-    });
-  };
-
-  // Fetch all images from file system (like landing page)
+  // Fetch all images from BLOB storage API
   const fetchAllImages = async () => {
     if (!stall) return;
     
     try {
       setLoadingImages(true);
-      const imageBaseUrl = getImageBaseUrl();
-      const branchId = stall.branch?.id || stall.branchId || stall.branch_id || 1;
-      const stallNumber = stall.stallNumber || stall.stall_no;
+      const apiBaseUrl = getApiBaseUrl();
+      const stallId = stall.id || stall.stall_id;
 
-      if (!stallNumber) {
+      console.log(`📷 Modal: Fetching images for stall ${stallId} from BLOB API...`);
+
+      if (!stallId) {
         setImages([{ id: 'default', image_url: stall.image || DEFAULT_STALL_IMAGE, is_primary: true }]);
         setLoadingImages(false);
         return;
       }
 
-      const foundImages = [];
-      const extensions = ['png', 'jpg', 'jpeg'];
-
-      // Check for images 1-10 (like landing page approach)
-      for (let i = 1; i <= 10; i++) {
-        let found = false;
-        for (const ext of extensions) {
-          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`;
+      try {
+        // Use BLOB API endpoint to get images
+        const response = await ApiService.get(`/stalls/${stallId}/images/blob`);
+        
+        if (response.success && response.data?.images && response.data.images.length > 0) {
+          // Map images to use BLOB serving endpoint
+          const blobImages = response.data.images.map(img => ({
+            id: img.id,
+            stall_id: stallId,
+            image_url: `${apiBaseUrl}/stalls/images/blob/id/${img.id}`,
+            display_order: img.display_order,
+            is_primary: img.is_primary,
+          }));
           
-          try {
-            const exists = await testImage(imageUrl);
-            if (exists) {
-              foundImages.push({
-                id: `img_${i}`,
-                stall_id: stall.id,
-                image_url: imageUrl,
-                display_order: i,
-                is_primary: i === 1,
-              });
-              found = true;
-              break;
-            }
-          } catch (e) {
-            // Image doesn't exist, continue
+          console.log(`📷 Modal: Found ${blobImages.length} images in BLOB storage for stall ${stallId}`);
+          setImages(blobImages);
+        } else {
+          console.log(`📷 Modal: No BLOB images found for stall ${stallId}, using fallback`);
+          // Use stall's primary image or default
+          if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
+            setImages([{ id: 'primary', image_url: stall.image, is_primary: true }]);
+          } else {
+            setImages([{ id: 'default', image_url: DEFAULT_STALL_IMAGE, is_primary: true }]);
           }
         }
-        // Stop if no image found for this number and we have some images
-        if (!found && foundImages.length > 0) break;
-      }
-
-      if (foundImages.length > 0) {
-        console.log(`📷 Modal: Found ${foundImages.length} images for stall ${stallNumber}`);
-        setImages(foundImages);
-      } else if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
-        // Use stall's primary image
-        setImages([{ id: 'primary', image_url: getAbsoluteImageUrl(stall.image), is_primary: true }]);
-      } else {
-        // Use default
-        setImages([{ id: 'default', image_url: DEFAULT_STALL_IMAGE, is_primary: true }]);
+      } catch (apiError) {
+        console.log(`📷 Modal: BLOB API error for stall ${stallId}:`, apiError.message);
+        // Fallback to default image
+        if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
+          setImages([{ id: 'primary', image_url: stall.image, is_primary: true }]);
+        } else {
+          setImages([{ id: 'default', image_url: DEFAULT_STALL_IMAGE, is_primary: true }]);
+        }
       }
     } catch (error) {
       console.error('Error fetching images:', error);

@@ -10,8 +10,9 @@ import marketImg from '@/assets/market.png'
 
 class DataTransformService {
   /**
-   * Build full image URL for images stored in XAMPP htdocs
-   * @param {string} imagePath - Relative path like /digistall_uploads/stalls/...
+   * Build full image URL for images
+   * Supports both BLOB API endpoints and legacy file-based paths
+   * @param {string} imagePath - Relative path or BLOB API path
    * @returns {string} Full URL to the image
    */
   buildImageUrl(imagePath) {
@@ -22,7 +23,15 @@ class DataTransformService {
       return imagePath
     }
     
-    // Build URL for XAMPP hosted images (localhost:80)
+    // Check if it's a BLOB API URL path (e.g., /api/stalls/images/blob/21/1)
+    if (imagePath.includes('/api/stalls/images/blob/')) {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      // Remove trailing /api from base URL if present, then append the full path
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+      return `${baseUrl}${imagePath}`
+    }
+    
+    // Legacy: Build URL for file-based images
     const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
     return `${imageBaseUrl}${imagePath}`
   }

@@ -4,6 +4,7 @@ import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue';
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
@@ -20,10 +21,12 @@ export default {
     ManagePermissions,
     ToastNotification,
     ActivityLogDialog,
+    LoadingOverlay,
   },
   data() {
     return {
       saving: false,
+      loading: false,
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,
@@ -886,6 +889,73 @@ export default {
         console.error("Error resetting password:", error);
         this.showToast(
           `❌ Failed to reset password: ${error.message}`,
+          "error"
+        );
+      }
+    },
+
+    async fireEmployee(employee) {
+      const reason = prompt(
+        `Are you sure you want to FIRE ${employee.first_name} ${employee.last_name}?\n\nThis action will permanently remove the employee account.\n\nPlease enter the reason for termination:`
+      );
+
+      if (!reason) {
+        return; // User cancelled
+      }
+
+      try {
+        const token = sessionStorage.getItem("authToken");
+        if (!token) {
+          throw new Error("Authentication required. Please login again.");
+        }
+
+        let endpoint;
+        let employeeId;
+
+        // Determine the correct API endpoint based on employee type
+        if (employee.employee_type === 'mobile') {
+          if (employee.mobile_role === 'inspector') {
+            endpoint = `${this.apiBaseUrl}/mobile-staff/inspectors/${employee.inspector_id}`;
+            employeeId = employee.inspector_id;
+          } else if (employee.mobile_role === 'collector') {
+            endpoint = `${this.apiBaseUrl}/mobile-staff/collectors/${employee.collector_id}`;
+            employeeId = employee.collector_id;
+          }
+        } else {
+          // Web employee
+          endpoint = `${this.apiBaseUrl}/employees/${employee.employee_id}`;
+          employeeId = employee.employee_id;
+        }
+
+        if (!endpoint) {
+          throw new Error("Unable to determine employee type for termination.");
+        }
+
+        const response = await fetch(endpoint, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ reason }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          this.showToast(
+            `✅ ${employee.first_name} ${employee.last_name} has been terminated successfully.`,
+            "success"
+          );
+          // Refresh employee list
+          await this.fetchEmployees();
+        } else {
+          throw new Error(data.message || "Failed to terminate employee");
+        }
+      } catch (error) {
+        console.error("Error firing employee:", error);
+        this.showToast(
+          `❌ Failed to terminate employee: ${error.message}`,
           "error"
         );
       }

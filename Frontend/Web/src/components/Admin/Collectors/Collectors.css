@@ -3,6 +3,11 @@
   padding-left: 0 !important;
 }
 
+/* Collectors main content - position relative for contained loading overlay */
+.collectors-main-content {
+  position: relative;
+}
+
 .main-content {
   background-color: #fafafa;
   min-height: calc(100vh - 64px);

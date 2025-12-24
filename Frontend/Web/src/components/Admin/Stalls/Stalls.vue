@@ -2,16 +2,13 @@
 <template>
   <v-app>
     <!-- Main Content -->
-    <v-main>
-      <!-- Loading Overlay -->
-      <v-overlay v-if="loading" contained>
-        <v-progress-circular
-          indeterminate
-          size="64"
-          color="primary"
-        ></v-progress-circular>
-        <div class="text-h6 mt-4">Loading stalls...</div>
-      </v-overlay>
+    <v-main class="stalls-main-content">
+      <!-- Standardized Loading Overlay - contained within main content -->
+      <LoadingOverlay 
+        :loading="loading" 
+        text="Loading stalls..."
+        :full-page="false"
+      />
 
       <!-- Error State -->
       <v-alert v-if="error && !loading" type="error" prominent border="start" class="ma-4">

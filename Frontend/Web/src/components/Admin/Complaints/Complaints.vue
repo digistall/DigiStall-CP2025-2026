@@ -3,7 +3,14 @@
 <template>
   <v-app>
     <!-- Main Content -->
-    <v-main>
+    <v-main class="complaints-main-content">
+      <!-- Standardized Loading Overlay - contained within main content -->
+      <LoadingOverlay 
+        :loading="isLoading" 
+        text="Loading complaints..."
+        :full-page="false"
+      />
+
       <v-row>
         <v-col cols="12">
           <!-- Search Component -->

@@ -20,20 +20,23 @@
                   hint="Enter unique stall identifier" />
               </v-col>
 
-              <!-- Price -->
+              <!-- Price (Auto-populated from calculation OR manual for Raffle/Auction) -->
               <v-col cols="12" sm="6">
                 <v-text-field v-model="newStall.price" :rules="[rules.required, rules.positiveNumber]"
                   :label="priceFieldLabel" :placeholder="newStall.priceType === 'Raffle'
                       ? 'e.g., 500'
                       : newStall.priceType === 'Auction'
                         ? 'e.g., 1000'
-                        : 'e.g., 2500'
-                    " prepend-icon="mdi-currency-php" outlined dense persistent-hint :hint="newStall.priceType === 'Fixed Price'
-                      ? 'Enter monthly rental price'
+                        : calculatedMonthlyRent || 'Auto-calculated from Base Rate'
+                    " prepend-icon="mdi-currency-php" outlined dense persistent-hint 
+                  :hint="newStall.priceType === 'Fixed Price'
+                      ? 'Monthly rent (auto-calculated from Base Rate × 1.5)'
                       : newStall.priceType === 'Raffle'
                         ? 'Entry fee for raffle participation'
                         : 'Starting bid amount for auction'
-                    " />
+                    " 
+                  :readonly="newStall.priceType === 'Fixed Price'"
+                  :filled="newStall.priceType === 'Fixed Price'" />
               </v-col>
 
               <!-- Floor -->
@@ -48,11 +51,13 @@
                   prepend-icon="mdi-view-grid" outlined dense />
               </v-col>
 
-              <!-- Size -->
+              <!-- Area (Square Meters) - Matches MASTERLIST Excel format -->
               <v-col cols="12" sm="6">
-                <v-text-field v-model="newStall.size" :rules="[rules.required, validateSize]" label="Size"
-                  placeholder="e.g., 3x2m, 4x3m" prepend-icon="mdi-ruler" outlined dense persistent-hint
-                  hint="Use format: 3x2m or 3x2" />
+                <v-text-field v-model="newStall.areaSqm" :rules="[rules.required, rules.positiveNumber]" 
+                  label="NEW AREA OCCUPIED (sq.m)"
+                  placeholder="e.g., 17.16, 23.50" prepend-icon="mdi-ruler-square" outlined dense persistent-hint
+                  hint="Enter exact area in square meters (from MASTERLIST)" type="number" step="0.01" min="0.01"
+                  @input="calculateRentalFromArea" />
               </v-col>
 
               <!-- Location - CHANGED TO TEXT FIELD -->
@@ -60,6 +65,15 @@
                 <v-text-field v-model="newStall.location" :rules="[rules.required, validateLocation]" label="Location"
                   placeholder="e.g., Main Entrance Area, Food Court Central" prepend-icon="mdi-map-marker" outlined
                   dense persistent-hint hint="Describe the specific location within the building" />
+              </v-col>
+
+              <!-- RENTAL RATE (2010) - Base rate input -->
+              <v-col cols="12" sm="6">
+                <v-text-field v-model="newStall.baseRate" :rules="[rules.required, rules.positiveNumber]"
+                  label="RENTAL RATE (2010)"
+                  placeholder="e.g., 3331.28, 3685.75" prepend-icon="mdi-cash" outlined dense persistent-hint
+                  hint="Monthly Rent = RENTAL RATE × 2" type="number" step="0.01" min="0.01"
+                  @input="calculateRentalPrice" />
               </v-col>
 
               <!-- Price Type Dropdown -->

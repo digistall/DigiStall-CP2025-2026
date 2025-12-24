@@ -5,15 +5,12 @@
       <!-- Main Content -->
       <v-main>
         <v-container fluid class="main-content">
-          <!-- Loading Overlay -->
-          <div v-if="loading" class="loading-overlay">
-            <v-progress-circular
-              indeterminate
-              color="primary"
-              size="64"
-            ></v-progress-circular>
-            <p class="mt-4 text-grey-600">Loading dashboard data...</p>
-          </div>
+          <!-- Standardized Loading Overlay -->
+          <LoadingOverlay 
+            :loading="loading" 
+            text="Loading dashboard data..."
+            :full-page="false"
+          />
           
           <v-row>
             <v-col cols="12">

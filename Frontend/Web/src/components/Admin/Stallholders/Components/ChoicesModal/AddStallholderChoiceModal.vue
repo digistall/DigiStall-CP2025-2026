@@ -33,7 +33,7 @@
               >
                 <div class="choice-card-content">
                   <div class="choice-icon-container stallholder-icon">
-                    <v-icon size="40" color="white">mdi-account-plus</v-icon>
+                    <v-icon size="36" color="white">mdi-account-plus-outline</v-icon>
                   </div>
                   <h3 class="choice-title">Add Stallholder</h3>
                   <p class="choice-description">
@@ -42,27 +42,27 @@
                   </p>
                   <div class="choice-features">
                     <div class="feature-item">
-                      <v-icon size="16" color="#4caf50">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Personal Information</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#4caf50">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Business Details</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#4caf50">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Contract & Payment</span>
                     </div>
                   </div>
                 </div>
                 <div class="choice-card-overlay">
                   <v-btn
-                    color="success"
+                    color="primary"
                     class="choice-btn"
                     :loading="loading"
                     :disabled="loading"
                   >
-                    <v-icon left>mdi-account-plus</v-icon>
+                    <v-icon left>mdi-account-plus-outline</v-icon>
                     Add Stallholder
                   </v-btn>
                 </div>
@@ -85,7 +85,7 @@
               >
                 <div class="choice-card-content">
                   <div class="choice-icon-container excel-icon">
-                    <v-icon size="40" color="white">mdi-file-excel</v-icon>
+                    <v-icon size="36" color="white">mdi-microsoft-excel</v-icon>
                   </div>
                   <h3 class="choice-title">Import from Excel</h3>
                   <p class="choice-description">
@@ -94,27 +94,27 @@
                   </p>
                   <div class="choice-features">
                     <div class="feature-item">
-                      <v-icon size="16" color="#2196f3">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(16, 124, 65)">mdi-check-circle</v-icon>
                       <span>Bulk Import</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#2196f3">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(16, 124, 65)">mdi-check-circle</v-icon>
                       <span>Excel Template</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#2196f3">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(16, 124, 65)">mdi-check-circle</v-icon>
                       <span>Data Validation</span>
                     </div>
                   </div>
                 </div>
                 <div class="choice-card-overlay">
                   <v-btn
-                    color="info"
+                    color="success"
                     class="choice-btn"
                     :loading="loading"
                     :disabled="loading"
                   >
-                    <v-icon left>mdi-file-excel</v-icon>
+                    <v-icon left>mdi-microsoft-excel</v-icon>
                     Import Excel
                   </v-btn>
                 </div>
@@ -137,7 +137,7 @@
               >
                 <div class="choice-card-content">
                   <div class="choice-icon-container document-icon">
-                    <v-icon size="40" color="white">mdi-cog</v-icon>
+                    <v-icon size="36" color="white">mdi-file-cog-outline</v-icon>
                   </div>
                   <h3 class="choice-title">Document Settings</h3>
                   <p class="choice-description">
@@ -146,27 +146,27 @@
                   </p>
                   <div class="choice-features">
                     <div class="feature-item">
-                      <v-icon size="16" color="#ff9800">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Document Types</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#ff9800">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Requirements Setup</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#ff9800">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Validation Rules</span>
                     </div>
                   </div>
                 </div>
                 <div class="choice-card-overlay">
                   <v-btn
-                    color="warning"
+                    color="primary"
                     class="choice-btn"
                     :loading="loading"
                     :disabled="loading"
                   >
-                    <v-icon left>mdi-cog</v-icon>
+                    <v-icon left>mdi-file-cog-outline</v-icon>
                     Document Settings
                   </v-btn>
                 </div>

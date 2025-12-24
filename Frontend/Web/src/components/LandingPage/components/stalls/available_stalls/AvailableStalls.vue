@@ -414,8 +414,15 @@ export default {
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         return imagePath
       }
-      // Build full URL from relative path
-      const imageBaseUrl = 'http://localhost'
+      // Check if it's a BLOB API URL path (e.g., /api/stalls/images/blob/21/1)
+      if (imagePath.includes('/api/stalls/images/blob/')) {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        // Remove trailing /api from base URL if present, then append the full path
+        const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+        return `${baseUrl}${imagePath}`
+      }
+      // Build full URL from relative path (legacy file-based)
+      const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
       return `${imageBaseUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`
     },
 
@@ -430,76 +437,57 @@ export default {
         return
       }
       
-      // For landing page (public), directly scan htdocs instead of calling authenticated API
-      // This avoids 401 Unauthorized errors for public users
-      await this.fetchImagesFromFileSystemForGrid(stall)
+      // Use BLOB API for cloud deployment
+      await this.fetchImagesFromBlobApiForGrid(stall)
     },
 
-    async fetchImagesFromFileSystemForGrid(stall) {
-      if (!stall.stallNumber) {
+    async fetchImagesFromBlobApiForGrid(stall) {
+      if (!stall.id) {
         stall.stallImages = []
         stall.imageCount = 1
         return
       }
       
-      const imageBaseUrl = 'http://localhost'
-      const branchId = stall.branchId || 1
-      const stallNumber = stall.stallNumber
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      // Remove trailing /api if present to avoid double /api in URLs
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+      const stallId = stall.id
       
-      // Test a single image URL silently (no console errors)
-      const testImageSilent = (url) => {
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => resolve(true)
-          img.onerror = () => resolve(false)
-          img.src = url
-        })
-      }
-      
-      const images = []
-      
-      // Check for images 1-10, stop early if an image number is not found
-      for (let i = 1; i <= 10; i++) {
-        // First, quickly test the most common extension (png)
-        const pngUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.png`
-        let foundUrl = null
+      try {
+        // Fetch images from PUBLIC BLOB API endpoint (no auth required)
+        const response = await fetch(`${baseUrl}/api/stalls/public/${stallId}/images/blob`)
         
-        if (await testImageSilent(pngUrl)) {
-          foundUrl = pngUrl
-        } else {
-          // Only try other extensions if png fails
-          for (const ext of ['jpg', 'jpeg']) {
-            const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
-            if (await testImageSilent(imageUrl)) {
-              foundUrl = imageUrl
-              break
-            }
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data?.images && result.data.images.length > 0) {
+            const images = result.data.images.map(img => ({
+              id: img.id,
+              stall_id: stallId,
+              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.id}`,
+              display_order: img.display_order,
+              is_primary: img.is_primary ? 1 : 0
+            }))
+            
+            // Cache the results
+            this.stallImageCache.set(stallId, images)
+            stall.stallImages = images
+            stall.imageCount = images.length
+            console.log(`📷 Grid: Loaded ${images.length} BLOB images for stall ${stallId}`)
+            return
           }
         }
-        
-        if (foundUrl) {
-          images.push({
-            id: `grid_img_${i}`,
-            stall_id: stall.id,
-            image_url: foundUrl,
-            display_order: i,
-            is_primary: i === 1 ? 1 : 0
-          })
-        } else {
-          // Stop checking more image numbers once we find a gap
-          // (e.g., if image 5 doesn't exist, don't check 6-10)
-          break
-        }
+      } catch (error) {
+        console.log(`📷 Grid: BLOB API error for stall ${stallId}:`, error.message)
       }
       
-      // Cache the results
-      this.stallImageCache.set(stall.id, images)
-      stall.stallImages = images
-      stall.imageCount = images.length > 0 ? images.length : 1
-      
-      if (images.length > 0) {
-        console.log(`📁 Grid: Loaded ${images.length} images for stall ${stallNumber}`)
-      }
+      // Fallback: no images found
+      stall.stallImages = []
+      stall.imageCount = 1
+    },
+
+    async fetchImagesFromFileSystemForGrid(stall) {
+      // Legacy method - redirect to BLOB API
+      return this.fetchImagesFromBlobApiForGrid(stall)
     },
 
     getStallDisplayImage(stall) {
@@ -546,82 +534,69 @@ export default {
       
       this.loadingImages = true
       
-      // For public landing page, use file system scanning only
-      // The API requires authentication which public users don't have
-      await this.fetchImagesFromFileSystem(stallId)
+      // Use BLOB API for cloud deployment
+      await this.fetchImagesFromBlobApi(stallId)
       
       this.loadingImages = false
     },
 
-    async fetchImagesFromFileSystem(stallId) {
-      // Scan htdocs folder for stall images
+    async fetchImagesFromBlobApi(stallId) {
+      // Fetch images from BLOB storage API
       const stall = this.selectedStallDetails
-      if (!stall || !stall.stallNumber) return
+      if (!stall) return
       
-      console.log(`🔍 Scanning htdocs for stall ${stall.stallNumber} images`)
+      console.log(`🔍 Fetching images for stall ${stallId} from BLOB API`)
       
-      const imageBaseUrl = 'http://localhost'  // Apache runs on port 80
-      const branchId = stall.branchId || 1
-      const stallNumber = stall.stallNumber
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      // Remove trailing /api if present to avoid double /api in URLs
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
       
-      // Test images by actually loading them (avoids CORS issues with HEAD requests)
-      const testImage = (url) => {
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => resolve(true)
-          img.onerror = () => resolve(false)
-          img.src = url
-        })
-      }
-      
-      const images = []
-      const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif']
-      
-      console.log(`📂 Scanning: ${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/`)
-      
-      // Check for images 1-10
-      for (let i = 1; i <= 10; i++) {
-        let foundForThisNumber = false
-        for (const ext of extensions) {
-          const imageUrl = `${imageBaseUrl}/digistall_uploads/stalls/${branchId}/${stallNumber}/${i}.${ext}`
-          
-          const exists = await testImage(imageUrl)
-          if (exists) {
-            images.push({
-              id: `img_${i}`,
+      try {
+        // Use PUBLIC BLOB API endpoint (no auth required)
+        const response = await fetch(`${baseUrl}/api/stalls/public/${stallId}/images/blob`)
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data?.images && result.data.images.length > 0) {
+            this.stallImages = result.data.images.map(img => ({
+              id: img.id,
               stall_id: stallId,
-              image_url: imageUrl,
-              display_order: i,
-              is_primary: i === 1 ? 1 : 0
-            })
-            console.log(`✅ Found: ${i}.${ext}`)
-            foundForThisNumber = true
-            break
+              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.id}`,
+              display_order: img.display_order,
+              is_primary: img.is_primary ? 1 : 0
+            }))
+            console.log(`📷 Modal: Loaded ${this.stallImages.length} BLOB images for stall ${stallId}`)
+            return
           }
         }
-        // If no image found for this number and we already have some images, 
-        // stop searching (consecutive images expected)
-        if (!foundForThisNumber && images.length > 0) {
-          break
-        }
+      } catch (error) {
+        console.log(`📷 Modal: BLOB API error for stall ${stallId}:`, error.message)
       }
       
-      if (images.length > 0) {
-        this.stallImages = images
-        console.log(`📁 Loaded ${images.length} images for stall ${stallNumber}`)
+      // Fallback: use stall's main image or placeholder
+      console.log(`❌ No BLOB images found, using fallback`)
+      if (stall.imageUrl && stall.imageUrl !== 'stall-image.jpg') {
+        this.stallImages = [{
+          id: 'fallback_1',
+          stall_id: stallId,
+          image_url: stall.imageUrl,
+          display_order: 1,
+          is_primary: 1
+        }]
       } else {
-        console.log(`❌ No images found, using fallback`)
-        // Use main stall image as fallback
-        if (stall.imageUrl && stall.imageUrl !== 'stall-image.jpg') {
-          this.stallImages = [{
-            id: 'fallback_1',
-            stall_id: stallId,
-            image_url: stall.imageUrl,
-            display_order: 1,
-            is_primary: 1
-          }]
-        }
+        this.stallImages = [{
+          id: 'placeholder',
+          stall_id: stallId,
+          image_url: stallBackgroundImg,
+          display_order: 1,
+          is_primary: 1
+        }]
       }
+    },
+
+    // Legacy method - redirects to BLOB API
+    async fetchImagesFromFileSystem(stallId) {
+      return this.fetchImagesFromBlobApi(stallId)
     },
 
     prevImage() {
@@ -761,6 +736,7 @@ export default {
       this.selectedStall = this.selectedStallDetails
       this.showStallDetails = false
       this.showApplyForm = true
+      this.$emit('application-form-opened')
     },
 
     openApplyForm(stall) {
@@ -772,11 +748,13 @@ export default {
       })
       this.selectedStall = stall
       this.showApplyForm = true
+      this.$emit('application-form-opened')
     },
 
     closeApplyForm() {
       this.showApplyForm = false
       this.selectedStall = null
+      this.$emit('application-form-closed')
     },
 
     nextPage() {

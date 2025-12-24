@@ -147,7 +147,49 @@ export default {
           this.form.stallholderId = details.id;
           this.form.stallholderName = details.name;
           this.form.stallNo = details.stallNo || details.stall_no;
-          this.form.amount = details.monthlyRental || details.rental_price || details.monthly_rental || '';
+          
+          // Calculate early payment discount (25% off if paid 5+ days before due date)
+          const monthlyRent = parseFloat(details.monthlyRental || details.rental_price || details.monthly_rental || 0);
+          const contractStartDate = details.contract_start_date ? new Date(details.contract_start_date) : null;
+          const lastPaymentDate = details.last_payment_date ? new Date(details.last_payment_date) : null;
+          const paymentDate = new Date();
+          
+          let dueDate;
+          let isNewStallholder = false;
+          
+          if (lastPaymentDate) {
+            // Has previous payment - due date is 30 days after last payment
+            dueDate = new Date(lastPaymentDate);
+            dueDate.setDate(dueDate.getDate() + 30);
+          } else if (contractStartDate) {
+            // First payment - due date is 30 days after contract start
+            dueDate = new Date(contractStartDate);
+            dueDate.setDate(dueDate.getDate() + 30);
+          } else {
+            // New stallholder without dates - ALWAYS give 25% discount for first payment
+            // Assume due date is 30 days from now (they're paying 30 days early)
+            isNewStallholder = true;
+            dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+          }
+          
+          const daysEarly = Math.floor((dueDate - paymentDate) / (1000 * 60 * 60 * 24));
+          
+          if (isNewStallholder || daysEarly >= 5) {
+            // Apply 25% early payment discount
+            const discountedAmount = monthlyRent * 0.75;
+            this.form.amount = discountedAmount.toFixed(2);
+            if (isNewStallholder) {
+              console.log(`💰 New stallholder discount applied! Original: ₱${monthlyRent.toFixed(2)}, Discounted: ₱${discountedAmount.toFixed(2)} (25% off first payment)`);
+            } else {
+              console.log(`💰 Early payment discount applied! Days early: ${daysEarly}, Original: ₱${monthlyRent.toFixed(2)}, Discounted: ₱${discountedAmount.toFixed(2)}`);
+            }
+          } else {
+            this.form.amount = monthlyRent.toFixed(2);
+            if (daysEarly > 0) {
+              console.log(`ℹ️ Payment is ${daysEarly} days early (need 5+ for discount)`);
+            }
+          }
           
           // Set payment date to today
           this.form.paymentDate = new Date().toISOString().split('T')[0];
@@ -170,9 +212,6 @@ export default {
             paymentForMonth: this.form.paymentForMonth,
             collectedBy: this.form.collectedBy
           });
-          
-          // Generate receipt number after all other fields are set
-          await this.generateReceiptNumber();
         } else {
           console.error('❌ Failed to get stallholder details:', response.status);
           // Still auto-fill basic info from dropdown data
@@ -181,12 +220,11 @@ export default {
           this.form.stallNo = stallholder.stallNo;
           this.form.amount = stallholder.monthlyRental || '';
           
-          // Set dates and generate receipt
+          // Set dates
           this.form.paymentDate = new Date().toISOString().split('T')[0];
           this.form.paymentTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
           this.form.paymentForMonth = new Date().toISOString().substring(0, 7);
           this.setCurrentUser();
-          await this.generateReceiptNumber();
         }
       } catch (error) {
         console.error('❌ Error getting stallholder details:', error);
@@ -197,12 +235,11 @@ export default {
         this.form.stallNo = stallholder.stallNo;
         this.form.amount = stallholder.monthlyRental || '';
         
-        // Set dates and generate receipt
+        // Set dates
         this.form.paymentDate = new Date().toISOString().split('T')[0];
         this.form.paymentTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
         this.form.paymentForMonth = new Date().toISOString().substring(0, 7);
         this.setCurrentUser();
-        await this.generateReceiptNumber();
       }
     },
 
@@ -424,9 +461,21 @@ export default {
         if (response.ok && result.success) {
           console.log('✅ Payment added successfully:', result);
           
-          // Show late fee information if applicable
-          if (result.lateFee && result.lateFee > 0) {
-            console.log(`⚠️ Late fee applied: ₱${result.lateFee} (${result.daysOverdue} days overdue)`);
+          // Show discount/late fee information
+          let successMsg = '✅ Payment added successfully!';
+          
+          // Parse values as floats (backend returns strings)
+          const monthlyRent = parseFloat(result.monthlyRent) || 0;
+          const amountPaid = parseFloat(result.amountPaid) || 0;
+          const earlyDiscount = parseFloat(result.earlyDiscount) || 0;
+          const lateFee = parseFloat(result.lateFee) || 0;
+          
+          if (earlyDiscount > 0) {
+            console.log(`💰 Early payment discount: ₱${earlyDiscount} (${result.daysEarly} days early)`);
+            successMsg = `✅ Payment saved! 25% discount applied: ₱${monthlyRent.toFixed(2)} → ₱${amountPaid.toFixed(2)} (Saved ₱${earlyDiscount.toFixed(2)})`;
+          } else if (lateFee > 0) {
+            console.log(`⚠️ Late fee applied: ₱${lateFee} (${result.daysOverdue} days overdue)`);
+            successMsg = `✅ Payment added (Including ₱${lateFee.toFixed(2)} late fee)`;
           }
           
           // Refresh payments list
@@ -439,9 +488,6 @@ export default {
           this.$emit('payment-added', result);
           
           // Show success message with toast
-          const successMsg = result.lateFee > 0 
-            ? `✅ Payment added successfully! (Including ₱${result.lateFee} late fee)`
-            : '✅ Payment added successfully!';
           this.showToast(successMsg, 'success');
         } else {
           console.error('❌ Failed to add payment:', result.message);

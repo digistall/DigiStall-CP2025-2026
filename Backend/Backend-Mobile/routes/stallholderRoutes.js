@@ -7,6 +7,18 @@ import {
   uploadStallholderDocument
 } from '../controllers/user/stallholderDocumentController.js';
 
+// Import BLOB document controller for cloud storage
+import {
+  uploadStallholderDocumentBlob,
+  uploadStallholderDocumentSubmissionBlob,
+  getStallholderDocumentBlob,
+  getStallholderDocumentBlobById,
+  getStallholderDocumentSubmissionBlob,
+  getStallholderDocuments,
+  deleteStallholderDocumentBlob,
+  updateStallholderDocumentVerificationStatus
+} from '../controllers/documents/stallholderDocumentBlobController.js';
+
 const router = express.Router();
 
 // Get directory path for uploads
@@ -65,5 +77,60 @@ router.get('/documents/:applicantId', getStallholderStallsWithDocuments);
  * @access Public (should be protected in production)
  */
 router.post('/documents/upload', upload.single('file'), uploadStallholderDocument);
+
+// =============================================
+// STALLHOLDER DOCUMENT BLOB ROUTES (Cloud Storage)
+// =============================================
+
+/**
+ * @route POST /api/mobile/stallholder/documents/blob/upload
+ * @desc Upload document as BLOB (base64) to cloud database
+ * @body stallholder_id, document_type_id, document_data (base64), mime_type, file_name
+ */
+router.post('/documents/blob/upload', uploadStallholderDocumentBlob);
+
+/**
+ * @route POST /api/mobile/stallholder/documents/submission/blob/upload
+ * @desc Upload document submission as BLOB for document_submissions table
+ * @body stallholder_id, owner_id, requirement_id, document_data (base64), mime_type, file_name
+ */
+router.post('/documents/submission/blob/upload', uploadStallholderDocumentSubmissionBlob);
+
+/**
+ * @route GET /api/mobile/stallholder/documents/blob/:stallholder_id/:document_type_id
+ * @desc Get document BLOB by stallholder and document type (returns binary)
+ */
+router.get('/documents/blob/:stallholder_id/:document_type_id', getStallholderDocumentBlob);
+
+/**
+ * @route GET /api/mobile/stallholder/documents/blob/id/:document_id
+ * @desc Get document BLOB by document ID (returns binary)
+ */
+router.get('/documents/blob/id/:document_id', getStallholderDocumentBlobById);
+
+/**
+ * @route GET /api/mobile/stallholder/documents/submission/blob/:submission_id
+ * @desc Get document submission BLOB (returns binary)
+ */
+router.get('/documents/submission/blob/:submission_id', getStallholderDocumentSubmissionBlob);
+
+/**
+ * @route GET /api/mobile/stallholder/:stallholder_id/documents/blob
+ * @desc Get all documents for stallholder (returns metadata with optional base64)
+ * @query include_data=true to include base64 data
+ */
+router.get('/:stallholder_id/documents/blob', getStallholderDocuments);
+
+/**
+ * @route DELETE /api/mobile/stallholder/documents/blob/:document_id
+ * @desc Delete document BLOB
+ */
+router.delete('/documents/blob/:document_id', deleteStallholderDocumentBlob);
+
+/**
+ * @route PUT /api/mobile/stallholder/documents/blob/:document_id/verify
+ * @desc Update document verification status
+ */
+router.put('/documents/blob/:document_id/verify', updateStallholderDocumentVerificationStatus);
 
 export default router;

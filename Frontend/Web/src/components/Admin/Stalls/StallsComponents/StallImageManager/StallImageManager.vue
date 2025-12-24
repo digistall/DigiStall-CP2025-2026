@@ -115,7 +115,7 @@
             <v-card elevation="3" class="image-card">
               <!-- Image -->
               <v-img
-                :src="image.image_url"
+                :src="getImageUrl(image)"
                 height="200"
                 cover
                 class="rounded-t"
@@ -247,6 +247,7 @@ export default {
       isUpdating: false,
       showDeleteDialog: false,
       imageToDelete: null,
+      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001',
       fileRules: [
         files => !files || files.length === 0 || files.length <= 10 || 'Maximum 10 files allowed',
         files => !files || files.length === 0 || files.every(f => f.size <= 2097152) || 'Each file must be less than 2MB',
@@ -270,14 +271,41 @@ export default {
   },
   
   methods: {
+    // Get image URL for display (BLOB API)
+    getImageUrl(image) {
+      // Use BLOB API endpoint to serve images
+      if (image.id) {
+        return `${this.apiBaseUrl}/api/stalls/images/blob/id/${image.id}`
+      }
+      // Fallback to image_url if it's a full URL
+      return image.image_url
+    },
+    
+    // Convert file to base64
+    async fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+    },
+    
     async loadImages() {
       this.isLoading = true
       
       try {
-        const response = await apiClient.get(`/stalls/${this.stallId}/images`)
+        // Use BLOB API endpoint to get images metadata
+        const response = await apiClient.get(`/stalls/${this.stallId}/images/blob`)
         
         if (response.data.success) {
-          this.images = response.data.data.images
+          // Map images to include proper URLs for BLOB serving
+          this.images = response.data.data.images.map(img => ({
+            ...img,
+            // Generate display URL using BLOB endpoint
+            image_url: `${this.apiBaseUrl}/api/stalls/images/blob/id/${img.id}`
+          }))
+          console.log(`📸 Loaded ${this.images.length} images from BLOB storage`)
         }
       } catch (error) {
         console.error('Error loading images:', error)
@@ -302,26 +330,24 @@ export default {
       this.isUploading = true
       
       try {
-        const formData = new FormData()
+        // Convert files to base64 and upload via BLOB API
+        const images = []
         
-        // Append files
-        this.selectedFiles.forEach(file => {
-          formData.append('images', file)
-        })
+        for (const file of this.selectedFiles) {
+          const base64Data = await this.fileToBase64(file)
+          images.push({
+            image_data: base64Data,
+            mime_type: file.type,
+            file_name: file.name
+          })
+        }
         
-        // Append metadata
-        formData.append('stall_id', this.stallId)
-        formData.append('branch_id', this.branchId)
-        formData.append('stall_number', this.stallNumber)
-        formData.append('is_primary', this.images.length === 0 ? 'true' : 'false')
-        
+        // Upload via BLOB API
         const response = await apiClient.post(
-          `/stalls/${this.stallId}/images/upload`,
-          formData,
+          `/stalls/images/blob/upload-multiple`,
           {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
+            stall_id: this.stallId,
+            images: images
           }
         )
         
@@ -349,8 +375,9 @@ export default {
       this.isDeleting = true
       
       try {
+        // Use BLOB API delete endpoint
         const response = await apiClient.delete(
-          `/stalls/images/${this.imageToDelete.id}`
+          `/stalls/images/blob/${this.imageToDelete.id}`
         )
         
         if (response.data.success) {
@@ -371,8 +398,9 @@ export default {
       this.isUpdating = true
       
       try {
+        // Use BLOB API set primary endpoint
         const response = await apiClient.put(
-          `/stalls/images/${imageId}/set-primary`,
+          `/stalls/images/blob/${imageId}/primary`,
           {}
         )
         

@@ -8,7 +8,7 @@ export const getBranches = async (req, res) => {
 
     // Get distinct branch names instead of areas
     const [branches] = await connection.execute(
-      'SELECT DISTINCT branch_name as branch FROM branch WHERE status = "Active" ORDER BY branch_name'
+      "SELECT DISTINCT branch_name as branch FROM branch WHERE status = 'Active' ORDER BY branch_name"
     );
 
     // Format the data to match frontend expectations

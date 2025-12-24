@@ -1,15 +1,15 @@
+// Load environment variables FIRST (before any other imports)
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authMiddleware from './middleware/auth.js';
 import { activityLogger } from './Backend-Web/middleware/activityLogger.js';
 import './Backend-Web/services/cleanupScheduler.js'; // Initialize cleanup scheduler
-
-// Load environment variables
-dotenv.config();
 
 // Import Web routes (from Backend-Web)
 import webAuthRoutes from './Backend-Web/routes/authRoutes.js';

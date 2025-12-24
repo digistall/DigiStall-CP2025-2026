@@ -58,6 +58,20 @@ import {
   getStallImageCount
 } from '../controllers/stalls/stallImageController.js'
 
+// Import BLOB image controller for cloud storage
+import {
+  uploadStallImageBlob,
+  uploadStallImagesBlob,
+  getStallImageBlob,
+  getStallImageBlobById,
+  getStallImagesBlob,
+  deleteStallImageBlob,
+  deleteLegacyStallImage,
+  setStallPrimaryImageBlob,
+  updateStallImageBlob,
+  getStallPrimaryImageBlob
+} from '../controllers/stalls/stallImageBlobController.js'
+
 // Import new addStall with images
 import { addStallWithImages } from '../controllers/stalls/stallComponents/addStallWithImages.js'
 
@@ -65,8 +79,17 @@ import { addStallWithImages } from '../controllers/stalls/stallComponents/addSta
 import upload, { checkImageLimit } from '../config/multerStallImages.js'
 import multer from 'multer'
 
-// Temporary upload for addStall
-const tempUpload = multer({ dest: 'uploads/temp/' })
+// Temporary upload for addStall - Configure with large limits for base64 images
+// Base64 encoding increases size by ~33%, so 100MB allows ~75MB of actual images
+const tempUpload = multer({ 
+  dest: 'uploads/temp/',
+  limits: {
+    fieldSize: 100 * 1024 * 1024, // 100MB for base64 image fields (handles ~75MB of images)
+    fileSize: 100 * 1024 * 1024,  // 100MB for file uploads
+    fields: 100,                   // Allow many fields
+    files: 10                      // Max 10 files
+  }
+})
 
 const router = express.Router()
 
@@ -85,6 +108,14 @@ router.get('/area/:area', getStallsByArea)              // GET /api/stalls/area/
 router.get('/location/:location', getStallsByLocation)  // GET /api/stalls/location/:location - Get stalls by location (public)
 router.get('/filter', getFilteredStalls)                // GET /api/stalls/filter - Get filtered stalls (public)
 router.get('/public/:id', getStallById)                 // GET /api/stalls/public/:id - Get stall details (public)
+
+// ===== PUBLIC BLOB IMAGE ROUTES (No Auth - for <img> tags) =====
+// These routes serve images directly without authentication so they can be loaded in img tags
+// NOTE: More specific routes must come BEFORE generic routes to avoid path parameter collisions
+router.get('/images/blob/id/:image_id', getStallImageBlobById)           // GET /api/stalls/images/blob/id/:image_id - Serve image by ID (MUST be before generic route)
+router.get('/images/blob/primary/:stall_id', getStallPrimaryImageBlob)   // GET /api/stalls/images/blob/primary/:stall_id - Get primary image
+router.get('/images/blob/:stall_id/:display_order', getStallImageBlob)   // GET /api/stalls/images/blob/:stall_id/:display_order - Serve image binary
+router.get('/public/:stall_id/images/blob', getStallImagesBlob)          // GET /api/stalls/public/:stall_id/images/blob - Get images metadata (public)
 
 // ===== PROTECTED ROUTES (Authentication Required) =====
 router.use(authMiddleware.authenticateToken)
@@ -142,5 +173,16 @@ router.get('/:stall_id/images/count', getStallImageCount)           // GET /api/
 router.delete('/images/:image_id', viewOnlyForOwners, deleteStallImage)                // DELETE /api/stalls/images/:image_id - Delete image by database ID
 router.delete('/:stall_id/images/:filename', viewOnlyForOwners, deleteStallImageByFilename)  // DELETE /api/stalls/:stall_id/images/:filename - Delete image by filename
 router.put('/images/:image_id/set-primary', viewOnlyForOwners, setStallPrimaryImage)   // PUT /api/stalls/images/:image_id/set-primary - Set primary image
+
+// ===== BLOB IMAGE ROUTES (Cloud Storage) =====
+// These routes store images directly in database as BLOB for cloud deployment
+router.post('/images/blob/upload', viewOnlyForOwners, uploadStallImageBlob)            // POST /api/stalls/images/blob/upload - Upload single image as base64
+router.post('/images/blob/upload-multiple', viewOnlyForOwners, uploadStallImagesBlob)  // POST /api/stalls/images/blob/upload-multiple - Upload multiple images as base64
+// GET routes moved to PUBLIC section above (for img tag access without auth)
+router.get('/:stall_id/images/blob', getStallImagesBlob)                               // GET /api/stalls/:stall_id/images/blob - Get all images metadata
+router.put('/images/blob/:image_id', viewOnlyForOwners, updateStallImageBlob)          // PUT /api/stalls/images/blob/:image_id - Update image
+router.delete('/images/blob/:image_id', viewOnlyForOwners, deleteStallImageBlob)       // DELETE /api/stalls/images/blob/:image_id - Delete image
+router.delete('/:stall_id/legacy-image', viewOnlyForOwners, deleteLegacyStallImage)    // DELETE /api/stalls/:stall_id/legacy-image - Delete legacy image from stall table
+router.put('/images/blob/:image_id/primary', viewOnlyForOwners, setStallPrimaryImageBlob) // PUT /api/stalls/images/blob/:image_id/primary - Set primary
 
 export default router

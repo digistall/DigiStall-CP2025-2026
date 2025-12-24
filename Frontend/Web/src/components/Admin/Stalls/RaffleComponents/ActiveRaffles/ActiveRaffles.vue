@@ -1,5 +1,12 @@
 <template>
   <div class="active-raffles">
+    <!-- Standardized Loading Overlay - contained within raffles section -->
+    <LoadingOverlay 
+      :loading="loading && raffles.length === 0" 
+      text="Loading active raffles..."
+      :full-page="false"
+    />
+
     <!-- Search and Filters Section -->
     <SearchAndFilter 
       :raffles-data="activeRaffles" 
@@ -10,19 +17,9 @@
     <v-card>
       <v-card-text>
 
-        <!-- Loading State -->
-        <div v-if="loading && raffles.length === 0" class="text-center py-8">
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="60"
-          ></v-progress-circular>
-          <p class="mt-4">Loading active raffles...</p>
-        </div>
-
         <!-- No Data State -->
         <div
-          v-else-if="!loading && filteredRaffles.length === 0"
+          v-if="!loading && filteredRaffles.length === 0"
           class="text-center py-8"
         >
           <v-icon size="64" color="grey lighten-1">mdi-ticket-outline</v-icon>

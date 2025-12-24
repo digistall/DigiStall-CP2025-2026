@@ -420,6 +420,119 @@ class EmailService {
     }
 
     /**
+     * Send welcome email to stallholder with auto-generated credentials
+     * Used when importing stallholders via Excel
+     */
+    async sendStallholderWelcomeEmail(stallholderData) {
+        try {
+            const { 
+                email, 
+                stallholderName, 
+                username, 
+                password, 
+                stallNo, 
+                branchName,
+                businessName
+            } = stallholderData;
+
+            const mailOptions = {
+                from: `"${this.fromName}" <${this.fromEmail}>`,
+                to: email,
+                subject: 'Welcome to Naga Stall Management - Your Account Has Been Created',
+                text: `Dear ${stallholderName},
+
+Welcome to Naga Stall Management System!
+
+Your stallholder account has been created automatically. You can now access the mobile app using the following credentials:
+
+=== YOUR LOGIN CREDENTIALS ===
+Username: ${username}
+Password: ${password}
+
+=== STALL DETAILS ===
+Stall Number: ${stallNo}
+${businessName ? `Business Name: ${businessName}` : ''}
+${branchName ? `Branch: ${branchName}` : ''}
+
+IMPORTANT: 
+- Please change your password after your first login for security purposes.
+- Download the Naga Stall Management mobile app to access your account.
+- Keep your credentials safe and do not share them with anyone.
+
+If you have any questions, please contact your branch manager.
+
+Best regards,
+Naga Stall Management Team`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #002181 0%, #003399 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                            <h1 style="margin: 0; font-size: 24px;">🏪 Naga Stall Management</h1>
+                            <p style="margin: 10px 0 0 0; opacity: 0.9;">Welcome to your new account!</p>
+                        </div>
+                        
+                        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                            <p style="font-size: 16px; color: #333;">Dear <strong>${stallholderName}</strong>,</p>
+                            
+                            <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left: 4px solid #4CAF50; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                <p style="margin: 0 0 10px 0; font-weight: bold; color: #2e7d32; font-size: 16px;">🎉 Your account has been created!</p>
+                                <p style="margin: 0; color: #555;">You can now access the mobile app using the credentials below.</p>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; border: 2px dashed #002181; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0 0 15px 0; font-weight: bold; color: #002181; font-size: 18px;">🔐 Your Login Credentials</p>
+                                <div style="background: white; padding: 15px; border-radius: 6px; display: inline-block;">
+                                    <p style="margin: 0 0 10px 0;"><strong>Username:</strong> <span style="color: #002181; font-family: monospace; font-size: 16px;">${username}</span></p>
+                                    <p style="margin: 0;"><strong>Password:</strong> <span style="color: #002181; font-family: monospace; font-size: 16px;">${password}</span></p>
+                                </div>
+                            </div>
+                            
+                            <div style="background: #f1f3f5; padding: 15px; margin: 20px 0; border-radius: 8px;">
+                                <p style="margin: 0 0 10px 0; font-weight: bold; color: #333;">📍 Stall Details</p>
+                                <ul style="margin: 0; padding-left: 20px; color: #555;">
+                                    <li><strong>Stall Number:</strong> ${stallNo}</li>
+                                    ${businessName ? `<li><strong>Business:</strong> ${businessName}</li>` : ''}
+                                    ${branchName ? `<li><strong>Branch:</strong> ${branchName}</li>` : ''}
+                                </ul>
+                            </div>
+                            
+                            <div style="background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; margin: 20px 0; border-radius: 8px;">
+                                <p style="margin: 0; color: #e65100; font-weight: bold;">⚠️ Important Security Notice</p>
+                                <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #bf360c;">
+                                    <li>Please change your password after your first login</li>
+                                    <li>Keep your credentials safe and confidential</li>
+                                    <li>Download the mobile app to access your account</li>
+                                </ul>
+                            </div>
+                            
+                            <p style="color: #666; font-size: 14px;">If you have any questions, please contact your branch manager.</p>
+                            
+                            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                            
+                            <p style="color: #888; font-size: 12px; text-align: center;">
+                                Best regards,<br>
+                                <strong>Naga Stall Management Team</strong>
+                            </p>
+                        </div>
+                    </div>
+                `
+            };
+
+            const result = await this.transporter.sendMail(mailOptions);
+
+            console.log(`📧 Stallholder welcome email sent to ${email}`);
+            return {
+                success: true,
+                messageId: result.messageId,
+                recipient: email
+            };
+
+        } catch (error) {
+            console.error('Error sending stallholder welcome email:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Test email configuration
      */
     async testEmailConfiguration() {

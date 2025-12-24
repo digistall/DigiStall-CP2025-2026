@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 17, 2025 at 04:02 AM
+-- Generation Time: Dec 23, 2025 at 04:05 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,78 +44,133 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `addInspector` (IN `p_first_name` VA
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `addOnsitePayment` (IN `p_stallholder_id` INT, IN `p_amount` DECIMAL(10,2), IN `p_payment_date` DATE, IN `p_payment_time` TIME, IN `p_payment_for_month` VARCHAR(7), IN `p_payment_type` VARCHAR(50), IN `p_reference_number` VARCHAR(100), IN `p_collected_by` VARCHAR(100), IN `p_notes` TEXT, IN `p_branch_id` INT, IN `p_created_by` INT)   BEGIN
-                DECLARE payment_id INT;
-                DECLARE v_days_overdue INT DEFAULT 0;
-                DECLARE v_late_fee DECIMAL(10,2) DEFAULT 0.00;
-                DECLARE v_last_payment_date DATE;
-                DECLARE v_monthly_rent DECIMAL(10,2);
-                DECLARE v_total_amount DECIMAL(10,2);
-                DECLARE v_notes TEXT;
-                
-                DECLARE EXIT HANDLER FOR SQLEXCEPTION
-                BEGIN
-                    ROLLBACK;
-                    SELECT 0 as success, 'Payment processing failed' as message;
-                END;
-                
-                START TRANSACTION;
-                
-                SELECT last_payment_date, monthly_rent
-                INTO v_last_payment_date, v_monthly_rent
-                FROM stallholder
-                WHERE stallholder_id = p_stallholder_id;
-                
-                IF v_last_payment_date IS NOT NULL THEN
-                    SET v_days_overdue = DATEDIFF(p_payment_date, v_last_payment_date) - 30;
-                    IF v_days_overdue < 0 THEN
-                        SET v_days_overdue = 0;
-                    END IF;
-                END IF;
-                
-                IF v_days_overdue > 0 THEN
-                    SET v_late_fee = CEILING(v_days_overdue / 30) * 100.00;
-                END IF;
-                
-                SET v_total_amount = p_amount + v_late_fee;
-                
-                SET v_notes = p_notes;
-                IF v_late_fee > 0 THEN
-                    SET v_notes = CONCAT(
-                        COALESCE(p_notes, ''),
-                        IF(p_notes IS NOT NULL AND p_notes != '', ' | ', ''),
-                        'Late Fee: â‚±', FORMAT(v_late_fee, 2),
-                        ' (', v_days_overdue, ' days overdue)'
-                    );
-                END IF;
-                
-                INSERT INTO payments (
-                    stallholder_id, amount, payment_date, payment_time, payment_for_month,
-                    payment_type, payment_method, reference_number, collected_by, notes,
-                    payment_status, branch_id, created_by, created_at, updated_at
-                ) VALUES (
-                    p_stallholder_id, v_total_amount, p_payment_date, p_payment_time, p_payment_for_month,
-                    p_payment_type, 'onsite', p_reference_number, p_collected_by, v_notes,
-                    'completed', p_branch_id, p_created_by, NOW(), NOW()
-                );
-                
-                SET payment_id = LAST_INSERT_ID();
-                
-                UPDATE stallholder
-                SET last_payment_date = p_payment_date,
-                    payment_status = 'paid',
-                    updated_at = NOW()
-                WHERE stallholder_id = p_stallholder_id;
-                
-                COMMIT;
-                
-                SELECT 
-                    1 as success,
-                    payment_id,
-                    v_total_amount as amount_paid,
-                    v_late_fee as late_fee,
-                    v_days_overdue as days_overdue,
-                    'Payment recorded successfully. Stallholder status updated to PAID.' as message;
-            END$$
+    DECLARE payment_id INT;
+    DECLARE v_days_overdue INT DEFAULT 0;
+    DECLARE v_days_early INT DEFAULT 0;
+    DECLARE v_late_fee DECIMAL(10,2) DEFAULT 0.00;
+    DECLARE v_early_discount DECIMAL(10,2) DEFAULT 0.00;
+    DECLARE v_last_payment_date DATE;
+    DECLARE v_monthly_rent DECIMAL(10,2);
+    DECLARE v_contract_start_date DATE;
+    DECLARE v_total_amount DECIMAL(10,2);
+    DECLARE v_notes TEXT;
+    DECLARE v_due_date DATE;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SELECT 0 as success, 'Payment processing failed' as message;
+    END;
+    
+    START TRANSACTION;
+    
+    -- Get stallholder information
+    SELECT last_payment_date, monthly_rent, contract_start_date
+    INTO v_last_payment_date, v_monthly_rent, v_contract_start_date
+    FROM stallholder
+    WHERE stallholder_id = p_stallholder_id;
+    
+    -- Calculate due date (30 days after last payment or contract start)
+    IF v_last_payment_date IS NOT NULL THEN
+        SET v_due_date = DATE_ADD(v_last_payment_date, INTERVAL 30 DAY);
+    ELSEIF v_contract_start_date IS NOT NULL THEN
+        -- First payment: due date is 30 days after contract start
+        SET v_due_date = DATE_ADD(v_contract_start_date, INTERVAL 30 DAY);
+    ELSE
+        -- No contract start date: assume due date is today (no early discount for new stallholders without dates)
+        SET v_due_date = CURDATE();
+    END IF;
+    
+    -- Calculate if payment is early or late
+    SET v_days_early = DATEDIFF(v_due_date, p_payment_date);
+    
+    IF v_days_early > 0 THEN
+        -- EARLY PAYMENT: Apply 25% discount
+        -- Discount is only applied if paid 5+ days before due date
+        IF v_days_early >= 5 THEN
+            SET v_early_discount = v_monthly_rent * 0.25;
+            SET v_total_amount = v_monthly_rent - v_early_discount;
+        ELSE
+            -- Less than 5 days early, no discount
+            SET v_total_amount = v_monthly_rent;
+        END IF;
+        SET v_days_overdue = 0;
+        SET v_late_fee = 0.00;
+    ELSE
+        -- LATE OR ON-TIME PAYMENT
+        SET v_days_overdue = ABS(v_days_early);
+        
+        -- Calculate late fee (₱100 per month overdue)
+        IF v_days_overdue > 0 THEN
+            SET v_late_fee = CEILING(v_days_overdue / 30) * 100.00;
+        END IF;
+        
+        SET v_total_amount = v_monthly_rent + v_late_fee;
+        SET v_early_discount = 0.00;
+    END IF;
+    
+    -- Build notes with discount/late fee information
+    SET v_notes = p_notes;
+    
+    IF v_early_discount > 0 THEN
+        SET v_notes = CONCAT(
+            COALESCE(p_notes, ''),
+            IF(p_notes IS NOT NULL AND p_notes != '', ' | ', ''),
+            '✅ Early Payment Discount (25%): -₱', FORMAT(v_early_discount, 2),
+            ' (Paid ', v_days_early, ' days before due date: ', DATE_FORMAT(v_due_date, '%Y-%m-%d'), ')',
+            ' | Original: ₱', FORMAT(v_monthly_rent, 2),
+            ' → Discounted: ₱', FORMAT(v_total_amount, 2)
+        );
+    END IF;
+    
+    IF v_late_fee > 0 THEN
+        SET v_notes = CONCAT(
+            COALESCE(p_notes, ''),
+            IF(p_notes IS NOT NULL AND p_notes != '', ' | ', ''),
+            '⚠️ Late Fee: +₱', FORMAT(v_late_fee, 2),
+            ' (', v_days_overdue, ' days overdue from due date: ', DATE_FORMAT(v_due_date, '%Y-%m-%d'), ')'
+        );
+    END IF;
+    
+    -- Insert payment record
+    INSERT INTO payments (
+        stallholder_id, amount, payment_date, payment_time, payment_for_month,
+        payment_type, payment_method, reference_number, collected_by, notes,
+        payment_status, branch_id, created_by, created_at, updated_at
+    ) VALUES (
+        p_stallholder_id, v_total_amount, p_payment_date, p_payment_time, p_payment_for_month,
+        p_payment_type, 'onsite', p_reference_number, p_collected_by, v_notes,
+        'completed', p_branch_id, p_created_by, NOW(), NOW()
+    );
+    
+    SET payment_id = LAST_INSERT_ID();
+    
+    -- Update stallholder payment status
+    UPDATE stallholder
+    SET last_payment_date = p_payment_date,
+        payment_status = 'paid',
+        updated_at = NOW()
+    WHERE stallholder_id = p_stallholder_id;
+    
+    COMMIT;
+    
+    -- Return success with discount/late fee information
+    SELECT 
+        1 as success,
+        payment_id,
+        v_total_amount as amount_paid,
+        v_monthly_rent as monthly_rent,
+        v_early_discount as early_discount,
+        v_late_fee as late_fee,
+        v_days_early as days_early,
+        v_days_overdue as days_overdue,
+        v_due_date as due_date,
+        CASE 
+            WHEN v_early_discount > 0 THEN CONCAT('✅ Payment recorded with 25% early payment discount! Saved ₱', FORMAT(v_early_discount, 2))
+            WHEN v_late_fee > 0 THEN CONCAT('⚠️ Payment recorded with late fee of ₱', FORMAT(v_late_fee, 2))
+            ELSE '✓ Payment recorded successfully'
+        END as message;
+END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `assignManagerToBusinessOwner` (IN `p_business_owner_id` INT, IN `p_business_manager_id` INT, IN `p_access_level` VARCHAR(20), IN `p_assigned_by_system_admin` INT, IN `p_notes` TEXT)   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -1095,6 +1150,83 @@ END$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteComplianceRecord` (IN `p_report_id` INT)   BEGIN
   DELETE FROM `violation_report` WHERE report_id = p_report_id;
   SELECT ROW_COUNT() AS affected_rows;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteFloor` (IN `p_floor_id` INT)   BEGIN
+    DECLARE v_section_count INT;
+    DECLARE v_stall_count INT;
+    DECLARE v_floor_exists INT DEFAULT 0;
+    
+    
+    SELECT COUNT(*) INTO v_floor_exists
+    FROM floor
+    WHERE floor_id = p_floor_id;
+    
+    IF v_floor_exists = 0 THEN
+        SELECT 0 as success, 'Floor not found' as message;
+    ELSE
+        
+        SELECT COUNT(*) INTO v_section_count
+        FROM section
+        WHERE floor_id = p_floor_id;
+        
+        IF v_section_count > 0 THEN
+            SELECT 0 as success, 
+                   CONCAT('Cannot delete floor. It has ', v_section_count, ' section(s). Please delete sections first.') as message;
+        ELSE
+            
+            SELECT COUNT(*) INTO v_stall_count
+            FROM stall
+            WHERE floor_id = p_floor_id;
+            
+            IF v_stall_count > 0 THEN
+                SELECT 0 as success, 
+                       CONCAT('Cannot delete floor. It has ', v_stall_count, ' stall(s). Please delete stalls first.') as message;
+            ELSE
+                
+                DELETE FROM floor WHERE floor_id = p_floor_id;
+                
+                IF ROW_COUNT() > 0 THEN
+                    SELECT 1 as success, 'Floor deleted successfully' as message;
+                ELSE
+                    SELECT 0 as success, 'Failed to delete floor' as message;
+                END IF;
+            END IF;
+        END IF;
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteSection` (IN `p_section_id` INT)   BEGIN
+    DECLARE v_stall_count INT;
+    DECLARE v_section_exists INT DEFAULT 0;
+    
+    
+    SELECT COUNT(*) INTO v_section_exists
+    FROM section
+    WHERE section_id = p_section_id;
+    
+    IF v_section_exists = 0 THEN
+        SELECT 0 as success, 'Section not found' as message;
+    ELSE
+        
+        SELECT COUNT(*) INTO v_stall_count
+        FROM stall
+        WHERE section_id = p_section_id;
+        
+        IF v_stall_count > 0 THEN
+            SELECT 0 as success, 
+                   CONCAT('Cannot delete section. It has ', v_stall_count, ' stall(s). Please reassign or delete stalls first.') as message;
+        ELSE
+            
+            DELETE FROM section WHERE section_id = p_section_id;
+            
+            IF ROW_COUNT() > 0 THEN
+                SELECT 1 as success, 'Section deleted successfully' as message;
+            ELSE
+                SELECT 0 as success, 'Failed to delete section' as message;
+            END IF;
+        END IF;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStall` (IN `p_stall_id` INT)   BEGIN
@@ -3073,6 +3205,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAllAutoIncrements` ()   BEGIN
     SELECT '✅ All auto_increments have been reset!' AS result;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ResetAutoIncrement` (IN `tableName` VARCHAR(64), IN `columnName` VARCHAR(64))   BEGIN
+    DECLARE maxId INT;
+    DECLARE sqlStatement VARCHAR(255);
+    
+    -- Get the maximum ID from the table
+    SET @sql = CONCAT('SELECT IFNULL(MAX(', columnName, '), 0) INTO @maxId FROM ', tableName);
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    
+    -- Reset AUTO_INCREMENT to maxId + 1 (or 1 if table is empty)
+    SET @newAutoInc = @maxId + 1;
+    SET @sql = CONCAT('ALTER TABLE ', tableName, ' AUTO_INCREMENT = ', @newAutoInc);
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `resetBusinessEmployeePassword` (IN `p_employee_id` INT, IN `p_new_password_hash` VARCHAR(255), IN `p_reset_by` INT)   BEGIN
     UPDATE `business_employee` 
     SET 
@@ -3322,7 +3472,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStallImage` (IN `p_stall_id` 
     
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_stamp` VARCHAR(100), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_stall_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_stall INT DEFAULT 0;
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_branch_valid INT DEFAULT 0;
@@ -3341,11 +3491,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
 
     START TRANSACTION;
 
-    
+    -- Check user authorization
     IF p_user_type = 'business_manager' THEN
         SET v_business_manager_id = p_user_id;
         
-        
+        -- Verify manager belongs to this branch
         SELECT COUNT(*) INTO v_branch_valid
         FROM business_manager
         WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
@@ -3359,7 +3509,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         END IF;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
+        -- Get the manager for this branch
         SELECT bm.business_manager_id INTO v_business_manager_id
         FROM branch b
         LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
@@ -3381,7 +3531,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         LEAVE proc_label;
     END IF;
 
-    
+    -- Validate floor and section belong to the branch
     SELECT COUNT(*), MAX(f.floor_name), MAX(sec.section_name), MAX(b.branch_name)
     INTO v_floor_section_valid, v_floor_name, v_section_name, v_branch_name
     FROM section sec
@@ -3399,7 +3549,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         LEAVE proc_label;
     END IF;
 
-    
+    -- Check for duplicate stall number in section
     SELECT COUNT(*) INTO v_existing_stall
     FROM stall
     WHERE stall_no = p_stall_no AND section_id = p_section_id;
@@ -3412,7 +3562,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         LEAVE proc_label;
     END IF;
 
-    
+    -- Insert the stall with new rental calculation fields
     INSERT INTO stall (
         stall_no, 
         stall_location, 
@@ -3420,6 +3570,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         floor_id, 
         section_id, 
         rental_price,
+        base_rate,
+        area_sqm,
+        rate_per_sqm,
         price_type, 
         status, 
         stamp, 
@@ -3437,6 +3590,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         p_floor_id,
         p_section_id,
         p_rental_price,
+        p_base_rate,
+        p_area_sqm,
+        p_rate_per_sqm,
         p_price_type,
         p_status,
         p_stamp,
@@ -3452,9 +3608,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_addStall_complete` (IN `p_stall_
         NOW()
     );
 
-    
+    -- Get the new stall ID
     SET p_stall_id = LAST_INSERT_ID();
-    
     
     SET p_success = TRUE;
     SET p_message = CONCAT('Stall ', p_stall_no, ' created successfully in ', v_section_name, ' section on ', v_floor_name);
@@ -4547,20 +4702,24 @@ END$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLandingPageStats` ()   BEGIN
     DECLARE v_total_stallholders INT DEFAULT 0;
     DECLARE v_total_stalls INT DEFAULT 0;
+    DECLARE v_available_stalls INT DEFAULT 0;
+    DECLARE v_occupied_stalls INT DEFAULT 0;
     
-    -- Count active stallholders (with active contracts)
     SELECT COUNT(*) INTO v_total_stallholders
-    FROM stallholder
-    WHERE contract_status = 'Active';
+    FROM stallholder WHERE contract_status = 'Active';
     
-    -- Count all stalls (regardless of status)
-    SELECT COUNT(*) INTO v_total_stalls
-    FROM stall;
+    SELECT COUNT(*) INTO v_total_stalls FROM stall;
     
-    -- Return the statistics
-    SELECT 
-        v_total_stallholders AS total_stallholders,
-        v_total_stalls AS total_stalls;
+    SELECT COUNT(*) INTO v_available_stalls
+    FROM stall WHERE is_available = 1;
+    
+    SELECT COUNT(*) INTO v_occupied_stalls
+    FROM stall WHERE is_available = 0;
+    
+    SELECT v_total_stallholders AS total_stallholders,
+           v_total_stalls AS total_stalls,
+           v_available_stalls AS available_stalls,
+           v_occupied_stalls AS occupied_stalls;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getLocationsByArea` (IN `p_area` VARCHAR(100))   BEGIN
@@ -4734,24 +4893,27 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_getStallImages` (IN `p_stall_id`
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_all_stallholders` (IN `p_branch_id` INT)   BEGIN
-                SELECT 
-                    sh.stallholder_id as id,
-                    sh.stallholder_name as name,
-                    sh.contact_number as contact,
-                    sh.business_name as businessName,
-                    COALESCE(st.stall_no, 'N/A') as stallNo,
-                    COALESCE(st.stall_location, 'N/A') as stallLocation,
-                    COALESCE(sh.monthly_rent, st.rental_price, 0) as monthlyRental,
-                    COALESCE(b.branch_name, 'Unknown') as branchName,
-                    sh.payment_status as paymentStatus
-                FROM stallholder sh
-                LEFT JOIN stall st ON sh.stall_id = st.stall_id
-                LEFT JOIN branch b ON sh.branch_id = b.branch_id
-                WHERE (p_branch_id IS NULL OR sh.branch_id = p_branch_id)
-                  AND sh.contract_status = 'Active'
-                  AND sh.payment_status != 'paid'
-                ORDER BY sh.stallholder_name ASC;
-            END$$
+    SELECT 
+        sh.stallholder_id as id,
+        sh.stallholder_name as name,
+        sh.contact_number as contact,
+        sh.business_name as businessName,
+        COALESCE(st.stall_no, 'N/A') as stallNo,
+        COALESCE(st.stall_location, 'N/A') as stallLocation,
+        COALESCE(sh.monthly_rent, st.rental_price, 0) as monthlyRental,
+        COALESCE(b.branch_name, 'Unknown') as branchName,
+        sh.payment_status as paymentStatus,
+        -- Add these fields for early payment discount calculation
+        sh.contract_start_date as contract_start_date,
+        sh.last_payment_date as last_payment_date
+    FROM stallholder sh
+    LEFT JOIN stall st ON sh.stall_id = st.stall_id
+    LEFT JOIN branch b ON sh.branch_id = b.branch_id
+    WHERE (p_branch_id IS NULL OR sh.branch_id = p_branch_id)
+      AND sh.contract_status = 'Active'
+      AND sh.payment_status != 'paid'
+    ORDER BY sh.stallholder_name ASC;
+END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_payments_for_manager` (IN `p_manager_id` INT, IN `p_limit` INT, IN `p_offset` INT, IN `p_search` VARCHAR(255))   BEGIN
             SELECT 
@@ -4824,12 +4986,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_get_stallholder_details` (IN `p_
         sh.business_name as businessName,
         COALESCE(st.stall_no, 'N/A') as stallNo,
         COALESCE(st.stall_location, 'N/A') as stallLocation,
-        -- This one is already correct - it prioritizes sh.monthly_rent
         COALESCE(sh.monthly_rent, st.rental_price, 0) as monthlyRental,
         COALESCE(b.branch_name, 'Unknown') as branchName,
         sh.contract_status as contractStatus,
         sh.payment_status as paymentStatus,
-        sh.last_payment_date as lastPaymentDate,
+        -- Add these fields for early payment discount calculation
+        sh.contract_start_date as contract_start_date,
+        sh.last_payment_date as last_payment_date,
         'success' as status
     FROM stallholder sh
     LEFT JOIN stall st ON sh.stall_id = st.stall_id
@@ -5042,7 +5205,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStallRaffleAuctionStatus` 
   UPDATE stall SET raffle_auction_status = p_status WHERE stall_id = p_stall_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_floor_id` INT, IN `p_section_id` INT, IN `p_rental_price` DECIMAL(10,2), IN `p_base_rate` DECIMAL(10,2), IN `p_area_sqm` DECIMAL(8,2), IN `p_rate_per_sqm` DECIMAL(10,2), IN `p_price_type` ENUM('Fixed Price','Auction','Raffle'), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT, IN `p_stall_image` VARCHAR(500), IN `p_is_available` TINYINT(1), IN `p_raffle_auction_deadline` DATETIME, IN `p_user_id` INT, IN `p_user_type` VARCHAR(50), IN `p_branch_id` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(500))   proc_label: BEGIN
     DECLARE v_existing_branch_id INT;
     DECLARE v_floor_section_valid INT DEFAULT 0;
     DECLARE v_duplicate_stall INT DEFAULT 0;
@@ -5058,7 +5221,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
 
     START TRANSACTION;
 
-    
+    -- Get the branch the stall belongs to
     SELECT f.branch_id INTO v_existing_branch_id
     FROM stall s
     INNER JOIN section sec ON s.section_id = sec.section_id
@@ -5072,9 +5235,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Authorization check
     IF p_user_type = 'business_manager' THEN
-        
+        -- Verify manager belongs to this branch
         SELECT COUNT(*) INTO v_floor_section_valid
         FROM business_manager
         WHERE business_manager_id = p_user_id AND branch_id = p_branch_id;
@@ -5086,7 +5249,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        
+        -- Verify stall belongs to manager's branch
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -5097,7 +5260,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         SET v_business_manager_id = p_user_id;
         
     ELSEIF p_user_type = 'business_employee' THEN
-        
+        -- Verify stall belongs to employee's branch
         IF p_branch_id != v_existing_branch_id THEN
             SET p_success = FALSE;
             SET p_message = 'Access denied. Stall does not belong to your branch';
@@ -5105,7 +5268,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
             LEAVE proc_label;
         END IF;
         
-        
+        -- Get manager for this branch
         SELECT business_manager_id INTO v_business_manager_id
         FROM business_manager
         WHERE branch_id = p_branch_id
@@ -5118,8 +5281,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
-    
+    -- Get correct floor_id for the section
     SELECT f.floor_id INTO v_correct_floor_id
     FROM section sec
     INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -5133,10 +5295,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
     
-    
+    -- Use the correct floor_id
     SET p_floor_id = v_correct_floor_id;
 
-    
+    -- Check for duplicate stall number
     SELECT COUNT(*) INTO v_duplicate_stall
     FROM stall
     WHERE stall_no = p_stall_no 
@@ -5150,7 +5312,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         LEAVE proc_label;
     END IF;
 
-    
+    -- Update the stall with new rental calculation fields
     UPDATE stall SET
         stall_no = p_stall_no,
         stall_location = p_stall_location,
@@ -5158,6 +5320,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_updateStall_complete` (IN `p_sta
         floor_id = p_floor_id,
         section_id = p_section_id,
         rental_price = p_rental_price,
+        base_rate = p_base_rate,
+        area_sqm = p_area_sqm,
+        rate_per_sqm = p_rate_per_sqm,
         price_type = p_price_type,
         status = p_status,
         description = p_description,
@@ -5477,6 +5642,34 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCredentialLastLogin` (IN `p_a
     WHERE applicant_id = p_applicant_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateFloor` (IN `p_floor_id` INT, IN `p_floor_name` VARCHAR(50), IN `p_floor_number` INT, IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SELECT 0 as success, 'Failed to update floor' as message;
+    END;
+    
+    START TRANSACTION;
+    
+    
+    IF NOT EXISTS (SELECT 1 FROM floor WHERE floor_id = p_floor_id) THEN
+        SELECT 0 as success, 'Floor not found' as message;
+        ROLLBACK;
+    ELSE
+        
+        UPDATE floor 
+        SET 
+            floor_name = COALESCE(p_floor_name, floor_name),
+            floor_number = COALESCE(p_floor_number, floor_number),
+            status = COALESCE(p_status, status),
+            updated_at = NOW()
+        WHERE floor_id = p_floor_id;
+        
+        COMMIT;
+        SELECT 1 as success, 'Floor updated successfully' as message;
+    END IF;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateMobileApplication` (IN `p_application_id` INT, IN `p_applicant_id` INT, IN `p_business_name` VARCHAR(255), IN `p_business_type` VARCHAR(100), IN `p_preferred_area` VARCHAR(255), IN `p_document_urls` TEXT)   BEGIN
     UPDATE applications 
     SET business_name = p_business_name, 
@@ -5488,6 +5681,33 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateMobileApplication` (IN `p_app
       AND applicant_id = p_applicant_id;
     
     SELECT ROW_COUNT() as affected_rows;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateSection` (IN `p_section_id` INT, IN `p_section_name` VARCHAR(100), IN `p_status` ENUM('Active','Inactive','Under Construction','Maintenance'))   BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SELECT 0 as success, 'Failed to update section' as message;
+    END;
+    
+    START TRANSACTION;
+    
+    
+    IF NOT EXISTS (SELECT 1 FROM section WHERE section_id = p_section_id) THEN
+        SELECT 0 as success, 'Section not found' as message;
+        ROLLBACK;
+    ELSE
+        
+        UPDATE section 
+        SET 
+            section_name = COALESCE(p_section_name, section_name),
+            status = COALESCE(p_status, status),
+            updated_at = NOW()
+        WHERE section_id = p_section_id;
+        
+        COMMIT;
+        SELECT 1 as success, 'Section updated successfully' as message;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStall` (IN `p_stall_id` INT, IN `p_stall_no` VARCHAR(20), IN `p_stall_location` VARCHAR(100), IN `p_size` VARCHAR(50), IN `p_rental_price` DECIMAL(10,2), IN `p_status` ENUM('Active','Inactive','Maintenance','Occupied'), IN `p_description` TEXT)   BEGIN
@@ -5759,14 +5979,16 @@ CREATE TABLE `applicant` (
 --
 
 INSERT INTO `applicant` (`applicant_id`, `applicant_full_name`, `applicant_contact_number`, `applicant_address`, `applicant_birthdate`, `applicant_civil_status`, `applicant_educational_attainment`, `created_at`, `updated_at`, `applicant_username`, `applicant_email`, `applicant_password_hash`, `email_verified`, `last_login`, `login_attempts`, `account_locked_until`) VALUES
-(1, 'Jeno Aldrei A. Laurente', '09473430196', 'Zone 5, House Number 141', '2005-01-24', 'Married', 'College Graduate', '2025-12-08 09:23:07', '2025-12-08 09:23:07', NULL, NULL, NULL, 0, NULL, 0, NULL);
+(1, 'Jeno Aldrei Laurente', '09473430196', 'Zone 5', '2005-01-24', 'Married', 'College Graduate', '2025-12-22 14:35:40', '2025-12-22 14:35:40', NULL, NULL, NULL, 0, NULL, 0, NULL);
 
 --
 -- Triggers `applicant`
 --
 DELIMITER $$
 CREATE TRIGGER `trg_applicant_reset_auto` AFTER DELETE ON `applicant` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('applicant', 'applicant_id');
+    DECLARE max_id INT;
+    SELECT IFNULL(MAX(applicant_id), 0) INTO max_id FROM applicant;
+    SET @alter_sql = CONCAT('ALTER TABLE applicant AUTO_INCREMENT = ', max_id + 1);
 END
 $$
 DELIMITER ;
@@ -5798,16 +6020,6 @@ CREATE TABLE `applicant_documents` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Documents uploaded by applicants for different business owners';
 
---
--- Triggers `applicant_documents`
---
-DELIMITER $$
-CREATE TRIGGER `trg_applicant_documents_reset_auto` AFTER DELETE ON `applicant_documents` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('applicant_documents', 'document_id');
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -5829,14 +6041,16 @@ CREATE TABLE `application` (
 --
 
 INSERT INTO `application` (`application_id`, `stall_id`, `applicant_id`, `application_date`, `application_status`, `created_at`, `updated_at`) VALUES
-(0, 13, 1, '2025-12-08', 'Approved', '2025-12-08 09:23:07', '2025-12-08 09:37:44');
+(0, 20, 1, '2025-12-22', 'Approved', '2025-12-22 14:35:40', '2025-12-22 14:35:59');
 
 --
 -- Triggers `application`
 --
 DELIMITER $$
 CREATE TRIGGER `trg_application_reset_auto` AFTER DELETE ON `application` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('application', 'application_id');
+    DECLARE max_id INT;
+    SELECT IFNULL(MAX(application_id), 0) INTO max_id FROM application;
+    SET @alter_sql = CONCAT('ALTER TABLE application AUTO_INCREMENT = ', max_id + 1);
 END
 $$
 DELIMITER ;
@@ -6089,8 +6303,8 @@ CREATE TABLE `business_employee` (
 --
 
 INSERT INTO `business_employee` (`business_employee_id`, `employee_username`, `employee_password_hash`, `first_name`, `last_name`, `email`, `phone_number`, `branch_id`, `created_by_manager`, `permissions`, `status`, `last_login`, `password_reset_required`, `created_at`, `updated_at`) VALUES
-(1, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 3, 3, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', NULL, 1, '2025-11-06 05:36:23', '2025-11-06 09:02:11'),
-(2, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'Jeno Aldrei', 'Laurente', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', NULL, 1, '2025-12-03 04:03:26', '2025-12-08 21:35:05');
+(1, 'EMP3672', '$2a$12$ys/pmarvhP5EFRctGdD4mOO3n.Kvmwqh1HYHaoBEl68EV092idhGq', 'Voun Irish', 'Dejumo', 'awfullumos@gmail.com', '09876543212', 3, 3, '[\"dashboard\",\"payments\",\"applicants\",\"stalls\"]', 'Active', '2025-12-18 02:28:34', 1, '2025-11-06 05:36:23', '2025-12-18 02:28:34'),
+(2, 'EMP8043', '$2a$12$t42cPqUynSJcLxoiFO.5dO4IvS14FecCXT4wJTzo6rk8AdLGOZf92', 'Jeno Aldrei', 'Laurente', 'laurentejenoaldrei@gmail.com', '09876543212', 1, 1, '[\"dashboard\",\"payments\",\"applicants\"]', 'Active', '2025-12-18 02:53:08', 1, '2025-12-03 04:03:26', '2025-12-18 02:53:08');
 
 --
 -- Triggers `business_employee`
@@ -6125,17 +6339,7 @@ CREATE TABLE `business_information` (
 --
 
 INSERT INTO `business_information` (`business_id`, `applicant_id`, `nature_of_business`, `capitalization`, `source_of_capital`, `previous_business_experience`, `relative_stall_owner`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Flowers and Plants', 52000.00, 'Personal Savings', 'None', '', '2025-12-08 09:23:07', '2025-12-08 09:23:07');
-
---
--- Triggers `business_information`
---
-DELIMITER $$
-CREATE TRIGGER `trg_business_information_reset_auto` AFTER DELETE ON `business_information` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('business_information', 'business_id');
-END
-$$
-DELIMITER ;
+(1, 1, 'Flowers and Plants', 50000.00, 'Personal Savings', 'None', '', '2025-12-22 14:35:40', '2025-12-22 14:35:40');
 
 -- --------------------------------------------------------
 
@@ -6280,7 +6484,7 @@ CREATE TABLE `collector` (
 --
 
 INSERT INTO `collector` (`collector_id`, `username`, `password_hash`, `first_name`, `last_name`, `middle_name`, `email`, `contact_no`, `date_created`, `date_hired`, `status`, `termination_date`, `termination_reason`, `last_login`) VALUES
-(1, 'COL6806', '$2a$12$daseDK99xoM1.O4XOVbMzeSXdYKYJ5JAQ9O0fR6TN852oUZooDOqS', 'Jeno Aldrei', 'Laurente', NULL, 'laurentejeno73@gmail.com', '09473430196', '2025-12-09 16:29:10', '2025-12-09', 'active', NULL, NULL, '2025-12-09 08:51:23');
+(1, 'COL6806', '$2a$12$fyruXNao5wSK1v4DarRBLO03o/odeWS/P9Y9X98ml/RbYWTPNqZIK', 'Jeno Aldrei', 'Laurente', NULL, 'laurentejeno73@gmail.com', '09473430196', '2025-12-09 16:29:10', '2025-12-09', 'active', NULL, NULL, '2025-12-18 02:58:34');
 
 -- --------------------------------------------------------
 
@@ -6394,17 +6598,7 @@ CREATE TABLE `credential` (
 --
 
 INSERT INTO `credential` (`registrationid`, `applicant_id`, `user_name`, `password_hash`, `created_date`, `last_login`, `is_active`) VALUES
-(1, 1, '25-40329', '$2b$10$VqHIVe66uWoX42twl9Faj.nq86nq3P8TXAGMYBWAs/TgFhBjQMm26', '2025-12-08 09:37:44', '2025-12-09 01:40:37', 1);
-
---
--- Triggers `credential`
---
-DELIMITER $$
-CREATE TRIGGER `trg_credential_reset_auto` AFTER DELETE ON `credential` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('credential', 'registrationid');
-END
-$$
-DELIMITER ;
+(1, 1, '25-39683', '$2b$10$cCk5Yk.qSAk8WPNgQXvLPutg8JfR95Q2GXd0BTdd4oZ0H4uV4wGna', '2025-12-22 14:35:59', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -6624,16 +6818,6 @@ INSERT INTO `floor` (`floor_id`, `branch_id`, `floor_name`, `floor_number`, `sta
 (4, 1, '2', 0, 'Active', '2025-12-07 07:09:30', '2025-12-07 07:09:30'),
 (5, 1, '3', 0, 'Active', '2025-12-08 15:35:59', '2025-12-08 15:35:59');
 
---
--- Triggers `floor`
---
-DELIMITER $$
-CREATE TRIGGER `trg_floor_reset_auto` AFTER DELETE ON `floor` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('floor', 'floor_id');
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -6662,8 +6846,8 @@ CREATE TABLE `inspector` (
 -- Dumping data for table `inspector`
 --
 
-INSERT INTO `inspector` (`inspector_id`, `username`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `password_hash`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`) VALUES
-(4, 'INS9721', 'Voun Irish', 'Dejumo', '', 'josonglaurente@gmail.com', '', '$2a$12$YspzW.gMf6YZGEp8LXL1VeJyhbSD60UyM/Mm4f/3Dm1p7ta6nBjxe', '2025-12-17 10:46:51', 'active', '2025-12-09', '09473595468', NULL, NULL);
+INSERT INTO `inspector` (`inspector_id`, `username`, `first_name`, `last_name`, `middle_name`, `email`, `password`, `password_hash`, `date_created`, `status`, `date_hired`, `contact_no`, `termination_date`, `termination_reason`, `last_login`) VALUES
+(4, 'INS9721', 'Voun Irish', 'Dejumo', '', 'josonglaurente@gmail.com', '', '$2a$12$YspzW.gMf6YZGEp8LXL1VeJyhbSD60UyM/Mm4f/3Dm1p7ta6nBjxe', '2025-12-17 11:08:44', 'active', '2025-12-09', '09473595468', NULL, NULL, '2025-12-18 02:59:23');
 
 -- --------------------------------------------------------
 
@@ -6777,7 +6961,7 @@ CREATE TABLE `other_information` (
 --
 
 INSERT INTO `other_information` (`other_info_id`, `applicant_id`, `signature_of_applicant`, `house_sketch_location`, `valid_id`, `email_address`, `created_at`, `updated_at`) VALUES
-(1, 1, '7c0f1f2e1303456088b15eb4c90a45a5.webp', '10-Best-Fast-Food-Restaurants-in-Gujranwala-1024x683.jpg', '16.ehzc6wm.jpg', 'laurentejeno73@gmail.com', '2025-12-08 09:23:07', '2025-12-08 09:23:07');
+(4, 1, '8b4e361e-7753-42fd-88ca-2540c228ee88.jpg', 'stallbackground.png', '554391033_1345244260315277_2391226561442545193_n.jpg', 'laurentejeno73@gmail.com', '2025-12-22 14:35:40', '2025-12-22 14:35:40');
 
 --
 -- Triggers `other_information`
@@ -6819,7 +7003,7 @@ CREATE TABLE `payments` (
 --
 
 INSERT INTO `payments` (`payment_id`, `stallholder_id`, `payment_method`, `amount`, `payment_date`, `payment_time`, `payment_for_month`, `payment_type`, `reference_number`, `collected_by`, `payment_status`, `notes`, `branch_id`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 1, 'onsite', 3500.00, '2025-12-08', '20:25:00', '2025-12', 'rental', 'RCP-20251208-001', 'Juan Dela Cruz', 'completed', NULL, 1, 1, '2025-12-08 12:25:57', '2025-12-08 12:25:57');
+(1, 1, 'onsite', 4996.92, '2025-12-23', '09:11:00', '2025-12', 'rental', 'M3jdwa852', 'Juan Dela Cruz', 'completed', '✅ Early Payment Discount (25%): -₱1,665.64 (Paid 30 days before due date: 2026-01-22) | Original: ₱6,662.56 → Discounted: ₱4,996.92', 1, 1, '2025-12-23 01:11:37', '2025-12-23 01:11:37');
 
 --
 -- Triggers `payments`
@@ -7010,16 +7194,6 @@ INSERT INTO `section` (`section_id`, `floor_id`, `section_name`, `status`, `crea
 (6, 5, 'Dry Fish', 'Active', '2025-12-08 16:55:19', '2025-12-08 16:55:19'),
 (7, 5, 'Fruit', 'Active', '2025-12-08 17:02:00', '2025-12-08 17:02:00');
 
---
--- Triggers `section`
---
-DELIMITER $$
-CREATE TRIGGER `trg_section_reset_auto` AFTER DELETE ON `section` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('section', 'section_id');
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -7043,17 +7217,53 @@ CREATE TABLE `spouse` (
 --
 
 INSERT INTO `spouse` (`spouse_id`, `applicant_id`, `spouse_full_name`, `spouse_birthdate`, `spouse_educational_attainment`, `spouse_contact_number`, `spouse_occupation`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Elaine Zennia A. Laurente', '2005-06-03', 'College Graduate', '09126471858', 'Architecture', '2025-12-08 09:23:07', '2025-12-08 09:23:07');
+(1, 1, 'Elaine Zennia A. San Jose', '2005-06-03', 'College Graduate', '09126471858', 'Architecture', '2025-12-22 14:35:40', '2025-12-22 14:35:40');
+
+-- --------------------------------------------------------
 
 --
--- Triggers `spouse`
+-- Table structure for table `staff_activity_log`
 --
-DELIMITER $$
-CREATE TRIGGER `trg_spouse_reset_auto` AFTER DELETE ON `spouse` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('spouse', 'spouse_id');
-END
-$$
-DELIMITER ;
+
+CREATE TABLE `staff_activity_log` (
+  `log_id` int(11) NOT NULL,
+  `staff_type` enum('business_employee','business_manager','business_owner','system_administrator','inspector','collector') NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `staff_name` varchar(200) NOT NULL,
+  `branch_id` int(11) DEFAULT NULL,
+  `action_type` varchar(100) NOT NULL,
+  `action_description` text DEFAULT NULL,
+  `module` varchar(100) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `request_method` varchar(10) DEFAULT NULL,
+  `request_path` varchar(255) DEFAULT NULL,
+  `status` enum('success','failed','pending') DEFAULT 'success',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `staff_activity_log`
+--
+
+INSERT INTO `staff_activity_log` (`log_id`, `staff_type`, `staff_id`, `staff_name`, `branch_id`, `action_type`, `action_description`, `module`, `ip_address`, `user_agent`, `request_method`, `request_path`, `status`, `created_at`) VALUES
+(1, 'inspector', 4, 'Voun Irish Dejumo', 1, 'LOGIN', 'inspector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:02:51'),
+(2, 'collector', 1, 'Jeno Aldrei Laurente', 1, 'LOGIN', 'collector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:11:09'),
+(3, 'business_employee', 2, 'Jeno Aldrei Laurente', NULL, 'LOGIN', 'Jeno Aldrei Laurente logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 02:53:08'),
+(4, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 02:53:19'),
+(5, 'collector', 1, 'Jeno Aldrei Laurente', 1, 'LOGIN', 'collector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:58:34'),
+(6, 'inspector', 4, 'Voun Irish Dejumo', 1, 'LOGIN', 'inspector logged in via mobile app', 'mobile_app', '192.168.137.54', 'okhttp/4.12.0', NULL, NULL, 'success', '2025-12-18 02:59:23'),
+(7, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:14:21'),
+(8, 'business_owner', 1, 'Multi Manager Owner', NULL, 'LOGIN', 'Multi Manager Owner logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:31:31'),
+(9, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-18 03:35:01'),
+(10, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 06:40:01'),
+(11, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 07:19:00'),
+(12, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 09:02:15'),
+(13, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 12:52:24'),
+(14, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 14:35:48'),
+(15, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 14:47:23'),
+(16, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 14:49:19'),
+(17, 'business_manager', 1, 'Juan Dela Cruz', NULL, 'LOGIN', 'Juan Dela Cruz logged in via web', 'authentication', '127.0.0.1', NULL, NULL, NULL, 'success', '2025-12-22 14:55:01');
 
 -- --------------------------------------------------------
 
@@ -7068,7 +7278,10 @@ CREATE TABLE `stall` (
   `stall_no` varchar(20) NOT NULL,
   `stall_location` varchar(100) NOT NULL,
   `size` varchar(50) DEFAULT NULL,
+  `area_sqm` decimal(8,2) DEFAULT NULL,
   `rental_price` decimal(10,2) DEFAULT NULL,
+  `base_rate` decimal(10,2) DEFAULT NULL,
+  `rate_per_sqm` decimal(10,2) DEFAULT NULL,
   `price_type` enum('Fixed Price','Auction','Raffle') DEFAULT 'Fixed Price',
   `status` enum('Active','Inactive','Maintenance','Occupied') DEFAULT 'Active',
   `stamp` varchar(100) DEFAULT NULL,
@@ -7088,11 +7301,9 @@ CREATE TABLE `stall` (
 -- Dumping data for table `stall`
 --
 
-INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `rental_price`, `price_type`, `status`, `stamp`, `description`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
-(12, 4, 4, 'NPM-001', 'Near MEPO Office', '3x4', 2510.00, 'Fixed Price', 'Active', 'APPROVED', 'Best area to sell meat', 1, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 05:28:29', '2025-12-08 08:32:45'),
-(13, 3, 1, 'NPM-002', 'Back of the market', '4x5', 3500.00, 'Fixed Price', 'Occupied', 'APPROVED', 'Best area to sell flowers', 0, NULL, 0, NULL, NULL, NULL, 1, '2025-12-08 08:40:06', '2025-12-08 12:20:06'),
-(14, 5, 4, 'NPM-003', 'Near MEPO Office center in the candy section', '3x5', 3500.00, 'Raffle', 'Active', 'APPROVED', 'Best area for delivery', 1, '2025-12-12 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(16, 6, 5, 'NPM-004', 'Near parking area', '3x4', 2820.00, 'Auction', 'Active', 'APPROVED', 'The customer can see your stall after parking', 1, '2025-12-12 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-08 17:23:38', '2025-12-08 17:23:38');
+INSERT INTO `stall` (`stall_id`, `section_id`, `floor_id`, `stall_no`, `stall_location`, `size`, `area_sqm`, `rental_price`, `base_rate`, `rate_per_sqm`, `price_type`, `status`, `stamp`, `description`, `is_available`, `raffle_auction_deadline`, `deadline_active`, `raffle_auction_status`, `raffle_auction_start_time`, `raffle_auction_end_time`, `created_by_business_manager`, `created_at`, `updated_at`) VALUES
+(19, 4, 4, 'B1-S2', 'Near MEPO', '16.80 sq.m', 16.80, 7371.50, 3685.75, 438.78, 'Raffle', 'Active', 'APPROVED', 'Test Description', 1, '2025-12-25 23:00:00', 0, 'Not Started', NULL, NULL, 1, '2025-12-22 13:50:58', '2025-12-22 13:50:58'),
+(20, 3, 1, 'B1-S1', 'Near parking area on the market back ground floor', '17.16 sq.m', 17.16, 6662.56, 3331.28, 388.26, 'Fixed Price', 'Occupied', 'APPROVED', 'Test Description', 0, NULL, 0, NULL, NULL, NULL, 1, '2025-12-22 13:53:35', '2025-12-22 14:35:59');
 
 -- --------------------------------------------------------
 
@@ -7131,14 +7342,16 @@ CREATE TABLE `stallholder` (
 --
 
 INSERT INTO `stallholder` (`stallholder_id`, `applicant_id`, `stallholder_name`, `contact_number`, `email`, `address`, `business_name`, `business_type`, `branch_id`, `stall_id`, `contract_start_date`, `contract_end_date`, `contract_status`, `lease_amount`, `monthly_rent`, `payment_status`, `last_payment_date`, `notes`, `created_by_business_manager`, `compliance_status`, `date_created`, `updated_at`, `last_violation_date`) VALUES
-(1, 1, 'Jeno Aldrei A. Laurente', '09473430196', 'laurentejeno73@gmail.com', 'Zone 5, House Number 141', 'Flowers and Plants', 'Flowers and Plants', 1, 13, '2025-12-08', '2026-12-08', 'Active', 3500.00, 3500.00, 'paid', '2025-12-08', NULL, NULL, 'Compliant', '2025-12-08 12:20:06', '2025-12-08 12:25:57', NULL);
+(1, 1, 'Jeno Aldrei Laurente', '09473430196', 'laurentejeno73@gmail.com', 'Zone 5', 'Flowers and Plants', 'Flowers and Plants', 1, 20, '2025-12-22', '2026-12-22', 'Active', 6662.56, 6662.56, 'paid', '2025-12-23', NULL, NULL, 'Compliant', '2025-12-22 14:35:59', '2025-12-23 01:11:37', NULL);
 
 --
 -- Triggers `stallholder`
 --
 DELIMITER $$
 CREATE TRIGGER `trg_stallholder_reset_auto` AFTER DELETE ON `stallholder` FOR EACH ROW BEGIN
-    CALL ResetAutoIncrement('stallholder', 'stallholder_id');
+    DECLARE max_id INT;
+    SELECT IFNULL(MAX(stallholder_id), 0) INTO max_id FROM stallholder;
+    SET @alter_sql = CONCAT('ALTER TABLE stallholder AUTO_INCREMENT = ', max_id + 1);
 END
 $$
 DELIMITER ;
@@ -7341,19 +7554,13 @@ CREATE TABLE `stall_images` (
 --
 
 INSERT INTO `stall_images` (`id`, `stall_id`, `image_url`, `display_order`, `is_primary`, `created_at`, `updated_at`) VALUES
-(5, 12, '/digistall_uploads/stalls/1/NPM-001/1.png', 1, 1, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(6, 12, '/digistall_uploads/stalls/1/NPM-001/2.png', 2, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(7, 12, '/digistall_uploads/stalls/1/NPM-001/3.png', 3, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(8, 12, '/digistall_uploads/stalls/1/NPM-001/4.png', 4, 0, '2025-12-08 05:28:29', '2025-12-08 05:28:29'),
-(9, 13, '/digistall_uploads/stalls/1/NPM-002/1.png', 1, 1, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
-(10, 13, '/digistall_uploads/stalls/1/NPM-002/2.png', 2, 0, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
-(11, 13, '/digistall_uploads/stalls/1/NPM-002/3.png', 3, 0, '2025-12-08 08:40:06', '2025-12-08 08:40:06'),
-(12, 14, '/digistall_uploads/stalls/1/NPM-003/1.png', 1, 1, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(13, 14, '/digistall_uploads/stalls/1/NPM-003/2.png', 2, 0, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(14, 14, '/digistall_uploads/stalls/1/NPM-003/3.png', 3, 0, '2025-12-08 17:07:27', '2025-12-08 17:07:27'),
-(18, 16, '/digistall_uploads/stalls/1/NPM-004/1.png', 1, 1, '2025-12-08 17:23:38', '2025-12-08 17:23:38'),
-(19, 16, '/digistall_uploads/stalls/1/NPM-004/2.png', 2, 0, '2025-12-08 17:23:38', '2025-12-08 17:23:38'),
-(20, 16, '/digistall_uploads/stalls/1/NPM-004/3.png', 3, 0, '2025-12-08 17:23:38', '2025-12-08 17:23:38');
+(27, 19, '/digistall_uploads/stalls/1/B1-S2/1.png', 1, 1, '2025-12-22 13:50:58', '2025-12-22 13:50:58'),
+(28, 19, '/digistall_uploads/stalls/1/B1-S2/2.png', 1, 0, '2025-12-22 13:50:58', '2025-12-22 13:50:58'),
+(29, 19, '/digistall_uploads/stalls/1/B1-S2/3.png', 1, 0, '2025-12-22 13:50:58', '2025-12-22 13:50:58'),
+(30, 19, '/digistall_uploads/stalls/1/B1-S2/4.png', 1, 0, '2025-12-22 13:50:58', '2025-12-22 13:50:58'),
+(31, 20, '/digistall_uploads/stalls/1/B1-S1/1.png', 1, 1, '2025-12-22 13:53:35', '2025-12-22 13:53:35'),
+(32, 20, '/digistall_uploads/stalls/1/B1-S1/2.png', 1, 0, '2025-12-22 13:53:35', '2025-12-22 13:53:35'),
+(33, 20, '/digistall_uploads/stalls/1/B1-S1/3.png', 1, 0, '2025-12-22 13:53:35', '2025-12-22 13:53:35');
 
 --
 -- Triggers `stall_images`
@@ -7722,13 +7929,6 @@ CREATE TABLE `violation_report` (
   `offense_no` int(11) DEFAULT NULL,
   `penalty_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `violation_report`
---
-
-INSERT INTO `violation_report` (`report_id`, `inspector_id`, `stallholder_id`, `violator_name`, `violation_id`, `compliance_type`, `severity`, `stall_id`, `branch_id`, `evidence`, `date_reported`, `remarks`, `status`, `resolved_date`, `resolved_by`, `offense_no`, `penalty_id`) VALUES
-(1, 1, 1, NULL, 1, 'Illegal Vending', 'minor', 13, 1, 0x466f756e642076656e646f722073656c6c696e67206f7574736964652061737369676e6564206172656120617420383a313520414d2e, '2025-10-08 09:30:41', 'First warning issued. | Offense #1 | Fine: ₱300.00 | ', 'complete', '2025-10-15 09:30:41', NULL, 1, 1);
 
 --
 -- Triggers `violation_report`
@@ -8166,6 +8366,17 @@ ALTER TABLE `spouse`
   ADD KEY `applicant_id` (`applicant_id`);
 
 --
+-- Indexes for table `staff_activity_log`
+--
+ALTER TABLE `staff_activity_log`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `idx_staff_type` (`staff_type`),
+  ADD KEY `idx_staff_id` (`staff_id`),
+  ADD KEY `idx_branch_id` (`branch_id`),
+  ADD KEY `idx_action_type` (`action_type`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
 -- Indexes for table `stall`
 --
 ALTER TABLE `stall`
@@ -8472,7 +8683,7 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `other_information`
 --
 ALTER TABLE `other_information`
-  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `other_info_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -8514,7 +8725,7 @@ ALTER TABLE `raffle_result`
 -- AUTO_INCREMENT for table `section`
 --
 ALTER TABLE `section`
-  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `spouse`
@@ -8523,10 +8734,16 @@ ALTER TABLE `spouse`
   MODIFY `spouse_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `staff_activity_log`
+--
+ALTER TABLE `staff_activity_log`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
 -- AUTO_INCREMENT for table `stall`
 --
 ALTER TABLE `stall`
-  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `stall_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `stallholder`
@@ -8562,7 +8779,7 @@ ALTER TABLE `stall_business_owner`
 -- AUTO_INCREMENT for table `stall_images`
 --
 ALTER TABLE `stall_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `subscription_payments`
@@ -8598,7 +8815,7 @@ ALTER TABLE `violation_penalty`
 -- AUTO_INCREMENT for table `violation_report`
 --
 ALTER TABLE `violation_report`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables

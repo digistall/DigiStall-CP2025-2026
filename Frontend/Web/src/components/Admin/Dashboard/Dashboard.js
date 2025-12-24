@@ -1,9 +1,12 @@
 import Chart from 'chart.js/auto'
 import { markRaw } from 'vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Dashboard',
-  components: {},
+  components: {
+    LoadingOverlay
+  },
   data() {
     return {
       pageTitle: 'Dashboard',

@@ -66,7 +66,13 @@
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div class="floor-actions">
+                                            <div class="floor-actions d-flex align-center ga-1">
+                                                <v-btn icon size="small" color="primary" variant="text" @click="editFloor(floor)" title="Edit Floor">
+                                                    <v-icon size="small">mdi-pencil</v-icon>
+                                                </v-btn>
+                                                <v-btn icon size="small" color="error" variant="text" @click="confirmDeleteFloor(floor)" title="Delete Floor">
+                                                    <v-icon size="small">mdi-delete</v-icon>
+                                                </v-btn>
                                                 <v-btn icon size="small" @click="toggleFloorExpansion(floor.id)"
                                                     :color="expandedFloors.includes(floor.id) ? 'primary' : 'grey'">
                                                     <v-icon>
@@ -90,15 +96,25 @@
                                                         sm="6" md="4">
                                                         <v-card class="section-card" variant="outlined">
                                                             <v-card-text class="pa-3">
-                                                                <div class="d-flex align-center">
-                                                                    <v-icon color="primary"
-                                                                        class="mr-2">mdi-view-grid</v-icon>
-                                                                    <div>
-                                                                        <p class="font-weight-medium mb-1">{{
-                                                                            section.name }}</p>
-                                                                        <p class="text-caption grey--text mb-0">
-                                                                            {{ section.stall_count || 0 }} stalls
-                                                                        </p>
+                                                                <div class="d-flex align-center justify-space-between">
+                                                                    <div class="d-flex align-center">
+                                                                        <v-icon color="primary"
+                                                                            class="mr-2">mdi-view-grid</v-icon>
+                                                                        <div>
+                                                                            <p class="font-weight-medium mb-1">{{
+                                                                                section.name }}</p>
+                                                                            <p class="text-caption grey--text mb-0">
+                                                                                {{ section.stall_count || 0 }} stalls
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="section-actions">
+                                                                        <v-btn icon size="x-small" color="primary" variant="text" @click="editSection(section, floor)" title="Edit Section">
+                                                                            <v-icon size="small">mdi-pencil</v-icon>
+                                                                        </v-btn>
+                                                                        <v-btn icon size="x-small" color="error" variant="text" @click="confirmDeleteSection(section, floor)" title="Delete Section">
+                                                                            <v-icon size="small">mdi-delete</v-icon>
+                                                                        </v-btn>
                                                                     </div>
                                                                 </div>
                                                             </v-card-text>
@@ -129,6 +145,87 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Edit Dialog -->
+        <v-dialog v-model="editDialog" max-width="500px">
+            <v-card>
+                <v-card-title class="text-h6 bg-primary text-white pa-4">
+                    Edit {{ editType === 'floor' ? 'Floor' : 'Section' }}
+                </v-card-title>
+                <v-card-text class="pa-4">
+                    <v-text-field
+                        v-model="editForm.name"
+                        :label="editType === 'floor' ? 'Floor Name' : 'Section Name'"
+                        variant="outlined"
+                        density="compact"
+                        class="mb-3"
+                    />
+                    <v-textarea
+                        v-model="editForm.description"
+                        label="Description (Optional)"
+                        variant="outlined"
+                        density="compact"
+                        rows="3"
+                    />
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey" variant="outlined" @click="editDialog = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="saveEdit">Save Changes</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Delete Confirmation Dialog -->
+        <v-dialog v-model="deleteDialog" max-width="450px">
+            <v-card>
+                <v-card-title class="text-h6 bg-error text-white pa-4">
+                    <v-icon class="mr-2">mdi-alert</v-icon>
+                    Confirm Delete
+                </v-card-title>
+                <v-card-text class="pa-4">
+                    <p class="text-body-1">
+                        Are you sure you want to delete this {{ deleteType }}?
+                    </p>
+                    <p v-if="deleteItem" class="font-weight-bold text-h6 mt-2">
+                        "{{ deleteItem.name }}"
+                    </p>
+                    <p class="text-caption text-error mt-2">
+                        <v-icon size="small" color="error">mdi-information</v-icon>
+                        This action cannot be undone.
+                    </p>
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn color="grey" variant="outlined" @click="deleteDialog = false">Cancel</v-btn>
+                    <v-btn color="error" @click="deleteItem_">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Snackbar for notifications -->
+        <v-snackbar
+            v-model="snackbar.show"
+            :timeout="4000"
+            location="bottom left"
+            :content-class="'white-snackbar-content'"
+            :style="{ '--v-snackbar-background': '#ffffff' }"
+            :class="['custom-snackbar', snackbar.color === 'success' ? 'success-snackbar' : 'error-snackbar']"
+        >
+            <div class="d-flex align-center" :class="snackbar.color === 'success' ? 'success-content' : 'error-content'" style="background-color: #ffffff;">
+                <v-icon class="mr-2" :style="{ color: snackbar.color === 'success' ? '#4caf50' : '#f44336' }">
+                    {{ snackbar.color === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                </v-icon>
+                <span :style="{ color: snackbar.color === 'success' ? '#2e7d32' : '#c62828', fontWeight: 500 }">
+                    {{ snackbar.message }}
+                </span>
+            </div>
+            <template v-slot:actions>
+                <v-btn variant="text" :style="{ color: snackbar.color === 'success' ? '#4caf50' : '#f44336' }" @click="snackbar.show = false">
+                    Close
+                </v-btn>
+            </template>
+        </v-snackbar>
     </div>
 </template>
 

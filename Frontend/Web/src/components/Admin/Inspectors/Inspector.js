@@ -1,6 +1,7 @@
 import InspectorTable from './InspectorComponents/InspectorTable/InspectorTable.vue'
 import InspectorSearch from './InspectorComponents/InspectorSearch/InspectorSearch.vue'
 import ViewInspector from './InspectorComponents/ViewInspector/ViewInspector.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 import axios from 'axios'
 
 const API_BASE_URL = 'http://localhost:3001/api'
@@ -11,6 +12,7 @@ export default {
     InspectorTable,
     InspectorSearch,
     ViewInspector,
+    LoadingOverlay,
   },
   data() {
     return {

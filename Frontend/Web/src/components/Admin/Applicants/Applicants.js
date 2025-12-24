@@ -4,6 +4,7 @@ import VendorApplicantsTable from './Components/Table/ApplicantsTable.vue'
 import ApproveApplicants from './Components/ApproveApplicants/ApproveApplicants.vue'
 import DeclineApplicants from './Components/DeclineApplicants/DeclineApplicants.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -16,6 +17,7 @@ export default {
     ApproveApplicants,
     DeclineApplicants,
     ToastNotification,
+    LoadingOverlay,
   },
   data() {
     return {
