@@ -414,10 +414,12 @@ export default {
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         return imagePath
       }
-      // Check if it's a BLOB API URL path
+      // Check if it's a BLOB API URL path (e.g., /api/stalls/images/blob/21/1)
       if (imagePath.includes('/api/stalls/images/blob/')) {
         const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-        return `${apiBaseUrl}${imagePath.startsWith('/api') ? '' : '/api'}${imagePath.replace('/api', '')}`
+        // Remove trailing /api from base URL if present, then append the full path
+        const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+        return `${baseUrl}${imagePath}`
       }
       // Build full URL from relative path (legacy file-based)
       const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
@@ -447,11 +449,13 @@ export default {
       }
       
       const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      // Remove trailing /api if present to avoid double /api in URLs
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
       const stallId = stall.id
       
       try {
-        // Fetch images from BLOB API (public endpoint)
-        const response = await fetch(`${apiBaseUrl}/api/stalls/${stallId}/images/blob`)
+        // Fetch images from PUBLIC BLOB API endpoint (no auth required)
+        const response = await fetch(`${baseUrl}/api/stalls/public/${stallId}/images/blob`)
         
         if (response.ok) {
           const result = await response.json()
@@ -459,7 +463,7 @@ export default {
             const images = result.data.images.map(img => ({
               id: img.id,
               stall_id: stallId,
-              image_url: `${apiBaseUrl}/api/stalls/images/blob/id/${img.id}`,
+              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.id}`,
               display_order: img.display_order,
               is_primary: img.is_primary ? 1 : 0
             }))
@@ -544,9 +548,12 @@ export default {
       console.log(`🔍 Fetching images for stall ${stallId} from BLOB API`)
       
       const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      // Remove trailing /api if present to avoid double /api in URLs
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
       
       try {
-        const response = await fetch(`${apiBaseUrl}/api/stalls/${stallId}/images/blob`)
+        // Use PUBLIC BLOB API endpoint (no auth required)
+        const response = await fetch(`${baseUrl}/api/stalls/public/${stallId}/images/blob`)
         
         if (response.ok) {
           const result = await response.json()
@@ -554,7 +561,7 @@ export default {
             this.stallImages = result.data.images.map(img => ({
               id: img.id,
               stall_id: stallId,
-              image_url: `${apiBaseUrl}/api/stalls/images/blob/id/${img.id}`,
+              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.id}`,
               display_order: img.display_order,
               is_primary: img.is_primary ? 1 : 0
             }))

@@ -111,9 +111,11 @@ router.get('/public/:id', getStallById)                 // GET /api/stalls/publi
 
 // ===== PUBLIC BLOB IMAGE ROUTES (No Auth - for <img> tags) =====
 // These routes serve images directly without authentication so they can be loaded in img tags
-router.get('/images/blob/:stall_id/:display_order', getStallImageBlob)   // GET /api/stalls/images/blob/:stall_id/:display_order - Serve image binary
-router.get('/images/blob/id/:image_id', getStallImageBlobById)           // GET /api/stalls/images/blob/id/:image_id - Serve image by ID
+// NOTE: More specific routes must come BEFORE generic routes to avoid path parameter collisions
+router.get('/images/blob/id/:image_id', getStallImageBlobById)           // GET /api/stalls/images/blob/id/:image_id - Serve image by ID (MUST be before generic route)
 router.get('/images/blob/primary/:stall_id', getStallPrimaryImageBlob)   // GET /api/stalls/images/blob/primary/:stall_id - Get primary image
+router.get('/images/blob/:stall_id/:display_order', getStallImageBlob)   // GET /api/stalls/images/blob/:stall_id/:display_order - Serve image binary
+router.get('/public/:stall_id/images/blob', getStallImagesBlob)          // GET /api/stalls/public/:stall_id/images/blob - Get images metadata (public)
 
 // ===== PROTECTED ROUTES (Authentication Required) =====
 router.use(authMiddleware.authenticateToken)

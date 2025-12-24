@@ -124,6 +124,7 @@
                         height="180" 
                         cover 
                         class="rounded-t"
+                        @error="handleMainImageError"
                       >
                         <template v-slot:placeholder>
                           <div class="d-flex align-center justify-center fill-height">
@@ -133,6 +134,7 @@
                         <template v-slot:error>
                           <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
                             <v-icon color="error" size="48">mdi-image-broken</v-icon>
+                            <p class="text-caption text-error mt-2">Failed to load image</p>
                           </div>
                         </template>
 
@@ -185,7 +187,7 @@
                           :class="{ 'active': index === currentImageIndex }"
                           @click="goToImage(index)"
                         >
-                          <v-img :src="img" height="40" width="50" cover class="rounded"></v-img>
+                          <v-img :src="typeof img === 'object' ? img.url : img" height="40" width="50" cover class="rounded"></v-img>
                           <!-- Mini delete button on thumbnail -->
                           <v-btn
                             icon

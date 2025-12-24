@@ -3,7 +3,7 @@
   props: {
     employees: Array,
   },
-  emits: ['edit-employee', 'manage-permissions', 'toggle-status', 'reset-password'],
+  emits: ['edit-employee', 'manage-permissions', 'toggle-status', 'reset-password', 'fire-employee'],
 
   data() {
     return {
@@ -47,6 +47,11 @@
 
     handleResetPassword() {
       this.$emit('reset-password', this.selectedEmployee)
+      this.closeActionsDialog()
+    },
+
+    handleFireEmployee() {
+      this.$emit('fire-employee', this.selectedEmployee)
       this.closeActionsDialog()
     },
 

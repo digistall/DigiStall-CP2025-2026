@@ -122,10 +122,11 @@ export async function getAllStaffActivities(req, res) {
             params.push(endDate + ' 23:59:59');
         }
 
-        query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
-        params.push(limit, offset);
+        // Embed LIMIT and OFFSET directly in query string to avoid mysql2 execute() issues
+        query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
 
-        const [activities] = await connection.execute(query, params);
+        // Use query() instead of execute() for better mysql2 compatibility
+        const [activities] = await connection.query(query, params);
 
         // Get total count for pagination
         let countQuery = `SELECT COUNT(*) as total FROM staff_activity_log WHERE 1=1`;
@@ -152,7 +153,7 @@ export async function getAllStaffActivities(req, res) {
             countParams.push(endDate + ' 23:59:59');
         }
 
-        const [[{ total }]] = await connection.execute(countQuery, countParams);
+        const [[{ total }]] = await connection.query(countQuery, countParams);
 
         console.log(`✅ Found ${activities.length} activity logs`);
 
@@ -191,7 +192,8 @@ export async function getStaffActivityById(req, res) {
 
         connection = await createConnection();
 
-        const [activities] = await connection.execute(`
+        // Use query() instead of execute() and embed LIMIT/OFFSET directly
+        const [activities] = await connection.query(`
             SELECT 
                 log_id,
                 staff_type,
@@ -207,10 +209,10 @@ export async function getStaffActivityById(req, res) {
             FROM staff_activity_log
             WHERE staff_type = ? AND staff_id = ?
             ORDER BY created_at DESC
-            LIMIT ? OFFSET ?
-        `, [staffType, staffId, limit, offset]);
+            LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
+        `, [staffType, staffId]);
 
-        const [[{ total }]] = await connection.execute(`
+        const [[{ total }]] = await connection.query(`
             SELECT COUNT(*) as total FROM staff_activity_log
             WHERE staff_type = ? AND staff_id = ?
         `, [staffType, staffId]);
@@ -265,7 +267,7 @@ export async function getActivitySummary(req, res) {
         }
         typeQuery += ` GROUP BY staff_type`;
 
-        const [byType] = await connection.execute(typeQuery, typeParams);
+        const [byType] = await connection.query(typeQuery, typeParams);
 
         // Get activity counts by action type
         let actionQuery = `
@@ -283,7 +285,7 @@ export async function getActivitySummary(req, res) {
         }
         actionQuery += ` GROUP BY action_type ORDER BY count DESC LIMIT 10`;
 
-        const [byAction] = await connection.execute(actionQuery, actionParams);
+        const [byAction] = await connection.query(actionQuery, actionParams);
 
         // Get most active staff
         let activeQuery = `
@@ -303,7 +305,7 @@ export async function getActivitySummary(req, res) {
         }
         activeQuery += ` GROUP BY staff_type, staff_id, staff_name ORDER BY activity_count DESC LIMIT 10`;
 
-        const [mostActive] = await connection.execute(activeQuery, activeParams);
+        const [mostActive] = await connection.query(activeQuery, activeParams);
 
         // Get recent failed actions
         let failedQuery = `
@@ -324,7 +326,7 @@ export async function getActivitySummary(req, res) {
         }
         failedQuery += ` ORDER BY created_at DESC LIMIT 10`;
 
-        const [failedActions] = await connection.execute(failedQuery, failedParams);
+        const [failedActions] = await connection.query(failedQuery, failedParams);
 
         res.json({
             success: true,

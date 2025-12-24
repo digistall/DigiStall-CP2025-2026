@@ -23,10 +23,12 @@ class DataTransformService {
       return imagePath
     }
     
-    // Check if it's a BLOB API URL path
+    // Check if it's a BLOB API URL path (e.g., /api/stalls/images/blob/21/1)
     if (imagePath.includes('/api/stalls/images/blob/')) {
       const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-      return `${apiBaseUrl}${imagePath.startsWith('/api') ? '' : '/api'}${imagePath.replace('/api', '')}`
+      // Remove trailing /api from base URL if present, then append the full path
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+      return `${baseUrl}${imagePath}`
     }
     
     // Legacy: Build URL for file-based images

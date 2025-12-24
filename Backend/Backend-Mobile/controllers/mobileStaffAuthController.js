@@ -76,17 +76,18 @@ export const mobileStaffLogin = async (req, res) => {
         let staffData = null;
         let staffType = null;
         
-        // Check inspector table
+        // Check inspector table (inspector table uses 'password' column, not 'password_hash')
         const [inspectors] = await connection.execute(`
             SELECT 
                 i.inspector_id as staff_id,
+                i.username,
                 i.first_name,
                 i.last_name,
                 i.middle_name,
                 i.email,
                 i.contact_no,
                 i.status,
-                COALESCE(i.password_hash, i.password) as password_hash,
+                i.password as password_hash,
                 ia.branch_id,
                 b.branch_name
             FROM inspector i

@@ -271,14 +271,36 @@ export async function getStallImageBlobById(req, res) {
   try {
     const { image_id } = req.params
     
+    console.log(`📷 Fetching BLOB image by ID: ${image_id}`)
+    
     connection = await createConnection()
     
+    // First check if image exists at all
+    const [checkRows] = await connection.query(
+      'SELECT id, stall_id, mime_type, file_name, LENGTH(image_data) as data_size FROM stall_images WHERE id = ?',
+      [image_id]
+    )
+    
+    console.log(`📷 Image check result:`, checkRows)
+    
+    if (checkRows.length === 0) {
+      console.log(`📷 Image ID ${image_id} not found in database`)
+      return res.status(404).json({
+        success: false,
+        message: 'Image not found'
+      })
+    }
+    
+    console.log(`📷 Image found: ${checkRows[0].file_name}, size: ${checkRows[0].data_size} bytes`)
+    
+    // Now fetch the actual binary data
     const [images] = await connection.query(
       'SELECT image_data, mime_type, file_name FROM stall_images WHERE id = ?',
       [image_id]
     )
     
     if (images.length === 0 || !images[0].image_data) {
+      console.log(`📷 Image data is NULL for ID ${image_id}`)
       return res.status(404).json({
         success: false,
         message: 'Image not found'
@@ -286,6 +308,8 @@ export async function getStallImageBlobById(req, res) {
     }
     
     const image = images[0]
+    
+    console.log(`📷 Serving image: ${image.file_name}, type: ${image.mime_type}, size: ${image.image_data?.length || 0} bytes`)
     
     res.set('Content-Type', image.mime_type || 'image/jpeg')
     res.set('Content-Disposition', `inline; filename="${image.file_name || 'image.jpg'}"`)

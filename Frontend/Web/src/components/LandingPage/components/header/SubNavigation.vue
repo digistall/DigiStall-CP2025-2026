@@ -196,6 +196,8 @@ export default {
     },
 
     async handleBranchFilter(branch) {
+      console.log('🏢 Branch clicked:', branch);
+      
       const selectionResult = UIHelperService.handleBranchSelection(
         this.selectedBranch,
         branch,
@@ -205,20 +207,25 @@ export default {
       this.selectedBranch = selectionResult.selectedBranch;
       this.showStallsContainer = selectionResult.showStallsContainer;
 
-      // Reset scroll tracking when opening stalls container
-      if (this.showStallsContainer && this.selectedBranch) {
-        this.lastScrollY = window.scrollY;
-      }
-
       if (selectionResult.shouldReset) {
         this.resetFilters();
       }
 
       if (this.selectedBranch) {
-        await Promise.all([
-          this.fetchLocationsByBranch(this.selectedBranch),
-          this.fetchStallsByBranch(this.selectedBranch),
-        ]);
+        console.log('📥 Fetching stalls for branch:', this.selectedBranch);
+        
+        try {
+          await Promise.all([
+            this.fetchLocationsByBranch(this.selectedBranch),
+            this.fetchStallsByBranch(this.selectedBranch),
+          ]);
+          console.log('✅ Stalls loaded successfully');
+        } catch (error) {
+          console.error('❌ Error loading stalls:', error);
+        }
+        
+        // Reset scroll tracking AFTER data is loaded to prevent auto-close
+        this.lastScrollY = window.scrollY;
       }
     },
 
@@ -367,12 +374,14 @@ export default {
     setupWindowScrollListener() {
       this.windowScrollListener = () => {
         // Only auto-close if stalls container is open AND modal is NOT open
-        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen) {
+        // AND stallsLoading is false (to prevent closing while loading)
+        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen && !this.stallsLoading) {
           const currentScrollY = window.scrollY;
           const scrollDifference = currentScrollY - this.lastScrollY;
           
           // Check if user has scrolled down more than the threshold
           if (scrollDifference > this.scrollThreshold) {
+            console.log('🔻 Auto-closing stalls container due to scroll');
             this.closeStallsContainer();
           }
         }
