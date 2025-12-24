@@ -54,6 +54,7 @@
                 @manage-permissions="managePermissions"
                 @toggle-status="toggleEmployeeStatus"
                 @reset-password="resetEmployeePassword"
+                @fire-employee="fireEmployee"
               />
             </div>
 

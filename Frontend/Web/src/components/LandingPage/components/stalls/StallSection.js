@@ -236,7 +236,10 @@ export default {
     async fetchStalls() {
       try {
         this.stallsLoading = true
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        // Ensure apiUrl ends with /api
+        const apiUrl = apiBaseUrl.endsWith('/api') ? apiBaseUrl : `${apiBaseUrl}/api`
+        
         const params = new URLSearchParams({
           search: this.stallsSearch,
           branch: this.stallsBranchFilter,
@@ -246,21 +249,30 @@ export default {
           limit: 20
         })
         
+        console.log('📊 Fetching stalls from:', `${apiUrl}/stalls/public/list?${params}`)
+        
         const response = await fetch(`${apiUrl}/stalls/public/list?${params}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         })
         
         const data = await response.json()
+        console.log('📊 Stalls API response:', data)
         
         if (data.success) {
           // Process stall images - use backend image if available, otherwise default
-          const processedStalls = data.data.map(stall => ({
-            ...stall,
-            stall_image: stall.stall_image 
+          const processedStalls = data.data.map(stall => {
+            const imageUrl = stall.stall_image 
               ? this.buildImageUrl(stall.stall_image) 
               : this.getDefaultImage(stall.section_name)
-          }))
+            console.log(`🖼️ Stall ${stall.stall_no} image:`, stall.stall_image, '→', imageUrl)
+            return {
+              ...stall,
+              stall_image: imageUrl
+            }
+          })
+          
+          console.log('📊 Processed stalls:', processedStalls.length)
           
           if (this.stallsPage === 1) {
             this.stallsList = processedStalls
@@ -303,10 +315,12 @@ export default {
         return imagePath
       }
       
-      // Check if it's a BLOB API URL path
+      // Check if it's a BLOB API URL path (e.g., /api/stalls/images/blob/21/1)
       if (imagePath.includes('/api/stalls/images/blob/')) {
         const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-        return `${apiBaseUrl}${imagePath.startsWith('/api') ? '' : '/api'}${imagePath.replace('/api', '')}`
+        // Remove trailing /api from base URL if present, then append the full path
+        const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+        return `${baseUrl}${imagePath}`
       }
       
       // Legacy: Build URL for file-based images

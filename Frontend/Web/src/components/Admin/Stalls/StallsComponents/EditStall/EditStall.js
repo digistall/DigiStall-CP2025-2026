@@ -557,10 +557,17 @@ export default {
 
       try {
         const token = sessionStorage.getItem('authToken')
-        const apiUrl = this.apiBaseUrl.replace('/api', '')
+        // Remove trailing /api if present to get base URL
+        const apiUrl = this.apiBaseUrl.replace(/\/api$/, '')
+        
+        console.log('🔗 API Base URL:', this.apiBaseUrl)
+        console.log('🔗 Base URL (no /api):', apiUrl)
         
         // Use BLOB API endpoint to get images
-        const response = await fetch(`${apiUrl}/api/stalls/${stallId}/images/blob`, {
+        const fetchUrl = `${apiUrl}/api/stalls/${stallId}/images/blob`
+        console.log('🔗 Fetching from:', fetchUrl)
+        
+        const response = await fetch(fetchUrl, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -571,13 +578,17 @@ export default {
           const result = await response.json()
           if (result.success && result.data.images && result.data.images.length > 0) {
             // Map images to use BLOB serving endpoint
-            this.stallImages = result.data.images.map(img => ({
-              id: img.id,
-              url: `${apiUrl}/api/stalls/images/blob/id/${img.id}`,
-              is_primary: img.is_primary,
-              display_order: img.display_order,
-              file_name: img.file_name
-            }))
+            this.stallImages = result.data.images.map(img => {
+              const imageUrl = `${apiUrl}/api/stalls/images/blob/id/${img.id}`
+              console.log(`🖼️ Image ${img.id} URL:`, imageUrl)
+              return {
+                id: img.id,
+                url: imageUrl,
+                is_primary: img.is_primary,
+                display_order: img.display_order,
+                file_name: img.file_name
+              }
+            })
             console.log(`📸 Found ${this.stallImages.length} images in BLOB storage`)
           } else {
             console.log('📸 No images found in BLOB storage')
@@ -710,9 +721,18 @@ export default {
       if (this.stallImages.length > 0) {
         const currentImg = this.stallImages[this.currentImageIndex]
         // Handle both object format (BLOB) and string format (legacy)
-        return typeof currentImg === 'object' ? currentImg.url : currentImg
+        const url = typeof currentImg === 'object' ? currentImg.url : currentImg
+        console.log('🖼️ getCurrentImage() returning:', url)
+        return url
       }
       return this.editForm.image || null
+    },
+
+    handleMainImageError(event) {
+      const currentImg = this.stallImages[this.currentImageIndex]
+      const url = typeof currentImg === 'object' ? currentImg.url : currentImg
+      console.error('❌ Image failed to load:', url)
+      console.error('❌ Current image data:', currentImg)
     },
 
     confirmDeleteImage(index) {

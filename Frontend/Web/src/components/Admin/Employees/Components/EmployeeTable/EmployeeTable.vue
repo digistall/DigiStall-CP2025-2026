@@ -189,13 +189,24 @@
 
             <v-btn
               block
-              color="red"
+              color="warning"
               variant="flat"
-              class="simple-action-btn mb-4"
+              class="simple-action-btn mb-3"
               @click="handleResetPassword"
             >
               <v-icon class="me-2">mdi-key-variant</v-icon>
               Reset Password
+            </v-btn>
+
+            <v-btn
+              block
+              color="red-darken-3"
+              variant="flat"
+              class="simple-action-btn mb-4"
+              @click="handleFireEmployee"
+            >
+              <v-icon class="me-2">mdi-account-remove</v-icon>
+              Fire Employee
             </v-btn>
 
             <v-btn

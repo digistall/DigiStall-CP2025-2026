@@ -459,7 +459,7 @@ export default {
           ? (stall.stall_image.startsWith('http') 
               ? stall.stall_image 
               : stall.stall_image.startsWith('/api/') 
-                ? `${this.apiBaseUrl.replace('/api', '')}${stall.stall_image}`
+                ? `${this.apiBaseUrl.replace(/\/api$/, '')}${stall.stall_image}`
                 : `http://localhost${stall.stall_image}`)
           : this.getDefaultImage(stall.section_name),
 

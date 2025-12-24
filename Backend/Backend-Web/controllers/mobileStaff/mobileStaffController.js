@@ -70,66 +70,47 @@ export async function createInspector(req, res) {
 
         console.log(`📱 Creating inspector: ${firstName} ${lastName} (${username})`);
 
-        // Try to use stored procedure first, fallback to direct insert
+        // Use direct insert (stored procedure is unreliable)
+        const [insertResult] = await connection.query(
+            `INSERT INTO inspector (username, first_name, last_name, middle_name, email, password, contact_no, date_hired, status)
+             VALUES (?, ?, ?, '', ?, ?, ?, CURDATE(), 'active')`,
+            [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
+        );
+
+        const inspectorId = insertResult.insertId;
+        console.log(`✅ Inspector created with ID: ${inspectorId}`);
+
+        // Create assignment
+        await connection.query(
+            `INSERT INTO inspector_assignment (inspector_id, branch_id, start_date, status, remarks)
+             VALUES (?, ?, CURDATE(), 'Active', 'Newly hired inspector')`,
+            [inspectorId, branchId]
+        );
+        console.log(`✅ Inspector assignment created for branch ${branchId}`);
+
+        // Log the action
         try {
-            const [[result]] = await connection.execute(
-                'CALL createInspectorWithCredentials(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [username, hashedPassword, firstName, lastName, email, phoneNumber || null, branchId, null, branchManagerId]
-            );
-
-            console.log('✅ Inspector created via stored procedure');
-
-            return res.status(201).json({
-                success: true,
-                message: 'Inspector created successfully',
-                data: {
-                    inspectorId: result.inspector_id,
-                    credentials: {
-                        username,
-                        password
-                    },
-                    branchId
-                }
-            });
-        } catch (spError) {
-            console.log('⚠️ Stored procedure not available, using direct insert');
-            
-            // Direct insert fallback
-            const [insertResult] = await connection.execute(
-                `INSERT INTO inspector (first_name, last_name, middle_name, email, password, contact_no, date_hired, status)
-                 VALUES (?, ?, '', ?, ?, ?, CURDATE(), 'active')`,
-                [firstName, lastName, email, hashedPassword, phoneNumber || null]
-            );
-
-            const inspectorId = insertResult.insertId;
-
-            // Create assignment
-            await connection.execute(
-                `INSERT INTO inspector_assignment (inspector_id, branch_id, start_date, status, remarks)
-                 VALUES (?, ?, CURDATE(), 'Active', 'Newly hired inspector')`,
-                [inspectorId, branchId]
-            );
-
-            // Log the action
-            await connection.execute(
+            await connection.query(
                 `INSERT INTO inspector_action_log (inspector_id, branch_id, business_manager_id, action_type, action_date, remarks)
                  VALUES (?, ?, ?, 'New Hire', NOW(), ?)`,
                 [inspectorId, branchId, branchManagerId, `Inspector ${firstName} ${lastName} was hired`]
             );
-
-            return res.status(201).json({
-                success: true,
-                message: 'Inspector created successfully',
-                data: {
-                    inspectorId,
-                    credentials: {
-                        username,
-                        password
-                    },
-                    branchId
-                }
-            });
+        } catch (logError) {
+            console.log('⚠️ Could not log action:', logError.message);
         }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Inspector created successfully',
+            data: {
+                inspectorId,
+                credentials: {
+                    username,
+                    password
+                },
+                branchId
+            }
+        });
     } catch (error) {
         console.error('❌ Error creating inspector:', error);
         res.status(500).json({
@@ -309,9 +290,11 @@ export async function getInspectorsByBranch(req, res) {
 
         if (branchId) {
             // Filter by branch if branchId is provided
+            // Use LEFT JOIN and filter in WHERE to include inspectors with or without assignment
             query = `
                 SELECT 
                     i.inspector_id,
+                    i.username,
                     i.first_name,
                     i.last_name,
                     i.email,
@@ -319,20 +302,22 @@ export async function getInspectorsByBranch(req, res) {
                     i.date_hired,
                     i.status,
                     i.last_login,
-                    ia.branch_id,
-                    b.branch_name
+                    COALESCE(ia.branch_id, ?) as branch_id,
+                    COALESCE(b.branch_name, 'Unassigned') as branch_name
                 FROM inspector i
                 LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
                 LEFT JOIN branch b ON ia.branch_id = b.branch_id
-                WHERE ia.branch_id = ?
+                WHERE (ia.branch_id = ? OR ia.branch_id IS NULL)
+                  AND i.status IN ('active', 'Active')
                 ORDER BY i.date_hired DESC
             `;
-            params = [branchId];
+            params = [branchId, branchId];
         } else {
             // Return all inspectors if no branchId (for admin view)
             query = `
                 SELECT 
                     i.inspector_id,
+                    i.username,
                     i.first_name,
                     i.last_name,
                     i.email,
@@ -345,12 +330,13 @@ export async function getInspectorsByBranch(req, res) {
                 FROM inspector i
                 LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
                 LEFT JOIN branch b ON ia.branch_id = b.branch_id
+                WHERE i.status IN ('active', 'Active')
                 ORDER BY i.date_hired DESC
             `;
             params = [];
         }
 
-        const [inspectors] = await connection.execute(query, params);
+        const [inspectors] = await connection.query(query, params);
 
         console.log(`✅ Found ${inspectors.length} inspectors${branchId ? ` for branch ${branchId}` : ''}`);
 

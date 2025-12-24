@@ -108,9 +108,10 @@ export async function getAllEmployees(req, res) {
         
         console.log(`✅ getAllEmployees - Found ${employees.length} employees`);
         
-        // Parse permissions for each employee
+        // Parse permissions for each employee and alias business_employee_id as employee_id
         const employeesWithPermissions = employees.map(emp => ({
             ...emp,
+            employee_id: emp.business_employee_id, // Alias for frontend compatibility
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
         
@@ -300,6 +301,7 @@ export async function deleteEmployee(req, res) {
     let connection;
     try {
         const { id } = req.params;
+        const { reason } = req.body;
         const userBranchId = req.user?.branchId;
         
         if (!userBranchId) {
@@ -311,33 +313,61 @@ export async function deleteEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Verify employee belongs to the same branch (correct name: getBusinessEmployeeById)
-        const [[checkEmployee]] = await connection.execute(
-            'CALL getBusinessEmployeeById(?)',
-            [id]
-        );
-        
-        if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Employee not found or you do not have permission to delete this employee' 
-            });
-        }
-        
-        // Call stored procedure (correct name: deleteBusinessEmployee)
-        const [[result]] = await connection.execute(
-            'CALL deleteBusinessEmployee(?)',
-            [id]
-        );
+        // Try stored procedure first, fallback to direct query
+        try {
+            // Verify employee belongs to the same branch
+            const [[checkEmployee]] = await connection.execute(
+                'CALL getBusinessEmployeeById(?)',
+                [id]
+            );
+            
+            if (checkEmployee.length === 0 || checkEmployee[0].branch_id !== userBranchId) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'Employee not found or you do not have permission to delete this employee' 
+                });
+            }
+            
+            // Call stored procedure
+            const [[result]] = await connection.execute(
+                'CALL deleteBusinessEmployee(?)',
+                [id]
+            );
 
-        if (result.affected_rows === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Failed to deactivate employee' 
-            });
+            if (result.affected_rows === 0) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'Failed to deactivate employee' 
+                });
+            }
+        } catch (spError) {
+            console.log('⚠️ Stored procedure not available, using direct query');
+            
+            // Verify employee exists and belongs to the same branch
+            const [employees] = await connection.query(
+                'SELECT business_employee_id, branch_id FROM business_employee WHERE business_employee_id = ?',
+                [id]
+            );
+            
+            if (employees.length === 0 || employees[0].branch_id !== userBranchId) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'Employee not found or you do not have permission to delete this employee' 
+                });
+            }
+            
+            // Deactivate employee with termination info
+            await connection.query(
+                `UPDATE business_employee 
+                 SET status = 'inactive', 
+                     termination_date = CURDATE(),
+                     termination_reason = ?
+                 WHERE business_employee_id = ?`,
+                [reason || 'Terminated by manager', id]
+            );
         }
         
-        res.json({ success: true, message: 'Employee deactivated successfully' });
+        res.json({ success: true, message: 'Employee terminated successfully' });
     } catch (error) {
         console.error('Error deleting employee:', error);
         res.status(500).json({ success: false, message: 'Failed to delete employee', error: error.message });
