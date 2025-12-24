@@ -82,6 +82,8 @@
             :key="filterKey"
             @modal-opened="modalOpen = true"
             @modal-closed="modalOpen = false; lastScrollY = window.scrollY"
+            @application-form-opened="applicationFormOpen = true"
+            @application-form-closed="applicationFormOpen = false"
           />
         </div>
       </div>
@@ -134,6 +136,7 @@ export default {
       lastScrollY: 0,
       scrollThreshold: 100, // Pixels to scroll before auto-closing
       modalOpen: false, // Track if stall details modal is open
+      applicationFormOpen: false, // Track if application form is open
     };
   },
 
@@ -374,8 +377,8 @@ export default {
     setupWindowScrollListener() {
       this.windowScrollListener = () => {
         // Only auto-close if stalls container is open AND modal is NOT open
-        // AND stallsLoading is false (to prevent closing while loading)
-        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen && !this.stallsLoading) {
+        // AND application form is NOT open AND stallsLoading is false (to prevent closing while loading)
+        if (this.showStallsContainer && this.selectedBranch && !this.modalOpen && !this.applicationFormOpen && !this.stallsLoading) {
           const currentScrollY = window.scrollY;
           const scrollDifference = currentScrollY - this.lastScrollY;
           

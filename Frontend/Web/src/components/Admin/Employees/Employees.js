@@ -4,6 +4,7 @@ import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue';
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
@@ -20,10 +21,12 @@ export default {
     ManagePermissions,
     ToastNotification,
     ActivityLogDialog,
+    LoadingOverlay,
   },
   data() {
     return {
       saving: false,
+      loading: false,
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,

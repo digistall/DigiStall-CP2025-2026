@@ -3,8 +3,15 @@
   <v-app>
     <div>
       <!-- Main Content -->
-      <v-main>
+      <v-main class="stallholders-main-content">
         <v-container fluid class="main-content">
+          <!-- Standardized Loading Overlay - contained within main content -->
+          <LoadingOverlay 
+            :loading="loading" 
+            text="Loading stallholders..."
+            :full-page="false"
+          />
+          
           <v-row>
             <v-col cols="12">
               <!-- Search Component -->

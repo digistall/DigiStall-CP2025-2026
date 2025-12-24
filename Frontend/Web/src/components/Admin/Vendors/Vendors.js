@@ -4,12 +4,14 @@ import VendorDetailsDialog from './Components/VendorDetailsDialog/VendorDetailsD
 import EditVendorDialog from './Components/EditVendorDialog/EditVendorDialog.vue'
 import SearchVendor from './Components/Search/SearchVendor.vue'
 import TableVendor from './Components/Table/TableVendor.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Vendors',
-  components: { AddVendorDialog, VendorDetailsDialog, EditVendorDialog, SearchVendor, TableVendor },
+  components: { AddVendorDialog, VendorDetailsDialog, EditVendorDialog, SearchVendor, TableVendor, LoadingOverlay },
   data() {
     return {
+      loading: false,
       addDialog: false,
       detailsDialog: false,
       detailsData: null,

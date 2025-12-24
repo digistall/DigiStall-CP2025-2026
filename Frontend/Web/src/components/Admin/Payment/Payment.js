@@ -1,16 +1,19 @@
 import PaymentTypeSelector from './Components/PaymentTypeSelector/PaymentTypeSelector.vue'
 import StallPayments from './Components/StallPayments/StallPayments.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Payment',
   components: {
     PaymentTypeSelector,
-    StallPayments
+    StallPayments,
+    LoadingOverlay
   },
   data() {
     return {
       pageTitle: 'Payment',
-      selectedPaymentType: 'stall' // Default to stall applicants
+      selectedPaymentType: 'stall', // Default to stall applicants
+      loading: false
     }
   },
   mounted() {

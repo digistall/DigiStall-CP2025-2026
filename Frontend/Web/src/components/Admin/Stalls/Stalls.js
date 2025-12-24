@@ -3,6 +3,7 @@ import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFi
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
 import dataCacheService from '../../../services/dataCacheService.js'
 
@@ -14,6 +15,7 @@ export default {
     AddChoiceModal,
     EditStall,
     ToastNotification,
+    LoadingOverlay,
   },
   data() {
     return {

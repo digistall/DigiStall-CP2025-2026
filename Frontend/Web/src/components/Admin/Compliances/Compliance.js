@@ -1,6 +1,7 @@
 import ComplianceTable from './ComplianceComponents/ComplianceTable/ComplianceTable.vue'
 import ComplianceSearch from './ComplianceComponents/ComplianceSearch/ComplianceSearch.vue'
 import ViewCompliance from './ComplianceComponents/ViewCompliance/ViewCompliance.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 import axios from 'axios'
 
 const API_BASE_URL = 'http://localhost:3001/api'
@@ -11,6 +12,7 @@ export default {
     ComplianceTable,
     ComplianceSearch,
     ViewCompliance,
+    LoadingOverlay,
   },
   data() {
     return {

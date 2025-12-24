@@ -4,6 +4,7 @@ import TableStall from './Components/Table/TableStall.vue'
 import DocumentsView from './Components/Documents/DocumentsView.vue'
 import DocumentDetail from './Components/Documents/View/DocumentDetail.vue'
 import AddStallholder from './Components/Add/AddStallholder.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Stallholders',
@@ -13,12 +14,14 @@ export default {
     DocumentsView,
     DocumentDetail,
     AddStallholder,
+    LoadingOverlay,
   },
   data() {
     return {
       pageTitle: 'Stallholders',
       searchQuery: '',
       activeFilter: 'all',
+      loading: false,
       showDocumentsModal: false,
       showDocumentDetail: false,
       showAddStallholderModal: false,

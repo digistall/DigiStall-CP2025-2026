@@ -8,8 +8,8 @@
     justify-content: center;
     align-items: center;
     gap: 12px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
     border-bottom: 1px solid #e5e5e5;
 }
 
@@ -66,16 +66,17 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.09);
-    backdrop-filter: blur(2px);
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
     overflow-y: auto;
     overflow-x: hidden;
     animation: fadeIn 0.3s ease-out;
-    padding: 20px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
     z-index: 999999;
 }
 
@@ -86,19 +87,20 @@
 
 .form-container {
     background: rgb(249, 249, 255);
-    padding: 28px;
+    padding: 20px 28px;
     border-radius: 16px;
-    width: 100%;
+    width: 95%;
     max-width: 600px;
     min-width: 320px;
+    max-height: 95vh;
+    overflow-y: auto;
     box-shadow: 
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        0 20px 25px -5px rgba(0, 0, 0, 0.15),
+        0 10px 10px -5px rgba(0, 0, 0, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
     animation: slideUp 0.4s ease-out;
     margin: auto;
     position: relative;
-    overflow: visible;
 }
 
 @keyframes slideUp {
@@ -113,7 +115,7 @@
 }
 
 .form-container h3 {
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     font-size: clamp(20px, 4vw, 24px);
     font-weight: 700;
     color: #002B5B;
@@ -121,7 +123,7 @@
 }
 
 .form-container p {
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     font-size: clamp(12px, 2.5vw, 14px);
     color: #666;
     text-align: center;
@@ -131,7 +133,7 @@
 form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 14px;
 }
 
 label {
@@ -189,7 +191,7 @@ select {
 }
 
 .buttons {
-    margin-top: 28px;
+    margin-top: 20px;
     display: flex;
     justify-content: flex-end;
     gap: 16px;

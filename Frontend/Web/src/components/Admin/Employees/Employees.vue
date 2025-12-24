@@ -2,6 +2,13 @@
 <template>
   <v-app>
     <div class="employee-container">
+      <!-- Standardized Loading Overlay - contained within employee container -->
+      <LoadingOverlay 
+        :loading="loading" 
+        text="Loading employees..."
+        :full-page="false"
+      />
+      
       <!-- Header Section - Simple white header like Applicants -->
       <v-container fluid class="main-content">
         <v-row>
