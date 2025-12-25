@@ -11,16 +11,17 @@ services:
   # Backend API Service
   - name: digistall-api
     github:
-      branch: main
+      branch: FullBranch
       deploy_on_push: true
-      repo: your-github-username/DigiStall-CP2025-2026
+      repo: digistall/DigiStall-CP2025-2026
     source_dir: /Backend/Backend-Web
-    dockerfile_path: ../Dockerfile
     http_port: 3001
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
     routes:
       - path: /api
+    build_command: npm install
+    run_command: node server.js
     envs:
       # Server Configuration
       - key: NODE_ENV
@@ -63,9 +64,9 @@ static_sites:
   # Frontend Web Application
   - name: digistall-web
     github:
-      branch: main
+      branch: FullBranch
       deploy_on_push: true
-      repo: your-github-username/DigiStall-CP2025-2026
+      repo: digistall/DigiStall-CP2025-2026
     source_dir: /Frontend/Web
     build_command: npm install && npm run build
     output_dir: dist

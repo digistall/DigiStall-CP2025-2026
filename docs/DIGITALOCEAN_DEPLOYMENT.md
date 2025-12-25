@@ -19,7 +19,7 @@ This guide explains how to deploy DigiStall to DigitalOcean App Platform with:
 ```bash
 git add .
 git commit -m "Add DigitalOcean deployment configuration"
-git push origin main
+git push origin FullBranch
 ```
 
 ### Step 2: Create App in DigitalOcean
@@ -28,7 +28,7 @@ git push origin main
 3. Select **GitHub** as source
 4. Authorize DigitalOcean to access your repository
 5. Select your `DigiStall-CP2025-2026` repository
-6. Select branch: `main`
+6. Select branch: `FullBranch`
 
 ### Step 3: Configure Backend Service
 1. Click **"Add Resource"** → **"Service"**

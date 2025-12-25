@@ -12,6 +12,7 @@ class EmailService {
         this.baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
         this.fromEmail = process.env.FROM_EMAIL || 'noreply@nagastallmanagement.com';
         this.fromName = process.env.FROM_NAME || 'Naga Stall Management System';
+        this.mobileAppDownloadUrl = process.env.MOBILE_APP_DOWNLOAD_URL || 'https://expo.dev/accounts/genosexe02/projects/digistall/builds';
     }
 
     /**
@@ -459,6 +460,9 @@ IMPORTANT:
 - Download the Naga Stall Management mobile app to access your account.
 - Keep your credentials safe and do not share them with anyone.
 
+📱 DOWNLOAD MOBILE APP:
+${this.mobileAppDownloadUrl}
+
 If you have any questions, please contact your branch manager.
 
 Best regards,
@@ -502,6 +506,12 @@ Naga Stall Management Team`,
                                     <li>Keep your credentials safe and confidential</li>
                                     <li>Download the mobile app to access your account</li>
                                 </ul>
+                            </div>
+                            
+                            <div style="background: linear-gradient(135deg, #002181 0%, #003399 100%); padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0 0 15px 0; color: white; font-weight: bold; font-size: 16px;">📱 Download DigiStall Mobile App</p>
+                                <a href="${this.mobileAppDownloadUrl}" style="display: inline-block; background: #4CAF50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 14px;">Download Now</a>
+                                <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.8); font-size: 12px;">Available for Android devices</p>
                             </div>
                             
                             <p style="color: #666; font-size: 14px;">If you have any questions, please contact your branch manager.</p>

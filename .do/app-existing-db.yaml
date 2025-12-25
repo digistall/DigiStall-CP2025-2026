@@ -12,9 +12,9 @@ services:
   # Backend API Service
   - name: digistall-api
     github:
-      branch: main
+      branch: FullBranch
       deploy_on_push: true
-      repo: your-github-username/DigiStall-CP2025-2026
+      repo: digistall/DigiStall-CP2025-2026
     source_dir: /Backend/Backend-Web
     http_port: 3001
     instance_count: 1
@@ -60,15 +60,19 @@ services:
         type: SECRET
         value: REPLACE_WITH_SECURE_REFRESH_SECRET
         scope: RUN_TIME
+      # Mobile App Download URL
+      - key: MOBILE_APP_DOWNLOAD_URL
+        value: https://expo.dev/accounts/genosexe02/projects/digistall/builds
+        scope: RUN_TIME
 
 # ===== STATIC SITES =====
 static_sites:
   # Frontend Web Application
   - name: digistall-web
     github:
-      branch: main
+      branch: FullBranch
       deploy_on_push: true
-      repo: your-github-username/DigiStall-CP2025-2026
+      repo: digistall/DigiStall-CP2025-2026
     source_dir: /Frontend/Web
     build_command: npm install && npm run build
     output_dir: dist
