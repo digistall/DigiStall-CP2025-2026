@@ -3,7 +3,7 @@
     <div class="loading-content">
       <!-- Logo Header - Always visible -->
       <div class="logo-header">
-        <img src="@/assets/LandingPage/logo.png" alt="DigiStall" class="digistall-logo" />
+        <img src="@/assets/DigiStall-Logo.png" alt="DigiStall" class="digistall-logo" />
       </div>
 
       <!-- Preparing State -->
@@ -28,7 +28,7 @@
           </div>
         </div>
         <h3 class="loading-title">Submitting Application</h3>
-        <p class="loading-subtitle">Sending your application to the database...</p>
+        <p class="loading-subtitle">Saving your Application</p>
         <div class="progress-bar">
           <div class="progress-fill submitting-progress"></div>
         </div>
@@ -92,7 +92,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 33, 129, 0.95);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;

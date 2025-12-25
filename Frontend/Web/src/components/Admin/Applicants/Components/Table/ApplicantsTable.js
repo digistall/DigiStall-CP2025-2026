@@ -74,9 +74,11 @@ export default {
         let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
         apiBase = apiBase.replace(/\/api\/?$/, '') // Remove trailing /api if present
         
-        // Get token for authenticated requests
-        const token = localStorage.getItem('token')
+        // Get token for authenticated requests (stored as 'authToken' by authStore)
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token')
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+        
+        console.log('🔐 Auth token present:', !!token)
         
         // Try to fetch all documents for this applicant with base64 data
         let url = `${apiBase}/api/applicants/${applicantId}/documents/blob?include_data=true`
@@ -145,8 +147,10 @@ export default {
       
       console.log(`📄 Fetching documents from file system for applicant ${applicantId}, branch ${branchId}`)
       
-      // Base URL for applicant documents in htdocs
-      const baseUrl = `http://localhost/digistall_uploads/applicants/${branchId}/${applicantId}`
+      // Base URL for applicant documents - use API server to serve files
+      let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      apiBase = apiBase.replace(/\/api\/?$/, '') // Remove trailing /api if present
+      const baseUrl = `${apiBase}/uploads/applicants/${branchId}/${applicantId}`
       
       // Check for each document type with common extensions
       const documentTypes = ['signature', 'house_location', 'valid_id']
