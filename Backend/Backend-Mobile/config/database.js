@@ -40,6 +40,8 @@ console.log('🔧 Mobile App Database Config:', {
 export async function createConnection() {
   try {
     const connection = await mysql.createConnection(dbConfig)
+    // Set session timezone to Philippine time (UTC+8)
+    await connection.execute("SET time_zone = '+08:00'")
     return connection
   } catch (error) {
     console.error('❌ Mobile App Database connection failed:', error)

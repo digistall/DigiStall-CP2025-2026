@@ -6,6 +6,19 @@ import { createConnection } from '../config/database.js';
  * Tracks: page views, CRUD operations, payments, etc.
  */
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTime = () => {
+  const now = new Date();
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // Map API routes to readable module names and action types
 const routeMapping = {
   // Dashboard
@@ -208,11 +221,13 @@ export const activityLogger = async (req, res, next) => {
           if (req.body.amount) finalDescription += ` (Amount: ₱${req.body.amount})`;
         }
         
+        const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
+        
         await connection.execute(`
           INSERT INTO staff_activity_log 
           (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-           module, ip_address, user_agent, request_method, request_path, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           module, ip_address, user_agent, request_method, request_path, status, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         `, [
           staffType,
           staffId,
@@ -221,7 +236,7 @@ export const activityLogger = async (req, res, next) => {
           action,
           finalDescription,
           routeInfo.module,
-          req.ip || req.connection?.remoteAddress || 'unknown',
+          ipAddress,
           req.get('User-Agent')?.substring(0, 255) || null,
           req.method,
           path.substring(0, 255),

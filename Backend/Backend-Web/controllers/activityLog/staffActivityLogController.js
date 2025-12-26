@@ -5,6 +5,19 @@ import { createConnection } from '../../config/database.js';
  * Handles logging and retrieving activity for all staff types (web employees, inspectors, collectors)
  */
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTime = () => {
+  const now = new Date();
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 /**
  * Log staff activity
  * @param {Object} activityData - Activity data to log
@@ -32,8 +45,8 @@ export async function logStaffActivity(activityData) {
         await connection.execute(`
             INSERT INTO staff_activity_log 
             (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-             module, ip_address, user_agent, request_method, request_path, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             module, ip_address, user_agent, request_method, request_path, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         `, [
             staffType,
             staffId,
@@ -351,6 +364,57 @@ export async function getActivitySummary(req, res) {
 }
 
 /**
+ * Clear all activity logs
+ * DELETE /api/activity-logs/clear-all
+ */
+export async function clearAllActivityLogs(req, res) {
+    let connection;
+    try {
+        connection = await createConnection();
+        
+        // Delete all activity logs
+        const [result] = await connection.execute(`
+            DELETE FROM staff_activity_log
+        `);
+
+        console.log(`🗑️ Cleared ${result.affectedRows} activity log records`);
+
+        // Log this action
+        await logStaffActivity({
+            staffType: req.user.userType || 'system_administrator',
+            staffId: req.user.userId,
+            staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}`,
+            branchId: req.user.branchId,
+            actionType: 'DELETE',
+            actionDescription: `Cleared all activity log history (${result.affectedRows} records)`,
+            module: 'Activity Logs',
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            requestMethod: req.method,
+            requestPath: req.originalUrl,
+            status: 'success'
+        });
+
+        res.json({
+            success: true,
+            message: 'Activity log history cleared successfully',
+            data: {
+                recordsCleared: result.affectedRows
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error clearing activity logs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to clear activity logs',
+            error: error.message
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+
+/**
  * Middleware to automatically log staff activities
  */
 export function activityLogMiddleware(actionType, module) {
@@ -393,5 +457,6 @@ export default {
     getAllStaffActivities,
     getStaffActivityById,
     getActivitySummary,
+    clearAllActivityLogs,
     activityLogMiddleware
 };
