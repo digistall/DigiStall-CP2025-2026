@@ -6,7 +6,7 @@ export default {
   components: {
     ToastNotification
   },
-  emits: ['accept-payment', 'decline-payment', 'count-updated'],
+  emits: ['accept-payment', 'decline-payment', 'count-updated', 'loading'],
   data() {
     return {
       searchQuery: '',
@@ -94,6 +94,7 @@ export default {
     async fetchOnlinePayments() {
       try {
         this.loading = true;
+        this.$emit('loading', true);
         const token = sessionStorage.getItem('authToken');
 
         const params = new URLSearchParams({
@@ -155,6 +156,7 @@ export default {
         this.onlinePayments = [];
       } finally {
         this.loading = false;
+        this.$emit('loading', false);
       }
     },
 

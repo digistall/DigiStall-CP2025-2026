@@ -4,6 +4,7 @@ import ToastNotification from '../../../../Common/ToastNotification/ToastNotific
 
 export default {
   name: 'StallPayments',
+  emits: ['loading'],
   components: {
     OnlinePayments,
     OnsitePayments,
