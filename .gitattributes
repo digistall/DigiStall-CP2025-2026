@@ -1,0 +1,28 @@
+# Auto detect text files and normalize line endings to LF in the repo
+* text=auto
+
+# Keep nginx files with LF endings
+nginx/** text eol=lf
+
+# Ensure shell scripts use LF
+*.sh text eol=lf
+
+# Windows scripts should use CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Explicitly declare files that should always have LF
+*.md text eol=lf
+*.sql text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
