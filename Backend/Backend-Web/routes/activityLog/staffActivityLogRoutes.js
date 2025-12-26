@@ -2,7 +2,8 @@ import express from 'express';
 import { 
     getAllStaffActivities, 
     getStaffActivityById, 
-    getActivitySummary 
+    getActivitySummary,
+    clearAllActivityLogs
 } from '../../controllers/activityLog/staffActivityLogController.js';
 import { authenticateToken, authorizeRole } from '../../middleware/enhancedAuth.js';
 
@@ -24,6 +25,13 @@ router.get('/', authorizeRole('system_administrator', 'business_manager', 'busin
  * @access Private (Manager/Admin only)
  */
 router.get('/summary', authorizeRole('system_administrator', 'business_manager', 'business_owner'), getActivitySummary);
+
+/**
+ * @route DELETE /api/activity-logs/clear-all
+ * @desc Clear all activity log history
+ * @access Private (Admin/Manager only)
+ */
+router.delete('/clear-all', authorizeRole('system_administrator', 'business_manager', 'business_owner'), clearAllActivityLogs);
 
 /**
  * @route GET /api/activity-logs/staff/:staffType/:staffId
