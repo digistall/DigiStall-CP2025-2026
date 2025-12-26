@@ -145,6 +145,9 @@
       :userRole="loggedInUserRole"
       :branchName="loggedInBranchName"
       :duration="3000"
+      :currentLoadingStep="currentLoadingStep"
+      :currentProgress="currentProgress"
+      :isRealProgress="true"
       @loading-complete="onLoadingComplete"
       @ready-to-navigate="onReadyToNavigate"
     />

@@ -1,4 +1,11 @@
 // Login Functions - All business logic and event handlers
+// ===== REAL-TIME PROGRESS TRACKING ENABLED =====
+// This login function now reports actual authentication progress via setLoadingState callback:
+// Step 0 (0%): Connecting to server
+// Step 1 (20%): Verifying credentials (during API call)
+// Step 2 (60%): Loading profile data (after successful auth)
+// Step 3 (80%): Preparing dashboard (saving data)
+// Step 4 (100%): Finalizing (before navigation)
 import ApiService from '../../../services/ApiService';
 import UserStorageService from '../../../services/UserStorageService';
 import { API_CONFIG } from '../../../config/networkConfig';
@@ -30,7 +37,7 @@ export const handleLogin = async (
   
   // Update loading state if callback provided
   if (setLoadingState) {
-    setLoadingState({ step: 'connecting', message: 'Connecting to server...' });
+    setLoadingState({ step: 0, message: 'Connecting to server...', progress: 0 });
   }
 
   try {
@@ -47,7 +54,7 @@ export const handleLogin = async (
     console.log('✅ Basic connectivity successful');
     
     if (setLoadingState) {
-      setLoadingState({ step: 'authenticating', message: 'Verifying credentials...' });
+      setLoadingState({ step: 1, message: 'Verifying credentials...', progress: 20 });
     }
 
     // Try staff login first (inspector/collector)
@@ -60,7 +67,7 @@ export const handleLogin = async (
       console.log('👤 Staff type:', staffResponse.staffType);
       
       if (setLoadingState) {
-        setLoadingState({ step: 'loading', message: 'Loading your profile...' });
+        setLoadingState({ step: 2, message: 'Loading your profile...', progress: 60 });
       }
 
       // Save staff data
@@ -76,6 +83,10 @@ export const handleLogin = async (
       if (staffResponse.token) {
         await UserStorageService.saveAuthToken(staffResponse.token);
         console.log('🔐 Staff auth token saved');
+      }
+      
+      if (setLoadingState) {
+        setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
       }
 
       setIsLoading(false);
@@ -114,7 +125,7 @@ export const handleLogin = async (
       console.log('✅ Login successful:', response.message);
       
       if (setLoadingState) {
-        setLoadingState({ step: 'loading', message: 'Loading your profile...' });
+        setLoadingState({ step: 2, message: 'Loading your profile...', progress: 60 });
       }
 
       // Save user data in simple format
@@ -136,6 +147,10 @@ export const handleLogin = async (
       if (response.token) {
         await UserStorageService.saveAuthToken(response.token);
         console.log('🔐 Auth token saved for persistent login');
+      }
+      
+      if (setLoadingState) {
+        setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
       }
 
       // Stop the initial loading
