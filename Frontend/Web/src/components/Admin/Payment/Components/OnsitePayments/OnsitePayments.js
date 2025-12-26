@@ -3,7 +3,7 @@ import ToastNotification from '../../../../Common/ToastNotification/ToastNotific
 
 export default {
   name: 'OnsitePayments',
-  emits: ['payment-added', 'delete-payment', 'count-updated'],
+  emits: ['payment-added', 'delete-payment', 'count-updated', 'loading'],
   components: {
     StallholderDropdown,
     ToastNotification
@@ -288,11 +288,13 @@ export default {
     async fetchOnsitePayments() {
       try {
         this.loading = true;
+        this.$emit('loading', true);
         const token = sessionStorage.getItem('authToken');
 
         if (!token) {
           console.log('🔒 No auth token found');
           this.loadSampleData();
+          this.$emit('loading', false);
           return;
         }
 
@@ -346,6 +348,7 @@ export default {
         this.showToast('❌ An error occurred while fetching payments.', 'error');
       } finally {
         this.loading = false;
+        this.$emit('loading', false);
       }
     },
 

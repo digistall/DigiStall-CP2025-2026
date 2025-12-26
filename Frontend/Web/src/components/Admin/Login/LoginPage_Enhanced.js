@@ -28,6 +28,9 @@ export default {
       loggedInUserName: '',
       loggedInUserRole: '',
       loggedInBranchName: '',
+      // Real-time loading progress
+      currentLoadingStep: 0,
+      currentProgress: 0,
       // Universal popup for errors
       errorPopup: {
         show: false,
@@ -116,14 +119,27 @@ export default {
       this.loadingText = 'Authenticating'
       this.loadingSubtext = 'Verifying your credentials'
 
+      // Show loading screen immediately BEFORE starting authentication
+      this.currentLoadingStep = 0
+      this.currentProgress = 0
+      this.loggedInUserName = this.username.trim()
+      this.showLoadingScreen = true
+
       try {
+        // Step 1: Server connection
         this.loadingText = 'Connecting'
         this.loadingSubtext = 'Establishing secure connection'
+        await new Promise(resolve => setTimeout(resolve, 300))
+        this.currentLoadingStep = 1
+        this.currentProgress = 20
 
         console.log('🔐 Attempting login with username:', this.username.trim())
 
-        this.loadingText = 'Validating'
-        this.loadingSubtext = 'Checking permissions'
+        // Step 2: Authentication - verifying credentials
+        this.currentLoadingStep = 1
+        this.currentProgress = 25
+        await new Promise(resolve => setTimeout(resolve, 200))
+        this.currentProgress = 35
 
         // Use the new auth store login method
         const result = await this.authStore.login(
@@ -131,10 +147,11 @@ export default {
           this.password,
           this.userType
         )
-
+        
         if (result.success) {
-          // Login successful - show professional loading screen
-          this.loading = false
+          // Step 3: Profile loading
+          this.currentLoadingStep = 2
+          this.currentProgress = 55
           
           // Get user info for loading screen
           const userData = sessionStorage.getItem('currentUser')
@@ -149,19 +166,40 @@ export default {
               this.loggedInUserName = 'User'
             }
           }
-
-          // Show the professional loading screen
-          this.showLoadingScreen = true
-          console.log('✅ Login successful, showing loading screen')
-        } else {
+          
+          await new Promise(resolve => setTimeout(resolve, 300))
+          this.currentProgress = 70
+          
+          // Step 4: Dashboard setup
+          this.currentLoadingStep = 3
+          this.currentProgress = 75
+          await new Promise(resolve => setTimeout(resolve, 300))
+          this.currentProgress = 90
+          
+          // Step 5: Finalizing
+          this.currentLoadingStep = 4
+          this.currentProgress = 95
+          await new Promise(resolve => setTimeout(resolve, 200))
+          this.currentProgress = 100
+          
           this.loading = false
-          // Login failed
+          console.log('✅ Login successful, authentication complete')
+        } else {
+          // Login failed - hide loading screen and show error
+          this.loading = false
+          this.showLoadingScreen = false
+          this.currentLoadingStep = 0
+          this.currentProgress = 0
+          
           const errorMessage = result.message || 'Login failed. Please check your credentials and try again.'
           this.showErrorMessage(errorMessage)
           console.error('❌ Login failed:', errorMessage)
         }
       } catch (error) {
         this.loading = false
+        this.showLoadingScreen = false
+        this.currentLoadingStep = 0
+        this.currentProgress = 0
         console.error('❌ Login error:', error)
 
         // Handle different error scenarios

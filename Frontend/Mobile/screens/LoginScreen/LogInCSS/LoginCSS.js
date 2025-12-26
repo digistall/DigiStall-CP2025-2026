@@ -300,6 +300,80 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '500',
   },
+
+  // Progress Bar Styles
+  progressBarContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+
+  progressBarBackground: {
+    width: '100%',
+    height: 6,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4472C4',
+    borderRadius: 3,
+    transition: 'width 0.3s ease',
+  },
+
+  // Loading Steps Styles
+  loadingStepsContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+
+  loadingStepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  stepIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+
+  stepCompleted: {
+    backgroundColor: '#27ae60',
+  },
+
+  stepActive: {
+    backgroundColor: '#4472C4',
+  },
+
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#999',
+  },
+
+  stepLabel: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '500',
+  },
+
+  stepLabelCompleted: {
+    color: '#27ae60',
+    fontWeight: '600',
+  },
+
+  stepLabelActive: {
+    color: '#4472C4',
+    fontWeight: '700',
+  },
   
   modalOverlay: {
     flex: 1,

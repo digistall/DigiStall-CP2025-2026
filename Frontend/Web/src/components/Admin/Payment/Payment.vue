@@ -22,7 +22,10 @@
 
               <!-- Stall Applicants Payment Section -->
               <transition name="slide-fade" mode="out-in">
-                <StallPayments v-if="selectedPaymentType === 'stall'" />
+                <StallPayments 
+                  v-if="selectedPaymentType === 'stall'" 
+                  @loading="handleLoading"
+                />
                 
                 <!-- Vendor Applicants Payment Section (Blank for now) -->
                 <div v-else class="vendor-section">
