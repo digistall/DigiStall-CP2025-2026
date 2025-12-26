@@ -51,11 +51,32 @@
   border-radius: 12px;
   transition: all 0.3s ease;
   min-height: 120px;
+  position: relative;
 }
 
 .metric-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Download Button for Metric Cards */
+.metric-card .download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.metric-card:hover .download-btn {
+  opacity: 1;
+}
+
+.metric-card .download-btn:hover {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
 .metric-content {
@@ -114,6 +135,23 @@
   padding: 16px 24px !important;
   font-size: 1.1rem !important;
   font-weight: 600 !important;
+  display: flex;
+  align-items: center;
+}
+
+/* Download Button for Chart Cards */
+.chart-download-btn {
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+}
+
+.chart-card:hover .chart-download-btn {
+  opacity: 1;
+}
+
+.chart-download-btn:hover {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
 .chart-container {

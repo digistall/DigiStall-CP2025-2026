@@ -558,11 +558,9 @@
       <v-card class="confirm-dialog-card" rounded="lg">
         <!-- Header with Icon -->
         <div class="confirm-dialog-header" :class="confirmAction === 'accept' ? 'accept-header' : 'decline-header'">
-          <div class="confirm-icon-wrapper">
-            <v-icon size="32" color="white">
-              {{ confirmAction === 'accept' ? 'mdi-check-circle' : 'mdi-close-circle' }}
-            </v-icon>
-          </div>
+          <button class="close-dialog-btn" @click="showConfirmDialog = false" :aria-label="'Close dialog'">
+            <v-icon color="white" size="20">mdi-close</v-icon>
+          </button>
         </div>
 
         <!-- Content -->
@@ -586,16 +584,9 @@
 
         <!-- Actions -->
         <v-card-actions class="confirm-dialog-actions pa-4">
-          <v-btn 
-            variant="outlined" 
-            color="grey-darken-1"
-            class="confirm-btn cancel-btn"
-            @click="showConfirmDialog = false"
-          >
-            CANCEL
-          </v-btn>
+          <v-spacer></v-spacer>
           <v-btn
-            :color="confirmAction === 'accept' ? 'primary' : 'grey-darken-3'"
+            :color="confirmAction === 'accept' ? 'primary' : 'error'"
             variant="flat"
             class="confirm-btn action-btn"
             @click="confirmActionHandler"
