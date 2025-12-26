@@ -11,13 +11,21 @@ nginx/** text eol=lf
 *.bat text eol=crlf
 *.ps1 text eol=crlf
 
-# Explicitly declare files that should always have LF
+# All code files should use LF (cross-platform compatibility)
 *.md text eol=lf
 *.sql text eol=lf
 *.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.vue text eol=lf
 *.json text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.xml text eol=lf
 
 # Binary files
 *.png binary
@@ -26,3 +34,8 @@ nginx/** text eol=lf
 *.gif binary
 *.ico binary
 *.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary

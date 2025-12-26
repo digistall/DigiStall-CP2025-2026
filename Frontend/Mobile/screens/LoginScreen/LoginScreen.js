@@ -28,7 +28,13 @@ const LoginScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Authenticating...');
   const [loadingSubtext, setLoadingSubtext] = useState('Please wait while we verify your credentials');
-  const [errorModal, setErrorModal] = useState({
+  const [loadingState, setLoadingState] = useState({ step: 'idle', message: '', progress: 0 });  const [loadingSteps, setLoadingSteps] = useState([
+    { label: 'Server Connection', completed: false, active: false },
+    { label: 'Authentication', completed: false, active: false },
+    { label: 'Profile Data', completed: false, active: false },
+    { label: 'Dashboard Setup', completed: false, active: false },
+    { label: 'Finalizing', completed: false, active: false },
+  ]);  const [errorModal, setErrorModal] = useState({
     visible: false,
     title: '',
     message: '',
@@ -123,28 +129,31 @@ const LoginScreen = ({ navigation }) => {
     }
   }, [isLoading]);
 
+  // Update loading steps based on loadingState
+  useEffect(() => {
+    if (loadingState.step >= 0) {
+      setLoadingMessage(loadingState.message || 'Processing...');
+      
+      // Update steps array
+      const updatedSteps = loadingSteps.map((step, index) => ({
+        ...step,
+        completed: index < loadingState.step,
+        active: index === loadingState.step
+      }));
+      setLoadingSteps(updatedSteps);
+    }
+  }, [loadingState]);
+
   // Enhanced login handler with loading states
   const handleLoginPress = () => {
-    setLoadingMessage('Authenticating...');
-    setLoadingSubtext('Please wait while we verify your credentials');
-    
-    // Update loading message after delay
-    setTimeout(() => {
-      if (isLoading) {
-        setLoadingMessage('Connecting to server...');
-        setLoadingSubtext('Establishing secure connection');
-      }
-    }, 1500);
-
-    setTimeout(() => {
-      if (isLoading) {
-        setLoadingMessage('Loading your data...');
-        setLoadingSubtext('Preparing your dashboard');
-      }
-    }, 3000);
+    // Reset loading state
+    setLoadingState({ step: 0, message: 'Connecting to server...', progress: 0 });
+    setLoadingMessage('Connecting to server...');
+    setLoadingSubtext('Establishing secure connection');
 
     // Unified login - automatically detects staff or user
-    handleLogin(username, password, setIsLoading, navigation, setErrorModal);
+    // Progress updates will come from LoginFunctions via setLoadingState callback
+    handleLogin(username, password, setIsLoading, navigation, setErrorModal, setLoadingState);
   };
 
   const handleForgotPasswordPress = () => {
@@ -287,7 +296,49 @@ const LoginScreen = ({ navigation }) => {
 
               {/* Loading Text */}
               <Text style={styles.loadingTitle}>{loadingMessage}</Text>
-              <Text style={styles.loadingSubtext}>{loadingSubtext}</Text>
+              <Text style={styles.loadingSubtext}>
+                {loadingState.progress > 0 ? `${Math.round(loadingState.progress)}%` : 'Starting...'}
+              </Text>
+
+              {/* Progress Bar */}
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View 
+                    style={[
+                      styles.progressBarFill, 
+                      { width: `${loadingState.progress}%` }
+                    ]} 
+                  />
+                </View>
+              </View>
+
+              {/* Loading Steps */}
+              <View style={styles.loadingStepsContainer}>
+                {loadingSteps.map((step, index) => (
+                  <View key={index} style={styles.loadingStepItem}>
+                    <View style={[
+                      styles.stepIndicator,
+                      step.completed && styles.stepCompleted,
+                      step.active && styles.stepActive
+                    ]}>
+                      {step.completed ? (
+                        <Ionicons name="checkmark" size={12} color="white" />
+                      ) : step.active ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <View style={styles.stepDot} />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.stepLabel,
+                      step.completed && styles.stepLabelCompleted,
+                      step.active && styles.stepLabelActive
+                    ]}>
+                      {step.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
 
               {/* Animated Dots */}
               <View style={styles.loadingDotsContainer}>
