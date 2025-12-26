@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
+import { getPerformanceStats } from './config/performanceMonitor.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -79,9 +80,13 @@ console.log('📊 Activity log routes registered at /api/activity-logs');
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {
   try {
+    const startTime = Date.now();
     const connection = await createConnection();
     await connection.execute('SELECT 1');
+    const dbResponseTime = Date.now() - startTime;
     await connection.end();
+    
+    const perfStats = getPerformanceStats();
     
     res.status(200).json({
       success: true,
@@ -89,8 +94,10 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         server: 'running',
-        database: 'connected'
-      }
+        database: 'connected',
+        dbResponseTime: `${dbResponseTime}ms`
+      },
+      performance: perfStats
     });
   } catch (error) {
     console.error('Health check failed:', error);
@@ -98,6 +105,7 @@ app.get('/api/health', async (req, res) => {
       success: false,
       message: 'Health check failed',
       error: error.message,
+      code: error.code,
       timestamp: new Date().toISOString(),
       services: {
         server: 'running',
@@ -180,15 +188,24 @@ app.listen(PORT, async () => {
 
 //  Test database connection and initialize tables
   try {
+    console.log('🔍 Testing database connection...');
     const connection = await createConnection();
     await connection.execute('SELECT 1');
     await connection.end();
     console.log('✅ Database connection successful');
     
-    // Initialize database tables
-    await initializeDatabase();
-    console.log('✅ Database tables initialized');
+    // Initialize database tables (non-blocking - run in background)
+    initializeDatabase()
+      .then(() => console.log('✅ Database tables initialized'))
+      .catch(error => console.error('⚠️ Database initialization warning:', error.message));
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('⚠️ Server will continue running, but database features may not work.');
+    console.error('💡 Please check:');
+    console.error('   1. DigitalOcean database is running');
+    console.error('   2. Firewall allows connections from your IP');
+    console.error('   3. Database credentials are correct');
+    console.error('   4. Network connectivity to DigitalOcean');
   }
 });

@@ -275,8 +275,10 @@ export default {
         document.body.dataset._prevOverflow = prevBodyOverflow || ''
         document.documentElement.style.overflow = 'hidden'
         document.body.style.overflow = 'hidden'
-      } catch (e) {}
-    } catch (e) {
+      } catch {
+        /* ignore */
+      }
+    } catch {
       /* ignore */
     }
 
@@ -299,8 +301,10 @@ export default {
         document.body.style.overflow = prevBody
         delete document.documentElement.dataset._prevOverflow
         delete document.body.dataset._prevOverflow
-      } catch (e) {}
-    } catch (e) {
+      } catch {
+        /* ignore */
+      }
+    } catch {
       /* ignore */
     }
   },

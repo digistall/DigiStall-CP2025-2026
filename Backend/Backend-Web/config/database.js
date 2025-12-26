@@ -18,10 +18,15 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'naga_stall',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: isCloudDB ? 5 : 10, // Lower limit for cloud to avoid exhaustion
   queueLimit: 0,
   // Set charset for MySQL 8 compatibility
   charset: 'utf8mb4',
+  // Timeout settings for cloud database (only valid ones for createConnection)
+  connectTimeout: 60000, // 60 seconds - time to establish connection
+  // Keep connection alive
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
   // SSL required for DigitalOcean
   ...(isCloudDB && {
     ssl: { rejectUnauthorized: false }
@@ -38,13 +43,32 @@ console.log('🔧 Database Config:', {
 })
 
 export async function createConnection() {
-  try {
-    const connection = await mysql.createConnection(dbConfig)
-    return connection
-  } catch (error) {
-    console.error('❌ Database connection failed:', error)
-    throw error
+  let retries = 3
+  let lastError
+  
+  while (retries > 0) {
+    try {
+      const connection = await mysql.createConnection(dbConfig)
+      
+      // Test the connection
+      await connection.ping()
+      
+      return connection
+    } catch (error) {
+      lastError = error
+      retries--
+      
+      console.error(`❌ Database connection attempt failed (${3 - retries}/3):`, error.message)
+      
+      if (retries > 0) {
+        console.log(`⏳ Retrying in 2 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+    }
   }
+  
+  console.error('❌ All database connection attempts failed')
+  throw lastError
 }
 
 export async function testConnection() {

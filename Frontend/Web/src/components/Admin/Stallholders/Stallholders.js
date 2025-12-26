@@ -174,6 +174,7 @@ export default {
 
     // Load stallholders data (simulate API call)
     async loadStallholdersData() {
+      this.loading = true; // Show loading overlay
       try {
         // Simulate API call delay
         await new Promise((resolve) => setTimeout(resolve, 500))
@@ -197,6 +198,8 @@ export default {
         console.log('Stallholders data loaded:', this.stallholdersList)
       } catch (error) {
         console.error('Error loading stallholders data:', error)
+      } finally {
+        this.loading = false; // Hide loading overlay
       }
     },
   },
