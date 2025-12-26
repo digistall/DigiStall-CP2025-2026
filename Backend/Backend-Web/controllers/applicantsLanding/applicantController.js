@@ -16,7 +16,9 @@ export const applicantController = {
     let connection;
 
     try {
+      console.log("🔍 Creating database connection...");
       connection = await createConnection();
+      console.log("✅ Database connection established");
 
       console.log("🔍 DEBUG: Full request body received:");
       console.log(JSON.stringify(req.body, null, 2));
@@ -371,6 +373,31 @@ export const applicantController = {
         code: error.code,
       });
 
+      // Handle specific database errors
+      if (error.code === 'ECONNREFUSED') {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection refused. Please check database server.",
+          error: "Database unavailable"
+        });
+      }
+
+      if (error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection timeout. Please try again.",
+          error: "Connection timeout"
+        });
+      }
+
+      if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+        return res.status(503).json({
+          success: false,
+          message: "Database authentication failed.",
+          error: "Access denied"
+        });
+      }
+
       if (error.sqlState === "45000") {
         return res.status(400).json({
           success: false,
@@ -385,7 +412,12 @@ export const applicantController = {
       });
     } finally {
       if (connection) {
-        await connection.end();
+        try {
+          await connection.end();
+          console.log("🔒 Database connection closed");
+        } catch (closeError) {
+          console.error("⚠️ Error closing connection:", closeError.message);
+        }
       }
     }
   },

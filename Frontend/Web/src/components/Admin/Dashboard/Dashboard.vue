@@ -18,6 +18,16 @@
               <v-row class="mb-6">
                 <v-col cols="12" sm="6" md="3">
                   <v-card class="metric-card" elevation="2" :loading="loading">
+                    <v-btn
+                      class="download-btn"
+                      icon
+                      size="small"
+                      variant="text"
+                      @click.stop="exportStalls"
+                      title="Download Stalls Data"
+                    >
+                      <v-icon size="18">mdi-download</v-icon>
+                    </v-btn>
                     <v-card-text class="metric-content">
                       <div class="metric-title">Total Stalls</div>
                       <div class="metric-body">
@@ -31,6 +41,16 @@
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
                   <v-card class="metric-card" elevation="2" :loading="loading">
+                    <v-btn
+                      class="download-btn"
+                      icon
+                      size="small"
+                      variant="text"
+                      @click.stop="exportStallholders"
+                      title="Download Stallholders Data"
+                    >
+                      <v-icon size="18">mdi-download</v-icon>
+                    </v-btn>
                     <v-card-text class="metric-content">
                       <div class="metric-title">Active Stallholders</div>
                       <div class="metric-body">
@@ -44,6 +64,16 @@
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
                   <v-card class="metric-card" elevation="2" :loading="loading">
+                    <v-btn
+                      class="download-btn"
+                      icon
+                      size="small"
+                      variant="text"
+                      @click.stop="exportPayments"
+                      title="Download Payments Data"
+                    >
+                      <v-icon size="18">mdi-download</v-icon>
+                    </v-btn>
                     <v-card-text class="metric-content">
                       <div class="metric-title">Total Payments</div>
                       <div class="metric-body">
@@ -59,6 +89,16 @@
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
                   <v-card class="metric-card" elevation="2" :loading="loading">
+                    <v-btn
+                      class="download-btn"
+                      icon
+                      size="small"
+                      variant="text"
+                      @click.stop="exportEmployees"
+                      title="Download Employees Data"
+                    >
+                      <v-icon size="18">mdi-download</v-icon>
+                    </v-btn>
                     <v-card-text class="metric-content">
                       <div class="metric-title">Active Employees</div>
                       <div class="metric-body">
@@ -80,6 +120,17 @@
                     <v-card-title class="chart-title">
                       <v-icon left color="primary">mdi-chart-line</v-icon>
                       Payment Trends (Last 7 Days)
+                      <v-spacer></v-spacer>
+                      <v-btn
+                        class="chart-download-btn"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click.stop="exportPaymentTrends"
+                        title="Download Payment Trends"
+                      >
+                        <v-icon size="18">mdi-download</v-icon>
+                      </v-btn>
                     </v-card-title>
                     <v-card-text>
                       <div class="chart-container">
@@ -105,6 +156,17 @@
                     <v-card-title class="chart-title">
                       <v-icon left color="success">mdi-chart-donut</v-icon>
                       Stall Occupancy Status
+                      <v-spacer></v-spacer>
+                      <v-btn
+                        class="chart-download-btn"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click.stop="exportOccupancy"
+                        title="Download Occupancy Data"
+                      >
+                        <v-icon size="18">mdi-download</v-icon>
+                      </v-btn>
                     </v-card-title>
                     <v-card-text>
                       <div class="chart-container">
@@ -132,6 +194,17 @@
                     <v-card-title class="chart-title">
                       <v-icon left color="info">mdi-chart-bar</v-icon>
                       Collector Performance
+                      <v-spacer></v-spacer>
+                      <v-btn
+                        class="chart-download-btn"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click.stop="exportCollectorPerformance"
+                        title="Download Collector Performance"
+                      >
+                        <v-icon size="18">mdi-download</v-icon>
+                      </v-btn>
                     </v-card-title>
                     <v-card-text>
                       <div class="chart-container">

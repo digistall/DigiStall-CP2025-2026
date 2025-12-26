@@ -11,8 +11,8 @@ import { ref, computed } from 'vue';
 import axios from 'axios';
 import SecureLogger from '../utils/secureLogger.js';
 
-// API Base URL - Backend runs on port 3001
-const API_BASE_URL = 'http://localhost:3001/api';
+// API Base URL - Uses environment variable for production, fallback for local dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const useAuthStore = defineStore('auth', () => {
   // ===== STATE =====
