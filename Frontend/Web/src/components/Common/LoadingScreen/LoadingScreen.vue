@@ -110,6 +110,21 @@
 </template>
 
 <script>
+// ===== LOADING SCREEN WITH REAL-TIME PROGRESS TRACKING =====
+// This component now supports both:
+// 1. Timer-based fake progress (legacy mode, isRealProgress=false)
+// 2. Real-time progress updates from login process (isRealProgress=true)
+//
+// When isRealProgress=true, the parent component controls:
+// - currentLoadingStep: Which step (0-4) is currently executing
+// - currentProgress: Actual progress percentage (0-100)
+//
+// Real progress tracking shows users what's actually happening:
+// Step 0: Server Connection (0-20%)
+// Step 1: Authentication (20-40%)  
+// Step 2: Profile Data Loading (40-80%)
+// Step 3: Dashboard Setup (80-95%)
+// Step 4: Finalizing (95-100%)
 export default {
   name: 'LoadingScreen',
   props: {
@@ -132,6 +147,18 @@ export default {
     duration: {
       type: Number,
       default: 3000 // 3 seconds
+    },
+    currentLoadingStep: {
+      type: Number,
+      default: 0
+    },
+    currentProgress: {
+      type: Number,
+      default: 0
+    },
+    isRealProgress: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -160,6 +187,16 @@ export default {
       } else {
         this.resetState()
       }
+    },
+    currentLoadingStep(newVal) {
+      if (this.isRealProgress && newVal >= 0) {
+        this.currentStepIndex = newVal
+      }
+    },
+    currentProgress(newVal) {
+      if (this.isRealProgress && newVal >= 0) {
+        this.progressPercent = Math.min(newVal, 100)
+      }
     }
   },
   methods: {
@@ -168,6 +205,27 @@ export default {
       this.progressPercent = 0
       this.showWelcome = false
 
+      // If using real progress, don't run fake timer animations
+      if (this.isRealProgress) {
+        // Just watch for progress to reach 100%
+        const checkComplete = setInterval(() => {
+          if (this.progressPercent >= 100) {
+            clearInterval(checkComplete)
+            // Show welcome after progress completes
+            setTimeout(() => {
+              this.showWelcome = true
+              this.$emit('loading-complete')
+            }, 500)
+            // Emit ready to navigate after welcome display
+            setTimeout(() => {
+              this.$emit('ready-to-navigate')
+            }, 2500)
+          }
+        }, 100)
+        return
+      }
+
+      // Legacy timer-based animation
       const stepDuration = this.duration / this.loadingSteps.length
       const progressInterval = 50 // Update every 50ms
 
