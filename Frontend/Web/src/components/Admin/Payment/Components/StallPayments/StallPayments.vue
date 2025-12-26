@@ -32,6 +32,7 @@
         @payment-added="handlePaymentAdded"
         @delete-payment="handleDeletePayment"
         @count-updated="handleOnsiteCountUpdate"
+        @loading="$emit('loading', $event)"
       />
     </div>
 

@@ -66,6 +66,11 @@ export default {
     handleTypeChange(type) {
       this.selectedPaymentType = type
       console.log('Payment type changed to:', type)
+    },
+    
+    // Handle loading state from child components
+    handleLoading(isLoading) {
+      this.loading = isLoading
     }
   }
 }
