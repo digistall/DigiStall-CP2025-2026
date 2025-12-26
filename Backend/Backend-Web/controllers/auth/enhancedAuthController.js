@@ -17,6 +17,19 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-secret-
 const ACCESS_TOKEN_EXPIRY = '5m'; // 5 minutes
 const REFRESH_TOKEN_EXPIRY = '30d'; // 30 days
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTime = () => {
+  const now = new Date();
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -244,7 +257,7 @@ export const login = async (req, res) => {
       decodedAccessToken.jti
     );
     
-    // Update last login time
+    // Update last login time with UTC (consistent with mobile)
     await connection.execute(
       `UPDATE ${tableName} SET last_login = NOW() WHERE ${userIdField} = ?`,
       [user[userIdField]]
