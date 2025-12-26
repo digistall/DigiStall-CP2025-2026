@@ -97,23 +97,27 @@
 
     formatDate(date) {
       if (!date) return 'Never'
-      const d = new Date(date)
-      return d.toLocaleDateString('en-US', {
+      // Database stores UTC, add 8 hours to get Philippine time
+      const utcDate = new Date(date)
+      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
+      return new Intl.DateTimeFormat('en-PH', {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
-      })
+      }).format(phDate)
     },
 
     formatTime(date) {
       if (!date) return ''
-      const d = new Date(date)
-      return d.toLocaleTimeString('en-US', {
+      // Database stores UTC, add 8 hours to get Philippine time
+      const utcDate = new Date(date)
+      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
+      return new Intl.DateTimeFormat('en-PH', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hour12: true
-      })
+      }).format(phDate)
     },
 
     showPermissionsPopup(employee, event) {

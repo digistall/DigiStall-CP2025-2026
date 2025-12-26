@@ -5,6 +5,21 @@ import { createConnection } from '../../config/database.js'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTime = () => {
+  const now = new Date();
+  // Convert to Philippine timezone (UTC+8)
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  // Format as MySQL datetime: YYYY-MM-DD HH:MM:SS
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // ===== UNIFIED LOGIN ENDPOINT =====
 export const login = async (req, res) => {
   let connection;
@@ -208,7 +223,7 @@ export const login = async (req, res) => {
       ...additionalUserInfo
     };
     
-    // Update last_login for the user
+    // Update last_login for the user with UTC time (consistent with mobile)
     try {
       await connection.execute(
         `UPDATE ${tableName} SET last_login = NOW() WHERE ${userIdField} = ?`,
@@ -219,7 +234,7 @@ export const login = async (req, res) => {
       console.error('⚠️ Failed to update last_login:', updateError.message);
     }
     
-    // Log activity to staff_activity_log
+    // Log activity to staff_activity_log with UTC time
     try {
       // Map userType to staff_type for activity log
       const staffTypeMap = {
@@ -230,17 +245,20 @@ export const login = async (req, res) => {
       };
       const staffType = staffTypeMap[userType.toLowerCase()] || userType.toLowerCase();
       const staffName = `${user.first_name} ${user.last_name}`;
+      const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
       
       await connection.execute(
         `INSERT INTO staff_activity_log 
-         (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, status) 
-         VALUES (?, ?, ?, 'LOGIN', ?, 'authentication', ?, 'success')`,
+         (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, user_agent, status, created_at) 
+         VALUES (?, ?, ?, 'LOGIN', ?, 'authentication', ?, ?, 'success', NOW())`,
         [
           staffType,
           user[userIdField],
           staffName,
           `${staffName} logged in via web`,
-          req.ip || req.connection?.remoteAddress || 'unknown'
+          ipAddress,
+          userAgent
         ]
       );
       console.log(`✅ Activity logged for ${userType}: ${userUsername}`);
