@@ -1,6 +1,7 @@
 import Chart from 'chart.js/auto'
 import { markRaw } from 'vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
+import * as XLSX from 'xlsx'
 
 export default {
   name: 'Dashboard',
@@ -320,26 +321,59 @@ export default {
       }
     },
     
-    // Fetch payment trends for chart
+    // Fetch payment trends for chart using actual payment data
     async fetchPaymentTrends() {
       try {
         const token = this.getAuthToken()
         if (!token) return
         
-        // Get last 7 days of payment data
+        // Get last 7 days of payment data from actual payments
         const today = new Date()
-        const trends = []
+        today.setHours(23, 59, 59, 999) // End of today
         
+        // Create a map for the last 7 days
+        const dailyTotals = {}
         for (let i = 6; i >= 0; i--) {
           const date = new Date(today)
           date.setDate(date.getDate() - i)
-          trends.push({
-            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            amount: Math.floor(Math.random() * 30000) + 20000 // Placeholder - will be replaced with real data
-          })
+          const dateKey = date.toISOString().split('T')[0] // YYYY-MM-DD format
+          dailyTotals[dateKey] = 0
         }
         
+        // Aggregate actual payment data
+        if (this.recentPayments && this.recentPayments.length > 0) {
+          // We need to fetch all payments for accurate trends
+          const response = await fetch(`${this.apiBaseUrl}/payments/onsite`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success && result.data) {
+              result.data.forEach(payment => {
+                const paymentDate = payment.paymentDate || payment.payment_date || payment.createdAt || payment.created_at
+                if (paymentDate) {
+                  const dateKey = new Date(paymentDate).toISOString().split('T')[0]
+                  if (dailyTotals.hasOwnProperty(dateKey)) {
+                    dailyTotals[dateKey] += parseFloat(payment.amountPaid) || parseFloat(payment.amount) || 0
+                  }
+                }
+              })
+            }
+          }
+        }
+        
+        // Convert to array format for chart
+        const trends = Object.entries(dailyTotals).map(([dateKey, amount]) => ({
+          date: new Date(dateKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          amount: amount
+        }))
+        
         this.paymentTrendsData = trends
+        console.log('📈 Payment trends data loaded:', trends)
       } catch (error) {
         console.error('❌ Error fetching payment trends:', error)
       }
@@ -901,6 +935,332 @@ export default {
         default:
           return 'grey'
       }
+    },
+    
+    // ===== EXPORT METHODS =====
+    
+    // Helper method to create styled Excel workbook
+    createStyledWorkbook(title, headers, rows, options = {}) {
+      const wb = XLSX.utils.book_new()
+      
+      // Build worksheet data with title row
+      const wsData = []
+      
+      // Title row (merged across all columns)
+      wsData.push([title])
+      
+      // Subtitle with date
+      const today = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
+      wsData.push([`Generated on: ${today}`])
+      
+      // Empty row for spacing
+      wsData.push([])
+      
+      // Headers
+      wsData.push(headers)
+      
+      // Data rows
+      rows.forEach(row => wsData.push(row))
+      
+      // Add summary row if provided
+      if (options.summaryRow) {
+        wsData.push([])
+        wsData.push(options.summaryRow)
+      }
+      
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+      
+      // Set column widths
+      const colWidths = headers.map((h, i) => {
+        const maxDataWidth = Math.max(
+          h.toString().length,
+          ...rows.map(r => (r[i] || '').toString().length)
+        )
+        return { wch: Math.min(Math.max(maxDataWidth + 2, 12), 30) }
+      })
+      ws['!cols'] = colWidths
+      
+      // Merge title cells
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } }
+      ]
+      
+      XLSX.utils.book_append_sheet(wb, ws, options.sheetName || 'Data')
+      
+      return wb
+    },
+    
+    // Helper method to download Excel file
+    downloadExcel(wb, filename) {
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${filename}-${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    },
+    
+    // Export Stalls Data
+    exportStalls() {
+      if (this.stallOverview.length === 0) {
+        alert('No stall data available to export')
+        return
+      }
+      
+      const headers = ['Stall ID', 'Stallholder', 'Location', 'Monthly Fee (₱)', 'Last Payment', 'Status']
+      const rows = this.stallOverview.map(stall => [
+        stall.stallId,
+        stall.stallholder,
+        stall.location,
+        stall.monthlyFee,
+        stall.lastPayment,
+        stall.status
+      ])
+      
+      // Calculate summary
+      const totalFees = this.stallOverview.reduce((sum, s) => sum + (s.monthlyFee || 0), 0)
+      const activeCount = this.stallOverview.filter(s => s.status === 'Active').length
+      
+      const wb = this.createStyledWorkbook(
+        'STALL OVERVIEW REPORT',
+        headers,
+        rows,
+        {
+          sheetName: 'Stalls',
+          summaryRow: ['SUMMARY', `Total: ${this.stallOverview.length} stalls`, `Active: ${activeCount}`, `Total Monthly: ₱${totalFees.toLocaleString()}`, '', '']
+        }
+      )
+      
+      this.downloadExcel(wb, 'stalls-report')
+      console.log('✅ Stalls data exported to Excel')
+    },
+    
+    // Export Stallholders Data
+    exportStallholders() {
+      const stallholderData = this.stallOverview
+        .filter(s => {
+          // Filter out vacant stalls and empty/null stallholders
+          if (!s.stallholder) return false
+          const name = s.stallholder.toLowerCase()
+          return !name.includes('vacant') && name.trim() !== ''
+        })
+        .reduce((acc, s) => {
+          if (!acc.find(x => x.name === s.stallholder)) {
+            acc.push({ name: s.stallholder, stall: s.stallId, location: s.location })
+          }
+          return acc
+        }, [])
+      
+      if (stallholderData.length === 0) {
+        alert('No stallholder data available to export')
+        return
+      }
+      
+      const headers = ['#', 'Stallholder Name', 'Stall ID', 'Location', 'Status']
+      const rows = stallholderData.map((sh, index) => [
+        index + 1,
+        sh.name,
+        sh.stall,
+        sh.location,
+        'Active'
+      ])
+      
+      const wb = this.createStyledWorkbook(
+        'ACTIVE STALLHOLDERS REPORT',
+        headers,
+        rows,
+        {
+          sheetName: 'Stallholders',
+          summaryRow: ['TOTAL', `${stallholderData.length} Active Stallholders`, '', '', '']
+        }
+      )
+      
+      this.downloadExcel(wb, 'stallholders-report')
+      console.log('✅ Stallholders data exported to Excel')
+    },
+    
+    // Export Payments Data
+    exportPayments() {
+      if (this.recentPayments.length === 0) {
+        alert('No payment data available to export')
+        return
+      }
+      
+      const headers = ['Payment ID', 'Stallholder', 'Amount (₱)', 'Payment Date', 'Status']
+      const rows = this.recentPayments.map(payment => [
+        payment.id,
+        payment.stallholder,
+        payment.amount,
+        payment.date,
+        payment.status
+      ])
+      
+      const totalAmount = this.recentPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      const paidCount = this.recentPayments.filter(p => p.status === 'Paid').length
+      
+      const wb = this.createStyledWorkbook(
+        'RECENT PAYMENTS REPORT',
+        headers,
+        rows,
+        {
+          sheetName: 'Payments',
+          summaryRow: ['TOTAL', `${this.recentPayments.length} Payments`, `₱${totalAmount.toLocaleString()}`, `${paidCount} Paid`, '']
+        }
+      )
+      
+      this.downloadExcel(wb, 'payments-report')
+      console.log('✅ Payments data exported to Excel')
+    },
+    
+    // Export Employees Data
+    exportEmployees() {
+      if (this.activeCollectors.length === 0) {
+        alert('No employee data available to export')
+        return
+      }
+      
+      const headers = ['Employee ID', 'Full Name', 'Assigned Area', 'Total Collections', 'Status']
+      const rows = this.activeCollectors.map(collector => [
+        collector.id,
+        collector.name,
+        collector.area,
+        collector.collections,
+        collector.status
+      ])
+      
+      const totalCollections = this.activeCollectors.reduce((sum, c) => sum + (c.collections || 0), 0)
+      const activeCount = this.activeCollectors.filter(c => c.status === 'Active').length
+      
+      const wb = this.createStyledWorkbook(
+        'ACTIVE EMPLOYEES REPORT',
+        headers,
+        rows,
+        {
+          sheetName: 'Employees',
+          summaryRow: ['TOTAL', `${this.activeCollectors.length} Employees`, `${activeCount} Active`, totalCollections, '']
+        }
+      )
+      
+      this.downloadExcel(wb, 'employees-report')
+      console.log('✅ Employees data exported to Excel')
+    },
+    
+    // Export Payment Trends Data
+    exportPaymentTrends() {
+      if (this.paymentTrendsData.length === 0) {
+        alert('No payment trends data available to export')
+        return
+      }
+      
+      const headers = ['Date', 'Daily Total (₱)', 'Day of Week']
+      const rows = this.paymentTrendsData.map(trend => {
+        const dateStr = trend.date
+        // Parse the short date to get day of week
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        const today = new Date()
+        const trendIndex = this.paymentTrendsData.indexOf(trend)
+        const dayOffset = 6 - trendIndex
+        const trendDate = new Date(today)
+        trendDate.setDate(trendDate.getDate() - dayOffset)
+        const dayOfWeek = dayNames[trendDate.getDay()]
+        
+        return [
+          dateStr,
+          trend.amount.toFixed(2),
+          dayOfWeek
+        ]
+      })
+      
+      const total = this.paymentTrendsData.reduce((sum, t) => sum + t.amount, 0)
+      const average = total / this.paymentTrendsData.length
+      
+      const wb = this.createStyledWorkbook(
+        'PAYMENT TRENDS - LAST 7 DAYS',
+        headers,
+        rows,
+        {
+          sheetName: 'Payment Trends',
+          summaryRow: ['TOTAL / AVG', `₱${total.toFixed(2)}`, `Avg: ₱${average.toFixed(2)}/day`]
+        }
+      )
+      
+      this.downloadExcel(wb, 'payment-trends-report')
+      console.log('✅ Payment trends data exported to Excel')
+    },
+    
+    // Export Occupancy Data
+    exportOccupancy() {
+      const headers = ['Status', 'Stall Count', 'Percentage', 'Visual']
+      const rows = [
+        ['Occupied', this.occupiedStalls, `${((this.occupiedStalls / this.totalStalls) * 100).toFixed(1)}%`, '████████'],
+        ['Vacant', this.vacantStalls, `${((this.vacantStalls / this.totalStalls) * 100).toFixed(1)}%`, '████'],
+        ['', '', '', ''],
+        ['TOTAL', this.totalStalls, '100%', '']
+      ]
+      
+      const wb = this.createStyledWorkbook(
+        'STALL OCCUPANCY STATUS REPORT',
+        headers,
+        rows,
+        { sheetName: 'Occupancy' }
+      )
+      
+      this.downloadExcel(wb, 'occupancy-report')
+      console.log('✅ Occupancy data exported to Excel')
+    },
+    
+    // Export Collector Performance Data
+    exportCollectorPerformance() {
+      if (this.activeCollectors.length === 0) {
+        alert('No collector performance data available to export')
+        return
+      }
+      
+      const headers = ['Rank', 'Collector Name', 'Assigned Area', 'Collections This Month', 'Performance']
+      const sortedCollectors = [...this.activeCollectors].sort((a, b) => b.collections - a.collections)
+      const maxCollections = Math.max(...sortedCollectors.map(c => c.collections), 1)
+      
+      const rows = sortedCollectors.map((collector, index) => {
+        const perfPercent = ((collector.collections / maxCollections) * 100).toFixed(0)
+        let perfRating = 'Low'
+        if (perfPercent >= 80) perfRating = 'Excellent'
+        else if (perfPercent >= 60) perfRating = 'Good'
+        else if (perfPercent >= 40) perfRating = 'Average'
+        
+        return [
+          index + 1,
+          collector.name,
+          collector.area,
+          collector.collections,
+          perfRating
+        ]
+      })
+      
+      const totalCollections = sortedCollectors.reduce((sum, c) => sum + c.collections, 0)
+      const avgCollections = totalCollections / sortedCollectors.length
+      
+      const wb = this.createStyledWorkbook(
+        'COLLECTOR PERFORMANCE REPORT',
+        headers,
+        rows,
+        {
+          sheetName: 'Performance',
+          summaryRow: ['SUMMARY', `${sortedCollectors.length} Collectors`, `Avg: ${avgCollections.toFixed(0)}`, `Total: ${totalCollections}`, '']
+        }
+      )
+      
+      this.downloadExcel(wb, 'collector-performance-report')
+      console.log('✅ Collector performance data exported to Excel')
     },
   },
 }

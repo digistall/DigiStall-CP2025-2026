@@ -224,6 +224,7 @@ export default {
     
     // API Methods
     async fetchEmployees() {
+      this.loading = true; // Show loading overlay
       try {
         // Get authentication token
         const token = sessionStorage.getItem("authToken");
@@ -412,6 +413,8 @@ export default {
             "error"
           );
         }
+      } finally {
+        this.loading = false; // Hide loading overlay
       }
     },
 
