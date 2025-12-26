@@ -17,6 +17,8 @@ const dbConfig = {
   queueLimit: 0,
   // Set charset for MySQL 8 compatibility
   charset: 'utf8mb4',
+  // Set timezone to Philippine time (UTC+8)
+  timezone: '+08:00',
   // SSL is required for DigitalOcean managed databases
   ...(isCloudDB && {
     ssl: {
@@ -37,6 +39,8 @@ console.log('🔧 Database Config:', {
 export const createConnection = async () => {
   try {
     const connection = await mysql.createConnection(dbConfig)
+    // Set session timezone to Philippine time (UTC+8)
+    await connection.execute("SET time_zone = '+08:00'")
     return connection
   } catch (error) {
     console.error('❌ Database connection failed:', error.message)
@@ -79,8 +83,22 @@ export const initializeDatabase = async () => {
 
 export const createPool = () => {
   try {
-    const pool = mysql.createPool(dbConfig)
-    console.log('✅ Database pool created successfully')
+    const pool = mysql.createPool({
+      ...dbConfig,
+      // Set timezone for all connections in the pool
+      timezone: '+08:00'
+    })
+    
+    // Set session timezone for each connection when acquired from pool
+    pool.on('acquire', async (connection) => {
+      try {
+        await connection.execute("SET time_zone = '+08:00'")
+      } catch (err) {
+        console.error('⚠️ Failed to set timezone on connection:', err.message)
+      }
+    })
+    
+    console.log('✅ Database pool created successfully (timezone: Asia/Manila +08:00)')
     return pool
   } catch (error) {
     console.error('❌ Database pool creation failed:', error.message)
