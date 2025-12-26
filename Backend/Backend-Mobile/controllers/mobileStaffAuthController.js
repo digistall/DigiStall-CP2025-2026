@@ -7,6 +7,19 @@ import jwt from 'jsonwebtoken';
  * Handles authentication for Inspectors and Collectors on mobile app
  */
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTime = () => {
+  const now = new Date();
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // ===== LOG STAFF ACTIVITY =====
 async function logStaffActivity(activityData) {
     let connection;
@@ -26,11 +39,13 @@ async function logStaffActivity(activityData) {
             status = 'success'
         } = activityData;
 
+        const philippineTime = getPhilippineTime();
+        
         await connection.execute(`
             INSERT INTO staff_activity_log 
             (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-             module, ip_address, user_agent, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             module, ip_address, user_agent, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             staffType,
             staffId,
@@ -41,10 +56,11 @@ async function logStaffActivity(activityData) {
             module || 'mobile_app',
             ipAddress || null,
             userAgent || null,
-            status
+            status,
+            philippineTime
         ]);
 
-        console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType}`);
+        console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType} at ${philippineTime}`);
         return true;
     } catch (error) {
         console.error('❌ Error logging activity:', error);
@@ -195,16 +211,17 @@ export const mobileStaffLogin = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
         
-        // Update last login
+        // Update last login with Philippine time
+        const philippineTime = getPhilippineTime();
         if (staffType === 'inspector') {
             await connection.execute(
-                'UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?',
-                [staffData.staff_id]
+                "UPDATE inspector SET last_login = ? WHERE inspector_id = ?",
+                [philippineTime, staffData.staff_id]
             );
         } else {
             await connection.execute(
-                'UPDATE collector SET last_login = NOW() WHERE collector_id = ?',
-                [staffData.staff_id]
+                "UPDATE collector SET last_login = ? WHERE collector_id = ?",
+                [philippineTime, staffData.staff_id]
             );
         }
         
