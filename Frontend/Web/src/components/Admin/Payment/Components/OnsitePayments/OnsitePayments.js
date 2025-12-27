@@ -33,10 +33,15 @@ export default {
         paymentType: 'rental',
         collectedBy: '',
         receiptNo: '',
-        notes: ''
+        notes: '',
+        // Violation payment fields
+        selectedViolation: null
       },
       onsitePayments: [],
-      stallholders: []
+      stallholders: [],
+      // Violation payment data
+      unpaidViolations: [],
+      loadingViolations: false
     }
   },
   computed: {
@@ -44,24 +49,59 @@ export default {
       if (!this.searchQuery) {
         return this.onsitePayments;
       }
-      
+
       const query = this.searchQuery.toLowerCase();
-      return this.onsitePayments.filter(payment => 
+      return this.onsitePayments.filter(payment =>
         (payment.id || '').toString().toLowerCase().includes(query) ||
         (payment.stallholderName || '').toLowerCase().includes(query) ||
         (payment.stallNo || '').toLowerCase().includes(query) ||
         (payment.receiptNo || '').toLowerCase().includes(query) ||
         (payment.collectedBy || '').toLowerCase().includes(query)
       );
+    },
+    // Check if penalty payment type is selected
+    isPenaltyPayment() {
+      return this.form.paymentType === 'penalty';
+    },
+    // Format violations for dropdown
+    violationItems() {
+      return this.unpaidViolations.map(v => ({
+        title: `${v.violationType} - ₱${v.penaltyAmount.toLocaleString()} (${v.severity}) - ${this.formatDate(v.dateReported)}`,
+        value: v.violationId,
+        violation: v
+      }));
     }
   },
-  
+
   watch: {
     onsitePayments: {
       handler() {
         this.$emit('count-updated', this.onsitePayments.length);
       },
       immediate: true
+    },
+    // Watch for payment type changes
+    'form.paymentType': {
+      handler(newType) {
+        if (newType === 'penalty' && this.form.stallholderId) {
+          this.loadUnpaidViolations(this.form.stallholderId);
+        } else {
+          this.unpaidViolations = [];
+          this.form.selectedViolation = null;
+        }
+      }
+    },
+    // Watch for selected violation changes
+    'form.selectedViolation': {
+      handler(newViolation) {
+        if (newViolation) {
+          const violation = this.unpaidViolations.find(v => v.violationId === newViolation);
+          if (violation) {
+            this.form.amount = violation.penaltyAmount.toString();
+            console.log('💰 Auto-filled penalty amount:', violation.penaltyAmount);
+          }
+        }
+      }
     }
   },
   mounted() {
@@ -76,7 +116,7 @@ export default {
     async loadStallholders() {
       try {
         const token = sessionStorage.getItem('authToken');
-        
+
         if (!token) {
           console.warn('🔐 No auth token found');
           return;
@@ -124,11 +164,17 @@ export default {
     async onStallholderSelected(stallholder) {
       if (!stallholder) {
         this.clearForm();
+        this.unpaidViolations = [];
         return;
       }
 
       console.log('🏪 Stallholder selected:', stallholder);
-      
+
+      // Load unpaid violations if penalty payment type is selected
+      if (this.form.paymentType === 'penalty') {
+        this.loadUnpaidViolations(stallholder.id);
+      }
+
       try {
         // Get detailed stallholder information using stored procedure
         const token = sessionStorage.getItem('authToken');
@@ -142,21 +188,21 @@ export default {
         if (response.ok) {
           const result = await response.json();
           const details = result.data;
-          
+
           // Auto-fill form fields with all required data
           this.form.stallholderId = details.id;
           this.form.stallholderName = details.name;
           this.form.stallNo = details.stallNo || details.stall_no;
-          
+
           // Calculate early payment discount (25% off if paid 5+ days before due date)
           const monthlyRent = parseFloat(details.monthlyRental || details.rental_price || details.monthly_rental || 0);
           const contractStartDate = details.contract_start_date ? new Date(details.contract_start_date) : null;
           const lastPaymentDate = details.last_payment_date ? new Date(details.last_payment_date) : null;
           const paymentDate = new Date();
-          
+
           let dueDate;
           let isNewStallholder = false;
-          
+
           if (lastPaymentDate) {
             // Has previous payment - due date is 30 days after last payment
             dueDate = new Date(lastPaymentDate);
@@ -172,9 +218,9 @@ export default {
             dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + 30);
           }
-          
+
           const daysEarly = Math.floor((dueDate - paymentDate) / (1000 * 60 * 60 * 24));
-          
+
           if (isNewStallholder || daysEarly >= 5) {
             // Apply 25% early payment discount
             const discountedAmount = monthlyRent * 0.75;
@@ -190,19 +236,19 @@ export default {
               console.log(`ℹ️ Payment is ${daysEarly} days early (need 5+ for discount)`);
             }
           }
-          
+
           // Set payment date to today
           this.form.paymentDate = new Date().toISOString().split('T')[0];
-          
+
           // Set payment time to current time
           this.form.paymentTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
-          
+
           // Set payment for month to current month
           this.form.paymentForMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
-          
+
           // Auto-fill collected by from JWT token
           this.setCurrentUser();
-          
+
           console.log('📋 Form auto-filled with:', {
             name: details.name,
             stallNo: details.stallNo || details.stall_no,
@@ -219,7 +265,7 @@ export default {
           this.form.stallholderName = stallholder.name;
           this.form.stallNo = stallholder.stallNo;
           this.form.amount = stallholder.monthlyRental || '';
-          
+
           // Set dates
           this.form.paymentDate = new Date().toISOString().split('T')[0];
           this.form.paymentTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
@@ -228,13 +274,13 @@ export default {
         }
       } catch (error) {
         console.error('❌ Error getting stallholder details:', error);
-        
+
         // Fallback: use data from dropdown selection
         this.form.stallholderId = stallholder.id;
         this.form.stallholderName = stallholder.name;
         this.form.stallNo = stallholder.stallNo;
         this.form.amount = stallholder.monthlyRental || '';
-        
+
         // Set dates
         this.form.paymentDate = new Date().toISOString().split('T')[0];
         this.form.paymentTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
@@ -281,8 +327,117 @@ export default {
         paymentType: 'rental',
         collectedBy: this.form.collectedBy, // Keep collected by
         receiptNo: '',
-        notes: ''
+        notes: '',
+        selectedViolation: null
       };
+      this.unpaidViolations = [];
+    },
+
+    /**
+     * Load unpaid violations for a stallholder
+     */
+    async loadUnpaidViolations(stallholderId) {
+      try {
+        this.loadingViolations = true;
+        const token = sessionStorage.getItem('authToken');
+
+        if (!token) {
+          console.warn('🔐 No auth token found');
+          return;
+        }
+
+        console.log('🔍 Loading unpaid violations for stallholder:', stallholderId);
+
+        const response = await fetch(`/api/payments/violations/unpaid/${stallholderId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          this.unpaidViolations = result.data || [];
+          console.log('⚠️ Unpaid violations loaded:', this.unpaidViolations.length);
+
+          if (this.unpaidViolations.length === 0) {
+            this.showToast('ℹ️ No unpaid violations for this stallholder', 'info');
+          }
+        } else {
+          console.error('❌ Failed to load unpaid violations:', response.status);
+          this.unpaidViolations = [];
+        }
+      } catch (error) {
+        console.error('❌ Error loading unpaid violations:', error);
+        this.unpaidViolations = [];
+      } finally {
+        this.loadingViolations = false;
+      }
+    },
+
+    /**
+     * Process violation payment
+     */
+    async processViolationPayment() {
+      if (!this.$refs.addForm.validate()) {
+        return;
+      }
+
+      if (!this.form.selectedViolation) {
+        this.showToast('❌ Please select a violation to pay', 'error');
+        return;
+      }
+
+      try {
+        this.loading = true;
+        const token = sessionStorage.getItem('authToken');
+
+        if (!token) {
+          console.error('🔐 No auth token found');
+          return;
+        }
+
+        const paymentData = {
+          violationId: this.form.selectedViolation,
+          paymentReference: this.form.receiptNo,
+          paidAmount: parseFloat(this.form.amount),
+          notes: this.form.notes
+        };
+
+        console.log('💳 Processing violation payment:', paymentData);
+
+        const response = await fetch('/api/payments/violations/pay', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(paymentData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          console.log('✅ Violation payment processed:', result);
+
+          // Show success message
+          this.showToast(`✅ Violation payment processed! ${result.data.violationType} - ₱${result.data.paidAmount.toLocaleString()}`, 'success');
+
+          // Close modal and reset form
+          this.closeAddModal();
+
+          // Emit event to parent
+          this.$emit('payment-added', result);
+        } else {
+          console.error('❌ Failed to process violation payment:', result.message);
+          this.showToast(`❌ ${result.message || 'Failed to process payment'}`, 'error');
+        }
+      } catch (error) {
+        console.error('❌ Error processing violation payment:', error);
+        this.showToast('❌ An error occurred while processing payment', 'error');
+      } finally {
+        this.loading = false;
+      }
     },
 
     async fetchOnsitePayments() {
@@ -402,10 +557,10 @@ export default {
     },
     formatDate(dateString) {
       const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
       })
     },
     closeAddModal() {
@@ -420,10 +575,16 @@ export default {
     },
 
     /**
-     * Submit payment form
+     * Submit payment form - handles both regular and violation payments
      */
     async addPayment() {
       if (!this.$refs.addForm.validate()) {
+        return;
+      }
+
+      // If penalty payment, use violation payment flow
+      if (this.form.paymentType === 'penalty') {
+        await this.processViolationPayment();
         return;
       }
 
@@ -463,16 +624,16 @@ export default {
 
         if (response.ok && result.success) {
           console.log('✅ Payment added successfully:', result);
-          
+
           // Show discount/late fee information
           let successMsg = '✅ Payment added successfully!';
-          
+
           // Parse values as floats (backend returns strings)
           const monthlyRent = parseFloat(result.monthlyRent) || 0;
           const amountPaid = parseFloat(result.amountPaid) || 0;
           const earlyDiscount = parseFloat(result.earlyDiscount) || 0;
           const lateFee = parseFloat(result.lateFee) || 0;
-          
+
           if (earlyDiscount > 0) {
             console.log(`💰 Early payment discount: ₱${earlyDiscount} (${result.daysEarly} days early)`);
             successMsg = `✅ Payment saved! 25% discount applied: ₱${monthlyRent.toFixed(2)} → ₱${amountPaid.toFixed(2)} (Saved ₱${earlyDiscount.toFixed(2)})`;
@@ -480,16 +641,16 @@ export default {
             console.log(`⚠️ Late fee applied: ₱${lateFee} (${result.daysOverdue} days overdue)`);
             successMsg = `✅ Payment added (Including ₱${lateFee.toFixed(2)} late fee)`;
           }
-          
+
           // Refresh payments list
           await this.fetchOnsitePayments();
-          
+
           // Close modal and reset form
           this.closeAddModal();
-          
+
           // Emit event to parent
           this.$emit('payment-added', result);
-          
+
           // Show success message with toast
           this.showToast(successMsg, 'success');
         } else {
@@ -511,6 +672,19 @@ export default {
 
     deletePayment(payment) {
       this.$emit('delete-payment', payment)
+    },
+
+    /**
+     * Get color based on violation severity
+     */
+    getSeverityColor(severity) {
+      const colors = {
+        'minor': 'green',
+        'moderate': 'orange',
+        'major': 'deep-orange',
+        'critical': 'red'
+      };
+      return colors[severity?.toLowerCase()] || 'grey';
     }
   }
 }

@@ -160,6 +160,82 @@
                   prepend-inner-icon="mdi-tag-outline"
                 ></v-select>
               </v-col>
+
+              <!-- Violation Dropdown - Only shown when penalty is selected -->
+              <v-col cols="12" v-if="isPenaltyPayment">
+                <v-select
+                  v-model="form.selectedViolation"
+                  :items="violationItems"
+                  :loading="loadingViolations"
+                  :disabled="!form.stallholderId || loadingViolations"
+                  label="Select Violation to Pay"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-alert-circle"
+                  :rules="[(v) => !!v || 'Please select a violation']"
+                  :no-data-text="!form.stallholderId ? 'Select a stallholder first' : 'No unpaid violations found'"
+                  return-object
+                  item-title="title"
+                  item-value="value"
+                  @update:modelValue="(item) => form.selectedViolation = item?.value"
+                >
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <template v-slot:prepend>
+                        <v-icon :color="getSeverityColor(item.raw.violation?.severity)">
+                          mdi-alert-circle
+                        </v-icon>
+                      </template>
+                      <v-list-item-subtitle>
+                        <v-chip
+                          :color="getSeverityColor(item.raw.violation?.severity)"
+                          size="x-small"
+                          class="mr-2"
+                        >
+                          {{ item.raw.violation?.severity }}
+                        </v-chip>
+                        <span>Offense #{{ item.raw.violation?.offenseNo }} - ₱{{ item.raw.violation?.penaltyAmount?.toLocaleString() }}</span>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </template>
+                </v-select>
+
+                <!-- Violation Details Card -->
+                <v-card
+                  v-if="form.selectedViolation"
+                  class="mt-2 violation-details-card"
+                  variant="outlined"
+                  color="warning"
+                >
+                  <v-card-text class="pa-3">
+                    <div class="d-flex align-center mb-2">
+                      <v-icon color="warning" size="20" class="mr-2">mdi-alert</v-icon>
+                      <span class="font-weight-bold">Selected Violation Details</span>
+                    </div>
+                    <div class="violation-info">
+                      <div v-for="v in unpaidViolations.filter(x => x.violationId === form.selectedViolation)" :key="v.violationId">
+                        <div class="d-flex justify-space-between mb-1">
+                          <span class="text-caption">Type:</span>
+                          <span class="font-weight-medium">{{ v.violationType }}</span>
+                        </div>
+                        <div class="d-flex justify-space-between mb-1">
+                          <span class="text-caption">Offense #:</span>
+                          <span class="font-weight-medium">{{ v.offenseNo }}</span>
+                        </div>
+                        <div class="d-flex justify-space-between mb-1">
+                          <span class="text-caption">Penalty Amount:</span>
+                          <span class="font-weight-bold text-error">₱{{ v.penaltyAmount?.toLocaleString() }}</span>
+                        </div>
+                        <div class="d-flex justify-space-between">
+                          <span class="text-caption">Date Reported:</span>
+                          <span>{{ formatDate(v.dateReported) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="form.collectedBy"
@@ -174,12 +250,12 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="form.receiptNo"
-                  label="Receipt Number"
+                  :label="isPenaltyPayment ? 'Payment Reference Number' : 'Receipt Number'"
                   variant="outlined"
                   density="comfortable"
                   :rules="[(v) => !!v || 'Required']"
                   prepend-inner-icon="mdi-receipt"
-                  placeholder="Enter receipt number (e.g., RCP-001)"
+                  :placeholder="isPenaltyPayment ? 'Enter payment reference (e.g., REF-001)' : 'Enter receipt number (e.g., RCP-001)'"
                 ></v-text-field>
               </v-col>
               <v-col cols="12">
@@ -201,11 +277,11 @@
           <v-btn
             color="#002181"
             variant="flat"
-            :disabled="!formValid"
+            :disabled="!formValid || (isPenaltyPayment && !form.selectedViolation)"
             @click="addPayment"
           >
             <v-icon class="mr-1">mdi-check</v-icon>
-            Add Payment
+            {{ isPenaltyPayment ? 'Process Violation Payment' : 'Add Payment' }}
           </v-btn>
         </v-card-actions>
       </v-card>

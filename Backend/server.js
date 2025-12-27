@@ -32,6 +32,7 @@ import mobileAuthRoutes from './Backend-Mobile/routes/authRoutes.js';
 import mobileStallRoutes from './Backend-Mobile/routes/stallRoutes.js';
 import mobileApplicationRoutes from './Backend-Mobile/routes/applicationRoutes.js';
 import mobileStallholderRoutes from './Backend-Mobile/routes/stallholderRoutes.js';
+import mobileInspectorRoutes from './Backend-Mobile/routes/inspectorRoutes.js';
 
 const app = express();
 const WEB_PORT = process.env.WEB_PORT || 3001;
@@ -85,6 +86,7 @@ app.use('/mobile/api/auth', mobileAuthRoutes);
 app.use('/mobile/api/stalls', mobileStallRoutes);
 app.use('/mobile/api/applications', mobileApplicationRoutes);
 app.use('/api/mobile/stallholder', mobileStallholderRoutes); // Stallholder document management for mobile
+app.use('/api/mobile/inspector', mobileInspectorRoutes); // Inspector routes for mobile
 
 // Mobile areas endpoint (separate from stalls)
 app.get('/mobile/api/areas', async (req, res) => {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,59 +10,84 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from "../../../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
+import ApiService from "../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
-
-// Violation types based on database (frontend mock)
-const violationTypes = [
-  {
-    violation_id: 1,
-    ordinance_no: "Ordinance No. 2001-055",
-    violation_type: "Illegal Vending",
-    details: "Vending outside prescribed area (Obstruction)",
-  },
-  {
-    violation_id: 2,
-    ordinance_no: "Ordinance No. 2001-056",
-    violation_type: "Waste Segregation / Anti-Littering",
-    details: "Improper waste disposal or littering",
-  },
-  {
-    violation_id: 3,
-    ordinance_no: "Ordinance No. 2017-066",
-    violation_type: "Anti-Smoking",
-    details: "Smoking in prohibited public areas",
-  },
-];
-
-const severityLevels = [
-  { id: "minor", label: "Minor", color: "#10b981", description: "First-time offense, small impact" },
-  { id: "moderate", label: "Moderate", color: "#f59e0b", description: "Repeated offense or medium impact" },
-  { id: "major", label: "Major", color: "#ef4444", description: "Serious violation, significant impact" },
-  { id: "critical", label: "Critical", color: "#7c2d12", description: "Severe violation, immediate action needed" },
-];
 
 const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSuccess, onCancel }) => {
   const { theme, isDark } = useTheme();
   
+  // Violation types from API
+  const [violationTypes, setViolationTypes] = useState([]);
+  const [loadingViolations, setLoadingViolations] = useState(true);
+  
   // Form state
   const [selectedViolation, setSelectedViolation] = useState(null);
-  const [selectedSeverity, setSelectedSeverity] = useState(null);
   const [remarks, setRemarks] = useState("");
   const [evidence, setEvidence] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [receiptNumber, setReceiptNumber] = useState("");
   
   // Selection state
   const [stallholderName, setStallholderName] = useState(
     preselectedStallholder?.stallholder_name || preselectedStall?.stallholder_name || ""
   );
-  const [stallNo, setStallNo] = useState(
-    preselectedStall?.stall_no || preselectedStallholder?.stall_no || ""
+  const [stallholderId, setStallholderId] = useState(
+    preselectedStallholder?.stallholder_id?.toString() || preselectedStall?.stallholder_id?.toString() || ""
   );
+  const [branchId, setBranchId] = useState(
+    preselectedStallholder?.branch_id?.toString() || preselectedStall?.branch_id?.toString() || ""
+  );
+  const [stallId, setStallId] = useState(
+    preselectedStallholder?.stall_id?.toString() || preselectedStall?.stall_id?.toString() || ""
+  );
+
+  // Load violation types on mount
+  useEffect(() => {
+    loadViolationTypes();
+  }, []);
+
+  const loadViolationTypes = async () => {
+    try {
+      setLoadingViolations(true);
+      const response = await ApiService.getViolationTypes();
+      if (response.success) {
+        setViolationTypes(response.data || []);
+      } else {
+        console.error('Failed to load violations:', response.message);
+        // Use fallback mock data if API fails
+        setViolationTypes([
+          {
+            violation_id: 1,
+            ordinance_no: "Ordinance No. 2001-055",
+            violation_type: "Illegal Vending",
+            details: "Vending outside prescribed area (Obstruction)",
+          },
+          {
+            violation_id: 2,
+            ordinance_no: "Ordinance No. 2001-056",
+            violation_type: "Waste Segregation / Anti-Littering",
+            details: "Improper waste disposal or littering",
+          },
+          {
+            violation_id: 3,
+            ordinance_no: "Ordinance No. 2017-066",
+            violation_type: "Anti-Smoking",
+            details: "Smoking in prohibited public areas",
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading violations:', error);
+    } finally {
+      setLoadingViolations(false);
+    }
+  };
 
   const handleSubmit = () => {
     // Validation
@@ -70,16 +95,24 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
       Alert.alert("Error", "Please enter the stallholder name");
       return;
     }
-    if (!stallNo.trim()) {
-      Alert.alert("Error", "Please enter the stall number");
+    if (!stallholderId.trim()) {
+      Alert.alert("Error", "Please enter the stallholder ID");
+      return;
+    }
+    if (!branchId.trim()) {
+      Alert.alert("Error", "Please enter the branch ID");
+      return;
+    }
+    if (!receiptNumber.trim()) {
+      Alert.alert("Error", "Please enter the receipt number");
+      return;
+    }
+    if (receiptNumber.length !== 7 || !/^\d+$/.test(receiptNumber)) {
+      Alert.alert("Error", "Receipt number must be exactly 7 digits");
       return;
     }
     if (!selectedViolation) {
       Alert.alert("Error", "Please select a violation type");
-      return;
-    }
-    if (!selectedSeverity) {
-      Alert.alert("Error", "Please select a severity level");
       return;
     }
     if (!evidence.trim()) {
@@ -90,7 +123,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
     // Show confirmation
     Alert.alert(
       "Confirm Report Submission",
-      `Are you sure you want to submit this violation report?\n\nStallholder: ${stallholderName}\nStall: ${stallNo}\nViolation: ${selectedViolation.violation_type}\nSeverity: ${selectedSeverity.label}`,
+      `Are you sure you want to submit this violation report?\n\nStallholder: ${stallholderName}\nStallholder ID: ${stallholderId}\nBranch ID: ${branchId}\nReceipt No: ${receiptNumber}\nViolation: ${selectedViolation.violation_type}`,
       [
         {
           text: "Cancel",
@@ -101,31 +134,54 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
           onPress: async () => {
             setIsSubmitting(true);
             
-            // Simulate API call (frontend only)
-            setTimeout(() => {
+            try {
+              // Call the API
+              const reportData = {
+                stallholder_id: parseInt(stallholderId),
+                violation_id: selectedViolation.violation_id,
+                branch_id: parseInt(branchId),
+                stall_id: stallId ? parseInt(stallId) : null,
+                receipt_number: parseInt(receiptNumber),
+                evidence: evidence.trim(),
+                remarks: remarks.trim() || null
+              };
+              
+              const response = await ApiService.submitViolationReport(reportData);
+              
               setIsSubmitting(false);
-              Alert.alert(
-                "Report Submitted",
-                "The violation report has been successfully submitted.",
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      // Reset form
-                      setSelectedViolation(null);
-                      setSelectedSeverity(null);
-                      setRemarks("");
-                      setEvidence("");
-                      if (!preselectedStall && !preselectedStallholder) {
-                        setStallholderName("");
-                        setStallNo("");
-                      }
-                      onSubmitSuccess && onSubmitSuccess();
+              
+              if (response.success) {
+                Alert.alert(
+                  "Report Submitted",
+                  "The violation report has been successfully submitted.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        // Reset form
+                        setSelectedViolation(null);
+                        setRemarks("");
+                        setEvidence("");
+                        setReceiptNumber("");
+                        if (!preselectedStall && !preselectedStallholder) {
+                          setStallholderName("");
+                          setStallholderId("");
+                          setBranchId("");
+                          setStallId("");
+                        }
+                        onSubmitSuccess && onSubmitSuccess();
+                      },
                     },
-                  },
-                ]
-              );
-            }, 1500);
+                  ]
+                );
+              } else {
+                Alert.alert("Error", response.message || "Failed to submit report");
+              }
+            } catch (error) {
+              setIsSubmitting(false);
+              Alert.alert("Error", "An unexpected error occurred. Please try again.");
+              console.error('Submit error:', error);
+            }
           },
         },
       ]
@@ -186,7 +242,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
 
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
-              Stall Number *
+              Stallholder ID *
             </Text>
             <TextInput
               style={[styles.textInput, { 
@@ -194,11 +250,73 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
                 color: theme.colors.text,
                 borderColor: theme.colors.border 
               }]}
-              value={stallNo}
-              onChangeText={setStallNo}
-              placeholder="Enter stall number (e.g., A-001)"
+              value={stallholderId}
+              onChangeText={setStallholderId}
+              placeholder="Enter stallholder ID"
               placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="numeric"
               editable={!preselectedStall && !preselectedStallholder}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              Branch ID *
+            </Text>
+            <TextInput
+              style={[styles.textInput, { 
+                backgroundColor: theme.colors.background, 
+                color: theme.colors.text,
+                borderColor: theme.colors.border 
+              }]}
+              value={branchId}
+              onChangeText={setBranchId}
+              placeholder="Enter branch ID"
+              placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="numeric"
+              editable={!preselectedStall && !preselectedStallholder}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              Stall ID (Optional)
+            </Text>
+            <TextInput
+              style={[styles.textInput, { 
+                backgroundColor: theme.colors.background, 
+                color: theme.colors.text,
+                borderColor: theme.colors.border 
+              }]}
+              value={stallId}
+              onChangeText={setStallId}
+              placeholder="Enter stall ID (if applicable)"
+              placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="numeric"
+              editable={!preselectedStall && !preselectedStallholder}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              Receipt Number * (7 digits)
+            </Text>
+            <TextInput
+              style={[styles.textInput, { 
+                backgroundColor: theme.colors.background, 
+                color: theme.colors.text,
+                borderColor: theme.colors.border 
+              }]}
+              value={receiptNumber}
+              onChangeText={(text) => {
+                // Only allow digits and max 7 characters
+                const filtered = text.replace(/[^0-9]/g, '').slice(0, 7);
+                setReceiptNumber(filtered);
+              }}
+              placeholder="Enter 7-digit receipt number"
+              placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="numeric"
+              maxLength={7}
             />
           </View>
         </View>
@@ -209,7 +327,14 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
             <Ionicons name="warning" size={18} color="#f59e0b" /> Violation Type *
           </Text>
           
-          {violationTypes.map((violation) => (
+          {loadingViolations ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#f59e0b" />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+                Loading violation types...
+              </Text>
+            </View>
+          ) : violationTypes.map((violation) => (
             <TouchableOpacity
               key={violation.violation_id}
               style={[
@@ -249,49 +374,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
           ))}
         </View>
 
-        {/* Severity Section */}
-        <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            <Ionicons name="alert-circle" size={18} color="#f59e0b" /> Severity Level *
-          </Text>
-          
-          <View style={styles.severityGrid}>
-            {severityLevels.map((severity) => (
-              <TouchableOpacity
-                key={severity.id}
-                style={[
-                  styles.severityCard,
-                  { 
-                    backgroundColor: selectedSeverity?.id === severity.id 
-                      ? severity.color + '20' 
-                      : theme.colors.background,
-                    borderColor: selectedSeverity?.id === severity.id 
-                      ? severity.color 
-                      : theme.colors.border 
-                  }
-                ]}
-                onPress={() => setSelectedSeverity(severity)}
-              >
-                <View style={[styles.severityDot, { backgroundColor: severity.color }]} />
-                <Text style={[
-                  styles.severityLabel, 
-                  { color: selectedSeverity?.id === severity.id ? severity.color : theme.colors.text }
-                ]}>
-                  {severity.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          {selectedSeverity && (
-            <View style={[styles.severityDescription, { backgroundColor: selectedSeverity.color + '10' }]}>
-              <Ionicons name="information-circle" size={16} color={selectedSeverity.color} />
-              <Text style={[styles.severityDescText, { color: selectedSeverity.color }]}>
-                {selectedSeverity.description}
-              </Text>
-            </View>
-          )}
-        </View>
+
 
         {/* Evidence Section */}
         <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
@@ -591,6 +674,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 14,
   },
 });
 
