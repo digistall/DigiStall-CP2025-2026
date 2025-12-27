@@ -116,7 +116,7 @@ export const createFloor = async (req, res) => {
 
     const [[result]] = await connection.execute(
       "CALL createFloor(?, ?, ?, ?)",
-      [branch_id, floor_number, floor_name, status || 'Active']
+      [branch_id, floor_name, floor_number, branch_id]
     );
     
     const floor_id = result.floor_id;
