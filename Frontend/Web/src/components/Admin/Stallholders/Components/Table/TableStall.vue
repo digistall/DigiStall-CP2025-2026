@@ -11,6 +11,7 @@
           <div class="header-cell phone-col">Phone Number</div>
           <div class="header-cell stall-col">Stall</div>
           <div class="header-cell status-col">Status</div>
+          <div class="header-cell compliance-col">Compliance</div>
         </div>
       </div>
 
@@ -77,10 +78,20 @@
               </div>
             </div>
           </div>
+          <div class="table-cell compliance-col" @click.stop>
+            <v-chip
+              :color="stallholder.compliance_status === 'Compliant' ? 'green' : 'red'"
+              size="small"
+              variant="flat"
+              :prepend-icon="stallholder.compliance_status === 'Compliant' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+            >
+              {{ stallholder.compliance_status || 'Compliant' }}
+            </v-chip>
+          </div>
         </div>
       </div>
-      
-      
+
+
       <!-- Empty State -->
       <div v-if="stallholders.length === 0" class="empty-state">
         <v-icon size="48" color="grey-lighten-1" class="mb-3">
