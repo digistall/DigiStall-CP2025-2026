@@ -889,6 +889,200 @@ class ApiService {
       message: error.message || 'Network error occurred'
     };
   }
+
+  // ===== INSPECTOR METHODS =====
+  
+  /**
+   * Get all stallholders in inspector's branch
+   */
+  static async getInspectorStallholders() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_INSPECTOR_STALLHOLDERS}`;
+      console.log('🔄 Fetching stallholders from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholders');
+      }
+      
+      console.log('✅ Stallholders fetched:', data.count || 0);
+      return {
+        success: true,
+        data: data.data,
+        count: data.count,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Inspector Stallholders Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+  
+  /**
+   * Get stallholder details by ID
+   * @param {number} stallholderId - The stallholder ID
+   */
+  static async getStallholderDetails(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALLHOLDER_DETAILS}/${stallholderId}`;
+      console.log('🔄 Fetching stallholder details from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholder details');
+      }
+      
+      console.log('✅ Stallholder details fetched');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Stallholder Details Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: null
+      };
+    }
+  }
+  
+  /**
+   * Get all violation types
+   */
+  static async getViolationTypes() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_VIOLATION_TYPES}`;
+      console.log('🔄 Fetching violation types from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch violation types');
+      }
+      
+      console.log('✅ Violation types fetched:', data.count || 0);
+      return {
+        success: true,
+        data: data.data,
+        count: data.count,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Violation Types Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+  
+  /**
+   * Submit a violation report
+   * @param {object} reportData - The report data
+   */
+  static async submitViolationReport(reportData) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_VIOLATION_REPORT}`;
+      console.log('🔄 Submitting violation report to:', url);
+      console.log('📝 Report data:', reportData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(reportData)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit violation report');
+      }
+      
+      console.log('✅ Violation report submitted successfully');
+      return {
+        success: true,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Violation Report Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
 }
 
 export default ApiService;
