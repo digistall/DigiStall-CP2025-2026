@@ -7,34 +7,34 @@
 export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   SERVERS: [
-    // Current detected IP addresses
-    'http://192.168.100.241:3001', // Current Ethernet IP (December 10, 2025)
-    'http://172.18.195.29:3001',   // Current Wi-Fi IP (November 7, 2025)
-    'http://192.168.137.1:3001',   // Local Area Connection (successful)
-    'http://192.168.1.101:3001',   // Previous Expo detected IP
-    'http://192.168.110.16:3001',  // Previous Wi-Fi IP
+    // DigitalOcean Production Server - Mobile Backend (HIGHEST PRIORITY)
+    'http://68.183.154.125:5001',  // Mobile Backend on DigitalOcean
+    'http://68.183.154.125:5000',  // Web Backend on DigitalOcean (fallback)
+    
+    // Local Development - Mobile Backend (Port 5001)
+    'http://192.168.100.241:5001', // Current Ethernet IP
+    'http://172.18.195.29:5001',   // Current Wi-Fi IP
+    'http://192.168.137.1:5001',   // Local Area Connection
+    'http://192.168.1.101:5001',   // Previous Expo detected IP
+    'http://192.168.110.16:5001',  // Previous Wi-Fi IP
     
     // Previous IP (backup)
-    'http://192.168.8.38:3001',
+    'http://192.168.8.38:5000',
     
-    // Common local network ranges (try different networks)
-    'http://192.168.1.100:3001',  // Common router IP range
-    'http://192.168.0.100:3001',  // Another common range
-    'http://192.168.1.1:3001',    // Router IP attempt
-    'http://192.168.0.1:3001',    // Another router IP
-    'http://10.0.0.100:3001',     // Mobile hotspot range
-    'http://10.0.0.1:3001',       // Mobile hotspot router
-    'http://172.16.0.100:3001',   // Corporate network range
-    'http://192.168.43.1:3001',   // Android hotspot default
-    'http://172.20.10.1:3001',    // iPhone hotspot default
+    // Common local network ranges
+    'http://192.168.1.100:5000',
+    'http://192.168.0.100:5000',
+    'http://192.168.1.1:5000',
+    'http://192.168.0.1:5000',
+    'http://10.0.0.100:5000',
+    'http://10.0.0.1:5000',
+    'http://172.16.0.100:5000',
+    'http://192.168.43.1:5000',
+    'http://172.20.10.1:5000',
     
-    // Localhost alternatives (for testing)
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    
-    // Add your cloud server here when available
-    // 'https://your-app-name.herokuapp.com',
-    // 'https://your-app-name.vercel.app',
+    // Localhost alternatives
+    'http://localhost:5000',
+    'http://127.0.0.1:5000',
   ],
   
   // Static file server for images (Apache on port 80)
@@ -46,27 +46,27 @@ export const API_CONFIG = {
   
   // Mobile app specific endpoints
   MOBILE_ENDPOINTS: {
-    // Authentication endpoints
-    LOGIN: '/mobile/api/auth/login',
-    STAFF_LOGIN: '/mobile/api/auth/staff-login',
-    REGISTER: '/mobile/api/auth/register',
-    VERIFY_TOKEN: '/mobile/api/auth/verify-token',
-    LOGOUT: '/mobile/api/auth/logout',
+    // Authentication endpoints - Match Backend-Mobile routes
+    LOGIN: '/api/mobile/auth/login',
+    STAFF_LOGIN: '/api/mobile/auth/staff-login',
+    REGISTER: '/api/mobile/auth/register',
+    VERIFY_TOKEN: '/api/mobile/auth/verify-token',
+    LOGOUT: '/api/mobile/auth/logout',
     
     // Stall endpoints
-    GET_ALL_STALLS: '/mobile/api/stalls',
-    GET_STALLS_BY_TYPE: '/mobile/api/stalls/type',
-    GET_STALLS_BY_AREA: '/mobile/api/stalls/area',
-    GET_STALL_BY_ID: '/mobile/api/stalls',
-    GET_STALL_IMAGES: '/mobile/api/stalls/images',
-    GET_AVAILABLE_AREAS: '/mobile/api/areas',
-    SEARCH_STALLS: '/mobile/api/stalls/search',
+    GET_ALL_STALLS: '/api/mobile/stalls',
+    GET_STALLS_BY_TYPE: '/api/mobile/stalls/type',
+    GET_STALLS_BY_AREA: '/api/mobile/stalls/area',
+    GET_STALL_BY_ID: '/api/mobile/stalls',
+    GET_STALL_IMAGES: '/api/mobile/stalls/images',
+    GET_AVAILABLE_AREAS: '/api/mobile/areas',
+    SEARCH_STALLS: '/api/mobile/stalls/search',
     
     // Application endpoints
-    SUBMIT_APPLICATION: '/mobile/api/applications/submit',
-    GET_MY_APPLICATIONS: '/mobile/api/applications/my',
-    GET_APPLICATION_STATUS: '/mobile/api/applications',
-    UPDATE_APPLICATION: '/mobile/api/applications',
+    SUBMIT_APPLICATION: '/api/mobile/applications/submit',
+    GET_MY_APPLICATIONS: '/api/mobile/applications/my',
+    GET_APPLICATION_STATUS: '/api/mobile/applications',
+    UPDATE_APPLICATION: '/api/mobile/applications',
 
     // Stallholder document endpoints
     GET_STALLHOLDER_STALLS_DOCUMENTS: '/api/mobile/stallholder/documents',

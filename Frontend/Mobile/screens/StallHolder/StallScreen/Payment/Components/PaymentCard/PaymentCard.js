@@ -50,8 +50,8 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment, theme = defaultT
       backgroundColor: "#E8F8ED",
       gradientColors: ["#00D632", "#00A827"],
       description: "Pay with your PayMaya account",
-      logo: require("../../../../../../assets/icon.png"),
-      backgroundImage: require("../../../../../../assets/icon.png"),
+      logo: require("../../../../../../assets/paymaya-logo.png"),
+      backgroundImage: require("../../../../../../assets/paymaya-logo.png"),
     },
     {
       id: "bank",
