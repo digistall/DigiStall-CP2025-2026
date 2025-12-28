@@ -1727,6 +1727,46 @@ const StallholderController = {
     } finally {
       if (connection) await connection.end();
     }
+  },
+
+  /**
+   * Get violation history for a specific stallholder
+   * @route GET /api/stallholders/:id/violations
+   */
+  getViolationHistory: async (req, res) => {
+    let connection;
+    try {
+      const { id } = req.params;
+
+      console.log(`📋 Fetching violation history for stallholder ID: ${id}`);
+
+      connection = await createConnection();
+
+      const [records] = await connection.execute(
+        'CALL getViolationHistoryByStallholder(?)',
+        [id]
+      );
+
+      const violations = records[0] || [];
+
+      console.log(`✅ Found ${violations.length} violations for stallholder ${id}`);
+
+      res.json({
+        success: true,
+        data: violations,
+        count: violations.length
+      });
+
+    } catch (error) {
+      console.error('❌ Error fetching violation history:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching violation history',
+        error: error.message
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
   }
 };
 

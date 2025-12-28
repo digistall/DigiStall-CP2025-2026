@@ -29,11 +29,11 @@ const ComplianceTable = {
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase()
         filtered = filtered.filter(compliance =>
-          compliance.id.toLowerCase().includes(query) ||
-          compliance.type.toLowerCase().includes(query) ||
-          compliance.inspector.toLowerCase().includes(query) ||
-          compliance.stallholder.toLowerCase().includes(query) ||
-          compliance.status.toLowerCase().includes(query) ||
+          (compliance.id && compliance.id.toLowerCase().includes(query)) ||
+          (compliance.type && compliance.type.toLowerCase().includes(query)) ||
+          (compliance.inspector && compliance.inspector.toLowerCase().includes(query)) ||
+          (compliance.stallholder && compliance.stallholder.toLowerCase().includes(query)) ||
+          (compliance.status && compliance.status.toLowerCase().includes(query)) ||
           (compliance.date && compliance.date.toLowerCase().includes(query)) ||
           (compliance.severity && compliance.severity.toLowerCase().includes(query))
         )

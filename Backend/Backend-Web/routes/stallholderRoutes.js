@@ -71,6 +71,13 @@ router.get('/', authenticateToken, StallholderController.getAllStallholders);
 router.get('/:id', authenticateToken, StallholderController.getStallholderById);
 
 /**
+ * @route GET /api/stallholders/:id/violations
+ * @description Get violation history for a specific stallholder
+ * @access Branch Manager, Employee, Admin
+ */
+router.get('/:id/violations', authenticateToken, StallholderController.getViolationHistory);
+
+/**
  * @route POST /api/stallholders
  * @description Create new stallholder
  * @access Business Manager (view-only blocked for owners)
