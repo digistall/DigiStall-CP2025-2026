@@ -124,22 +124,50 @@ export default {
         console.log("📥 Response received:", response.status, response.data)
 
         if (response.data.success) {
+          // Debug: Log raw data from API
+          console.log("📊 Raw compliance data from API:", response.data.data)
+          if (response.data.data.length > 0) {
+            console.log("📊 First record fields:", Object.keys(response.data.data[0]))
+            console.log("📊 First record values:", response.data.data[0])
+          }
+
           // Map backend data to frontend format
+          // Support both old field names (from view_compliance_records) and new field names (from compliance_record table)
           this.complianceList = response.data.data.map(item => ({
-            id: `CMP-${String(item.compliance_id).padStart(4, '0')}`,
-            compliance_id: item.compliance_id,
-            date: this.formatDate(item.date),
-            type: item.type || 'General Compliance',
-            inspector: item.inspector || 'N/A',
-            stallholder: item.stallholder || 'N/A',
-            status: item.status || 'pending',
+            id: `CMP-${String(item.compliance_id || item.compliance_record_id).padStart(4, '0')}`,
+            compliance_id: item.compliance_id || item.compliance_record_id,
+            date: this.formatDate(item.date || item.inspection_date),
+            type: item.type || item.compliance_type || 'General Compliance',
+            inspector: item.inspector || item.inspector_name || 'N/A',
+            inspector_id: item.inspector_id || null,
+            stallholder: item.stallholder || item.stallholder_name || 'N/A',
+            stallholder_id: item.stallholder_id || null,
+            status: item.status || item.compliance_status || 'pending',
             severity: item.severity || 'moderate',
             notes: item.notes || '',
             branch_name: item.branch_name || '',
+            branch_id: item.branch_id || null,
             stall_no: item.stall_no || '',
+            stall_id: item.stall_id || null,
             offense_no: item.offense_no || 1,
             penalty_amount: item.penalty_amount || 0,
-            resolved_date: item.resolved_date,
+            receipt_number: item.receipt_number || null,
+            evidence: item.evidence || '',
+            resolved_date: item.resolved_date ? this.formatDate(item.resolved_date) : null,
+            violation_id: item.violation_id || null,
+            // Payment info (new fields)
+            payment_date: item.payment_date ? this.formatDate(item.payment_date) : null,
+            payment_reference: item.payment_reference || null,
+            paid_amount: item.paid_amount || 0,
+            collected_by: item.collected_by || null,
+            // Additional violation details
+            ordinance_no: item.ordinance_no || null,
+            violation_details: item.violation_details || null,
+            penalty_remarks: item.penalty_remarks || null,
+            // Stallholder additional info
+            stallholder_compliance_status: item.stallholder_compliance_status || 'Compliant',
+            stallholder_contact: item.stallholder_contact || null,
+            stallholder_email: item.stallholder_email || null,
             // Keep original data for API calls
             _original: item
           }))

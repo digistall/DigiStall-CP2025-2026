@@ -73,6 +73,12 @@ export const API_CONFIG = {
     GET_BRANCH_DOCUMENT_REQUIREMENTS: '/api/mobile/stallholder/documents/branch',
     UPLOAD_STALLHOLDER_DOCUMENT: '/api/mobile/stallholder/documents/upload',
     
+    // Inspector endpoints
+    GET_INSPECTOR_STALLHOLDERS: '/api/mobile/inspector/stallholders',
+    GET_STALLHOLDER_DETAILS: '/api/mobile/inspector/stallholders',
+    GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
+    SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
+    
     // Health check
     HEALTH: '/api/health'  // Main health endpoint
   },
