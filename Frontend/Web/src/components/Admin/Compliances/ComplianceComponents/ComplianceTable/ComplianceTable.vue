@@ -6,10 +6,11 @@
         <thead>
           <tr>
             <th>Compliance ID</th>
-            <th>Date</th>
+            <th>Report Date</th>
             <th>Type</th>
             <th>Inspector</th>
             <th>Stallholder</th>
+            <th>Payment Date</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -22,24 +23,30 @@
             class="compliance-row-clickable"
             :title="'Click to view details'"
           >
-            <td>{{ compliance.id }}</td>
-            <td>{{ compliance.date }}</td>
-            <td>{{ compliance.type }}</td>
-            <td>{{ compliance.inspector }}</td>
+            <td>{{ compliance.id || 'N/A' }}</td>
+            <td>{{ compliance.date || 'N/A' }}</td>
+            <td>{{ compliance.type || 'N/A' }}</td>
+            <td>{{ compliance.inspector || 'N/A' }}</td>
             <td class="compliance-name-cell">
               <div class="compliance-name-wrapper">
                 <div class="compliance-avatar">
-                  {{ getInitials(compliance.stallholder) }}
+                  {{ getInitials(compliance.stallholder || 'N/A') }}
                 </div>
-                <span>{{ compliance.stallholder }}</span>
+                <span>{{ compliance.stallholder || 'N/A' }}</span>
               </div>
+            </td>
+            <td>
+              <span v-if="compliance.payment_date" class="payment-date-text">
+                {{ compliance.payment_date }}
+              </span>
+              <span v-else class="no-payment">—</span>
             </td>
             <td>
               <span
                 class="compliance-status-badge"
-                :class="getStatusClass(compliance.status)"
+                :class="getStatusClass(compliance.status || 'pending')"
               >
-                {{ compliance.status.toUpperCase() }}
+                {{ (compliance.status || 'PENDING').toUpperCase() }}
               </span>
             </td>
           </tr>
