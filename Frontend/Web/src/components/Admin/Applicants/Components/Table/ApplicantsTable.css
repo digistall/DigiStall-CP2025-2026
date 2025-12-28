@@ -672,3 +672,20 @@
 .no-document span {
   max-width: 120px;
 }
+/* Document Loading State */
+.document-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  height: 100%;
+  min-height: 120px;
+}
+
+.document-loading .loading-text {
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+}

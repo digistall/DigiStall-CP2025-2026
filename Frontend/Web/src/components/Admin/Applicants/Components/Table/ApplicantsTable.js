@@ -24,6 +24,8 @@ export default {
         house_location: null,
         valid_id: null
       },
+      // Loading state for documents
+      loadingDocuments: true,
       documentPreview: {
         show: false,
         url: '',
@@ -49,21 +51,29 @@ export default {
   methods: {
     // Fetch documents for the selected applicant
     async fetchApplicantDocuments(applicant) {
+      this.loadingDocuments = true
       this.resetApplicantDocuments()
       
-      if (!applicant) return
+      if (!applicant) {
+        this.loadingDocuments = false
+        return
+      }
       
       const applicantId = applicant.applicant_id || applicant.id
       const businessOwnerId = applicant.business_owner_id || applicant.stall_info?.business_owner_id
       
       console.log(`📄 Fetching documents for applicant ${applicantId}`)
       
-      if (this.useBlobStorage) {
-        // Use BLOB API for cloud storage
-        await this.fetchDocumentsFromBlobApi(applicantId, businessOwnerId)
-      } else {
-        // Fallback to legacy file system
-        await this.fetchDocumentsFromFileSystem(applicant)
+      try {
+        if (this.useBlobStorage) {
+          // Use BLOB API for cloud storage
+          await this.fetchDocumentsFromBlobApi(applicantId, businessOwnerId)
+        } else {
+          // Fallback to legacy file system
+          await this.fetchDocumentsFromFileSystem(applicant)
+        }
+      } finally {
+        this.loadingDocuments = false
       }
     },
     
