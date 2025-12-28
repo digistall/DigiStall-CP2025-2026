@@ -31,9 +31,10 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "CAMERA"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -41,9 +42,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "639d2e28-95f9-493b-8fa6-a306b52d6ffd"
+        "projectId": "f808ec8b-1dfa-45b0-a416-671193ef1b2b"
       }
     },
-    "owner": "digistalls-organization"
+    "owner": "genosexe02"
   }
 }
