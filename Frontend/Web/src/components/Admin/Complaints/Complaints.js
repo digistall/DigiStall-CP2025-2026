@@ -2,9 +2,7 @@ import ComplaintsTable from './ComplaintsComponents/ComplaintsTable/ComplaintsTa
 import ComplaintsSearch from './ComplaintsComponents/ComplaintsSearch/ComplaintsSearch.vue'
 import ViewComplaints from './ComplaintsComponents/ViewComplaints/ViewComplaints.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:3001/api'
+import apiClient from '../../../services/apiClient'
 
 export default {
   name: 'Complaints',
@@ -105,14 +103,10 @@ export default {
           params.search = this.searchQuery
         }
 
-        console.log('🔄 Fetching complaints data from:', `${API_BASE_URL}/complaints`)
+        console.log('🔄 Fetching complaints data')
         console.log('📋 Query params:', params)
-        console.log('🔑 Token present:', !!token)
 
-        const response = await axios.get(`${API_BASE_URL}/complaints`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await apiClient.get('/complaints', {
           params,
         })
 
