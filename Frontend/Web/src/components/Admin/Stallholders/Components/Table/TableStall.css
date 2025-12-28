@@ -30,7 +30,7 @@
 
 /* Stallholder Layout */
 .simplified-layout {
-  grid-template-columns: 0.8fr 1.8fr 2fr 1.8fr 1.4fr 1.5fr 1.8fr;
+  grid-template-columns: 0.8fr 1.8fr 2fr 1.8fr 1.4fr 1.5fr 1.8fr 1.2fr;
   width: 100%;
 }
 
@@ -121,6 +121,10 @@
 }
 
 .status-col {
+  justify-content: center;
+}
+
+.compliance-col {
   justify-content: center;
 }
 
@@ -351,7 +355,7 @@
 /* Mobile responsiveness */
 @media (max-width: 1200px) {
   .simplified-layout {
-    grid-template-columns: 0.8fr 1.6fr 1.8fr 1.6fr 1.2fr 1.3fr 1.6fr;
+    grid-template-columns: 0.8fr 1.6fr 1.8fr 1.6fr 1.2fr 1.3fr 1.6fr 1.1fr;
   }
 }
 
@@ -360,7 +364,7 @@
     grid-template-columns: 1fr;
     gap: 0;
   }
-  
+
   .header-row,
   .table-row {
     display: flex;
@@ -370,18 +374,18 @@
     gap: 8px;
     min-height: auto;
   }
-  
+
   .table-cell,
   .header-cell {
     justify-content: flex-start;
     text-align: left;
     padding: 0;
   }
-  
+
   .header-cell {
     display: none;
   }
-  
+
   .table-cell:before {
     content: attr(data-label) ': ';
     font-weight: 600;
@@ -390,9 +394,68 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  
+
   .floating-actions {
     bottom: 16px;
     right: 16px;
   }
+}
+
+/* Violation History Styles */
+.violations-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.violations-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.violations-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.violations-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.violation-card {
+  border-left: 4px solid #ef4444 !important;
+  transition: all 0.2s ease;
+}
+
+.violation-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.violation-type {
+  color: #1e293b;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Violation Summary Card Styles */
+.violation-summary-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px !important;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-stat .stat-value {
+  line-height: 1.2;
+}
+
+.summary-stat.total-penalty {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  padding: 12px;
+  border-radius: 8px;
+  margin: -8px;
 }
