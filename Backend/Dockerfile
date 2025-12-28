@@ -77,8 +77,8 @@ RUN chown -R nodejs:nodejs /app/uploads
 
 USER nodejs
 
-# Expose BOTH Web (5000) and Mobile (5001) ports
-EXPOSE 5000 5001
+# Expose unified API port (serves both Web and Mobile routes)
+EXPOSE 5000
 
 # Health check for Web API
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
