@@ -30,8 +30,8 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      # Mount local uploads folder so existing images are accessible
-      - ${UPLOAD_PATH:-C:/xampp/htdocs/digistall_uploads}:/app/uploads
+      # Mount uploads - works on both Windows and Linux
+      - ./uploads:/app/uploads
     networks:
       - digistall-network
     extra_hosts:
@@ -67,8 +67,8 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      # Mount local uploads folder so existing images are accessible
-      - ${UPLOAD_PATH:-C:/xampp/htdocs/digistall_uploads}:/app/uploads
+      # Mount uploads - works on both Windows and Linux
+      - ./uploads:/app/uploads
     networks:
       - digistall-network
     extra_hosts:
