@@ -7,8 +7,9 @@
 export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   SERVERS: [
-    // DigitalOcean Production Server - Unified Backend (Port 5000)
+    // DigitalOcean Production Server - Unified Backend (Port 5000) - PRIORITY
     'http://68.183.154.125:5000',  // Unified Backend serves both Web and Mobile APIs
+    'https://68.183.154.125:5000', // Try HTTPS as well
     
     // Local Development - Port 3001 (Default WEB_PORT)
     'http://192.168.100.241:3001', // Current Ethernet IP
@@ -100,8 +101,8 @@ export const API_CONFIG = {
     HEALTH: '/api/health'  // Main health endpoint
   },
   
-  // Timeout for network requests (5 seconds per attempt)
-  TIMEOUT: 5000,
+  // Timeout for network requests (10 seconds per attempt - increased for slow connections)
+  TIMEOUT: 10000,
   
   // Default headers
   HEADERS: {
@@ -158,7 +159,7 @@ export const NetworkUtils = {
     }
     
     console.error('❌ No working servers found');
-    throw new Error('Unable to connect to any server. Please check:\n\n• Backend server is running on port 3001\n• Device and server are on same network\n• Firewall allows connections\n• Server IP is in the config');
+    throw new Error('Unable to connect to any server. Please check:\n\n• Backend server is running (port 3001 or 5000)\n• Device has internet connection\n• DigitalOcean server: http://68.183.154.125:5000\n• Server IP is in the config');
   },
 
   // Get current active server or find one
