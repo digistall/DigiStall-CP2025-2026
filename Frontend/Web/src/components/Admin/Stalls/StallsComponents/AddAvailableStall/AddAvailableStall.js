@@ -243,7 +243,7 @@ export default {
       console.log('  - Type:', typeof files)
       console.log('  - Is Array:', Array.isArray(files))
       console.log('  - Length:', files?.length || 0)
-      
+
       // Clear previous previews
       this.imagePreviews.forEach(preview => {
         if (preview && typeof preview === 'string' && preview.startsWith('blob:')) {
@@ -251,17 +251,17 @@ export default {
         }
       })
       this.imagePreviews = []
-      
+
       // Handle null/undefined/empty
       if (!files || (Array.isArray(files) && files.length === 0)) {
         console.log('  ❌ No files to process')
         return
       }
-      
+
       // Convert to array if needed (some events pass FileList)
       const filesArray = Array.isArray(files) ? files : Array.from(files)
       console.log('  ✅ Files array created with', filesArray.length, 'files')
-      
+
       // Generate previews using object URLs (faster than base64)
       const maxImages = Math.min(filesArray.length, 10)
       for (let i = 0; i < maxImages; i++) {
@@ -274,7 +274,7 @@ export default {
           console.warn(`  ⚠️ Item ${i} is not a valid File object:`, file)
         }
       }
-      
+
       console.log('📸 Total previews generated:', this.imagePreviews.length)
       console.log('📸 Preview URLs:', this.imagePreviews)
     },
@@ -290,11 +290,11 @@ export default {
         if (this.imagePreviews[index]?.startsWith('blob:')) {
           URL.revokeObjectURL(this.imagePreviews[index])
         }
-        
+
         // Remove from both arrays
         this.newStall.images.splice(index, 1)
         this.imagePreviews.splice(index, 1)
-        
+
         console.log('  ✅ Removed. Remaining images:', this.newStall.images.length)
       }
     },
@@ -306,7 +306,7 @@ export default {
           URL.revokeObjectURL(preview)
         }
       })
-      
+
       this.newStall = {
         stallNumber: '',
         price: '',
@@ -413,7 +413,7 @@ export default {
 
         // Create FormData for multipart upload
         const formData = new FormData()
-        
+
         // Append stall data fields
         Object.keys(stallData).forEach(key => {
           formData.append(key, stallData[key])
@@ -423,7 +423,7 @@ export default {
         if (this.newStall.images && this.newStall.images.length > 0) {
           console.log('📸 Converting images to base64 for BLOB storage:', this.newStall.images.length)
           const base64Images = []
-          
+
           for (let i = 0; i < this.newStall.images.length; i++) {
             const file = this.newStall.images[i]
             try {
@@ -438,7 +438,7 @@ export default {
               console.error(`  ❌ Failed to convert image ${i + 1}:`, err)
             }
           }
-          
+
           // Send base64 images as JSON string
           if (base64Images.length > 0) {
             formData.append('base64Images', JSON.stringify(base64Images))
@@ -597,14 +597,14 @@ export default {
         const monthlyRent = Math.round(rentalRate2010 * 2 * 100) / 100
         // Discounted rate for early payment = Monthly Rent × 0.75
         const discountedRate = Math.round(monthlyRent * 0.75 * 100) / 100
-        
+
         this.calculatedMonthlyRent = monthlyRent.toFixed(2)
-        
+
         // Auto-update price field for Fixed Price type (use full monthly rent)
         if (this.newStall.priceType === 'Fixed Price') {
           this.newStall.price = monthlyRent.toString()
         }
-        
+
         console.log(`📊 RENTAL RATE 2010: ${rentalRate2010} | Monthly Rent (×2): ${monthlyRent} | Discounted: ${discountedRate}`)
       } else {
         this.calculatedMonthlyRent = ''
@@ -884,7 +884,7 @@ export default {
       clearTimeout(this.refreshTimeout)
       this.refreshTimeout = null
     }
-    
+
     // Clean up image preview URLs to prevent memory leaks
     this.imagePreviews.forEach(preview => {
       if (preview.startsWith('blob:')) {

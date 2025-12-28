@@ -11,6 +11,7 @@ import stallRoutes from './routes/stallRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
+import inspectorRoutes from './routes/inspectorRoutes.js';
 
 const app = express();
 const PORT = process.env.MOBILE_PORT || 5001;
@@ -44,6 +45,7 @@ app.use('/api/mobile/stalls', stallRoutes);
 app.use('/api/mobile/users', userRoutes);
 app.use('/api/mobile/applications', applicationRoutes);
 app.use('/api/mobile/stallholder', stallholderRoutes);
+app.use('/api/mobile/inspector', inspectorRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/mobile/health', async (req, res) => {

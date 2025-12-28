@@ -202,13 +202,25 @@
   }
 }
 
+/* Payment Date */
+.payment-date-text {
+  color: #059669;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.no-payment {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
 @media (max-width: 480px) {
   .compliance-table-wrapper {
     overflow-x: scroll;
   }
 
   .compliance-table {
-    min-width: 800px;
+    min-width: 900px;
   }
 
   .compliance-pagination-wrapper {
