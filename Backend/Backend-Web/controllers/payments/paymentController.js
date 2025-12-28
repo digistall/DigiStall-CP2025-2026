@@ -765,6 +765,166 @@ const PaymentController = {
     } finally {
       if (connection) await connection.end();
     }
+  },
+
+  /**
+   * Get unpaid violations for a stallholder
+   * @route GET /api/payments/violations/unpaid/:stallholderId
+   */
+  getUnpaidViolations: async (req, res) => {
+    let connection;
+    try {
+      connection = await createConnection();
+      
+      const { stallholderId } = req.params;
+      
+      if (!stallholderId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stallholder ID is required'
+        });
+      }
+      
+      console.log('🔍 getUnpaidViolations called for stallholderId:', stallholderId);
+      
+      const [result] = await connection.execute(
+        'CALL getUnpaidViolationsByStallholder(?)',
+        [parseInt(stallholderId)]
+      );
+      
+      const violations = result[0] || [];
+      console.log('📊 Unpaid violations found:', violations.length);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Unpaid violations retrieved successfully',
+        data: violations.map(v => ({
+          violationId: v.violation_id,
+          dateReported: v.date_reported,
+          violationType: v.violation_type,
+          ordinanceNo: v.ordinance_no,
+          offenseNo: v.offense_no,
+          severity: v.severity,
+          status: v.status,
+          receiptNumber: v.receipt_number,
+          penaltyAmount: parseFloat(v.penalty_amount) || 0,
+          penaltyRemarks: v.penalty_remarks,
+          inspectorName: v.inspector_name,
+          branchName: v.branch_name,
+          stallNo: v.stall_no,
+          stallholderId: v.stallholder_id
+        }))
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching unpaid violations:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch unpaid violations',
+        error: error.message
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
+  },
+
+  /**
+   * Process violation payment
+   * @route POST /api/payments/violations/pay
+   */
+  processViolationPayment: async (req, res) => {
+    let connection;
+    try {
+      connection = await createConnection();
+      
+      const { violationId, paymentReference, paidAmount, notes } = req.body;
+      
+      // Validate required fields
+      if (!violationId || !paymentReference || !paidAmount) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: violationId, paymentReference, and paidAmount are required'
+        });
+      }
+      
+      // Get collected by info from token
+      const userInfo = req.user;
+      const collectedBy = userInfo ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 'System' : 'System';
+      
+      console.log('💳 Processing violation payment:', {
+        violationId,
+        paymentReference,
+        paidAmount,
+        collectedBy,
+        notes
+      });
+      
+      const [result] = await connection.execute(
+        'CALL processViolationPayment(?, ?, ?, ?, ?)',
+        [
+          parseInt(violationId),
+          paymentReference,
+          parseFloat(paidAmount),
+          collectedBy,
+          notes || null
+        ]
+      );
+      
+      const paymentResult = result[0]?.[0];
+      
+      if (!paymentResult) {
+        return res.status(404).json({
+          success: false,
+          message: 'Failed to process payment - violation not found'
+        });
+      }
+      
+      console.log('✅ Violation payment processed:', paymentResult);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Violation payment processed successfully',
+        data: {
+          reportId: paymentResult.report_id,
+          status: paymentResult.status,
+          paymentDate: paymentResult.payment_date,
+          paymentReference: paymentResult.payment_reference,
+          paidAmount: parseFloat(paymentResult.paid_amount) || 0,
+          collectedBy: paymentResult.collected_by,
+          violationType: paymentResult.violation_type,
+          originalPenalty: parseFloat(paymentResult.original_penalty) || 0,
+          stallholderName: paymentResult.stallholder_name,
+          stallNo: paymentResult.stall_no,
+          branchName: paymentResult.branch_name
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error processing violation payment:', error);
+      
+      // Handle specific error messages from stored procedure
+      if (error.message.includes('Violation report not found')) {
+        return res.status(404).json({
+          success: false,
+          message: 'Violation report not found'
+        });
+      }
+      
+      if (error.message.includes('already been paid')) {
+        return res.status(400).json({
+          success: false,
+          message: 'This violation has already been paid'
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process violation payment',
+        error: error.message
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
   }
 };
 

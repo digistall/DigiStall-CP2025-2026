@@ -48,11 +48,11 @@ const Sidebar = ({
       try {
         const storedUserData = await UserStorageService.getUserData();
         console.log('🔍 Inspector Sidebar - Retrieved user data:', JSON.stringify(storedUserData, null, 2));
-        if (storedUserData && storedUserData.user) {
-          setUserData(storedUserData.user);
-          console.log('👤 Inspector Sidebar - Set user data:', storedUserData.user);
+        if (storedUserData) {
+          setUserData(storedUserData);
+          console.log('👤 Inspector Sidebar - Set user data:', storedUserData);
         } else {
-          console.log('❌ Inspector Sidebar - No user data found');
+          console.log('❌ Inspector Sidebar - No stored data found');
         }
       } catch (error) {
         console.error('Error loading user data for sidebar:', error);
@@ -77,6 +77,28 @@ const Sidebar = ({
       }).start();
     }
   }, [isVisible]);
+
+  // Helper function to get inspector name
+  const getInspectorName = () => {
+    if (!userData) return null;
+    // Check staff object (for new staff login structure)
+    if (userData.staff) {
+      return userData.staff.fullName || userData.staff.full_name || `${userData.staff.firstName} ${userData.staff.lastName}` || userData.staff.username;
+    }
+    // Fallback to old structure
+    return userData.user?.full_name || userData.inspector?.inspector_name || userData.user?.username || userData.inspector?.username;
+  };
+
+  // Helper function to get inspector email/contact
+  const getInspectorContact = () => {
+    if (!userData) return '';
+    // Check staff object (for new staff login structure)
+    if (userData.staff) {
+      return userData.staff.email || userData.staff.contactNumber || userData.staff.contact_number || userData.staff.username || '';
+    }
+    // Fallback to old structure
+    return userData.user?.email || userData.inspector?.email || userData.user?.contact_number || userData.inspector?.contact_number || userData.user?.username || userData.inspector?.username || '';
+  };
 
   // Helper function to get user initials
   const getUserInitials = (fullName) => {
@@ -149,17 +171,17 @@ const Sidebar = ({
                   <View style={baseStyles.profileImageContainer}>
                     <View style={[baseStyles.profileImage, { backgroundColor: '#f59e0b' }]}>
                       <Text style={baseStyles.profileInitials}>
-                        {userData ? getUserInitials(userData.full_name || userData.username) : "I"}
+                        {userData ? getUserInitials(getInspectorName() || "Inspector") : "I"}
                       </Text>
                     </View>
                     <View style={baseStyles.statusIndicator} />
                   </View>
                   <View style={baseStyles.profileInfo}>
                     <Text style={[baseStyles.profileName, { color: colors.text }]}>
-                      {userData ? userData.full_name : "Loading..."}
+                      {userData ? getInspectorName() || "Loading..." : "Loading..."}
                     </Text>
                     <Text style={[baseStyles.profileEmail, { color: colors.textSecondary }]}>
-                      {userData ? (userData.email || userData.contact_number || userData.username) : ""}
+                      {userData ? getInspectorContact() : ""}
                     </Text>
                     <View style={localStyles.roleContainer}>
                       <Text style={baseStyles.profileStatus}>Online</Text>
