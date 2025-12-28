@@ -92,6 +92,29 @@
   overflow: hidden;
 }
 
+/* Stall Image Loading State */
+.stall-image-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  z-index: 2;
+}
+
+.loading-spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #002181;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 .stall-image img {
   width: 100%;
   height: 100%;
@@ -930,6 +953,42 @@
   height: 240px;
   overflow: hidden;
   cursor: pointer;
+}
+
+.hero-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  gap: 12px;
+  z-index: 5;
+}
+
+.hero-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #002181;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.hero-loading span {
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hero-image {
