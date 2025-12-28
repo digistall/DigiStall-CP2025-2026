@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
+import ApiService from "../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
 
@@ -71,16 +73,43 @@ const mockStallholders = [
 const StallholdersScreen = ({ onSelectStallholder }) => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [stallholders, setStallholders] = useState(mockStallholders);
+  const [stallholders, setStallholders] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [error, setError] = useState(null);
+
+  // Load stallholders on component mount
+  useEffect(() => {
+    loadStallholders();
+  }, []);
+
+  const loadStallholders = async () => {
+    try {
+      console.log('📋 Loading stallholders...');
+      setError(null);
+      
+      const response = await ApiService.getInspectorStallholders();
+      
+      if (response.success) {
+        console.log('✅ Stallholders loaded:', response.count);
+        setStallholders(response.data || []);
+      } else {
+        console.error('❌ Failed to load stallholders:', response.message);
+        setError(response.message);
+      }
+    } catch (error) {
+      console.error('❌ Error loading stallholders:', error);
+      setError('Failed to load stallholders');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadStallholders();
   }, []);
 
   const filters = [
@@ -180,76 +209,109 @@ const StallholdersScreen = ({ onSelectStallholder }) => {
     );
   };
 
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card }]}>
-        <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
-        <TextInput
-          style={[styles.searchInput, { color: theme.colors.text }]}
-          placeholder="Search stallholder, stall, or business..."
-          placeholderTextColor={theme.colors.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")}>
-            <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-      </View>
+  // Header component moved outside FlatList to prevent keyboard dismissal
 
-      {/* Filter Chips */}
-      <View style={styles.filterContainer}>
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterChip,
-              selectedFilter === filter.id && styles.filterChipActive,
-              { backgroundColor: selectedFilter === filter.id ? '#f59e0b' : theme.colors.card }
-            ]}
-            onPress={() => setSelectedFilter(filter.id)}
+  const renderEmpty = () => {
+    if (loading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color="#f59e0b" />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text, marginTop: 16 }]}>
+            Loading Stallholders...
+          </Text>
+        </View>
+      );
+    }
+    
+    if (error) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>Error Loading Data</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+            {error}
+          </Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={loadStallholders}
           >
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: selectedFilter === filter.id ? '#ffffff' : theme.colors.textSecondary }
-              ]}
-            >
-              {filter.label}
-            </Text>
+            <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
-        ))}
+        </View>
+      );
+    }
+    
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="people-outline" size={64} color={theme.colors.textSecondary} />
+        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Stallholders Found</Text>
+        <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+          {searchQuery ? "Try adjusting your search or filters" : "Pull down to refresh"}
+        </Text>
       </View>
-
-      {/* Results Count */}
-      <Text style={[styles.resultsCount, { color: theme.colors.textSecondary }]}>
-        {filteredStallholders.length} stallholder{filteredStallholders.length !== 1 ? 's' : ''} found
-      </Text>
-    </View>
-  );
-
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="people-outline" size={64} color={theme.colors.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Stallholders Found</Text>
-      <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-        {searchQuery ? "Try adjusting your search or filters" : "Pull down to refresh"}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Search Bar - Outside FlatList to prevent keyboard dismissal */}
+      <View style={styles.headerContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: theme.colors.card }]}>
+          <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.colors.text }]}
+            placeholder="Search stallholder, stall, or business..."
+            placeholderTextColor={theme.colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filter Chips */}
+        <View style={styles.filterContainer}>
+          {filters.map((filter) => (
+            <TouchableOpacity
+              key={filter.id}
+              style={[
+                styles.filterChip,
+                selectedFilter === filter.id && styles.filterChipActive,
+                { backgroundColor: selectedFilter === filter.id ? '#f59e0b' : theme.colors.card }
+              ]}
+              onPress={() => setSelectedFilter(filter.id)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: selectedFilter === filter.id ? '#ffffff' : theme.colors.textSecondary }
+                ]}
+              >
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Results Count */}
+        <Text style={[styles.resultsCount, { color: theme.colors.textSecondary }]}>
+          {filteredStallholders.length} stallholder{filteredStallholders.length !== 1 ? 's' : ''} found
+        </Text>
+      </View>
+
       <FlatList
         data={filteredStallholders}
         renderItem={renderStallholderCard}
         keyExtractor={(item) => item.stallholder_id.toString()}
-        ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -268,11 +330,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    padding: width * 0.04,
+    paddingHorizontal: width * 0.04,
     paddingBottom: 32,
   },
   headerContainer: {
-    marginBottom: 16,
+    paddingHorizontal: width * 0.04,
+    paddingTop: width * 0.04,
+    paddingBottom: 8,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -415,6 +479,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#f59e0b',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
