@@ -1,5 +1,5 @@
 import express from 'express'
-import authMiddleware from '../../middleware/auth.js'
+import authMiddleware from '../middleware/auth.js';
 
 // Import mobile login controller with full data fetching (including spouse, business, stallholder data)
 import { mobileLogin } from '../controllers/login/loginController.js'

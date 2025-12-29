@@ -3,7 +3,7 @@
 // Includes CRUD operations, filtering, and statistics
 
 import { createConnection } from '../../config/database.js';
-import { getBranchFilter } from '../middleware/rolePermissions.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
 
 /**
  * Get all complaints with optional filters
