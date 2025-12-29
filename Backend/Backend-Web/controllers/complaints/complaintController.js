@@ -2,7 +2,7 @@
 // Handles all complaint management operations
 // Includes CRUD operations, filtering, and statistics
 
-import { createConnection } from '../../../config/database.js';
+import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
 
 /**

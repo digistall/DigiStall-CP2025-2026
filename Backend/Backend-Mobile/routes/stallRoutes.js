@@ -9,13 +9,13 @@ import {
   getStallImages
 } from '../controllers/stall/stallController.js'
 
-// Import BLOB image controller from Web backend (shared)
+// Import BLOB image controller (copied from Web backend)
 import {
   uploadStallImageBlob,
   getStallImageBlobById,
   getStallImagesBlob,
   getStallPrimaryImageBlob
-} from '../../Backend-Web/controllers/stalls/stallImageBlobController.js'
+} from '../controllers/stalls/stallImageBlobController.js'
 
 const router = express.Router()
 
