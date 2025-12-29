@@ -4,9 +4,13 @@
     "slug": "digistall",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/DigiStall-Logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
+    "plugins": [
+      "expo-image-picker",
+      "expo-document-picker"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,24 +18,33 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.digistall.mobile"
+      "bundleIdentifier": "com.digistall.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.digistall.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/DigiStall-Logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": false,
-      "package": "com.digistall.mobile"
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "c74c9945-b775-4083-bb0f-c8e651921896"
+        "projectId": "e2d9ba73-0e36-4fbf-9bc4-5e0d398981d3"
       }
     },
-    "owner": "genosexe02"
+    "owner": "naga-stalls-organization"
   }
 }
