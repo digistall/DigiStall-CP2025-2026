@@ -65,34 +65,34 @@ export const API_CONFIG = {
   
   // Mobile app specific endpoints
   MOBILE_ENDPOINTS: {
-    // Authentication endpoints - Match Backend-Mobile routes (using /mobile/api/ prefix)
-    LOGIN: '/mobile/api/auth/login',
-    STAFF_LOGIN: '/mobile/api/auth/staff-login',
-    REGISTER: '/mobile/api/auth/register',
-    VERIFY_TOKEN: '/mobile/api/auth/verify-token',
-    LOGOUT: '/mobile/api/auth/logout',
+    // Authentication endpoints - Match Backend-Mobile routes (using /api/mobile/ prefix)
+    LOGIN: '/api/mobile/auth/login',
+    STAFF_LOGIN: '/api/mobile/auth/staff-login',
+    REGISTER: '/api/mobile/auth/register',
+    VERIFY_TOKEN: '/api/mobile/auth/verify-token',
+    LOGOUT: '/api/mobile/auth/logout',
     
     // Stall endpoints
-    GET_ALL_STALLS: '/mobile/api/stalls',
-    GET_STALLS_BY_TYPE: '/mobile/api/stalls/type',
-    GET_STALLS_BY_AREA: '/mobile/api/stalls/area',
-    GET_STALL_BY_ID: '/mobile/api/stalls',
-    GET_STALL_IMAGES: '/mobile/api/stalls/images',
-    GET_AVAILABLE_AREAS: '/mobile/api/areas',
-    SEARCH_STALLS: '/mobile/api/stalls/search',
+    GET_ALL_STALLS: '/api/mobile/stalls',
+    GET_STALLS_BY_TYPE: '/api/mobile/stalls/type',
+    GET_STALLS_BY_AREA: '/api/mobile/stalls/area',
+    GET_STALL_BY_ID: '/api/mobile/stalls',
+    GET_STALL_IMAGES: '/api/mobile/stalls/images',
+    GET_AVAILABLE_AREAS: '/api/mobile/areas',
+    SEARCH_STALLS: '/api/mobile/stalls/search',
     
     // Application endpoints
-    SUBMIT_APPLICATION: '/mobile/api/applications/submit',
-    GET_MY_APPLICATIONS: '/mobile/api/applications/my',
-    GET_APPLICATION_STATUS: '/mobile/api/applications',
-    UPDATE_APPLICATION: '/mobile/api/applications',
+    SUBMIT_APPLICATION: '/api/mobile/applications/submit',
+    GET_MY_APPLICATIONS: '/api/mobile/applications/my',
+    GET_APPLICATION_STATUS: '/api/mobile/applications',
+    UPDATE_APPLICATION: '/api/mobile/applications',
 
-    // Stallholder document endpoints (keeping /api/mobile/ as these don't have /mobile/api/ routes)
+    // Stallholder document endpoints
     GET_STALLHOLDER_STALLS_DOCUMENTS: '/api/mobile/stallholder/documents',
     GET_BRANCH_DOCUMENT_REQUIREMENTS: '/api/mobile/stallholder/documents/branch',
     UPLOAD_STALLHOLDER_DOCUMENT: '/api/mobile/stallholder/documents/upload',
     
-    // Inspector endpoints (keeping /api/mobile/ as these don't have /mobile/api/ routes)
+    // Inspector endpoints
     GET_INSPECTOR_STALLHOLDERS: '/api/mobile/inspector/stallholders',
     GET_STALLHOLDER_DETAILS: '/api/mobile/inspector/stallholders',
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
