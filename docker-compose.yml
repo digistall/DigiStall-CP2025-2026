@@ -4,12 +4,12 @@
 # Team members can clone and run without installing node_modules
 
 services:
-  # Unified Backend (runs both Web and Mobile APIs)
-  backend:
+  # Backend Web API Server (Port 5000)
+  backend-web:
     build:
-      context: ./Backend
+      context: ./Backend/Backend-Web
       dockerfile: Dockerfile
-    container_name: digistall-backend
+    container_name: digistall-backend-web
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -28,14 +28,47 @@ services:
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
     ports:
-      - "5000:5000"  # Unified API (Web + Mobile)
+      - "5000:5000"
     volumes:
-      # Mount uploads - works on both Windows and Linux
       - ./uploads:/app/uploads
     networks:
       - digistall-network
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend Mobile API Server (Port 5001)
+  backend-mobile:
+    build:
+      context: ./Backend/Backend-Mobile
+      dockerfile: Dockerfile
+    container_name: digistall-backend-mobile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MOBILE_PORT: 5001
+      # Connect to external database
+      DB_HOST: ${DB_HOST:-db.cjunttcqcwlh.ap-southeast-1.rds.amazonaws.com}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
+      # Upload directories (Docker-compatible paths)
+      UPLOAD_DIR_STALLS: /app/uploads/stalls
+      UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - digistall-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,7 +82,7 @@ services:
     container_name: digistall-frontend-web
     restart: unless-stopped
     depends_on:
-      backend:
+      backend-web:
         condition: service_healthy
     environment:
       VITE_API_URL: /api
@@ -62,34 +95,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Frontend Mobile Application (Expo Development Server)
-  frontend-mobile:
-    build:
-      context: ./Frontend/Mobile
-      dockerfile: Dockerfile.dev
-    container_name: digistall-frontend-mobile
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      # Expo configuration
-      EXPO_DEVTOOLS_LISTEN_ADDRESS: "0.0.0.0"
-      REACT_NATIVE_PACKAGER_HOSTNAME: "${HOST_IP:-192.168.1.105}"
-      # API URL for the mobile app
-      EXPO_PUBLIC_API_URL: "http://${HOST_IP:-192.168.1.105}:5001"
-    ports:
-      - "8081:8081"
-      - "19000:19000"
-      - "19001:19001"
-      - "19002:19002"
-    networks:
-      - digistall-network
-    # Use host network mode alternative: uncomment if LAN access doesn't work
-    # network_mode: host
-    stdin_open: true
-    tty: true
 
 # Networks
 networks:

@@ -7,25 +7,26 @@
 export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   SERVERS: [
-    // DigitalOcean Production Server - Unified Backend (Port 5000) - PRIORITY
-    'http://68.183.154.125:5000',  // Unified Backend serves both Web and Mobile APIs
-    'https://68.183.154.125:5000', // Try HTTPS as well
+    // DigitalOcean Production Server - Mobile Backend (Port 5001) - PRIORITY
+    'http://68.183.154.125:5001',  // Mobile Backend on DigitalOcean
     
-    // Local Development - Port 3001 (Default WEB_PORT)
-    'http://192.168.100.241:3001', // Current Ethernet IP
-    'http://172.18.195.29:3001',   // Current Wi-Fi IP
-    'http://192.168.137.1:3001',   // Local Area Connection
-    'http://192.168.1.101:3001',   // Previous Expo detected IP
-    'http://192.168.110.16:3001',  // Previous Wi-Fi IP
+    // Local Development - Port 5001 (Mobile Backend)
+    'http://192.168.100.241:5001', // Current Ethernet IP
+    'http://172.18.195.29:5001',   // Current Wi-Fi IP
+    'http://192.168.137.1:5001',   // Local Area Connection
+    'http://192.168.1.101:5001',   // Previous Expo detected IP
+    'http://192.168.110.16:5001',  // Previous Wi-Fi IP
+    'http://localhost:5001',
+    'http://127.0.0.1:5001',
+    
+    // Fallback to port 3001
+    'http://192.168.100.241:3001',
+    'http://172.18.195.29:3001',
+    'http://192.168.137.1:3001',
+    'http://192.168.1.101:3001',
+    'http://192.168.110.16:3001',
     'http://localhost:3001',
     'http://127.0.0.1:3001',
-    
-    // Local Development - Port 5000 (Docker)
-    'http://192.168.100.241:5000',
-    'http://172.18.195.29:5000',
-    'http://192.168.137.1:5000',
-    'http://192.168.1.101:5000',
-    'http://192.168.110.16:5000',
     
     // Previous IP (backup)
     'http://192.168.8.38:3001',
