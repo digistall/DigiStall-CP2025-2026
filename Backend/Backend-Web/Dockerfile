@@ -28,5 +28,5 @@ EXPOSE 5000
 ENV NODE_ENV=production
 ENV WEB_PORT=5000
 
-# Start the server
-CMD ["node", "server.js"]
+# Start the server with logging
+CMD ["node", "--trace-warnings", "server.js"]
