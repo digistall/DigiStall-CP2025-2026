@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js'
+import { createConnection } from '../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
