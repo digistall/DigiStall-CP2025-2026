@@ -483,14 +483,25 @@
                     <div class="document-card">
                       <span class="document-label">Signature</span>
                       <div class="document-image-container">
+                        <!-- Loading State -->
+                        <div v-if="loadingDocuments" class="document-loading">
+                          <v-progress-circular
+                            indeterminate
+                            color="primary"
+                            size="32"
+                          ></v-progress-circular>
+                          <span class="loading-text">Loading...</span>
+                        </div>
+                        <!-- Image Loaded -->
                         <img 
-                          v-if="applicantDocuments.signature" 
+                          v-else-if="applicantDocuments.signature" 
                           :src="applicantDocuments.signature" 
                           alt="Signature"
                           class="document-image"
                           @error="handleDocumentError('signature')"
                           @click="openDocumentPreview(applicantDocuments.signature, 'Signature')"
                         />
+                        <!-- No Document -->
                         <div v-else class="no-document">
                           <v-icon size="48" color="grey">mdi-file-document-outline</v-icon>
                           <span>No signature uploaded</span>
@@ -504,14 +515,25 @@
                     <div class="document-card">
                       <span class="document-label">House Location Sketch</span>
                       <div class="document-image-container">
+                        <!-- Loading State -->
+                        <div v-if="loadingDocuments" class="document-loading">
+                          <v-progress-circular
+                            indeterminate
+                            color="primary"
+                            size="32"
+                          ></v-progress-circular>
+                          <span class="loading-text">Loading...</span>
+                        </div>
+                        <!-- Image Loaded -->
                         <img 
-                          v-if="applicantDocuments.house_location" 
+                          v-else-if="applicantDocuments.house_location" 
                           :src="applicantDocuments.house_location" 
                           alt="House Location"
                           class="document-image"
                           @error="handleDocumentError('house_location')"
                           @click="openDocumentPreview(applicantDocuments.house_location, 'House Location Sketch')"
                         />
+                        <!-- No Document -->
                         <div v-else class="no-document">
                           <v-icon size="48" color="grey">mdi-map-outline</v-icon>
                           <span>No house sketch uploaded</span>
@@ -525,14 +547,25 @@
                     <div class="document-card">
                       <span class="document-label">Valid ID</span>
                       <div class="document-image-container">
+                        <!-- Loading State -->
+                        <div v-if="loadingDocuments" class="document-loading">
+                          <v-progress-circular
+                            indeterminate
+                            color="primary"
+                            size="32"
+                          ></v-progress-circular>
+                          <span class="loading-text">Loading...</span>
+                        </div>
+                        <!-- Image Loaded -->
                         <img 
-                          v-if="applicantDocuments.valid_id" 
+                          v-else-if="applicantDocuments.valid_id" 
                           :src="applicantDocuments.valid_id" 
                           alt="Valid ID"
                           class="document-image"
                           @error="handleDocumentError('valid_id')"
                           @click="openDocumentPreview(applicantDocuments.valid_id, 'Valid ID')"
                         />
+                        <!-- No Document -->
                         <div v-else class="no-document">
                           <v-icon size="48" color="grey">mdi-card-account-details-outline</v-icon>
                           <span>No valid ID uploaded</span>

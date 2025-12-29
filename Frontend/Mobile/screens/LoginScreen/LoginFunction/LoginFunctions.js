@@ -45,13 +45,13 @@ export const handleLogin = async (
     console.log('🔌 Testing basic connectivity...');
     
     // First, test if we can reach the server at all
-    const isConnected = await ApiService.testConnectivity();
+    const connectivityResult = await ApiService.testConnectivity();
     
-    if (!isConnected) {
-      throw new Error('Cannot reach the server. Please check:\n\n• Backend server is running on port 3001\n• Same Wi-Fi network\n• Windows Firewall allows Node.js');
+    if (!connectivityResult.success) {
+      throw new Error('Cannot reach the server. Please check:\n\n• Backend server is running (port 3001 or 5000)\n• Internet or Wi-Fi connection active\n• DigitalOcean: http://68.183.154.125:5000');
     }
 
-    console.log('✅ Basic connectivity successful');
+    console.log('✅ Basic connectivity successful to:', connectivityResult.server);
     
     if (setLoadingState) {
       setLoadingState({ step: 1, message: 'Verifying credentials...', progress: 20 });
