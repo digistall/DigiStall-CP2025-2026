@@ -2,9 +2,7 @@ import InspectorTable from './InspectorComponents/InspectorTable/InspectorTable.
 import InspectorSearch from './InspectorComponents/InspectorSearch/InspectorSearch.vue'
 import ViewInspector from './InspectorComponents/ViewInspector/ViewInspector.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:3001/api'
+import apiClient from '../../../services/apiClient'
 
 export default {
   name: "Inspector",
@@ -109,14 +107,10 @@ export default {
           params.search = this.searchQuery
         }
 
-        console.log("🔄 Fetching inspector data from:", `${API_BASE_URL}/compliances/helpers/inspectors`)
+        console.log("🔄 Fetching inspector data")
         console.log("📋 Query params:", params)
-        console.log("🔑 Token present:", !!token)
 
-        const response = await axios.get(`${API_BASE_URL}/compliances/helpers/inspectors`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
+        const response = await apiClient.get('/compliances/helpers/inspectors', {
           params
         })
 

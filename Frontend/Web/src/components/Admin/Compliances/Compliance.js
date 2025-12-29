@@ -2,9 +2,7 @@ import ComplianceTable from './ComplianceComponents/ComplianceTable/ComplianceTa
 import ComplianceSearch from './ComplianceComponents/ComplianceSearch/ComplianceSearch.vue'
 import ViewCompliance from './ComplianceComponents/ViewCompliance/ViewCompliance.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:3001/api'
+import apiClient from '../../../services/apiClient'
 
 export default {
   name: "Compliance",
@@ -110,14 +108,10 @@ export default {
           params.search = this.searchQuery
         }
 
-        console.log("🔄 Fetching compliance data from:", `${API_BASE_URL}/compliances`)
+        console.log("🔄 Fetching compliance data")
         console.log("📋 Query params:", params)
-        console.log("🔑 Token present:", !!token)
 
-        const response = await axios.get(`${API_BASE_URL}/compliances`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
+        const response = await apiClient.get('/compliances', {
           params
         })
 

@@ -17,7 +17,11 @@
         <div class="stall-grid" :key="currentPage">
           <div class="stall-card" v-for="stall in paginatedStalls" :key="stall.id" @click="openStallDetails(stall)">
             <div class="stall-image">
-              <img :src="getStallDisplayImage(stall)" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
+              <!-- Loading placeholder until images are fetched -->
+              <div v-if="!stall.stallImages || stall.stallImages.length === 0" class="stall-image-loading">
+                <div class="loading-spinner-small"></div>
+              </div>
+              <img v-else :src="getStallDisplayImage(stall)" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
               <div class="stall-status-badge" :class="getStallBadgeClass(stall)">
                 {{ getStallBadgeText(stall) }}
               </div>
@@ -119,7 +123,13 @@
             <!-- Image Gallery Section - Full width hero -->
             <div class="modal-image-hero">
               <div class="hero-image-container" @click="openFullscreenViewer">
-                <img :src="currentDisplayImage" :alt="`Stall ${selectedStallDetails.stallNumber}`"
+                <!-- Loading State -->
+                <div v-if="loadingImages" class="hero-loading">
+                  <div class="loading-spinner"></div>
+                  <span>Loading images...</span>
+                </div>
+                <!-- Image Display -->
+                <img v-else :src="currentDisplayImage" :alt="`Stall ${selectedStallDetails.stallNumber}`"
                   @error="handleImageError" class="hero-image" />
                 
                 <!-- Gradient overlay -->
@@ -134,7 +144,7 @@
                 </div>
                 
                 <!-- Image navigation arrows -->
-                <template v-if="stallImages.length > 1">
+                <template v-if="!loadingImages && stallImages.length > 1">
                   <button class="hero-nav prev" @click.stop="prevImage">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                       <polyline points="15 18 9 12 15 6"></polyline>
@@ -148,7 +158,7 @@
                 </template>
                 
                 <!-- Image dots indicator -->
-                <div class="hero-dots" v-if="stallImages.length > 1">
+                <div class="hero-dots" v-if="!loadingImages && stallImages.length > 1">
                   <span 
                     v-for="(img, index) in stallImages" 
                     :key="index"
