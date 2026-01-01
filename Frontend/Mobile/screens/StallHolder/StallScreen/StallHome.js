@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "./Settings/components/ThemeComponents/ThemeContext";
+import ApiService from "../../../services/ApiService";
+import UserStorageService from "../../../services/UserStorageService";
 
 // nav bar and sidebar components
 import Header from "../StallComponents/header";
@@ -35,7 +37,25 @@ const StallHome = ({ navigation }) => {
   const [currentScreen, setCurrentScreen] = useState("stall");
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Get user data before clearing
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const userId = userData?.user?.applicant_id || userData?.user?.id;
+      
+      // Call logout API to update last_logout in database
+      if (token) {
+        await ApiService.mobileLogout(token, userId);
+        console.log('✅ Logout API called - last_logout updated');
+      }
+      
+      // Clear local storage
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+    
     navigation.navigate("LoginScreen");
   };
 

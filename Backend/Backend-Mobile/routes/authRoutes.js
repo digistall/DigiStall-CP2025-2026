@@ -12,7 +12,7 @@ import {
 } from '../controllers/mobileAuthController.js'
 
 // Import mobile staff auth controller (inspector/collector)
-import { mobileStaffLogin } from '../controllers/mobileStaffAuthController.js'
+import { mobileStaffLogin, mobileStaffLogout } from '../controllers/mobileStaffAuthController.js'
 
 const router = express.Router()
 
@@ -24,6 +24,7 @@ router.get('/verify-token', mobileVerifyToken)           // GET /mobile/auth/ver
 
 // ===== PROTECTED MOBILE ROUTES =====
 router.use(verifyToken) // Apply auth middleware to routes below
-router.post('/logout', mobileLogout)                     // POST /mobile/auth/logout - Mobile logout
+router.post('/logout', mobileLogout)                     // POST /mobile/auth/logout - Mobile user logout
+router.post('/staff-logout', mobileStaffLogout)          // POST /mobile/auth/staff-logout - Inspector/Collector logout
 
 export default router
