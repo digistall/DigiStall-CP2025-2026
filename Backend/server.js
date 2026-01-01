@@ -81,15 +81,15 @@ console.log('📊 Activity log routes registered at /api/activity-logs');
 console.log('📊 Activity logger middleware enabled for protected routes');
 
 // ===== MOBILE ROUTES (Backend-Mobile functionality) =====
-// Mobile API routes with /mobile prefix to differentiate
-app.use('/mobile/api/auth', mobileAuthRoutes);
-app.use('/mobile/api/stalls', mobileStallRoutes);
-app.use('/mobile/api/applications', mobileApplicationRoutes);
+// Mobile API routes with /api/mobile prefix
+app.use('/api/mobile/auth', mobileAuthRoutes);
+app.use('/api/mobile/stalls', mobileStallRoutes);
+app.use('/api/mobile/applications', mobileApplicationRoutes);
 app.use('/api/mobile/stallholder', mobileStallholderRoutes); // Stallholder document management for mobile
 app.use('/api/mobile/inspector', mobileInspectorRoutes); // Inspector routes for mobile
 
 // Mobile areas endpoint (separate from stalls)
-app.get('/mobile/api/areas', async (req, res) => {
+app.get('/api/mobile/areas', async (req, res) => {
   const { getAvailableAreas } = await import('./Backend-Mobile/controllers/stall/stallController.js');
   getAvailableAreas(req, res);
 });
@@ -106,7 +106,7 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         web: `http://localhost:${WEB_PORT}`,
-        mobile: `Mobile API available at /mobile/api/*`
+        mobile: `Mobile API available at /api/mobile/*`
       }
     });
   } catch (error) {
@@ -140,9 +140,10 @@ app.get('/', (req, res) => {
         branches: '/api/branches/*'
       },
       mobile: {
-        auth: '/mobile/api/auth/*',
-        stalls: '/mobile/api/stalls/*',
-        applications: '/mobile/api/applications/*'
+        auth: '/api/mobile/auth/*',
+        stalls: '/api/mobile/stalls/*',
+        applications: '/api/mobile/applications/*',
+        areas: '/api/mobile/areas'
       }
     }
   });
@@ -175,14 +176,14 @@ const startServer = async () => {
 
 📋 Available Services:
    🏪 Web API          - Landing Page and Management functions
-   📱 Mobile API       - Mobile application functions (/mobile/api/*)
+   📱 Mobile API       - Mobile application functions (/api/mobile/*)
 
 🔗 Health Check: http://localhost:${WEB_PORT}/api/health
 📚 API Documentation: http://localhost:${WEB_PORT}/
 
 🎯 Service Endpoints:
    Web Frontend:    http://localhost:${WEB_PORT}/api/*
-   Mobile App:      http://localhost:${WEB_PORT}/mobile/api/*
+   Mobile App:      http://localhost:${WEB_PORT}/api/mobile/*
       `);
     });
 

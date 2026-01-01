@@ -11,7 +11,8 @@ import {
   loginEmployee,
   logoutEmployee,
   resetEmployeePassword,
-  getEmployeesByBranch
+  getEmployeesByBranch,
+  getActiveSessions
 } from '../controllers/employees/employeeController.js';
 
 const router = express.Router();
@@ -59,6 +60,13 @@ router.post('/', createEmployee);
  * @query   ?status=active&search=john&page=1&limit=50&sortBy=created_at&sortOrder=DESC
  */
 router.get('/', getAllEmployees);
+
+/**
+ * @route   GET /api/employees/sessions/active
+ * @desc    Get active employee sessions for online status tracking
+ * @access  Business Manager and Business Owner
+ */
+router.get('/sessions/active', getActiveSessions);
 
 /**
  * @route   GET /api/employees/:id

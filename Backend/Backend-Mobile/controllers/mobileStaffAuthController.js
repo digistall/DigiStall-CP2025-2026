@@ -273,6 +273,102 @@ export const mobileStaffLogin = async (req, res) => {
     }
 };
 
+// ===== MOBILE STAFF LOGOUT =====
+export const mobileStaffLogout = async (req, res) => {
+    let connection;
+    
+    try {
+        connection = await createConnection();
+        
+        // Get staff info from JWT token (set by auth middleware) or from body
+        const staffId = req.user?.staffId || req.user?.userId || req.body?.staffId;
+        const staffType = req.user?.staffType || req.user?.userType || req.body?.staffType;
+        
+        const philippineTime = getPhilippineTime();
+        
+        console.log('='.repeat(60));
+        console.log('📱 MOBILE STAFF LOGOUT REQUEST');
+        console.log('📱 Timestamp:', new Date().toISOString());
+        console.log('📱 req.body:', JSON.stringify(req.body, null, 2));
+        console.log('📱 req.user:', JSON.stringify(req.user, null, 2));
+        console.log('📱 Extracted staffId:', staffId, '(type:', typeof staffId, ')');
+        console.log('📱 Extracted staffType:', staffType);
+        console.log('📱 Philippine time:', philippineTime);
+        console.log('='.repeat(60));
+        
+        if (staffId && staffType) {
+            // Update last_logout based on staff type
+            if (staffType === 'inspector') {
+                const [result] = await connection.execute(
+                    'UPDATE inspector SET last_logout = ? WHERE inspector_id = ?',
+                    [philippineTime, staffId]
+                );
+                console.log(`✅ Updated last_logout for inspector ${staffId} at ${philippineTime}`);
+                console.log(`   - affectedRows: ${result.affectedRows}`);
+            } else if (staffType === 'collector') {
+                const [result] = await connection.execute(
+                    'UPDATE collector SET last_logout = ? WHERE collector_id = ?',
+                    [philippineTime, staffId]
+                );
+                console.log(`✅ Updated last_logout for collector ${staffId} at ${philippineTime}`);
+                console.log(`   - affectedRows: ${result.affectedRows}`);
+            } else {
+                console.warn(`⚠️ Unknown staffType: ${staffType}`);
+            }
+            
+            // Get staff name for activity log
+            let staffName = 'Unknown';
+            if (staffType === 'inspector') {
+                const [rows] = await connection.execute(
+                    'SELECT first_name, last_name FROM inspector WHERE inspector_id = ?',
+                    [staffId]
+                );
+                if (rows.length > 0) {
+                    staffName = `${rows[0].first_name} ${rows[0].last_name}`;
+                }
+            } else if (staffType === 'collector') {
+                const [rows] = await connection.execute(
+                    'SELECT first_name, last_name FROM collector WHERE collector_id = ?',
+                    [staffId]
+                );
+                if (rows.length > 0) {
+                    staffName = `${rows[0].first_name} ${rows[0].last_name}`;
+                }
+            }
+            
+            // Log the logout activity
+            await logStaffActivity({
+                staffType: staffType,
+                staffId: staffId,
+                staffName: staffName,
+                branchId: req.user?.branchId || null,
+                actionType: 'LOGOUT',
+                actionDescription: `${staffType} logged out from mobile app`,
+                module: 'mobile_app',
+                ipAddress: req.ip || req.connection?.remoteAddress,
+                userAgent: req.get('User-Agent'),
+                status: 'success'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Logout successful'
+        });
+        
+    } catch (error) {
+        console.error('❌ Mobile staff logout error:', error);
+        // Still return success to client (logout should always "succeed" from user perspective)
+        res.json({
+            success: true,
+            message: 'Logout successful'
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
 export default {
-    mobileStaffLogin
+    mobileStaffLogin,
+    mobileStaffLogout
 };

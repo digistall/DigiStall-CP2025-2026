@@ -302,6 +302,7 @@ export async function getInspectorsByBranch(req, res) {
                     i.date_hired,
                     i.status,
                     i.last_login,
+                    i.last_logout,
                     COALESCE(ia.branch_id, ?) as branch_id,
                     COALESCE(b.branch_name, 'Unassigned') as branch_name
                 FROM inspector i
@@ -325,6 +326,7 @@ export async function getInspectorsByBranch(req, res) {
                     i.date_hired,
                     i.status,
                     i.last_login,
+                    i.last_logout,
                     ia.branch_id,
                     b.branch_name
                 FROM inspector i
@@ -401,6 +403,7 @@ export async function getCollectorsByBranch(req, res) {
                     c.status,
                     c.date_created,
                     c.last_login,
+                    c.last_logout,
                     ca.branch_id,
                     b.branch_name
                 FROM collector c
@@ -423,6 +426,7 @@ export async function getCollectorsByBranch(req, res) {
                     c.status,
                     c.date_created,
                     c.last_login,
+                    c.last_logout,
                     ca.branch_id,
                     b.branch_name
                 FROM collector c
