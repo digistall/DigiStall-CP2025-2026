@@ -77,7 +77,7 @@ const StallDetailsModal = ({
           const blobImages = response.data.images.map(img => ({
             id: img.id,
             stall_id: stallId,
-            image_url: `${apiBaseUrl}/stalls/images/blob/id/${img.id}`,
+            image_url: `${apiBaseUrl}/api/mobile/stalls/images/blob/id/${img.id}`,
             display_order: img.display_order,
             is_primary: img.is_primary,
           }));

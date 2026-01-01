@@ -13,6 +13,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import UserStorageService from '../../services/UserStorageService';
+import ApiService from '../../services/ApiService';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +22,7 @@ const CollectorHome = () => {
   const [userData, setUserData] = useState(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [activeScreen, setActiveScreen] = useState('home');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -36,7 +38,28 @@ const CollectorHome = () => {
   };
 
   const handleLogout = async () => {
+    // Prevent multiple clicks
+    if (isLoggingOut) {
+      console.log('⏳ Logout already in progress, ignoring...');
+      return;
+    }
+    
+    setIsLoggingOut(true);
+    
     try {
+      // Get user data before clearing
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
+      const staffType = 'collector';
+      
+      // Call staff logout API to update last_logout in database
+      if (token && staffId) {
+        await ApiService.staffLogout(token, staffId, staffType);
+        console.log('✅ Staff logout API called - last_logout updated');
+      }
+      
+      // Clear local storage
       await UserStorageService.clearUserData();
       navigation.reset({
         index: 0,
@@ -44,6 +67,8 @@ const CollectorHome = () => {
       });
     } catch (error) {
       console.error('Error during logout:', error);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 

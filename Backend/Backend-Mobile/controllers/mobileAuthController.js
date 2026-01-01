@@ -389,9 +389,67 @@ export const mobileVerifyToken = async (req, res) => {
 
 // ===== MOBILE LOGOUT =====
 export const mobileLogout = async (req, res) => {
-  // Since we're using stateless JWT, logout is handled client-side
-  res.status(200).json({
-    success: true,
-    message: 'Logout successful. Please remove the token from client storage.'
-  });
+  let connection;
+  
+  try {
+    connection = await createConnection();
+    
+    // Debug: Log the entire request to see what we're receiving
+    console.log('📱 Mobile logout request received');
+    console.log('📱 req.user:', JSON.stringify(req.user, null, 2));
+    console.log('📱 req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📱 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    
+    // Get user info from JWT token (set by auth middleware) or from body
+    const applicantId = req.user?.userId || req.user?.applicantId || req.body?.applicantId || req.body?.userId;
+    
+    console.log('📱 Extracted applicant ID:', applicantId);
+    
+    if (applicantId) {
+      // Get Philippine time
+      const now = new Date();
+      const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const year = phTime.getFullYear();
+      const month = String(phTime.getMonth() + 1).padStart(2, '0');
+      const day = String(phTime.getDate()).padStart(2, '0');
+      const hours = String(phTime.getHours()).padStart(2, '0');
+      const minutes = String(phTime.getMinutes()).padStart(2, '0');
+      const seconds = String(phTime.getSeconds()).padStart(2, '0');
+      const philippineTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      
+      console.log('📱 Updating credential table with time:', philippineTime);
+      
+      // Update last_logout in credential table
+      const [result] = await connection.execute(
+        'UPDATE credential SET last_logout = ? WHERE applicant_id = ?',
+        [philippineTime, applicantId]
+      );
+      
+      console.log(`✅ Updated last_logout for applicant ${applicantId} at ${philippineTime}, affected rows: ${result.affectedRows}`);
+      
+      if (result.affectedRows === 0) {
+        console.warn(`⚠️ No rows updated - applicant_id ${applicantId} may not exist in credential table`);
+      }
+    } else {
+      console.warn('⚠️ No applicant ID found in request - cannot update last_logout');
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.'
+    });
+    
+  } catch (error) {
+    console.error('❌ Mobile logout error:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Still return success even if database update fails (client-side logout should work)
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.'
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
 };

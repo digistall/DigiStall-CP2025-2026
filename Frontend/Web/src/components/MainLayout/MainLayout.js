@@ -1,5 +1,6 @@
 import AppHeader from '../Admin/AppHeader/AppHeader.vue'
 import AppSidebar from '../Admin/AppSidebar/AppSidebar.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 export default {
   name: 'MainLayout',
@@ -198,15 +199,13 @@ export default {
     handleSettingsClick() {
       console.log('Settings clicked')
     },
-    handleLogoutClick() {
-      console.log('Logout clicked')
-      // Clear authentication data
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('branchManagerId')
-      sessionStorage.removeItem('adminId')
-
+    async handleLogoutClick() {
+      console.log('Logout clicked - calling authStore.logout()')
+      
+      // Call authStore.logout() which handles API call to update last_logout
+      const authStore = useAuthStore()
+      await authStore.logout()
+      
       // Redirect to login page
       this.$router.push('/').catch(() => {
         window.location.href = '/'
