@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
+import ApiService from "../../services/ApiService";
+import UserStorageService from "../../services/UserStorageService";
 
 // Inspector nav bar and sidebar components
 import Header from "./InspectorComponents/Header";
@@ -30,11 +32,41 @@ const InspectorHome = ({ navigation }) => {
   // Single source of truth for current screen
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // For pre-selecting stallholder/stall when navigating to report
   const [reportContext, setReportContext] = useState(null);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Prevent multiple clicks
+    if (isLoggingOut) {
+      console.log('⏳ Logout already in progress, ignoring...');
+      return;
+    }
+    
+    setIsLoggingOut(true);
+    
+    try {
+      // Get user data before clearing
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const staffId = userData?.staff?.inspector_id || userData?.staff?.staffId;
+      const staffType = 'inspector';
+      
+      // Call staff logout API to update last_logout in database
+      if (token && staffId) {
+        await ApiService.staffLogout(token, staffId, staffType);
+        console.log('✅ Staff logout API called - last_logout updated');
+      }
+      
+      // Clear local storage
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+    
     navigation.navigate("LoginScreen");
   };
 
