@@ -508,6 +508,116 @@ export const logout = async (req, res) => {
     // Get refresh token from cookie or body
     const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     
+    // Get user info from multiple sources - try body first, then req.user
+    // Body may contain 'userId' or 'id' depending on frontend
+    let userId = req.body?.userId || req.body?.id || req.user?.userId || req.user?.id;
+    let userType = req.body?.userType || req.user?.userType;
+    
+    // Convert userId to number if it's a string
+    if (userId && typeof userId === 'string') {
+      userId = parseInt(userId, 10);
+    }
+    
+    console.log('='.repeat(60));
+    console.log('📤 WEB LOGOUT REQUEST RECEIVED');
+    console.log('📤 Timestamp:', new Date().toISOString());
+    console.log('📤 req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📤 req.user:', JSON.stringify(req.user, null, 2));
+    console.log('📤 req.cookies:', JSON.stringify(req.cookies, null, 2));
+    console.log('📤 Extracted values:');
+    console.log('   - userId:', userId, '(type:', typeof userId, ')');
+    console.log('   - userType:', userType);
+    console.log('   - hasRefreshToken:', !!refreshToken);
+    console.log('='.repeat(60));
+    
+    const philippineTime = getPhilippineTime();
+    console.log('📤 Philippine time for logout:', philippineTime);
+    
+    // Update last_logout for the user based on their type
+    if (userId && userType) {
+      let tableName = '';
+      let idColumn = '';
+      
+      const normalizedUserType = userType.toLowerCase().trim();
+      console.log('📤 Normalized userType:', normalizedUserType);
+      
+      switch (normalizedUserType) {
+        case 'business_employee':
+        case 'employee':
+          tableName = 'business_employee';
+          idColumn = 'business_employee_id';
+          break;
+        case 'business_manager':
+        case 'branch_manager':
+        case 'manager':
+          tableName = 'business_manager';
+          idColumn = 'business_manager_id';
+          break;
+        case 'stall_business_owner':
+        case 'business_owner':
+        case 'owner':
+          tableName = 'stall_business_owner';
+          idColumn = 'business_owner_id';
+          break;
+        case 'system_administrator':
+        case 'admin':
+        case 'system_admin':
+          tableName = 'system_administrator';
+          idColumn = 'system_admin_id';
+          break;
+        default:
+          console.error(`❌ Unhandled userType: "${normalizedUserType}"`);
+          break;
+      }
+      
+      console.log(`📤 Table mapping: ${normalizedUserType} -> ${tableName}.${idColumn}`);
+      
+      if (tableName) {
+        try {
+          // First, verify the user exists
+          const [checkRows] = await connection.execute(
+            `SELECT ${idColumn} FROM ${tableName} WHERE ${idColumn} = ?`,
+            [userId]
+          );
+          console.log(`📤 User check: found ${checkRows.length} row(s) in ${tableName}`);
+          
+          if (checkRows.length === 0) {
+            console.warn(`⚠️ User ${userId} not found in ${tableName}`);
+          } else {
+            // User exists, update last_logout
+            const updateQuery = `UPDATE ${tableName} SET last_logout = ? WHERE ${idColumn} = ?`;
+            console.log(`📤 Executing: ${updateQuery}`);
+            console.log(`📤 Parameters: [${philippineTime}, ${userId}]`);
+            
+            const [result] = await connection.execute(updateQuery, [philippineTime, userId]);
+            
+            console.log(`✅ UPDATE RESULT:`);
+            console.log(`   - affectedRows: ${result.affectedRows}`);
+            console.log(`   - changedRows: ${result.changedRows}`);
+            console.log(`   - message: ${result.message}`);
+            
+            if (result.affectedRows === 0) {
+              console.warn(`⚠️ No rows affected! User ${userId} may not exist or last_logout column missing`);
+            } else {
+              console.log(`✅ Successfully updated last_logout for ${userType} ID ${userId} to ${philippineTime}`);
+            }
+          }
+        } catch (updateError) {
+          console.error('❌ DATABASE ERROR updating last_logout:');
+          console.error('   - Error message:', updateError.message);
+          console.error('   - Error code:', updateError.code);
+          console.error('   - SQL state:', updateError.sqlState);
+          console.error('   - Full error:', updateError);
+        }
+      } else {
+        console.warn(`⚠️ Unknown userType: "${userType}", cannot map to table`);
+      }
+    } else {
+      console.warn('⚠️ Missing required data for logout:');
+      console.warn('   - userId:', userId || '(missing)');
+      console.warn('   - userType:', userType || '(missing)');
+    }
+    
     if (!refreshToken) {
       return res.status(200).json({
         success: true,
@@ -542,6 +652,50 @@ export const logout = async (req, res) => {
         VALUES (?, ?, ?, 'logout', ?, ?, TRUE)`,
         [tokenData.token_id, tokenData.user_id, tokenData.user_type, ipAddress, userAgent]
       );
+      
+      // Also update last_logout if we have token data
+      if (!userId && tokenData.user_id && tokenData.user_type) {
+        let tableName = '';
+        let idColumn = '';
+        
+        switch (tokenData.user_type.toLowerCase()) {
+          case 'business_employee':
+          case 'employee':
+            tableName = 'business_employee';
+            idColumn = 'business_employee_id';
+            break;
+          case 'business_manager':
+          case 'branch_manager':
+          case 'manager':
+            tableName = 'business_manager';
+            idColumn = 'business_manager_id';
+            break;
+          case 'stall_business_owner':
+          case 'business_owner':
+          case 'owner':
+            tableName = 'stall_business_owner';
+            idColumn = 'business_owner_id';
+            break;
+          case 'system_administrator':
+          case 'admin':
+          case 'system_admin':
+            tableName = 'system_administrator';
+            idColumn = 'system_admin_id';
+            break;
+        }
+        
+        if (tableName) {
+          try {
+            await connection.execute(
+              `UPDATE ${tableName} SET last_logout = ? WHERE ${idColumn} = ?`,
+              [philippineTime, tokenData.user_id]
+            );
+            console.log(`✅ Updated last_logout for ${tokenData.user_type} ${tokenData.user_id} from token data`);
+          } catch (updateError) {
+            console.warn('Could not update last_logout from token:', updateError.message);
+          }
+        }
+      }
     }
     
     // Clear refresh token cookie

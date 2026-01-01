@@ -2,11 +2,31 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import ApiService from '../../services/ApiService';
+import UserStorageService from '../../services/UserStorageService';
 
 const VendorHome = () => {
   const navigation = useNavigation();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Get user data before clearing
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const userId = userData?.user?.applicant_id || userData?.user?.id;
+      
+      // Call logout API to update last_logout in database
+      if (token) {
+        await ApiService.mobileLogout(token, userId);
+        console.log('✅ Logout API called - last_logout updated');
+      }
+      
+      // Clear local storage
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+    
     navigation.reset({
       index: 0,
       routes: [{ name: 'LoginScreen' }],
