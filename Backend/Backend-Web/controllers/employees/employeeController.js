@@ -486,18 +486,50 @@ export async function loginEmployee(req, res) {
     }
 }
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTimeForLogout = () => {
+  const now = new Date();
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 export async function logoutEmployee(req, res) {
     let connection;
     try {
+        // Get employee ID from the request (either from token or body)
+        const employeeId = req.user?.userId || req.user?.employeeId || req.body?.employeeId;
         const sessionToken = req.headers.authorization?.split(' ')[1];
         
-        if (sessionToken) {
-            connection = await createConnection();
-            // Call stored procedure (correct name: logoutBusinessEmployee)
+        connection = await createConnection();
+        const philippineTime = getPhilippineTimeForLogout();
+        
+        if (employeeId) {
+            // Update last_logout timestamp for the employee
             await connection.execute(
-                'CALL logoutBusinessEmployee(?)',
-                [sessionToken]
+                'UPDATE business_employee SET last_logout = ?, is_active = 0 WHERE business_employee_id = ?',
+                [philippineTime, employeeId]
             );
+            console.log(`✅ Updated last_logout for employee ${employeeId} at ${philippineTime}`);
+        }
+        
+        // Also deactivate any active sessions
+        if (sessionToken || employeeId) {
+            try {
+                if (employeeId) {
+                    await connection.execute(
+                        'UPDATE employee_session SET is_active = 0, logout_time = ? WHERE business_employee_id = ? AND is_active = 1',
+                        [philippineTime, employeeId]
+                    );
+                }
+            } catch (sessionError) {
+                console.warn('Session update warning:', sessionError.message);
+            }
         }
         
         res.json({ success: true, message: 'Logout successful' });
@@ -606,6 +638,87 @@ export async function getEmployeesByBranch(req, res) {
     } catch (error) {
         console.error('Error getting employees by branch:', error);
         res.status(500).json({ success: false, message: 'Failed to get employees', error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+/**
+ * Get active employee sessions for online status tracking
+ * GET /api/employees/sessions/active
+ */
+export async function getActiveSessions(req, res) {
+    let connection;
+    try {
+        const userBranchId = req.user?.branchId;
+        
+        connection = await createConnection();
+        
+        // Get branch filter based on user role
+        const branchFilter = await getBranchFilter(req, connection);
+        
+        let query;
+        let params = [];
+        
+        if (branchFilter === null) {
+            // System admin - see all sessions
+            query = `
+                SELECT 
+                    es.session_id,
+                    es.business_employee_id,
+                    es.is_active,
+                    es.login_time,
+                    es.last_activity,
+                    es.logout_time,
+                    be.first_name,
+                    be.last_name,
+                    be.branch_id
+                FROM employee_session es
+                INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
+                WHERE es.is_active = true 
+                   OR es.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                ORDER BY es.last_activity DESC
+            `;
+        } else if (branchFilter.length === 0) {
+            // No accessible branches
+            return res.json({ success: true, data: [] });
+        } else {
+            // Filter by accessible branches
+            const placeholders = branchFilter.map(() => '?').join(',');
+            query = `
+                SELECT 
+                    es.session_id,
+                    es.business_employee_id,
+                    es.is_active,
+                    es.login_time,
+                    es.last_activity,
+                    es.logout_time,
+                    be.first_name,
+                    be.last_name,
+                    be.branch_id
+                FROM employee_session es
+                INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
+                WHERE be.branch_id IN (${placeholders})
+                  AND (es.is_active = true OR es.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE))
+                ORDER BY es.last_activity DESC
+            `;
+            params = branchFilter;
+        }
+        
+        const [sessions] = await connection.execute(query, params);
+        
+        console.log(`✅ Found ${sessions.length} active/recent sessions`);
+        
+        res.json({ 
+            success: true, 
+            data: sessions 
+        });
+    } catch (error) {
+        console.error('Error getting active sessions:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to get active sessions', 
+            error: error.message 
+        });
     } finally {
         if (connection) await connection.end();
     }

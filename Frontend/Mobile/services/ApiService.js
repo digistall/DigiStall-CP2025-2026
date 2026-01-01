@@ -186,7 +186,7 @@ class ApiService {
   }
 
   // Mobile logout
-  static async mobileLogout(token) {
+  static async mobileLogout(token, userId = null) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
@@ -196,6 +196,10 @@ class ApiService {
           ...API_CONFIG.HEADERS,
           'Authorization': `Bearer ${token}`
         },
+        body: JSON.stringify({
+          userId: userId,
+          applicantId: userId
+        })
       });
 
       const data = await response.json();
@@ -211,6 +215,43 @@ class ApiService {
       };
     } catch (error) {
       console.error('❌ Logout API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Staff (Inspector/Collector) logout
+  static async staffLogout(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGOUT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff logout failed');
+      }
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Staff Logout API Error:', error);
       return {
         success: false,
         message: error.message || 'Network error occurred'
@@ -862,6 +903,91 @@ class ApiService {
   }
 
   // ===== UTILITY METHODS =====
+
+  // Generic GET method
+  static async get(endpoint, includeAuth = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = { ...API_CONFIG.HEADERS };
+      
+      if (includeAuth) {
+        const token = await UserStorageService.getAuthToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      
+      const url = `${server}/api/mobile${endpoint}`;
+      console.log('🔄 GET Request:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+      
+      return {
+        success: true,
+        data: data.data || data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error(`❌ GET ${endpoint} Error:`, error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Generic POST method
+  static async post(endpoint, body, includeAuth = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = { ...API_CONFIG.HEADERS };
+      
+      if (includeAuth) {
+        const token = await UserStorageService.getAuthToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      
+      const url = `${server}/api/mobile${endpoint}`;
+      console.log('🔄 POST Request:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+      
+      return {
+        success: true,
+        data: data.data || data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error(`❌ POST ${endpoint} Error:`, error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
 
   // Reset network configuration (force server rediscovery)
   static resetNetwork() {

@@ -6,54 +6,16 @@
 
 export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
+  // Mobile API runs on unified server port 3001 at /api/mobile/*
   SERVERS: [
-    // DigitalOcean Production Server - Mobile Backend (Port 5001) - PRIORITY
-    'http://68.183.154.125:5001',  // Mobile Backend on DigitalOcean
-    
-    // Local Development - Port 5001 (Mobile Backend)
-    'http://192.168.100.241:5001', // Current Ethernet IP
-    'http://172.18.195.29:5001',   // Current Wi-Fi IP
-    'http://192.168.137.1:5001',   // Local Area Connection
-    'http://192.168.1.101:5001',   // Previous Expo detected IP
-    'http://192.168.110.16:5001',  // Previous Wi-Fi IP
-    'http://localhost:5001',
-    'http://127.0.0.1:5001',
-    
-    // Fallback to port 3001
+    // Local Development - Port 3001 (Unified Server with Mobile API)
+    'http://192.168.1.101:3001',   // User's current IP
     'http://192.168.100.241:3001',
-    'http://172.18.195.29:3001',
-    'http://192.168.137.1:3001',
-    'http://192.168.1.101:3001',
-    'http://192.168.110.16:3001',
     'http://localhost:3001',
-    'http://127.0.0.1:3001',
     
-    // Previous IP (backup)
-    'http://192.168.8.38:3001',
-    'http://192.168.8.38:5000',
-    
-    // Common local network ranges - Port 3001
-    'http://192.168.1.100:3001',
-    'http://192.168.0.100:3001',
-    'http://192.168.1.1:3001',
-    'http://192.168.0.1:3001',
-    'http://10.0.0.100:3001',
-    'http://10.0.0.1:3001',
-    
-    // Common local network ranges - Port 5000
-    'http://192.168.1.100:5000',
-    'http://192.168.0.100:5000',
-    'http://192.168.1.1:5000',
-    'http://192.168.0.1:5000',
-    'http://10.0.0.100:5000',
-    'http://10.0.0.1:5000',
-    'http://172.16.0.100:5000',
-    'http://192.168.43.1:5000',
-    'http://172.20.10.1:5000',
-    
-    // Localhost alternatives
-    'http://localhost:5000',
-    'http://127.0.0.1:5000',
+    // DigitalOcean Production Server
+    'http://68.183.154.125:3001',
+    'http://68.183.154.125:5001',
   ],
   
   // Static file server for images (Apache on port 80)
@@ -71,6 +33,7 @@ export const API_CONFIG = {
     REGISTER: '/api/mobile/auth/register',
     VERIFY_TOKEN: '/api/mobile/auth/verify-token',
     LOGOUT: '/api/mobile/auth/logout',
+    STAFF_LOGOUT: '/api/mobile/auth/staff-logout',
     
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
@@ -99,11 +62,11 @@ export const API_CONFIG = {
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     
     // Health check
-    HEALTH: '/api/health'  // Main health endpoint
+    HEALTH: '/api/health'  // Unified server health endpoint
   },
   
-  // Timeout for network requests (10 seconds per attempt - increased for slow connections)
-  TIMEOUT: 10000,
+  // Timeout for network requests (5 seconds - balanced for reliability)
+  TIMEOUT: 5000,
   
   // Default headers
   HEADERS: {
@@ -114,23 +77,35 @@ export const API_CONFIG = {
 
 // Server discovery and connection testing
 export const NetworkUtils = {
-  // Test if a server is reachable
-  async testConnection(serverUrl) {
+  // Test if a server is reachable (quick check)
+  async testConnection(serverUrl, quickCheck = false) {
     try {
       console.log(`🔌 Testing connection to: ${serverUrl}`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+      const timeout = quickCheck ? 3000 : API_CONFIG.TIMEOUT; // 3s for quick, 5s for full
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
       
-      const response = await fetch(`${serverUrl}${API_CONFIG.MOBILE_ENDPOINTS.HEALTH}`, {
-        method: 'GET',
-        headers: API_CONFIG.HEADERS,
-        signal: controller.signal
-      });
+      // Try health endpoint first
+      let response;
+      try {
+        response = await fetch(`${serverUrl}${API_CONFIG.MOBILE_ENDPOINTS.HEALTH}`, {
+          method: 'GET',
+          headers: API_CONFIG.HEADERS,
+          signal: controller.signal
+        });
+      } catch (healthError) {
+        // If health endpoint fails, try root endpoint
+        console.log(`🔄 Health endpoint failed, trying root...`);
+        response = await fetch(`${serverUrl}/`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+      }
       
       clearTimeout(timeoutId);
       
-      if (response.ok) {
+      if (response.ok || response.status < 500) {
         console.log(`✅ Connection successful to: ${serverUrl}`);
         return true;
       } else {
@@ -147,20 +122,24 @@ export const NetworkUtils = {
   async findWorkingServer() {
     console.log('🔍 Discovering available servers...');
     
+    // Test servers sequentially (more reliable than parallel for mobile)
     for (const server of API_CONFIG.SERVERS) {
-      if (await this.testConnection(server)) {
+      const works = await this.testConnection(server, true);
+      if (works) {
         API_CONFIG.BASE_URL = server;
-        // Extract host IP from server URL for static files (Apache on port 80)
-        const url = new URL(server);
-        API_CONFIG.STATIC_FILE_SERVER = `http://${url.hostname}`;
+        try {
+          const url = new URL(server);
+          API_CONFIG.STATIC_FILE_SERVER = `http://${url.hostname}`;
+        } catch (e) {
+          API_CONFIG.STATIC_FILE_SERVER = server;
+        }
         console.log(`🎯 Active server set to: ${server}`);
-        console.log(`📁 Static file server set to: ${API_CONFIG.STATIC_FILE_SERVER}`);
         return server;
       }
     }
     
     console.error('❌ No working servers found');
-    throw new Error('Unable to connect to any server. Please check:\n\n• Backend server is running (port 3001 or 5000)\n• Device has internet connection\n• DigitalOcean server: http://68.183.154.125:5000\n• Server IP is in the config');
+    throw new Error('Unable to connect to any server. Please check:\n\n• Backend-Mobile server is running (port 5001)\n• Device has internet connection\n• Your IP is in the server list');
   },
 
   // Get current active server or find one
@@ -195,6 +174,11 @@ export const NetworkUtils = {
       }
     }
     return API_CONFIG.STATIC_FILE_SERVER || 'http://localhost';
+  },
+  
+  // Get API base URL for API calls (including BLOB image endpoints)
+  getApiUrl() {
+    return API_CONFIG.BASE_URL || 'http://localhost:3001';
   }
 };
 
