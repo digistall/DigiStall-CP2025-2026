@@ -594,13 +594,12 @@ export async function getActiveSessions(req, res) {
     try {
         connection = await createConnection();
         
-        // Set session timezone to Philippine time for correct timestamp conversion
-        await connection.execute(`SET time_zone = '+08:00'`);
-        
         let employeeSessions = [];
         let staffSessions = [];
         
         // Get employee sessions (web employees)
+        // NOTE: Web employee sessions already store Philippine time via CONVERT_TZ in stored procedures
+        // So we query WITHOUT timezone conversion to avoid double conversion
         try {
             const [empRows] = await connection.execute(`
                 SELECT 
@@ -631,7 +630,10 @@ export async function getActiveSessions(req, res) {
         }
         
         // Get staff sessions (inspector/collector from mobile)
+        // NOTE: Mobile staff sessions store UTC time, so we need timezone conversion
+        // Set timezone ONLY for staff_session query
         try {
+            await connection.execute(`SET time_zone = '+08:00'`);
             const [staffRows] = await connection.execute(`
                 SELECT 
                     ss.session_id,
