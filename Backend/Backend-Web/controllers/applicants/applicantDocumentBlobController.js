@@ -61,11 +61,12 @@ export async function uploadApplicantDocumentBlob(req, res) {
     
     connection = await createConnection()
     
-    // Verify applicant exists
-    const [applicants] = await connection.query(
-      'SELECT applicant_id FROM applicant WHERE applicant_id = ?',
+    // Verify applicant exists using stored procedure
+    const [applicantRows] = await connection.execute(
+      'CALL sp_checkApplicantExists(?)',
       [applicant_id]
     )
+    const applicants = applicantRows[0]
     
     if (applicants.length === 0) {
       return res.status(404).json({
@@ -80,54 +81,35 @@ export async function uploadApplicantDocumentBlob(req, res) {
     const generatedFileName = file_name || `applicant_${applicant_id}_doc_${document_type_id}_${timestamp}.${extension}`
     const virtualFilePath = `/api/applicants/documents/blob/${applicant_id}/${document_type_id}`
     
-    // Check if document already exists for this applicant/business owner/document type
-    const [existingDocs] = await connection.query(
-      `SELECT document_id FROM applicant_documents 
-       WHERE applicant_id = ? AND business_owner_id = ? AND document_type_id = ?`,
+    // Check if document already exists for this applicant/business owner/document type using stored procedure
+    const [existingRows] = await connection.execute(
+      'CALL sp_checkExistingApplicantDocument(?, ?, ?)',
       [applicant_id, business_owner_id, document_type_id]
     )
+    const existingDocs = existingRows[0]
     
     let documentId
     let isUpdate = false
     
     if (existingDocs.length > 0) {
-      // Update existing document
+      // Update existing document using stored procedure
       documentId = existingDocs[0].document_id
       isUpdate = true
       
-      await connection.query(
-        `UPDATE applicant_documents 
-         SET file_path = ?,
-             original_filename = ?,
-             file_size = ?,
-             mime_type = ?,
-             document_data = ?,
-             storage_type = 'blob',
-             upload_date = NOW(),
-             verification_status = 'pending',
-             verified_by = NULL,
-             verified_at = NULL,
-             rejection_reason = NULL,
-             expiry_date = ?,
-             notes = ?,
-             updated_at = NOW()
-         WHERE document_id = ?`,
-        [virtualFilePath, generatedFileName, documentBuffer.length, actualMimeType, documentBuffer, 
-         expiry_date || null, notes || null, documentId]
+      await connection.execute(
+        'CALL sp_updateApplicantDocumentBlob(?, ?, ?, ?, ?, ?, ?, ?)',
+        [documentId, virtualFilePath, generatedFileName, documentBuffer.length, actualMimeType, documentBuffer, 
+         expiry_date || null, notes || null]
       )
     } else {
-      // Insert new document
-      const [result] = await connection.query(
-        `INSERT INTO applicant_documents (
-           applicant_id, business_owner_id, branch_id, document_type_id,
-           file_path, original_filename, file_size, mime_type,
-           document_data, storage_type, expiry_date, notes, verification_status
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'blob', ?, ?, 'pending')`,
+      // Insert new document using stored procedure
+      const [insertRows] = await connection.execute(
+        'CALL sp_insertApplicantDocumentBlob(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [applicant_id, business_owner_id, branch_id || null, document_type_id,
          virtualFilePath, generatedFileName, documentBuffer.length, actualMimeType,
          documentBuffer, expiry_date || null, notes || null]
       )
-      documentId = result.insertId
+      documentId = insertRows[0][0].document_id
     }
     
     res.status(200).json({
@@ -172,20 +154,12 @@ export async function getApplicantDocumentBlob(req, res) {
     
     connection = await createConnection()
     
-    let query = `
-      SELECT document_data, mime_type, original_filename 
-      FROM applicant_documents 
-      WHERE applicant_id = ? AND document_type_id = ? AND storage_type = 'blob' AND document_data IS NOT NULL`
-    let params = [applicant_id, document_type_id]
-    
-    if (business_owner_id) {
-      query += ' AND business_owner_id = ?'
-      params.push(business_owner_id)
-    }
-    
-    query += ' ORDER BY upload_date DESC LIMIT 1'
-    
-    const [documents] = await connection.query(query, params)
+    // Use stored procedure to get document
+    const [rows] = await connection.execute(
+      'CALL sp_getApplicantDocumentBlob(?, ?, ?)',
+      [applicant_id, document_type_id, business_owner_id || null]
+    )
+    const documents = rows[0]
     
     if (documents.length === 0) {
       return res.status(404).json({
@@ -227,12 +201,12 @@ export async function getApplicantDocumentBlobById(req, res) {
     
     connection = await createConnection()
     
-    const [documents] = await connection.query(
-      `SELECT document_data, mime_type, original_filename 
-       FROM applicant_documents 
-       WHERE document_id = ? AND storage_type = 'blob' AND document_data IS NOT NULL`,
+    // Use stored procedure to get document by ID
+    const [rows] = await connection.execute(
+      'CALL sp_getApplicantDocumentBlobById(?)',
       [document_id]
     )
+    const documents = rows[0]
     
     if (documents.length === 0) {
       return res.status(404).json({
@@ -275,34 +249,21 @@ export async function getApplicantDocuments(req, res) {
     
     connection = await createConnection()
     
-    // Build query
-    let selectColumns = `
-      ad.document_id, ad.applicant_id, ad.business_owner_id, ad.branch_id,
-      ad.document_type_id, dt.document_name, dt.description as document_description,
-      ad.file_path, ad.original_filename, ad.file_size, ad.mime_type,
-      ad.upload_date, ad.verification_status, ad.verified_at, ad.verified_by,
-      ad.rejection_reason, ad.expiry_date, ad.notes, ad.storage_type`
-    
-    // Optionally include base64 data
+    // Use stored procedure based on whether data is needed
+    let documents
     if (include_data === 'true') {
-      selectColumns += `, TO_BASE64(ad.document_data) as document_data_base64`
+      const [rows] = await connection.execute(
+        'CALL sp_getAllApplicantDocumentsWithData(?, ?)',
+        [applicant_id, business_owner_id || null]
+      )
+      documents = rows[0]
+    } else {
+      const [rows] = await connection.execute(
+        'CALL sp_getAllApplicantDocuments(?, ?)',
+        [applicant_id, business_owner_id || null]
+      )
+      documents = rows[0]
     }
-    
-    let query = `
-      SELECT ${selectColumns}
-      FROM applicant_documents ad
-      LEFT JOIN document_types dt ON ad.document_type_id = dt.document_type_id
-      WHERE ad.applicant_id = ?`
-    let params = [applicant_id]
-    
-    if (business_owner_id) {
-      query += ' AND ad.business_owner_id = ?'
-      params.push(business_owner_id)
-    }
-    
-    query += ' ORDER BY dt.document_name ASC, ad.upload_date DESC'
-    
-    const [documents] = await connection.query(query, params)
     
     // Transform documents to include virtual URL for BLOB API
     const transformedDocs = documents.map(doc => ({
@@ -345,24 +306,19 @@ export async function deleteApplicantDocumentBlob(req, res) {
     
     connection = await createConnection()
     
-    // Verify document exists
-    const [documents] = await connection.query(
-      'SELECT document_id, applicant_id FROM applicant_documents WHERE document_id = ?',
+    // Delete using stored procedure (includes existence check)
+    const [rows] = await connection.execute(
+      'CALL sp_deleteApplicantDocumentBlob(?)',
       [document_id]
     )
+    const result = rows[0][0]
     
-    if (documents.length === 0) {
+    if (!result.success) {
       return res.status(404).json({
         success: false,
-        message: 'Document not found'
+        message: result.message
       })
     }
-    
-    // Delete the document
-    await connection.query(
-      'DELETE FROM applicant_documents WHERE document_id = ?',
-      [document_id]
-    )
     
     res.status(200).json({
       success: true,
@@ -411,30 +367,19 @@ export async function updateDocumentVerificationStatus(req, res) {
     
     connection = await createConnection()
     
-    // Verify document exists
-    const [documents] = await connection.query(
-      'SELECT document_id FROM applicant_documents WHERE document_id = ?',
-      [document_id]
+    // Update verification status using stored procedure (includes existence check)
+    const [rows] = await connection.execute(
+      'CALL sp_updateApplicantDocumentVerification(?, ?, ?, ?)',
+      [document_id, verification_status, rejection_reason || null, verified_by || null]
     )
+    const result = rows[0][0]
     
-    if (documents.length === 0) {
+    if (!result.success) {
       return res.status(404).json({
         success: false,
-        message: 'Document not found'
+        message: result.message
       })
     }
-    
-    // Update verification status
-    await connection.query(
-      `UPDATE applicant_documents 
-       SET verification_status = ?,
-           rejection_reason = ?,
-           verified_by = ?,
-           verified_at = NOW(),
-           updated_at = NOW()
-       WHERE document_id = ?`,
-      [verification_status, rejection_reason || null, verified_by || null, document_id]
-    )
     
     res.status(200).json({
       success: true,
@@ -485,11 +430,12 @@ export async function getApplicantDocumentByType(req, res) {
     let documentTypeId = documentTypeMap[document_type] || parseInt(document_type)
     
     if (isNaN(documentTypeId)) {
-      // Try to find by document name
-      const [types] = await connection.query(
-        `SELECT document_type_id FROM document_types WHERE LOWER(document_name) LIKE ?`,
-        [`%${document_type.toLowerCase()}%`]
+      // Try to find by document name using stored procedure
+      const [typeRows] = await connection.execute(
+        'CALL sp_getDocumentTypeByName(?)',
+        [document_type]
       )
+      const types = typeRows[0]
       if (types.length > 0) {
         documentTypeId = types[0].document_type_id
       } else {
@@ -500,26 +446,12 @@ export async function getApplicantDocumentByType(req, res) {
       }
     }
     
-    let query = `
-      SELECT ad.document_id, ad.document_data, ad.mime_type, ad.original_filename,
-             ad.verification_status, ad.storage_type
-      FROM applicant_documents ad
-      WHERE ad.applicant_id = ? AND ad.document_type_id = ?`
-    let params = [applicant_id, documentTypeId]
-    
-    if (business_owner_id) {
-      query += ' AND ad.business_owner_id = ?'
-      params.push(business_owner_id)
-    }
-    
-    if (branch_id) {
-      query += ' AND ad.branch_id = ?'
-      params.push(branch_id)
-    }
-    
-    query += ' ORDER BY ad.upload_date DESC LIMIT 1'
-    
-    const [documents] = await connection.query(query, params)
+    // Get document using stored procedure
+    const [rows] = await connection.execute(
+      'CALL sp_getApplicantDocumentByTypeExtended(?, ?, ?, ?)',
+      [applicant_id, documentTypeId, business_owner_id || null, branch_id || null]
+    )
+    const documents = rows[0]
     
     if (documents.length === 0) {
       return res.status(404).json({

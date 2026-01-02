@@ -45,11 +45,9 @@ export async function uploadStallImageBlob(req, res) {
     
     connection = await createConnection()
     
-    // Verify stall exists
-    const [stalls] = await connection.query(
-      'SELECT stall_id FROM stall WHERE stall_id = ?',
-      [stall_id]
-    )
+    // Verify stall exists using stored procedure
+    const [stallRows] = await connection.execute('CALL sp_verifyStallExistsMobile(?)', [stall_id])
+    const stalls = stallRows[0]
     
     if (stalls.length === 0) {
       return res.status(404).json({
@@ -58,13 +56,10 @@ export async function uploadStallImageBlob(req, res) {
       })
     }
     
-    // Check current image count
-    const [currentImages] = await connection.query(
-      'SELECT COUNT(*) as count FROM stall_images WHERE stall_id = ?',
-      [stall_id]
-    )
+    // Check current image count using stored procedure
+    const [countRows] = await connection.execute('CALL sp_getStallImageCountMobile(?)', [stall_id])
+    const currentCount = countRows[0][0].count
     
-    const currentCount = currentImages[0].count
     if (currentCount >= 10) {
       return res.status(400).json({
         success: false,
@@ -72,22 +67,16 @@ export async function uploadStallImageBlob(req, res) {
       })
     }
     
-    // Get next display order
-    const [maxOrder] = await connection.query(
-      'SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM stall_images WHERE stall_id = ?',
-      [stall_id]
-    )
-    const displayOrder = maxOrder[0].next_order
+    // Get next display order using stored procedure
+    const [orderRows] = await connection.execute('CALL sp_getNextStallImageOrderMobile(?)', [stall_id])
+    const displayOrder = orderRows[0][0].next_order
     
     // Determine if this should be primary (first image or explicitly set)
     const shouldBePrimary = is_primary === true || is_primary === 'true' || currentCount === 0
     
-    // If setting as primary, unset existing primary
+    // If setting as primary, unset existing primary using stored procedure
     if (shouldBePrimary) {
-      await connection.query(
-        'UPDATE stall_images SET is_primary = 0 WHERE stall_id = ?',
-        [stall_id]
-      )
+      await connection.execute('CALL sp_unsetStallPrimaryImagesMobile(?)', [stall_id])
     }
     
     // Generate unique filename for reference
@@ -96,18 +85,18 @@ export async function uploadStallImageBlob(req, res) {
     const generatedFileName = file_name || `stall_${stall_id}_${timestamp}.${extension}`
     const imageUrl = `/api/stalls/images/blob/${stall_id}/${displayOrder}` // Virtual URL for serving
     
-    // Insert image with BLOB data
-    const [result] = await connection.query(
-      `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [stall_id, imageUrl, imageBuffer, actualMimeType, generatedFileName, displayOrder, shouldBePrimary ? 1 : 0]
+    // Insert image with BLOB data using stored procedure
+    const [resultRows] = await connection.execute(
+      'CALL sp_insertStallImageBlobMobile(?, ?, ?, ?, ?, ?, ?)',
+      [stall_id, imageUrl, imageBuffer, actualMimeType, generatedFileName, shouldBePrimary ? 1 : 0, displayOrder]
     )
+    const result = resultRows[0][0]
     
     res.status(200).json({
       success: true,
       message: 'Image uploaded successfully',
       data: {
-        id: result.insertId,
+        id: result.id,
         stall_id: parseInt(stall_id),
         image_url: imageUrl,
         file_name: generatedFileName,
@@ -132,7 +121,7 @@ export async function uploadStallImageBlob(req, res) {
 }
 
 // =============================================
-// UPLOAD MULTIPLE STALL IMAGES AS BLOB
+// UPLOAD MULTIPLE STALL IMAGES AS BLOB - Uses stored procedures
 // =============================================
 export async function uploadStallImagesBlob(req, res) {
   let connection
@@ -150,13 +139,10 @@ export async function uploadStallImagesBlob(req, res) {
     
     connection = await createConnection()
     
-    // Check current image count
-    const [currentImages] = await connection.query(
-      'SELECT COUNT(*) as count FROM stall_images WHERE stall_id = ?',
-      [stall_id]
-    )
+    // Check current image count using stored procedure
+    const [countRows] = await connection.execute('CALL sp_getStallImageCountMobile(?)', [stall_id])
+    const currentCount = countRows[0][0].count
     
-    const currentCount = currentImages[0].count
     if (currentCount + images.length > 10) {
       return res.status(400).json({
         success: false,
@@ -179,14 +165,15 @@ export async function uploadStallImagesBlob(req, res) {
       const imageUrl = `/api/stalls/images/blob/${stall_id}/${displayOrder}`
       const shouldBePrimary = i === 0 && currentCount === 0
       
-      const [result] = await connection.query(
-        `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [stall_id, imageUrl, imageBuffer, actualMimeType, generatedFileName, displayOrder, shouldBePrimary ? 1 : 0]
+      // Insert using stored procedure
+      const [resultRows] = await connection.execute(
+        'CALL sp_insertStallImageBlobMobile(?, ?, ?, ?, ?, ?, ?)',
+        [stall_id, imageUrl, imageBuffer, actualMimeType, generatedFileName, shouldBePrimary ? 1 : 0, displayOrder]
       )
+      const result = resultRows[0][0]
       
       uploadedImages.push({
-        id: result.insertId,
+        id: result.id,
         stall_id: parseInt(stall_id),
         image_url: imageUrl,
         file_name: generatedFileName,
@@ -228,10 +215,12 @@ export async function getStallImageBlob(req, res) {
     
     connection = await createConnection()
     
-    const [images] = await connection.query(
-      'SELECT image_data, mime_type, file_name FROM stall_images WHERE stall_id = ? AND display_order = ?',
+    // Use stored procedure
+    const [rows] = await connection.execute(
+      'CALL sp_getStallImageByOrder(?, ?)',
       [stall_id, display_order]
     )
+    const images = rows[0]
     
     if (images.length === 0 || !images[0].image_data) {
       return res.status(404).json({
@@ -275,15 +264,16 @@ export async function getStallImageBlobById(req, res) {
     
     connection = await createConnection()
     
-    // First check if image exists at all
-    const [checkRows] = await connection.query(
-      'SELECT id, stall_id, mime_type, file_name, LENGTH(image_data) as data_size FROM stall_images WHERE id = ?',
+    // First check if image exists at all using stored procedure
+    const [checkRows] = await connection.execute(
+      'CALL sp_checkStallImageById(?)',
       [image_id]
     )
+    const checkResult = checkRows[0]
     
-    console.log(`📷 Image check result:`, checkRows)
+    console.log(`📷 Image check result:`, checkResult)
     
-    if (checkRows.length === 0) {
+    if (checkResult.length === 0) {
       console.log(`📷 Image ID ${image_id} not found in database`)
       return res.status(404).json({
         success: false,
@@ -291,13 +281,14 @@ export async function getStallImageBlobById(req, res) {
       })
     }
     
-    console.log(`📷 Image found: ${checkRows[0].file_name}, size: ${checkRows[0].data_size} bytes`)
+    console.log(`📷 Image found: ${checkResult[0].file_name}, size: ${checkResult[0].data_size} bytes`)
     
-    // Now fetch the actual binary data
-    const [images] = await connection.query(
-      'SELECT image_data, mime_type, file_name FROM stall_images WHERE id = ?',
+    // Now fetch the actual binary data using stored procedure
+    const [rows] = await connection.execute(
+      'CALL sp_getStallImageDataById(?)',
       [image_id]
     )
+    const images = rows[0]
     
     if (images.length === 0 || !images[0].image_data) {
       console.log(`📷 Image data is NULL for ID ${image_id}`)
@@ -341,18 +332,12 @@ export async function getStallImagesBlob(req, res) {
     
     connection = await createConnection()
     
-    let query, params
-    if (include_data === 'true') {
-      query = `SELECT id, stall_id, image_url, 
-               TO_BASE64(image_data) as image_base64, 
-               mime_type, file_name, display_order, is_primary, created_at, updated_at 
-               FROM stall_images WHERE stall_id = ? ORDER BY display_order`
-    } else {
-      query = `SELECT id, stall_id, image_url, mime_type, file_name, display_order, is_primary, created_at, updated_at 
-               FROM stall_images WHERE stall_id = ? ORDER BY display_order`
-    }
-    
-    const [images] = await connection.query(query, [stall_id])
+    // Use stored procedure with include_data parameter
+    const [rows] = await connection.execute(
+      'CALL sp_getStallImagesWithData(?, ?)',
+      [stall_id, include_data === 'true' ? 1 : 0]
+    )
+    const images = rows[0]
     
     // Add full URL for serving
     const imagesWithUrls = images.map(img => ({
@@ -393,11 +378,12 @@ export async function deleteStallImageBlob(req, res) {
     
     connection = await createConnection()
     
-    // Check if image exists
-    const [images] = await connection.query(
-      'SELECT id, stall_id, is_primary FROM stall_images WHERE id = ?',
+    // Check if image exists using stored procedure
+    const [checkRows] = await connection.execute(
+      'CALL sp_getStallImageForDelete(?)',
       [image_id]
     )
+    const images = checkRows[0]
     
     if (images.length === 0) {
       return res.status(404).json({
@@ -410,27 +396,25 @@ export async function deleteStallImageBlob(req, res) {
     const stallId = image.stall_id
     const wasPrimary = image.is_primary
     
-    // Delete the image
-    await connection.query('DELETE FROM stall_images WHERE id = ?', [image_id])
+    // Delete the image using stored procedure
+    await connection.execute('CALL sp_deleteStallImage(?)', [image_id])
     
-    // If deleted image was primary, set another as primary
+    // If deleted image was primary, set another as primary using stored procedure
     if (wasPrimary) {
-      await connection.query(
-        'UPDATE stall_images SET is_primary = 1 WHERE stall_id = ? ORDER BY display_order LIMIT 1',
-        [stallId]
-      )
+      await connection.execute('CALL sp_setNextPrimaryImage(?)', [stallId])
     }
     
-    // Reorder remaining images
-    const [remaining] = await connection.query(
-      'SELECT id FROM stall_images WHERE stall_id = ? ORDER BY display_order',
+    // Reorder remaining images using stored procedure
+    const [remainingRows] = await connection.execute(
+      'CALL sp_getRemainingImagesForReorder(?)',
       [stallId]
     )
+    const remaining = remainingRows[0]
     
     for (let i = 0; i < remaining.length; i++) {
-      await connection.query(
-        'UPDATE stall_images SET display_order = ? WHERE id = ?',
-        [i + 1, remaining[i].id]
+      await connection.execute(
+        'CALL sp_updateImageDisplayOrder(?, ?)',
+        [remaining[i].id, i + 1]
       )
     }
     
@@ -463,11 +447,12 @@ export async function setStallPrimaryImageBlob(req, res) {
     
     connection = await createConnection()
     
-    // Get the image to find stall_id
-    const [images] = await connection.query(
-      'SELECT stall_id FROM stall_images WHERE id = ?',
+    // Get the image to find stall_id using stored procedure
+    const [rows] = await connection.execute(
+      'CALL sp_getStallIdFromImage(?)',
       [image_id]
     )
+    const images = rows[0]
     
     if (images.length === 0) {
       return res.status(404).json({
@@ -478,17 +463,11 @@ export async function setStallPrimaryImageBlob(req, res) {
     
     const stallId = images[0].stall_id
     
-    // Unset all primary for this stall
-    await connection.query(
-      'UPDATE stall_images SET is_primary = 0 WHERE stall_id = ?',
-      [stallId]
-    )
+    // Unset all primary for this stall using stored procedure
+    await connection.execute('CALL sp_unsetAllPrimaryImages(?)', [stallId])
     
-    // Set this image as primary
-    await connection.query(
-      'UPDATE stall_images SET is_primary = 1 WHERE id = ?',
-      [image_id]
-    )
+    // Set this image as primary using stored procedure
+    await connection.execute('CALL sp_setImageAsPrimary(?)', [image_id])
     
     res.status(200).json({
       success: true,
@@ -527,11 +506,12 @@ export async function updateStallImageBlob(req, res) {
     
     connection = await createConnection()
     
-    // Check if image exists
-    const [images] = await connection.query(
-      'SELECT id FROM stall_images WHERE id = ?',
+    // Check if image exists using stored procedure
+    const [checkRows] = await connection.execute(
+      'CALL sp_checkImageExistsById(?)',
       [image_id]
     )
+    const images = checkRows[0]
     
     if (images.length === 0) {
       return res.status(404).json({
@@ -556,10 +536,10 @@ export async function updateStallImageBlob(req, res) {
     const actualMimeType = mime_type || 'image/jpeg'
     const actualFileName = file_name || `updated_${Date.now()}.jpg`
     
-    // Update the image
-    await connection.query(
-      'UPDATE stall_images SET image_data = ?, mime_type = ?, file_name = ?, updated_at = NOW() WHERE id = ?',
-      [imageBuffer, actualMimeType, actualFileName, image_id]
+    // Update the image using stored procedure
+    await connection.execute(
+      'CALL sp_updateStallImageBlobData(?, ?, ?, ?)',
+      [image_id, imageBuffer, actualMimeType, actualFileName]
     )
     
     res.status(200).json({
@@ -596,17 +576,20 @@ export async function getStallPrimaryImageBlob(req, res) {
     
     connection = await createConnection()
     
-    const [images] = await connection.query(
-      'SELECT image_data, mime_type, file_name FROM stall_images WHERE stall_id = ? AND is_primary = 1',
+    // Use stored procedure to get primary image
+    const [rows] = await connection.execute(
+      'CALL sp_getStallPrimaryImage(?)',
       [stall_id]
     )
+    const images = rows[0]
     
     if (images.length === 0 || !images[0].image_data) {
-      // Try to get first image if no primary set
-      const [firstImage] = await connection.query(
-        'SELECT image_data, mime_type, file_name FROM stall_images WHERE stall_id = ? ORDER BY display_order LIMIT 1',
+      // Try to get first image if no primary set using stored procedure
+      const [firstRows] = await connection.execute(
+        'CALL sp_getStallFirstImage(?)',
         [stall_id]
       )
+      const firstImage = firstRows[0]
       
       if (firstImage.length === 0 || !firstImage[0].image_data) {
         return res.status(404).json({
@@ -656,11 +639,12 @@ export async function deleteLegacyStallImage(req, res) {
     
     connection = await createConnection()
     
-    // Verify stall exists (removed stall_image from SELECT since column doesn't exist)
-    const [stalls] = await connection.query(
-      'SELECT stall_id FROM stall WHERE stall_id = ?',
+    // Verify stall exists using stored procedure
+    const [rows] = await connection.execute(
+      'CALL sp_checkStallExistsById(?)',
       [stall_id]
     )
+    const stalls = rows[0]
     
     if (stalls.length === 0) {
       return res.status(404).json({
@@ -671,10 +655,7 @@ export async function deleteLegacyStallImage(req, res) {
     
     // Clear the legacy stall_image field (commented out - column doesn't exist in current schema)
     // Legacy images should already be migrated to BLOB storage
-    // await connection.query(
-    //   'UPDATE stall SET stall_image = NULL WHERE stall_id = ?',
-    //   [stall_id]
-    // )
+    // await connection.execute('CALL sp_clearLegacyStallImage(?)', [stall_id])
     
     console.log(`✅ Legacy image reference cleared for stall ${stall_id}`)
     

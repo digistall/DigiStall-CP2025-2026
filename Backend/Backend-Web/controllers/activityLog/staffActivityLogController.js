@@ -42,25 +42,24 @@ export async function logStaffActivity(activityData) {
             status = 'success'
         } = activityData;
 
-        await connection.execute(`
-            INSERT INTO staff_activity_log 
-            (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-             module, ip_address, user_agent, request_method, request_path, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        `, [
-            staffType,
-            staffId,
-            staffName,
-            branchId || null,
-            actionType,
-            actionDescription || null,
-            module || null,
-            ipAddress || null,
-            userAgent || null,
-            requestMethod || null,
-            requestPath || null,
-            status
-        ]);
+        // Use stored procedure for inserting activity log
+        await connection.execute(
+            'CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                staffType,
+                staffId,
+                staffName,
+                branchId || null,
+                actionType,
+                actionDescription || null,
+                module || null,
+                ipAddress || null,
+                userAgent || null,
+                requestMethod || null,
+                requestPath || null,
+                status
+            ]
+        );
 
         console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType}`);
         return true;
@@ -79,94 +78,29 @@ export async function logStaffActivity(activityData) {
 export async function getAllStaffActivities(req, res) {
     let connection;
     try {
-        const branchId = req.query.branchId || req.user?.branchId;
-        const staffType = req.query.staffType; // Optional filter
-        const staffId = req.query.staffId; // Optional filter
-        const startDate = req.query.startDate;
-        const endDate = req.query.endDate;
+        const branchId = req.query.branchId || req.user?.branchId || null;
+        const staffType = req.query.staffType || null;
+        const staffId = req.query.staffId ? parseInt(req.query.staffId) : null;
+        const startDate = req.query.startDate || null;
+        const endDate = req.query.endDate || null;
         const limit = parseInt(req.query.limit) || 100;
         const offset = parseInt(req.query.offset) || 0;
 
         connection = await createConnection();
 
-        let query = `
-            SELECT 
-                log_id,
-                staff_type,
-                staff_id,
-                staff_name,
-                branch_id,
-                action_type,
-                action_description,
-                module,
-                ip_address,
-                status,
-                created_at
-            FROM staff_activity_log
-            WHERE 1=1
-        `;
-        const params = [];
+        // Use stored procedure for getting activities
+        const [rows] = await connection.execute(
+            'CALL sp_getAllStaffActivities(?, ?, ?, ?, ?, ?, ?)',
+            [branchId, staffType, staffId, startDate, endDate, limit, offset]
+        );
+        const activities = rows[0];
 
-        // Filter by branch if provided
-        if (branchId) {
-            query += ` AND (branch_id = ? OR branch_id IS NULL)`;
-            params.push(branchId);
-        }
-
-        // Filter by staff type
-        if (staffType) {
-            query += ` AND staff_type = ?`;
-            params.push(staffType);
-        }
-
-        // Filter by staff ID
-        if (staffId) {
-            query += ` AND staff_id = ?`;
-            params.push(staffId);
-        }
-
-        // Filter by date range
-        if (startDate) {
-            query += ` AND created_at >= ?`;
-            params.push(startDate);
-        }
-        if (endDate) {
-            query += ` AND created_at <= ?`;
-            params.push(endDate + ' 23:59:59');
-        }
-
-        // Embed LIMIT and OFFSET directly in query string to avoid mysql2 execute() issues
-        query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
-
-        // Use query() instead of execute() for better mysql2 compatibility
-        const [activities] = await connection.query(query, params);
-
-        // Get total count for pagination
-        let countQuery = `SELECT COUNT(*) as total FROM staff_activity_log WHERE 1=1`;
-        const countParams = [];
-
-        if (branchId) {
-            countQuery += ` AND (branch_id = ? OR branch_id IS NULL)`;
-            countParams.push(branchId);
-        }
-        if (staffType) {
-            countQuery += ` AND staff_type = ?`;
-            countParams.push(staffType);
-        }
-        if (staffId) {
-            countQuery += ` AND staff_id = ?`;
-            countParams.push(staffId);
-        }
-        if (startDate) {
-            countQuery += ` AND created_at >= ?`;
-            countParams.push(startDate);
-        }
-        if (endDate) {
-            countQuery += ` AND created_at <= ?`;
-            countParams.push(endDate + ' 23:59:59');
-        }
-
-        const [[{ total }]] = await connection.query(countQuery, countParams);
+        // Get total count using stored procedure
+        const [countRows] = await connection.execute(
+            'CALL sp_countStaffActivities(?, ?, ?, ?, ?)',
+            [branchId, staffType, staffId, startDate, endDate]
+        );
+        const total = countRows[0][0].total;
 
         console.log(`✅ Found ${activities.length} activity logs`);
 
@@ -205,30 +139,19 @@ export async function getStaffActivityById(req, res) {
 
         connection = await createConnection();
 
-        // Use query() instead of execute() and embed LIMIT/OFFSET directly
-        const [activities] = await connection.query(`
-            SELECT 
-                log_id,
-                staff_type,
-                staff_id,
-                staff_name,
-                branch_id,
-                action_type,
-                action_description,
-                module,
-                ip_address,
-                status,
-                created_at
-            FROM staff_activity_log
-            WHERE staff_type = ? AND staff_id = ?
-            ORDER BY created_at DESC
-            LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-        `, [staffType, staffId]);
+        // Use stored procedure for getting staff activities
+        const [rows] = await connection.execute(
+            'CALL sp_getStaffActivityById(?, ?, ?, ?)',
+            [staffType, parseInt(staffId), limit, offset]
+        );
+        const activities = rows[0];
 
-        const [[{ total }]] = await connection.query(`
-            SELECT COUNT(*) as total FROM staff_activity_log
-            WHERE staff_type = ? AND staff_id = ?
-        `, [staffType, staffId]);
+        // Get count using stored procedure
+        const [countRows] = await connection.execute(
+            'CALL sp_countStaffActivityById(?, ?)',
+            [staffType, parseInt(staffId)]
+        );
+        const total = countRows[0][0].total;
 
         res.json({
             success: true,
@@ -259,87 +182,38 @@ export async function getStaffActivityById(req, res) {
 export async function getActivitySummary(req, res) {
     let connection;
     try {
-        const branchId = req.query.branchId || req.user?.branchId;
+        const branchId = req.query.branchId || req.user?.branchId || null;
         const days = parseInt(req.query.days) || 7;
 
         connection = await createConnection();
 
-        // Get activity counts by staff type
-        let typeQuery = `
-            SELECT 
-                staff_type,
-                COUNT(*) as activity_count
-            FROM staff_activity_log
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-        `;
-        const typeParams = [days];
+        // Get activity counts by staff type using stored procedure
+        const [typeRows] = await connection.execute(
+            'CALL sp_getActivitySummaryByType(?, ?)',
+            [branchId, days]
+        );
+        const byType = typeRows[0];
 
-        if (branchId) {
-            typeQuery += ` AND (branch_id = ? OR branch_id IS NULL)`;
-            typeParams.push(branchId);
-        }
-        typeQuery += ` GROUP BY staff_type`;
+        // Get activity counts by action type using stored procedure
+        const [actionRows] = await connection.execute(
+            'CALL sp_getActivitySummaryByAction(?, ?)',
+            [branchId, days]
+        );
+        const byAction = actionRows[0];
 
-        const [byType] = await connection.query(typeQuery, typeParams);
+        // Get most active staff using stored procedure
+        const [activeRows] = await connection.execute(
+            'CALL sp_getMostActiveStaff(?, ?)',
+            [branchId, days]
+        );
+        const mostActive = activeRows[0];
 
-        // Get activity counts by action type
-        let actionQuery = `
-            SELECT 
-                action_type,
-                COUNT(*) as count
-            FROM staff_activity_log
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-        `;
-        const actionParams = [days];
-
-        if (branchId) {
-            actionQuery += ` AND (branch_id = ? OR branch_id IS NULL)`;
-            actionParams.push(branchId);
-        }
-        actionQuery += ` GROUP BY action_type ORDER BY count DESC LIMIT 10`;
-
-        const [byAction] = await connection.query(actionQuery, actionParams);
-
-        // Get most active staff
-        let activeQuery = `
-            SELECT 
-                staff_type,
-                staff_id,
-                staff_name,
-                COUNT(*) as activity_count
-            FROM staff_activity_log
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-        `;
-        const activeParams = [days];
-
-        if (branchId) {
-            activeQuery += ` AND (branch_id = ? OR branch_id IS NULL)`;
-            activeParams.push(branchId);
-        }
-        activeQuery += ` GROUP BY staff_type, staff_id, staff_name ORDER BY activity_count DESC LIMIT 10`;
-
-        const [mostActive] = await connection.query(activeQuery, activeParams);
-
-        // Get recent failed actions
-        let failedQuery = `
-            SELECT 
-                staff_type,
-                staff_name,
-                action_type,
-                action_description,
-                created_at
-            FROM staff_activity_log
-            WHERE status = 'failed' AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-        `;
-        const failedParams = [days];
-
-        if (branchId) {
-            failedQuery += ` AND (branch_id = ? OR branch_id IS NULL)`;
-            failedParams.push(branchId);
-        }
-        failedQuery += ` ORDER BY created_at DESC LIMIT 10`;
-
-        const [failedActions] = await connection.query(failedQuery, failedParams);
+        // Get recent failed actions using stored procedure
+        const [failedRows] = await connection.execute(
+            'CALL sp_getRecentFailedActions(?, ?)',
+            [branchId, days]
+        );
+        const failedActions = failedRows[0];
 
         res.json({
             success: true,
@@ -372,12 +246,11 @@ export async function clearAllActivityLogs(req, res) {
     try {
         connection = await createConnection();
         
-        // Delete all activity logs
-        const [result] = await connection.execute(`
-            DELETE FROM staff_activity_log
-        `);
+        // Delete all activity logs using stored procedure
+        const [rows] = await connection.execute('CALL sp_clearAllActivityLogs()');
+        const affectedRows = rows[0][0].affected_rows;
 
-        console.log(`🗑️ Cleared ${result.affectedRows} activity log records`);
+        console.log(`🗑️ Cleared ${affectedRows} activity log records`);
 
         // Log this action
         await logStaffActivity({
@@ -386,7 +259,7 @@ export async function clearAllActivityLogs(req, res) {
             staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}`,
             branchId: req.user.branchId,
             actionType: 'DELETE',
-            actionDescription: `Cleared all activity log history (${result.affectedRows} records)`,
+            actionDescription: `Cleared all activity log history (${affectedRows} records)`,
             module: 'Activity Logs',
             ipAddress: req.ip || req.connection?.remoteAddress,
             userAgent: req.get('User-Agent'),
@@ -399,7 +272,7 @@ export async function clearAllActivityLogs(req, res) {
             success: true,
             message: 'Activity log history cleared successfully',
             data: {
-                recordsCleared: result.affectedRows
+                recordsCleared: affectedRows
             }
         });
     } catch (error) {

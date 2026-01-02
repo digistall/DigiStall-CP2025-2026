@@ -73,20 +73,25 @@ export default {
     }
   },
   mounted() {
+    this._isMounted = true
     this.initializeDashboard()
     // Start auto-refresh for realtime updates
     this.startAutoRefresh()
   },
   beforeUnmount() {
+    this._isMounted = false
     // Clean up chart instances
     if (this.paymentChart) {
       this.paymentChart.destroy()
+      this.paymentChart = null
     }
     if (this.occupancyChart) {
       this.occupancyChart.destroy()
+      this.occupancyChart = null
     }
     if (this.collectorChart) {
       this.collectorChart.destroy()
+      this.collectorChart = null
     }
     // Stop auto-refresh
     this.stopAutoRefresh()
@@ -104,7 +109,7 @@ export default {
           this.refreshDashboardData()
         }
       }, 2000) // 2 seconds
-      console.log('⏱️ Auto-refresh enabled (every 2 seconds)')
+      // Only log once on start
     },
     
     // Stop auto-refresh interval
@@ -112,14 +117,12 @@ export default {
       if (this.refreshInterval) {
         clearInterval(this.refreshInterval)
         this.refreshInterval = null
-        console.log('⏹️ Auto-refresh stopped')
       }
     },
     
     // Toggle auto-refresh on/off
     toggleAutoRefresh() {
       this.autoRefreshEnabled = !this.autoRefreshEnabled
-      console.log(`🔄 Auto-refresh ${this.autoRefreshEnabled ? 'enabled' : 'disabled'}`)
     },
     
     // Refresh dashboard data without full reload (for realtime updates)
@@ -134,35 +137,51 @@ export default {
         ])
         
         this.lastRefreshTime = new Date()
-        console.log('✅ Dashboard data refreshed at', this.lastRefreshTime.toLocaleTimeString())
+        // Silent refresh - no console logging to prevent flooding
         
         // Update charts with new data
         this.updateCharts()
       } catch (error) {
+        // Only log errors, not success
         console.error('❌ Error refreshing dashboard data:', error)
       }
     },
     
     // Update existing charts with new data (without recreating them)
     updateCharts() {
+      // Check if component is still mounted before updating charts
+      if (!this._isMounted) return;
+      
       // Update payment trends chart
-      if (this.paymentChart && this.paymentTrendsData.length > 0) {
-        this.paymentChart.data.labels = this.paymentTrendsData.map(item => item.date)
-        this.paymentChart.data.datasets[0].data = this.paymentTrendsData.map(item => item.amount)
-        this.paymentChart.update('none') // Update without animation for smoother experience
+      if (this.paymentChart && this.paymentChart.canvas && this.paymentTrendsData.length > 0) {
+        try {
+          this.paymentChart.data.labels = this.paymentTrendsData.map(item => item.date)
+          this.paymentChart.data.datasets[0].data = this.paymentTrendsData.map(item => item.amount)
+          this.paymentChart.update('none') // Update without animation for smoother experience
+        } catch (e) {
+          console.warn('Could not update payment chart:', e.message)
+        }
       }
       
       // Update occupancy chart
-      if (this.occupancyChart) {
-        this.occupancyChart.data.datasets[0].data = [this.occupiedStalls, this.vacantStalls]
-        this.occupancyChart.update('none')
+      if (this.occupancyChart && this.occupancyChart.canvas) {
+        try {
+          this.occupancyChart.data.datasets[0].data = [this.occupiedStalls, this.vacantStalls]
+          this.occupancyChart.update('none')
+        } catch (e) {
+          console.warn('Could not update occupancy chart:', e.message)
+        }
       }
       
       // Update collector performance chart
-      if (this.collectorChart && this.collectorPerformanceData.length > 0) {
-        this.collectorChart.data.labels = this.collectorPerformanceData.map(c => c.name)
-        this.collectorChart.data.datasets[0].data = this.collectorPerformanceData.map(c => c.collections)
-        this.collectorChart.update('none')
+      if (this.collectorChart && this.collectorChart.canvas && this.collectorPerformanceData.length > 0) {
+        try {
+          this.collectorChart.data.labels = this.collectorPerformanceData.map(c => c.name)
+          this.collectorChart.data.datasets[0].data = this.collectorPerformanceData.map(c => c.collections)
+          this.collectorChart.update('none')
+        } catch (e) {
+          console.warn('Could not update collector chart:', e.message)
+        }
       }
     },
     
@@ -178,7 +197,7 @@ export default {
     
     // Initialize dashboard with real data
     async initializeDashboard() {
-      console.log('✅ Dashboard page initialized - Fetching real data...')
+      // Dashboard initialized - fetching real data silently
       this.loading = true
       
       try {
@@ -194,17 +213,11 @@ export default {
         
         this.dataLoaded = true
         this.lastRefreshTime = new Date() // Set initial refresh time
-        console.log('📊 Dashboard data loaded:', {
-          stalls: this.totalStalls,
-          stallholders: this.totalStallholders,
-          payments: this.totalPayments,
-          collectors: this.totalCollectors,
-        })
+        // Dashboard data loaded silently
         
         // Initialize charts after data is loaded
         this.$nextTick(() => {
           setTimeout(() => {
-            console.log('🎯 Attempting to initialize charts...')
             this.initializeCharts()
           }, 500)
         })
@@ -242,17 +255,11 @@ export default {
         
         const result = await response.json()
         
-        console.log('📦 Raw stalls API response:', result)
-        
         if (result.success && result.data) {
           const stalls = result.data
           this.totalStalls = stalls.length
           
-          // Log first stall to see available fields
-          if (stalls.length > 0) {
-            console.log('📋 Sample stall data fields:', Object.keys(stalls[0]))
-            console.log('📋 Sample stall data:', stalls[0])
-          }
+          // First stall data available for debugging if needed
           
           // Calculate occupancy - use availability_status from stored procedure
           // availability_status can be: 'Occupied', 'Available', 'Unavailable'
@@ -263,11 +270,7 @@ export default {
           ).length
           this.vacantStalls = this.totalStalls - this.occupiedStalls
           
-          console.log('📊 Occupancy calculation:', {
-            total: this.totalStalls,
-            occupied: this.occupiedStalls,
-            sampleAvailabilityStatuses: stalls.slice(0, 5).map(s => s.availability_status)
-          })
+          // Occupancy calculated silently
           
           // Count unique stallholders from stalls data
           const uniqueStallholders = new Set()
@@ -296,12 +299,7 @@ export default {
             }
           })
           
-          console.log('✅ Stalls data loaded:', {
-            total: this.totalStalls,
-            occupied: this.occupiedStalls,
-            vacant: this.vacantStalls,
-            stallholders: this.totalStallholders
-          })
+          // Stalls data loaded successfully
         }
       } catch (error) {
         console.error('❌ Error fetching stalls:', error)
@@ -334,7 +332,6 @@ export default {
     async fetchStallholdersData() {
       // Stallholders count is already calculated from stalls data in fetchStallsData()
       // No additional API call needed - the count is derived from unique stallholder_ids
-      console.log('✅ Using stallholders count from stalls data:', this.totalStallholders)
     },
     
     // Fetch payments data from API
@@ -356,20 +353,13 @@ export default {
           }
         })
         
-        console.log('💰 Payments API response status:', paymentsResponse.status)
-        
         if (paymentsResponse.ok) {
           const paymentsResult = await paymentsResponse.json()
-          console.log('💰 Raw payments API response:', paymentsResult)
           
           if (paymentsResult.success && paymentsResult.data) {
             const payments = paymentsResult.data
             
-            // Log first payment to see available fields
-            if (payments.length > 0) {
-              console.log('💰 Sample payment data fields:', Object.keys(payments[0]))
-              console.log('💰 Sample payment data:', payments[0])
-            }
+            // First payment data available for debugging if needed
             
             // Calculate total from all payments (use amountPaid from API response)
             totalFromPayments = payments.reduce((sum, p) => sum + (parseFloat(p.amountPaid) || parseFloat(p.amount) || 0), 0)
@@ -397,8 +387,7 @@ export default {
               paymentType: payment.paymentType || payment.payment_type || 'rental'
             }))
             
-            console.log('✅ Recent payments loaded:', payments.length, 'Total amount:', totalFromPayments)
-            console.log('✅ Last payments by stallholder:', Object.keys(this.lastPaymentsByStallholder).length, 'stallholders')
+            // Recent payments and last payments by stallholder loaded
           }
         }
         
@@ -415,12 +404,10 @@ export default {
             const statsResult = await statsResponse.json()
             if (statsResult.success && statsResult.data) {
               this.totalPayments = statsResult.data.totalAmount || totalFromPayments
-              console.log('✅ Payment stats loaded:', this.totalPayments)
             }
           } else {
             // Use total from payments list
             this.totalPayments = totalFromPayments
-            console.log('⚠️ Payment stats unavailable - using calculated total:', totalFromPayments)
           }
         } catch (_) {
           this.totalPayments = totalFromPayments
@@ -486,7 +473,7 @@ export default {
         }))
         
         this.paymentTrendsData = trends
-        console.log('📈 Payment trends data loaded:', trends)
+        // Payment trends data loaded silently
       } catch (error) {
         console.error('❌ Error fetching payment trends:', error)
       }
@@ -575,17 +562,42 @@ export default {
           const sessionsResult = await sessionsRes.json()
           if (sessionsResult.success && sessionsResult.data) {
             activeSessions = sessionsResult.data
+            console.log('📊 Active sessions received:', activeSessions.length)
+            // Log staff sessions specifically
+            const staffSessions = activeSessions.filter(s => s.user_type === 'inspector' || s.user_type === 'collector')
+            console.log('📊 Staff sessions (inspector/collector):', staffSessions.length, staffSessions)
           }
         }
         
         // Helper function to check if employee is online based on last_login and last_logout
-        // Logic: Online if last_logout is NULL OR last_login > last_logout
+        // Logic: Online if:
+        //   1. last_login exists AND
+        //   2. (last_logout is NULL OR last_login > last_logout) AND
+        //   3. last_login is within the last 10 minutes (inactivity timeout)
+        const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes in milliseconds
+        const now = Date.now()
+        
         const checkIsOnline = (lastLogin, lastLogout) => {
           if (!lastLogin) return false // Never logged in
           
           const loginTime = new Date(lastLogin).getTime()
           
-          // If no logout recorded, employee is online (logged in but never logged out)
+          // Check if last_login is within the inactivity timeout (10 minutes)
+          const isWithinTimeout = (now - loginTime) < INACTIVITY_TIMEOUT_MS
+          
+          // If logged in more than 10 minutes ago, consider offline due to inactivity
+          if (!isWithinTimeout) {
+            // Unless they have a more recent logout time that's also within timeout
+            if (lastLogout) {
+              const logoutTime = new Date(lastLogout).getTime()
+              // If logout is recent and after login, definitely offline
+              if (logoutTime >= loginTime) return false
+            }
+            // Inactive for more than 10 minutes = offline
+            return false
+          }
+          
+          // If no logout recorded and login is recent, employee is online
           if (!lastLogout) return true
           
           const logoutTime = new Date(lastLogout).getTime()
@@ -596,12 +608,27 @@ export default {
         
         // Helper function to get last activity time
         const getLastActivity = (emp, employeeType) => {
+          // For web employees, try session first, then fall back to last_login
           if (employeeType === 'web') {
-            const session = activeSessions.find(s => s.business_employee_id === emp.employee_id || s.business_employee_id === emp.id)
+            const empId = emp.employee_id || emp.business_employee_id || emp.id
+            const session = activeSessions.find(s => s.business_employee_id === empId && s.last_activity)
             if (session && session.last_activity) {
-              return this.formatRelativeTime(session.last_activity)
+              const result = this.formatRelativeTime(session.last_activity)
+              if (result !== 'N/A' && result !== 'Never') {
+                return result
+              }
             }
+            // Fall back to last_login for web employees too
+            const lastLogin = emp.last_login || emp.lastLogin
+            if (lastLogin) {
+              const result = this.formatRelativeTime(lastLogin)
+              if (result !== 'N/A') {
+                return result
+              }
+            }
+            return 'Never'
           }
+          // For mobile staff (collectors/inspectors)
           const lastLogin = emp.last_login || emp.lastLogin
           if (lastLogin) {
             return this.formatRelativeTime(lastLogin)
@@ -650,8 +677,15 @@ export default {
             allActiveEmployees = [...allActiveEmployees, ...activeCollectors.map(col => {
               const lastLogin = col.last_login || col.lastLogin
               const lastLogout = col.last_logout || col.lastLogout
-              // Use the new logic: online if last_logout is NULL or last_login > last_logout
-              const isOnline = checkIsOnline(lastLogin, lastLogout)
+              // Check staff_session for active session (same as web employees)
+              // Handle is_active as 1, true, or '1'
+              const hasActiveStaffSession = activeSessions.some(s => 
+                s.user_id == col.collector_id && 
+                s.user_type === 'collector' && 
+                (s.is_active === 1 || s.is_active === true || s.is_active === '1')
+              )
+              // Use session OR last_login/last_logout logic
+              const isOnline = hasActiveStaffSession || checkIsOnline(lastLogin, lastLogout)
               return {
                 id: col.collector_id,
                 name: `${col.first_name || ''} ${col.last_name || ''}`.trim() || 'Unknown',
@@ -685,8 +719,15 @@ export default {
             allActiveEmployees = [...allActiveEmployees, ...activeInspectors.map(ins => {
               const lastLogin = ins.last_login || ins.lastLogin
               const lastLogout = ins.last_logout || ins.lastLogout
-              // Use the new logic: online if last_logout is NULL or last_login > last_logout
-              const isOnline = checkIsOnline(lastLogin, lastLogout)
+              // Check staff_session for active session (same as web employees)
+              // Handle is_active as 1, true, or '1'
+              const hasActiveStaffSession = activeSessions.some(s => 
+                s.user_id == ins.inspector_id && 
+                s.user_type === 'inspector' && 
+                (s.is_active === 1 || s.is_active === true || s.is_active === '1')
+              )
+              // Use session OR last_login/last_logout logic
+              const isOnline = hasActiveStaffSession || checkIsOnline(lastLogin, lastLogout)
               return {
                 id: ins.inspector_id,
                 name: `${ins.first_name || ''} ${ins.last_name || ''}`.trim() || 'Unknown',
@@ -727,13 +768,7 @@ export default {
         // Store collectors data for the Collector Performance chart (only collectors, not other employee types)
         this.collectorPerformanceData = collectorsData.filter(col => col.status === 'Active').slice(0, 5)
         
-        console.log('✅ All employees data loaded:', {
-          total: this.totalCollectors,
-          webEmployees: allActiveEmployees.filter(e => e.type === 'web').length,
-          collectors: collectorsData.length,
-          inspectors: allActiveEmployees.filter(e => e.type === 'inspector').length,
-          online: allActiveEmployees.filter(e => e.isOnline).length
-        })
+        // All employees data loaded silently
       } catch (error) {
         console.error('❌ Error fetching employees:', error)
       }
@@ -741,14 +776,9 @@ export default {
 
     // Initialize charts using Chart.js
     initializeCharts() {
-      console.log('📊 Initializing interactive charts...')
-      console.log('📦 Chart.js loaded:', typeof Chart !== 'undefined')
-      console.log('🎯 Canvas elements found:', {
-        payment: !!this.$refs.paymentChart,
-        occupancy: !!this.$refs.occupancyChart,
-        collector: !!this.$refs.collectorChart,
-      })
-
+      // Check if component is still mounted
+      if (!this._isMounted) return
+      
       // Ensure Chart.js is available
       if (typeof Chart === 'undefined') {
         console.error('❌ Chart.js is not available')
@@ -759,10 +789,9 @@ export default {
         this.createPaymentChart()
         this.createOccupancyChart()
         this.createCollectorChart()
-        console.log('✅ All charts initialized successfully')
+        // All charts initialized silently
       } catch (error) {
         console.error('❌ Error initializing charts:', error)
-        console.error('❌ Stack trace:', error.stack)
       }
     },
 
@@ -896,7 +925,7 @@ export default {
         }
 
         this.paymentChart = markRaw(new Chart(ctx, config))
-        console.log('✅ Payment chart created successfully')
+        // Payment chart created silently
       } catch (error) {
         console.error('❌ Error creating payment chart:', error)
       }
@@ -928,8 +957,6 @@ export default {
           return
         }
 
-        console.log('Creating occupancy chart with real data...')
-        
         // Use real occupancy data
         const occupied = this.occupiedStalls || 0
         const vacant = this.vacantStalls || 0
@@ -1034,7 +1061,7 @@ export default {
             },
           },
         }))
-        console.log('✅ Occupancy chart created successfully')
+        // Occupancy chart created silently
       } catch (error) {
         console.error('❌ Error creating occupancy chart:', error)
       }
@@ -1048,8 +1075,6 @@ export default {
           console.warn('Collector chart canvas not found')
           return
         }
-
-        console.log('Creating collector chart with real collector data...')
 
         // Use collectorPerformanceData (only collectors, not other employee types)
         let collectorData = []
@@ -1165,7 +1190,7 @@ export default {
             },
           },
         }))
-        console.log('✅ Collector chart created successfully')
+        // Collector chart created silently
       } catch (error) {
         console.error('❌ Error creating collector chart:', error)
       }
@@ -1297,23 +1322,41 @@ export default {
     formatRelativeTime(dateString) {
       if (!dateString) return 'Never'
       try {
+        // Get current time in Philippine timezone
         const now = new Date()
-        // Database stores UTC, the date comes as ISO string with Z (UTC)
-        const utcDate = new Date(dateString)
+        const nowPH = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
         
-        // If the date string ends with Z, it's UTC - add 8 hours for Philippine time
-        // If it doesn't have Z, assume it's already in local/Philippine time
-        let phDate
-        if (typeof dateString === 'string' && dateString.endsWith('Z')) {
-          phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
+        // Parse the date string
+        let dateValue
+        if (typeof dateString === 'string') {
+          // Handle various date formats
+          if (dateString.endsWith('Z')) {
+            // UTC time - convert directly
+            dateValue = new Date(dateString)
+          } else if (dateString.includes('T')) {
+            // ISO format without Z - treat as local/Philippine time
+            dateValue = new Date(dateString)
+          } else {
+            // MySQL format (YYYY-MM-DD HH:MM:SS) - treat as Philippine time
+            dateValue = new Date(dateString.replace(' ', 'T'))
+          }
         } else {
-          phDate = utcDate
+          dateValue = new Date(dateString)
         }
         
-        const diffMs = now - phDate
+        // Check for invalid date
+        if (isNaN(dateValue.getTime())) return 'N/A'
         
-        // Handle future dates or invalid dates
-        if (diffMs < 0 || isNaN(diffMs)) return 'N/A'
+        // Convert to Philippine timezone for comparison
+        const datePH = new Date(dateValue.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
+        
+        const diffMs = nowPH - datePH
+        
+        // Handle future dates (within 1 minute tolerance for clock skew)
+        if (diffMs < -60000) return 'Just now'
+        
+        // Treat small negative values as "Just now"
+        if (diffMs < 0) return 'Just now'
         
         const diffMins = Math.floor(diffMs / 60000)
         const diffHours = Math.floor(diffMins / 60)
@@ -1325,7 +1368,7 @@ export default {
         if (diffDays === 1) return '1d ago'
         if (diffDays < 7) return `${diffDays}d ago`
         
-        return phDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+        return datePH.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
       } catch {
         return 'N/A'
       }

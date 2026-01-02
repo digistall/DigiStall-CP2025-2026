@@ -72,7 +72,7 @@ export default {
   async mounted() {
     // Check if already authenticated
     if (this.authStore.isAuthenticated) {
-      this.$router.push('/app/dashboard')
+      this.$router.push(this.getSmartRedirectPath())
     }
 
     // Listen for storage changes (login/logout in other tabs)
@@ -304,9 +304,72 @@ export default {
     },
 
     onReadyToNavigate() {
-      console.log('🚀 Ready to navigate to dashboard')
+      const redirectPath = this.getSmartRedirectPath()
+      console.log('🚀 Ready to navigate to:', redirectPath)
       this.showLoadingScreen = false
-      this.$router.push('/app/dashboard')
+      this.$router.push(redirectPath)
+    },
+
+    /**
+     * Get smart redirect path based on user permissions
+     */
+    getSmartRedirectPath() {
+      const userData = sessionStorage.getItem('currentUser')
+      if (!userData) return '/app/dashboard'
+
+      try {
+        const user = JSON.parse(userData)
+        
+        // System administrator goes to system admin dashboard
+        if (user.userType === 'system_administrator') {
+          return '/system-admin/dashboard'
+        }
+        
+        // Business owner and manager always have dashboard
+        if (user.userType === 'stall_business_owner' || user.userType === 'business_manager') {
+          return '/app/dashboard'
+        }
+        
+        // For business employees, check their permissions
+        if (user.userType === 'business_employee' && user.permissions) {
+          const permissions = user.permissions
+          
+          const hasPermission = (perm) => {
+            if (Array.isArray(permissions)) {
+              return permissions.includes(perm)
+            }
+            return permissions[perm] === true
+          }
+          
+          // If has dashboard permission, go to dashboard
+          if (hasPermission('dashboard')) {
+            return '/app/dashboard'
+          }
+          
+          // Find first available page based on permissions
+          const permissionRoutes = [
+            { perm: 'payments', route: '/app/payment' },
+            { perm: 'applicants', route: '/app/applicants' },
+            { perm: 'complaints', route: '/app/complaints' },
+            { perm: 'compliances', route: '/app/compliance' },
+            { perm: 'vendors', route: '/app/vendor' },
+            { perm: 'stallholders', route: '/app/stallholder' },
+            { perm: 'collectors', route: '/app/collectors' },
+            { perm: 'stalls', route: '/app/stalls' }
+          ]
+          
+          for (const { perm, route } of permissionRoutes) {
+            if (hasPermission(perm)) {
+              console.log(`🔄 User doesn't have dashboard permission, redirecting to ${route}`)
+              return route
+            }
+          }
+        }
+        
+        return '/app/dashboard'
+      } catch {
+        return '/app/dashboard'
+      }
     },
   },
 
@@ -324,9 +387,9 @@ export default {
     handleStorageChange(event) {
       // Listen for login in other tabs
       if (event.key === 'authToken' && event.newValue) {
-        // User logged in on another tab, redirect to dashboard
+        // User logged in on another tab, redirect to appropriate page
         console.log('🔄 Login detected in another tab, redirecting...')
-        this.$router.push('/app/dashboard')
+        this.$router.push(this.getSmartRedirectPath())
       }
     },
   },

@@ -333,47 +333,33 @@ export async function saveApplicantDocumentToBlob(connection, applicantId, busin
     // Virtual file path for API endpoint
     const virtualFilePath = `/api/applicants/documents/blob/${applicantId}/${documentTypeId}`
     
-    // Check if document already exists
-    const [existingDocs] = await connection.query(
-      `SELECT document_id FROM applicant_documents 
-       WHERE applicant_id = ? AND business_owner_id = ? AND document_type_id = ?`,
+    // Check if document already exists using stored procedure
+    const [existingRows] = await connection.execute(
+      'CALL sp_checkExistingApplicantDocumentMulter(?, ?, ?)',
       [applicantId, businessOwnerId, documentTypeId]
     )
+    const existingDocs = existingRows[0]
     
     let documentId
     let isUpdate = false
     
     if (existingDocs.length > 0) {
-      // Update existing document
+      // Update existing document using stored procedure
       documentId = existingDocs[0].document_id
       isUpdate = true
       
-      await connection.query(
-        `UPDATE applicant_documents 
-         SET file_path = ?,
-             original_filename = ?,
-             file_size = ?,
-             mime_type = ?,
-             document_data = ?,
-             storage_type = 'blob',
-             upload_date = NOW(),
-             verification_status = 'pending',
-             updated_at = NOW()
-         WHERE document_id = ?`,
-        [virtualFilePath, filename, documentBuffer.length, mimeType, documentBuffer, documentId]
+      await connection.execute(
+        'CALL sp_updateApplicantDocumentMulter(?, ?, ?, ?, ?, ?)',
+        [documentId, virtualFilePath, filename, documentBuffer.length, mimeType, documentBuffer]
       )
     } else {
-      // Insert new document
-      const [result] = await connection.query(
-        `INSERT INTO applicant_documents (
-           applicant_id, business_owner_id, branch_id, document_type_id,
-           file_path, original_filename, file_size, mime_type,
-           document_data, storage_type, verification_status
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'blob', 'pending')`,
+      // Insert new document using stored procedure
+      const [insertRows] = await connection.execute(
+        'CALL sp_insertApplicantDocumentMulter(?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [applicantId, businessOwnerId, branchId || null, documentTypeId,
          virtualFilePath, filename, documentBuffer.length, mimeType, documentBuffer]
       )
-      documentId = result.insertId
+      documentId = insertRows[0][0].document_id
     }
     
     console.log(`✅ Saved document to BLOB: ${filename} (${isUpdate ? 'updated' : 'new'})`)

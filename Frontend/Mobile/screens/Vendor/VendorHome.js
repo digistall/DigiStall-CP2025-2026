@@ -1,14 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ApiService from '../../services/ApiService';
 import UserStorageService from '../../services/UserStorageService';
+import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
 
 const VendorHome = () => {
   const navigation = useNavigation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    // Prevent multiple clicks
+    if (isLoggingOut) {
+      console.log('⏳ Logout already in progress, ignoring...');
+      return;
+    }
+    
+    // Show logout loading screen
+    setIsLoggingOut(true);
+    
     try {
       // Get user data before clearing
       const userData = await UserStorageService.getUserData();
@@ -21,10 +32,16 @@ const VendorHome = () => {
         console.log('✅ Logout API called - last_logout updated');
       }
       
+      // Add small delay to show the animation (1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       // Clear local storage
       await UserStorageService.clearUserData();
     } catch (error) {
       console.error('Error during logout:', error);
+      await UserStorageService.clearUserData();
+    } finally {
+      setIsLoggingOut(false);
     }
     
     navigation.reset({
@@ -43,6 +60,13 @@ const VendorHome = () => {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
+
+        {/* Logout Loading Screen */}
+        <LogoutLoadingScreen 
+          visible={isLoggingOut}
+          message="Logging out..."
+          subMessage="Please wait while we securely log you out"
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
