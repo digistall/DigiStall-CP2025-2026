@@ -60,11 +60,12 @@ export async function uploadStallholderDocumentBlob(req, res) {
     
     connection = await createConnection()
     
-    // Verify stallholder exists
-    const [stallholders] = await connection.query(
-      'SELECT stallholder_id FROM stallholder WHERE stallholder_id = ?',
+    // Verify stallholder exists using stored procedure
+    const [stallholderRows] = await connection.execute(
+      'CALL sp_checkStallholderExists(?)',
       [stallholder_id]
     )
+    const stallholders = stallholderRows[0]
     
     if (stallholders.length === 0) {
       return res.status(404).json({
@@ -79,52 +80,35 @@ export async function uploadStallholderDocumentBlob(req, res) {
     const generatedFileName = file_name || `stallholder_${stallholder_id}_doc_${document_type_id}_${timestamp}.${extension}`
     const virtualFilePath = `/api/mobile/stallholder/documents/blob/${stallholder_id}/${document_type_id}`
     
-    // Check if document already exists for this stallholder/document type
-    const [existingDocs] = await connection.query(
-      `SELECT document_id FROM stallholder_documents 
-       WHERE stallholder_id = ? AND document_type_id = ?`,
+    // Check if document already exists for this stallholder/document type using stored procedure
+    const [existingRows] = await connection.execute(
+      'CALL sp_checkExistingStallholderDocument(?, ?)',
       [stallholder_id, document_type_id]
     )
+    const existingDocs = existingRows[0]
     
     let documentId
     let isUpdate = false
     
     if (existingDocs.length > 0) {
-      // Update existing document
+      // Update existing document using stored procedure
       documentId = existingDocs[0].document_id
       isUpdate = true
       
-      await connection.query(
-        `UPDATE stallholder_documents 
-         SET file_path = ?,
-             original_filename = ?,
-             file_size = ?,
-             document_data = ?,
-             storage_type = 'blob',
-             upload_date = NOW(),
-             verification_status = 'pending',
-             verified_by = NULL,
-             verified_at = NULL,
-             rejection_reason = NULL,
-             expiry_date = ?,
-             notes = ?
-         WHERE document_id = ?`,
-        [virtualFilePath, generatedFileName, documentBuffer.length, documentBuffer, 
-         expiry_date || null, notes || null, documentId]
+      await connection.execute(
+        'CALL sp_updateStallholderDocumentBlob(?, ?, ?, ?, ?, ?, ?)',
+        [documentId, virtualFilePath, generatedFileName, documentBuffer.length, documentBuffer, 
+         expiry_date || null, notes || null]
       )
     } else {
-      // Insert new document
-      const [result] = await connection.query(
-        `INSERT INTO stallholder_documents (
-           stallholder_id, document_type_id,
-           file_path, original_filename, file_size,
-           document_data, storage_type, expiry_date, notes, verification_status
-         ) VALUES (?, ?, ?, ?, ?, ?, 'blob', ?, ?, 'pending')`,
+      // Insert new document using stored procedure
+      const [insertRows] = await connection.execute(
+        'CALL sp_insertStallholderDocumentBlob(?, ?, ?, ?, ?, ?, ?, ?)',
         [stallholder_id, document_type_id,
          virtualFilePath, generatedFileName, documentBuffer.length,
          documentBuffer, expiry_date || null, notes || null]
       )
-      documentId = result.insertId
+      documentId = insertRows[0][0].document_id
     }
     
     res.status(200).json({
@@ -213,52 +197,35 @@ export async function uploadStallholderDocumentSubmissionBlob(req, res) {
     const generatedFileName = file_name || `submission_${stallholder_id}_req_${requirement_id}_${timestamp}.${extension}`
     const virtualFileUrl = `/api/mobile/stallholder/documents/submission/blob/${stallholder_id}/${requirement_id}`
     
-    // Check if submission already exists
-    const [existingSubmissions] = await connection.query(
-      `SELECT submission_id FROM stallholder_document_submissions 
-       WHERE stallholder_id = ? AND requirement_id = ? AND owner_id = ?`,
+    // Check if submission already exists using stored procedure
+    const [existingRows] = await connection.execute(
+      'CALL sp_checkExistingDocumentSubmission(?, ?, ?)',
       [stallholder_id, requirement_id, owner_id]
     )
+    const existingSubmissions = existingRows[0]
     
     let submissionId
     let isUpdate = false
     
     if (existingSubmissions.length > 0) {
-      // Update existing submission
+      // Update existing submission using stored procedure
       submissionId = existingSubmissions[0].submission_id
       isUpdate = true
       
-      await connection.query(
-        `UPDATE stallholder_document_submissions 
-         SET file_url = ?,
-             file_name = ?,
-             file_type = ?,
-             file_size = ?,
-             document_data = ?,
-             storage_type = 'blob',
-             status = 'pending',
-             rejection_reason = NULL,
-             uploaded_at = NOW(),
-             updated_at = NOW(),
-             reviewed_by = NULL,
-             reviewed_at = NULL
-         WHERE submission_id = ?`,
-        [virtualFileUrl, generatedFileName, actualMimeType, documentBuffer.length, 
-         documentBuffer, submissionId]
+      await connection.execute(
+        'CALL sp_updateDocumentSubmissionBlob(?, ?, ?, ?, ?, ?)',
+        [submissionId, virtualFileUrl, generatedFileName, actualMimeType, documentBuffer.length, 
+         documentBuffer]
       )
     } else {
-      // Insert new submission
-      const [result] = await connection.query(
-        `INSERT INTO stallholder_document_submissions (
-           stallholder_id, owner_id, requirement_id, application_id,
-           file_url, file_name, file_type, file_size,
-           document_data, storage_type, status
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'blob', 'pending')`,
+      // Insert new submission using stored procedure
+      const [insertRows] = await connection.execute(
+        'CALL sp_insertDocumentSubmissionBlob(?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [stallholder_id, owner_id, requirement_id, application_id || null,
          virtualFileUrl, generatedFileName, actualMimeType, documentBuffer.length,
          documentBuffer]
       )
-      submissionId = result.insertId
+      submissionId = insertRows[0][0].submission_id
     }
     
     res.status(200).json({
@@ -302,14 +269,12 @@ export async function getStallholderDocumentBlob(req, res) {
     
     connection = await createConnection()
     
-    const [documents] = await connection.query(
-      `SELECT document_data, storage_type, original_filename,
-              (SELECT document_name FROM document_types WHERE document_type_id = sd.document_type_id) as document_name
-       FROM stallholder_documents sd
-       WHERE stallholder_id = ? AND document_type_id = ? AND storage_type = 'blob' AND document_data IS NOT NULL
-       ORDER BY upload_date DESC LIMIT 1`,
+    // Use stored procedure to get document
+    const [rows] = await connection.execute(
+      'CALL sp_getStallholderDocumentBlob(?, ?)',
       [stallholder_id, document_type_id]
     )
+    const documents = rows[0]
     
     if (documents.length === 0) {
       return res.status(404).json({
@@ -358,12 +323,12 @@ export async function getStallholderDocumentBlobById(req, res) {
     
     connection = await createConnection()
     
-    const [documents] = await connection.query(
-      `SELECT document_data, original_filename
-       FROM stallholder_documents
-       WHERE document_id = ? AND storage_type = 'blob' AND document_data IS NOT NULL`,
+    // Use stored procedure to get document by ID
+    const [rows] = await connection.execute(
+      'CALL sp_getStallholderDocumentBlobById(?)',
       [document_id]
     )
+    const documents = rows[0]
     
     if (documents.length === 0) {
       return res.status(404).json({
@@ -412,12 +377,12 @@ export async function getStallholderDocumentSubmissionBlob(req, res) {
     
     connection = await createConnection()
     
-    const [submissions] = await connection.query(
-      `SELECT document_data, file_name, file_type
-       FROM stallholder_document_submissions
-       WHERE submission_id = ? AND storage_type = 'blob' AND document_data IS NOT NULL`,
+    // Use stored procedure to get submission blob
+    const [rows] = await connection.execute(
+      'CALL sp_getStallholderDocumentSubmissionBlob(?)',
       [submission_id]
     )
+    const submissions = rows[0]
     
     if (submissions.length === 0) {
       return res.status(404).json({
@@ -459,25 +424,12 @@ export async function getStallholderDocuments(req, res) {
     
     connection = await createConnection()
     
-    let selectColumns = `
-      sd.document_id, sd.stallholder_id, sd.document_type_id,
-      dt.document_name, dt.description as document_description,
-      sd.file_path, sd.original_filename, sd.file_size,
-      sd.upload_date, sd.verification_status, sd.verified_at, sd.verified_by,
-      sd.rejection_reason, sd.expiry_date, sd.notes, sd.storage_type`
-    
-    if (include_data === 'true') {
-      selectColumns += `, TO_BASE64(sd.document_data) as document_data_base64`
-    }
-    
-    const [documents] = await connection.query(
-      `SELECT ${selectColumns}
-       FROM stallholder_documents sd
-       LEFT JOIN document_types dt ON sd.document_type_id = dt.document_type_id
-       WHERE sd.stallholder_id = ?
-       ORDER BY dt.document_name ASC, sd.upload_date DESC`,
-      [stallholder_id]
+    // Use stored procedure with include_data parameter
+    const [rows] = await connection.execute(
+      'CALL sp_getAllStallholderDocuments(?, ?)',
+      [stallholder_id, include_data === 'true' ? 1 : 0]
     )
+    const documents = rows[0]
     
     // Transform documents
     const transformedDocs = documents.map(doc => ({
@@ -520,11 +472,12 @@ export async function deleteStallholderDocumentBlob(req, res) {
     
     connection = await createConnection()
     
-    // Verify document exists
-    const [documents] = await connection.query(
-      'SELECT document_id FROM stallholder_documents WHERE document_id = ?',
+    // Verify document exists using stored procedure
+    const [checkRows] = await connection.execute(
+      'CALL sp_checkDocumentExistsForDelete(?)',
       [document_id]
     )
+    const documents = checkRows[0]
     
     if (documents.length === 0) {
       return res.status(404).json({
@@ -533,8 +486,9 @@ export async function deleteStallholderDocumentBlob(req, res) {
       })
     }
     
-    await connection.query(
-      'DELETE FROM stallholder_documents WHERE document_id = ?',
+    // Delete using stored procedure
+    await connection.execute(
+      'CALL sp_deleteStallholderDocument(?)',
       [document_id]
     )
     
@@ -577,14 +531,10 @@ export async function updateStallholderDocumentVerificationStatus(req, res) {
     
     connection = await createConnection()
     
-    await connection.query(
-      `UPDATE stallholder_documents 
-       SET verification_status = ?,
-           rejection_reason = ?,
-           verified_by = ?,
-           verified_at = NOW()
-       WHERE document_id = ?`,
-      [verification_status, rejection_reason || null, verified_by || null, document_id]
+    // Update using stored procedure
+    await connection.execute(
+      'CALL sp_updateStallholderDocumentVerification(?, ?, ?, ?)',
+      [document_id, verification_status, rejection_reason || null, verified_by || null]
     )
     
     res.status(200).json({
