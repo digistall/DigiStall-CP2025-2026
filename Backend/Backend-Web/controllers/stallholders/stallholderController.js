@@ -35,19 +35,13 @@ const StallholderController = {
       
       console.log('🔍 Stallholder branchFilter:', branchFilter);
       
-      let query;
-      let params = [];
+      let rows;
       
       if (branchFilter === null) {
-        // System administrator - see all stallholders
+        // System administrator - see all stallholders using stored procedure
         console.log('✅ System admin - fetching all stallholders');
-        query = `
-          SELECT sh.*, b.branch_name, st.stall_no
-          FROM stallholder sh
-          LEFT JOIN branch b ON sh.branch_id = b.branch_id
-          LEFT JOIN stall st ON sh.stall_id = st.stall_id
-          ORDER BY sh.date_created DESC
-        `;
+        const [result] = await connection.execute('CALL sp_getAllStallholdersAll()');
+        rows = result[0] || [];
       } else if (branchFilter.length === 0) {
         // No branches accessible
         console.log('⚠️ No branches accessible');
@@ -57,21 +51,12 @@ const StallholderController = {
           total: 0
         });
       } else {
-        // Filter by accessible branches
+        // Filter by accessible branches using stored procedure
         console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
-        query = `
-          SELECT sh.*, b.branch_name, st.stall_no
-          FROM stallholder sh
-          LEFT JOIN branch b ON sh.branch_id = b.branch_id
-          LEFT JOIN stall st ON sh.stall_id = st.stall_id
-          WHERE sh.branch_id IN (${branchFilter.map(() => '?').join(',')})
-          ORDER BY sh.date_created DESC
-        `;
-        params = branchFilter;
+        const branchIdsString = branchFilter.join(',');
+        const [result] = await connection.execute('CALL sp_getAllStallholdersByBranches(?)', [branchIdsString]);
+        rows = result[0] || [];
       }
-      
-      console.log('📝 Executing query with params:', params);
-      const [rows] = await connection.execute(query, params);
       
       console.log(`✅ Found ${rows.length} stallholders`);
       res.json({

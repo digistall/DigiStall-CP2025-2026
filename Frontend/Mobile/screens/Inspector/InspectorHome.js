@@ -10,6 +10,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
 import ApiService from "../../services/ApiService";
 import UserStorageService from "../../services/UserStorageService";
+import LogoutLoadingScreen from "../../components/Common/LogoutLoadingScreen";
 
 // Inspector nav bar and sidebar components
 import Header from "./InspectorComponents/Header";
@@ -44,6 +45,10 @@ const InspectorHome = ({ navigation }) => {
       return;
     }
     
+    // Close sidebar first
+    setSidebarVisible(false);
+    
+    // Show logout loading screen
     setIsLoggingOut(true);
     
     try {
@@ -59,10 +64,14 @@ const InspectorHome = ({ navigation }) => {
         console.log('✅ Staff logout API called - last_logout updated');
       }
       
+      // Add small delay to show the animation (1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       // Clear local storage
       await UserStorageService.clearUserData();
     } catch (error) {
       console.error('Error during logout:', error);
+      await UserStorageService.clearUserData();
     } finally {
       setIsLoggingOut(false);
     }
@@ -253,6 +262,13 @@ const InspectorHome = ({ navigation }) => {
           activeMenuItem={currentScreen}
           theme={theme}
           isDarkMode={isDarkMode}
+        />
+
+        {/* Logout Loading Screen */}
+        <LogoutLoadingScreen 
+          visible={isLoggingOut}
+          message="Logging out..."
+          subMessage="Please wait while we securely log you out"
         />
       </SafeAreaView>
     </SafeAreaProvider>

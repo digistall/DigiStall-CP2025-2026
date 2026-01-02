@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import UserStorageService from '../../services/UserStorageService';
 import ApiService from '../../services/ApiService';
+import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -44,6 +45,10 @@ const CollectorHome = () => {
       return;
     }
     
+    // Close sidebar first
+    setSidebarVisible(false);
+    
+    // Show logout loading screen
     setIsLoggingOut(true);
     
     try {
@@ -59,6 +64,9 @@ const CollectorHome = () => {
         console.log('✅ Staff logout API called - last_logout updated');
       }
       
+      // Add small delay to show the animation (1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       // Clear local storage
       await UserStorageService.clearUserData();
       navigation.reset({
@@ -67,6 +75,12 @@ const CollectorHome = () => {
       });
     } catch (error) {
       console.error('Error during logout:', error);
+      // Still navigate to login even on error
+      await UserStorageService.clearUserData();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LoginScreen' }],
+      });
     } finally {
       setIsLoggingOut(false);
     }
@@ -260,6 +274,13 @@ const CollectorHome = () => {
 
         {/* Sidebar */}
         {renderSidebar()}
+
+        {/* Logout Loading Screen */}
+        <LogoutLoadingScreen 
+          visible={isLoggingOut}
+          message="Logging out..."
+          subMessage="Please wait while we securely log you out"
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );

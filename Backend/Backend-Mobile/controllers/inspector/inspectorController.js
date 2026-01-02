@@ -168,7 +168,7 @@ export const reportStallholder = async (req, res) => {
 };
 
 /**
- * Get violation types
+ * Get violation types - Uses stored procedure
  * @route GET /api/mobile/inspector/violations
  * @access Protected (Inspector only)
  */
@@ -178,15 +178,9 @@ export const getViolationTypes = async (req, res) => {
   try {
     connection = await createConnection();
     
-    const [violations] = await connection.execute(`
-      SELECT 
-        v.violation_id,
-        v.ordinance_no,
-        v.violation_type,
-        v.details
-      FROM violation v
-      ORDER BY v.violation_type ASC
-    `);
+    // Use stored procedure to get violation types
+    const [violationRows] = await connection.execute('CALL sp_getViolationTypes()');
+    const violations = violationRows[0];
     
     console.log(`✅ Found ${violations.length} violation types`);
     
@@ -212,7 +206,7 @@ export const getViolationTypes = async (req, res) => {
 };
 
 /**
- * Get stallholder details by ID
+ * Get stallholder details by ID - Uses stored procedure
  * @route GET /api/mobile/inspector/stallholders/:id
  * @access Protected (Inspector only)
  */
@@ -228,29 +222,12 @@ export const getStallholderById = async (req, res) => {
     
     connection = await createConnection();
     
-    // Get stallholder with compliance status
-    const [stallholders] = await connection.execute(`
-      SELECT 
-        s.stallholder_id,
-        s.stallholder_name,
-        s.contact_number,
-        s.business_name,
-        s.business_type,
-        s.contract_status,
-        s.compliance_status,
-        s.branch_id,
-        s.stall_id,
-        st.stall_no,
-        st.stall_location,
-        st.floor,
-        st.section,
-        b.branch_name,
-        b.branch_location
-      FROM stallholder s
-      LEFT JOIN stall st ON s.stall_id = st.stall_id
-      LEFT JOIN branch b ON s.branch_id = b.branch_id
-      WHERE s.stallholder_id = ? AND s.branch_id = ?
-    `, [id, branchId]);
+    // Get stallholder with compliance status using stored procedure
+    const [stallholderRows] = await connection.execute(
+      'CALL sp_getStallholderDetailByIdWithBranch(?, ?)',
+      [id, branchId]
+    );
+    const stallholders = stallholderRows[0];
     
     if (stallholders.length === 0) {
       return res.status(404).json({

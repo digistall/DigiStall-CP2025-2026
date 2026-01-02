@@ -289,106 +289,40 @@ const PaymentController = {
       const offset = parseInt(req.query.offset) || 0;
       const search = req.query.search || '';
       
-      console.log('📊 Getting onsite payments with branchFilter:', branchFilter, { limit, offset, search });
+      // Debug logging disabled
       
       let onsiteQuery;
       let queryParams;
       
       if (branchFilter === null) {
-        // System administrator - see all
-        console.log('🔍 Admin user - fetching all onsite payments');
-        onsiteQuery = `
-          SELECT 
-            p.payment_id as id,
-            p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            COALESCE(st.stall_no, 'N/A') as stallNo,
-            p.amount as amountPaid,
-            p.payment_date as paymentDate,
-            p.payment_time as paymentTime,
-            p.payment_for_month as paymentForMonth,
-            p.payment_type as paymentType,
-            'Cash (Onsite)' as paymentMethod,
-            p.reference_number as referenceNo,
-            p.collected_by as collectedBy,
-            p.notes,
-            p.payment_status as status,
-            p.created_at as createdAt,
-            COALESCE(b.branch_name, 'Unknown') as branchName
-          FROM payments p
-          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-          LEFT JOIN stall st ON sh.stall_id = st.stall_id
-          LEFT JOIN branch b ON sh.branch_id = b.branch_id
-          WHERE p.payment_method = 'onsite'
-          AND (
-            ? = '' OR
-            p.reference_number LIKE CONCAT('%', ?, '%') OR
-            sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
-            st.stall_no LIKE CONCAT('%', ?, '%')
-          )
-          ORDER BY p.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        queryParams = [search, search, search, search, limit, offset];
+        // System administrator - see all using stored procedure
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAll(?, ?, ?)`, [search, limit, offset]);
+        const payments = result[0] || [];
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Onsite payments retrieved successfully',
+          data: payments
+        });
       } else if (branchFilter.length === 0) {
         // No branches accessible
-        console.log('⚠️ No branches accessible for onsite payments');
         return res.status(200).json({
           success: true,
           message: 'No payment data available',
           data: []
         });
       } else {
-        // Filter by accessible branches (business owner or manager)
-        const branchPlaceholders = branchFilter.map(() => '?').join(',');
-        console.log(`🔍 Fetching onsite payments for branches: ${branchFilter.join(', ')}`);
+        // Filter by accessible branches using stored procedure
+        const branchIdsString = branchFilter.join(',');
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranches(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const payments = result[0] || [];
         
-        onsiteQuery = `
-          SELECT 
-            p.payment_id as id,
-            p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            COALESCE(st.stall_no, 'N/A') as stallNo,
-            p.amount as amountPaid,
-            p.payment_date as paymentDate,
-            p.payment_time as paymentTime,
-            p.payment_for_month as paymentForMonth,
-            p.payment_type as paymentType,
-            'Cash (Onsite)' as paymentMethod,
-            p.reference_number as referenceNo,
-            p.collected_by as collectedBy,
-            p.notes,
-            p.payment_status as status,
-            p.created_at as createdAt,
-            COALESCE(b.branch_name, 'Unknown') as branchName
-          FROM payments p
-          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-          LEFT JOIN stall st ON sh.stall_id = st.stall_id
-          LEFT JOIN branch b ON sh.branch_id = b.branch_id
-          WHERE sh.branch_id IN (${branchPlaceholders})
-          AND p.payment_method = 'onsite'
-          AND (
-            ? = '' OR
-            p.reference_number LIKE CONCAT('%', ?, '%') OR
-            sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
-            st.stall_no LIKE CONCAT('%', ?, '%')
-          )
-          ORDER BY p.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        queryParams = [...branchFilter, search, search, search, search, limit, offset];
+        return res.status(200).json({
+          success: true,
+          message: 'Onsite payments retrieved successfully',
+          data: payments
+        });
       }
-      
-      // Use query() instead of execute() for better compatibility with IN clauses
-      const [payments] = await connection.query(onsiteQuery, queryParams);
-      
-      console.log('📋 Onsite payments found:', payments.length);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Onsite payments retrieved successfully',
-        data: payments
-      });
       
     } catch (error) {
       console.error('❌ Error fetching onsite payments:', error);
@@ -413,118 +347,39 @@ const PaymentController = {
       // Get branch filter based on user role
       const branchFilter = await getBranchFilter(req, connection);
       
-      console.log('📊 Getting online payments with branchFilter:', branchFilter);
-      
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
       const search = req.query.search || '';
       
-      let onlineQuery;
-      let queryParams;
-      
       if (branchFilter === null) {
-        // System administrator - see all
-        console.log('🔍 Admin user - fetching all online payments');
-        onlineQuery = `
-          SELECT 
-            p.payment_id as id,
-            p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            COALESCE(st.stall_no, 'N/A') as stallNo,
-            p.amount as amountPaid,
-            p.payment_date as paymentDate,
-            p.payment_time as paymentTime,
-            p.payment_for_month as paymentForMonth,
-            p.payment_type as paymentType,
-            CASE 
-              WHEN p.payment_method = 'gcash' THEN 'GCash'
-              WHEN p.payment_method = 'maya' THEN 'Maya'
-              WHEN p.payment_method = 'paymaya' THEN 'PayMaya'
-              WHEN p.payment_method = 'bank_transfer' THEN 'Bank Transfer'
-              ELSE 'Online Payment'
-            END as paymentMethod,
-            p.reference_number as referenceNo,
-            p.notes,
-            p.payment_status as status,
-            p.created_at as createdAt,
-            COALESCE(b.branch_name, 'Unknown') as branchName
-          FROM payments p
-          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-          LEFT JOIN stall st ON sh.stall_id = st.stall_id
-          LEFT JOIN branch b ON sh.branch_id = b.branch_id
-          WHERE p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online')
-          AND (
-            ? = '' OR
-            p.reference_number LIKE CONCAT('%', ?, '%') OR
-            sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
-            st.stall_no LIKE CONCAT('%', ?, '%')
-          )
-          ORDER BY p.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        queryParams = [search, search, search, search, limit, offset];
+        // System administrator - see all using stored procedure
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAll(?, ?, ?)`, [search, limit, offset]);
+        const payments = result[0] || [];
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Online payments retrieved successfully',
+          data: payments
+        });
       } else if (branchFilter.length === 0) {
         // No access
-        console.log('⚠️ User has no branch access');
         return res.status(200).json({
           success: true,
           data: [],
           total: 0
         });
       } else {
-        // Filter by accessible branches
-        console.log(`🔍 Fetching online payments for branches: ${branchFilter.join(', ')}`);
-        onlineQuery = `
-          SELECT 
-            p.payment_id as id,
-            p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            COALESCE(st.stall_no, 'N/A') as stallNo,
-            p.amount as amountPaid,
-            p.payment_date as paymentDate,
-            p.payment_time as paymentTime,
-            p.payment_for_month as paymentForMonth,
-            p.payment_type as paymentType,
-            CASE 
-              WHEN p.payment_method = 'gcash' THEN 'GCash'
-              WHEN p.payment_method = 'maya' THEN 'Maya'
-              WHEN p.payment_method = 'paymaya' THEN 'PayMaya'
-              WHEN p.payment_method = 'bank_transfer' THEN 'Bank Transfer'
-              ELSE 'Online Payment'
-            END as paymentMethod,
-            p.reference_number as referenceNo,
-            p.notes,
-            p.payment_status as status,
-            p.created_at as createdAt,
-            COALESCE(b.branch_name, 'Unknown') as branchName
-          FROM payments p
-          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-          LEFT JOIN stall st ON sh.stall_id = st.stall_id
-          LEFT JOIN branch b ON sh.branch_id = b.branch_id
-          WHERE sh.branch_id IN (${branchFilter.map(() => '?').join(',')})
-          AND p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online')
-          AND (
-            ? = '' OR
-            p.reference_number LIKE CONCAT('%', ?, '%') OR
-            sh.stallholder_name LIKE CONCAT('%', ?, '%') OR
-            st.stall_no LIKE CONCAT('%', ?, '%')
-          )
-          ORDER BY p.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        queryParams = [...branchFilter, search, search, search, search, limit, offset];
+        // Filter by accessible branches using stored procedure
+        const branchIdsString = branchFilter.join(',');
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranches(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const payments = result[0] || [];
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Online payments retrieved successfully',
+          data: payments
+        });
       }
-      
-      // Use query() instead of execute() for better compatibility with IN clauses
-      const [onlinePayments] = await connection.query(onlineQuery, queryParams);
-      
-      console.log('📋 Online payments found:', onlinePayments.length);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Online payments retrieved successfully',
-        data: onlinePayments
-      });
       
     } catch (error) {
       console.error('❌ Error fetching online payments:', error);
@@ -546,14 +401,11 @@ const PaymentController = {
       const { paymentId } = req.params;
       const userInfo = PaymentController.extractUserFromToken(req);
       
-      console.log('✅ Approving payment:', paymentId, 'by:', userInfo.fullName);
+      // Use stored procedure to approve payment
+      const [result] = await connection.execute(`CALL sp_approvePayment(?, ?)`, [paymentId, userInfo.fullName]);
+      const affectedRows = result[0]?.[0]?.affected_rows || 0;
       
-      const [result] = await connection.execute(
-        'UPDATE payment SET payment_status = ?, approved_by = ?, approved_at = NOW() WHERE payment_id = ?',
-        ['approved', userInfo.fullName, paymentId]
-      );
-      
-      if (result.affectedRows === 0) {
+      if (affectedRows === 0) {
         return res.status(404).json({
           success: false,
           message: 'Payment not found'
@@ -586,14 +438,11 @@ const PaymentController = {
       const { reason } = req.body;
       const userInfo = PaymentController.extractUserFromToken(req);
       
-      console.log('❌ Declining payment:', paymentId, 'by:', userInfo.fullName, 'reason:', reason);
+      // Use stored procedure to decline payment
+      const [result] = await connection.execute(`CALL sp_declinePayment(?, ?, ?)`, [paymentId, userInfo.fullName, reason || 'No reason provided']);
+      const affectedRows = result[0]?.[0]?.affected_rows || 0;
       
-      const [result] = await connection.execute(
-        'UPDATE payment SET payment_status = ?, declined_by = ?, declined_at = NOW(), decline_reason = ? WHERE payment_id = ?',
-        ['declined', userInfo.fullName, reason || 'No reason provided', paymentId]
-      );
-      
-      if (result.affectedRows === 0) {
+      if (affectedRows === 0) {
         return res.status(404).json({
           success: false,
           message: 'Payment not found'
@@ -629,36 +478,51 @@ const PaymentController = {
       // Get branch filter for proper multi-branch support
       const branchFilter = await getBranchFilter(req, connection);
       
-      console.log('📊 Getting payment stats with branchFilter:', branchFilter, 'month:', month);
-      
-      let statsQuery;
-      let queryParams;
-      
       if (branchFilter === null) {
-        // System administrator - see all
-        console.log('🔍 Admin user - fetching all payment stats');
-        statsQuery = `
-          SELECT
-            COUNT(*) as totalPayments,
-            SUM(CASE WHEN p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online') THEN 1 ELSE 0 END) as onlinePayments,
-            SUM(CASE WHEN p.payment_method = 'onsite' THEN 1 ELSE 0 END) as onsitePayments,
-            COALESCE(SUM(p.amount), 0) as totalAmount,
-            COALESCE(SUM(CASE WHEN p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online') THEN p.amount ELSE 0 END), 0) as onlineAmount,
-            COALESCE(SUM(CASE WHEN p.payment_method = 'onsite' THEN p.amount ELSE 0 END), 0) as onsiteAmount,
-            COUNT(CASE WHEN p.payment_status = 'completed' THEN 1 END) as completedPayments,
-            COUNT(CASE WHEN p.payment_status = 'pending' THEN 1 END) as pendingPayments,
-            SUM(CASE WHEN p.payment_method = 'gcash' THEN 1 ELSE 0 END) as gcashCount,
-            SUM(CASE WHEN p.payment_method = 'maya' THEN 1 ELSE 0 END) as mayaCount,
-            SUM(CASE WHEN p.payment_method = 'paymaya' THEN 1 ELSE 0 END) as paymayaCount,
-            SUM(CASE WHEN p.payment_method = 'bank_transfer' THEN 1 ELSE 0 END) as bankTransferCount
-          FROM payments p
-          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-          WHERE (? IS NULL OR p.payment_for_month = ?)
-        `;
-        queryParams = [month || null, month || null];
+        // System administrator - see all using stored procedure
+        const [result] = await connection.execute(`CALL sp_getPaymentStatsAll(?)`, [month || '']);
+        const stats = result[0]?.[0] || {
+          totalPayments: 0,
+          onlinePayments: 0,
+          onsitePayments: 0,
+          totalAmount: 0,
+          onlineAmount: 0,
+          onsiteAmount: 0,
+          completedPayments: 0,
+          pendingPayments: 0,
+          gcashCount: 0,
+          mayaCount: 0,
+          paymayaCount: 0,
+          bankTransferCount: 0
+        };
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Payment statistics retrieved successfully',
+          data: {
+            month: month,
+            branchIds: branchFilter,
+            totalPayments: parseInt(stats.totalPayments) || 0,
+            onlinePayments: parseInt(stats.onlinePayments) || 0,
+            onsitePayments: parseInt(stats.onsitePayments) || 0,
+            totalAmount: parseFloat(stats.totalAmount) || 0,
+            onlineAmount: parseFloat(stats.onlineAmount) || 0,
+            onsiteAmount: parseFloat(stats.onsiteAmount) || 0,
+            completedPayments: parseInt(stats.completedPayments) || 0,
+            pendingPayments: parseInt(stats.pendingPayments) || 0,
+            averagePayment: stats.totalPayments > 0 ? parseFloat(stats.totalAmount) / parseInt(stats.totalPayments) : 0,
+            methodBreakdown: {
+              onsite: { count: parseInt(stats.onsitePayments) || 0, amount: parseFloat(stats.onsiteAmount) || 0 },
+              gcash: { count: parseInt(stats.gcashCount) || 0, amount: 0 },
+              maya: { count: parseInt(stats.mayaCount) || 0, amount: 0 },
+              paymaya: { count: parseInt(stats.paymayaCount) || 0, amount: 0 },
+              bank_transfer: { count: parseInt(stats.bankTransferCount) || 0, amount: 0 },
+              online: { count: parseInt(stats.onlinePayments) || 0, amount: parseFloat(stats.onlineAmount) || 0 }
+            }
+          }
+        });
       } else if (branchFilter.length === 0) {
         // No branches accessible
-        console.log('⚠️ No branches accessible for payment stats');
         return res.status(200).json({
           success: true,
           message: 'No payment data available',
@@ -684,76 +548,50 @@ const PaymentController = {
           }
         });
       } else {
-        // Filter by accessible branches (business owner or manager)
-        const branchPlaceholders = branchFilter.map(() => '?').join(',');
-        console.log(`🔍 Fetching payment stats for branches: ${branchFilter.join(', ')}`);
+        // Filter by accessible branches using stored procedure
+        const branchIdsString = branchFilter.join(',');
+        const [result] = await connection.execute(`CALL sp_getPaymentStatsByBranches(?, ?)`, [branchIdsString, month || '']);
+        const stats = result[0]?.[0] || {
+          totalPayments: 0,
+          onlinePayments: 0,
+          onsitePayments: 0,
+          totalAmount: 0,
+          onlineAmount: 0,
+          onsiteAmount: 0,
+          completedPayments: 0,
+          pendingPayments: 0,
+          gcashCount: 0,
+          mayaCount: 0,
+          paymayaCount: 0,
+          bankTransferCount: 0
+        };
         
-        statsQuery = `
-          SELECT
-            COUNT(*) as totalPayments,
-            SUM(CASE WHEN p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online') THEN 1 ELSE 0 END) as onlinePayments,
-            SUM(CASE WHEN p.payment_method = 'onsite' THEN 1 ELSE 0 END) as onsitePayments,
-            COALESCE(SUM(p.amount), 0) as totalAmount,
-            COALESCE(SUM(CASE WHEN p.payment_method IN ('gcash', 'maya', 'paymaya', 'bank_transfer', 'online') THEN p.amount ELSE 0 END), 0) as onlineAmount,
-            COALESCE(SUM(CASE WHEN p.payment_method = 'onsite' THEN p.amount ELSE 0 END), 0) as onsiteAmount,
-            COUNT(CASE WHEN p.payment_status = 'completed' THEN 1 END) as completedPayments,
-            COUNT(CASE WHEN p.payment_status = 'pending' THEN 1 END) as pendingPayments,
-            SUM(CASE WHEN p.payment_method = 'gcash' THEN 1 ELSE 0 END) as gcashCount,
-            SUM(CASE WHEN p.payment_method = 'maya' THEN 1 ELSE 0 END) as mayaCount,
-            SUM(CASE WHEN p.payment_method = 'paymaya' THEN 1 ELSE 0 END) as paymayaCount,
-            SUM(CASE WHEN p.payment_method = 'bank_transfer' THEN 1 ELSE 0 END) as bankTransferCount
-          FROM payments p
-          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
-          WHERE sh.branch_id IN (${branchPlaceholders})
-          AND (? IS NULL OR p.payment_for_month = ?)
-        `;
-        queryParams = [...branchFilter, month || null, month || null];
-      }
-      
-      const [statsResult] = await connection.execute(statsQuery, queryParams);
-      
-      const stats = statsResult[0] || {
-        totalPayments: 0,
-        onlinePayments: 0,
-        onsitePayments: 0,
-        totalAmount: 0,
-        onlineAmount: 0,
-        onsiteAmount: 0,
-        completedPayments: 0,
-        pendingPayments: 0,
-        gcashCount: 0,
-        mayaCount: 0,
-        paymayaCount: 0,
-        bankTransferCount: 0
-      };
-      
-      console.log('📊 Payment stats retrieved:', stats);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Payment statistics retrieved successfully',
-        data: {
-          month: month,
-          branchIds: branchFilter,
-          totalPayments: parseInt(stats.totalPayments) || 0,
-          onlinePayments: parseInt(stats.onlinePayments) || 0,
-          onsitePayments: parseInt(stats.onsitePayments) || 0,
-          totalAmount: parseFloat(stats.totalAmount) || 0,
-          onlineAmount: parseFloat(stats.onlineAmount) || 0,
-          onsiteAmount: parseFloat(stats.onsiteAmount) || 0,
-          completedPayments: parseInt(stats.completedPayments) || 0,
-          pendingPayments: parseInt(stats.pendingPayments) || 0,
-          averagePayment: stats.totalPayments > 0 ? parseFloat(stats.totalAmount) / parseInt(stats.totalPayments) : 0,
-          methodBreakdown: {
-            onsite: { count: parseInt(stats.onsitePayments) || 0, amount: parseFloat(stats.onsiteAmount) || 0 },
-            gcash: { count: parseInt(stats.gcashCount) || 0, amount: 0 },
-            maya: { count: parseInt(stats.mayaCount) || 0, amount: 0 },
-            paymaya: { count: parseInt(stats.paymayaCount) || 0, amount: 0 },
-            bank_transfer: { count: parseInt(stats.bankTransferCount) || 0, amount: 0 },
-            online: { count: parseInt(stats.onlinePayments) || 0, amount: parseFloat(stats.onlineAmount) || 0 }
+        return res.status(200).json({
+          success: true,
+          message: 'Payment statistics retrieved successfully',
+          data: {
+            month: month,
+            branchIds: branchFilter,
+            totalPayments: parseInt(stats.totalPayments) || 0,
+            onlinePayments: parseInt(stats.onlinePayments) || 0,
+            onsitePayments: parseInt(stats.onsitePayments) || 0,
+            totalAmount: parseFloat(stats.totalAmount) || 0,
+            onlineAmount: parseFloat(stats.onlineAmount) || 0,
+            onsiteAmount: parseFloat(stats.onsiteAmount) || 0,
+            completedPayments: parseInt(stats.completedPayments) || 0,
+            pendingPayments: parseInt(stats.pendingPayments) || 0,
+            averagePayment: stats.totalPayments > 0 ? parseFloat(stats.totalAmount) / parseInt(stats.totalPayments) : 0,
+            methodBreakdown: {
+              onsite: { count: parseInt(stats.onsitePayments) || 0, amount: parseFloat(stats.onsiteAmount) || 0 },
+              gcash: { count: parseInt(stats.gcashCount) || 0, amount: 0 },
+              maya: { count: parseInt(stats.mayaCount) || 0, amount: 0 },
+              paymaya: { count: parseInt(stats.paymayaCount) || 0, amount: 0 },
+              bank_transfer: { count: parseInt(stats.bankTransferCount) || 0, amount: 0 },
+              online: { count: parseInt(stats.onlinePayments) || 0, amount: parseFloat(stats.onlineAmount) || 0 }
+            }
           }
-        }
-      });
+        });
+      }
       
     } catch (error) {
       console.error('❌ Error fetching payment stats:', error);
