@@ -548,6 +548,20 @@ export const logout = async (req, res) => {
               checkRows = checkResult[0] || [];
               if (checkRows.length > 0) {
                 [result] = await connection.execute('CALL sp_updateBusinessEmployeeLastLogout(?, ?)', [userId, philippineTime]);
+                // Also deactivate the employee session for online status tracking
+                try {
+                  await connection.execute(`
+                    UPDATE employee_session 
+                    SET is_active = 0, 
+                        logout_time = ?,
+                        last_activity = ?
+                    WHERE business_employee_id = ? 
+                      AND is_active = 1
+                  `, [philippineTime, philippineTime, userId]);
+                  console.log(`✅ Employee session deactivated for ID ${userId}`);
+                } catch (sessionError) {
+                  console.error('⚠️ Failed to deactivate employee session:', sessionError.message);
+                }
               }
             }
             break;
