@@ -1,57 +1,55 @@
 <template>
-  <Teleport to="body">
-    <Transition name="fade">
-      <div v-if="isVisible" class="logout-overlay">
-        <div class="logout-container">
-          <!-- Animated logout icon -->
-          <div class="logout-icon-wrapper">
-            <svg class="logout-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path 
-                class="door" 
-                d="M15 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21H15" 
-                stroke="currentColor" 
-                stroke-width="2" 
-                stroke-linecap="round"
-              />
-              <path 
-                class="arrow" 
-                d="M10 17L15 12L10 7" 
-                stroke="currentColor" 
-                stroke-width="2" 
-                stroke-linecap="round" 
-                stroke-linejoin="round"
-              />
-              <path 
-                class="line" 
-                d="M15 12H3" 
-                stroke="currentColor" 
-                stroke-width="2" 
-                stroke-linecap="round"
-              />
-            </svg>
-          </div>
-          
-          <!-- Loading spinner -->
-          <div class="spinner-container">
-            <div class="spinner"></div>
-          </div>
-          
-          <!-- Text -->
-          <div class="logout-text">
-            <h2>Logging out...</h2>
-            <p>{{ message }}</p>
-          </div>
-          
-          <!-- Progress dots -->
-          <div class="progress-dots">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </div>
+  <Transition name="fade">
+    <div v-if="isVisible" class="logout-overlay">
+      <div class="logout-container">
+        <!-- Animated logout icon -->
+        <div class="logout-icon-wrapper">
+          <svg class="logout-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path 
+              class="door" 
+              d="M15 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21H15" 
+              stroke="currentColor" 
+              stroke-width="2" 
+              stroke-linecap="round"
+            />
+            <path 
+              class="arrow" 
+              d="M10 17L15 12L10 7" 
+              stroke="currentColor" 
+              stroke-width="2" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+            />
+            <path 
+              class="line" 
+              d="M15 12H3" 
+              stroke="currentColor" 
+              stroke-width="2" 
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+        
+        <!-- Loading spinner -->
+        <div class="spinner-container">
+          <div class="spinner"></div>
+        </div>
+        
+        <!-- Text -->
+        <div class="logout-text">
+          <h2>Logging out...</h2>
+          <p>{{ message }}</p>
+        </div>
+        
+        <!-- Progress dots -->
+        <div class="progress-dots">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+  </Transition>
 </template>
 
 <script>

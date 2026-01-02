@@ -281,6 +281,9 @@ export async function getInspectorsByBranch(req, res) {
         const branchId = req.query.branchId || req.user?.branchId;
 
         connection = await createConnection();
+        
+        // Set session timezone to Philippine time for correct timestamp conversion
+        await connection.execute(`SET time_zone = '+08:00'`);
 
         let inspectors;
 
@@ -325,6 +328,9 @@ export async function getCollectorsByBranch(req, res) {
         const branchId = req.query.branchId || req.user?.branchId;
 
         connection = await createConnection();
+        
+        // Set session timezone to Philippine time for correct timestamp conversion
+        await connection.execute(`SET time_zone = '+08:00'`);
 
         // Check if table exists first using stored procedure
         const [tableResult] = await connection.execute('CALL sp_checkCollectorTableExists()');

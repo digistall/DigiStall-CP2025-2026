@@ -594,6 +594,9 @@ export async function getActiveSessions(req, res) {
     try {
         connection = await createConnection();
         
+        // Set session timezone to Philippine time for correct timestamp conversion
+        await connection.execute(`SET time_zone = '+08:00'`);
+        
         let employeeSessions = [];
         let staffSessions = [];
         

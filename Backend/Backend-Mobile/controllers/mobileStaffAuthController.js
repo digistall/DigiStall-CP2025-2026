@@ -225,18 +225,21 @@ export const mobileStaffLogin = async (req, res) => {
         const philippineTime = getPhilippineTime();
         console.log(`📅 Updating last_login for ${staffType} ${staffId} at ${philippineTime}`);
         
+        // Set session timezone to Philippine time
+        await connection.execute(`SET time_zone = '+08:00'`);
+        
         // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
-        // Update last_login in inspector/collector table
+        // Update last_login in inspector/collector table using NOW() with correct timezone
         if (staffType === 'inspector') {
             await connection.execute(
-                `UPDATE inspector SET last_login = ? WHERE inspector_id = ?`,
-                [philippineTime, staffId]
+                `UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`,
+                [staffId]
             );
             console.log(`✅ Updated last_login for inspector ${staffId}`);
         } else {
             await connection.execute(
-                `UPDATE collector SET last_login = ? WHERE collector_id = ?`,
-                [philippineTime, staffId]
+                `UPDATE collector SET last_login = NOW() WHERE collector_id = ?`,
+                [staffId]
             );
             console.log(`✅ Updated last_login for collector ${staffId}`);
         }
@@ -244,27 +247,31 @@ export const mobileStaffLogin = async (req, res) => {
         // Create/update staff session for online status tracking (DIRECT SQL)
         console.log(`📊 Creating/updating staff session for ${staffType} ${staffId}...`);
         try {
+            // Set session timezone to Philippine time to ensure correct timestamp storage
+            await connection.execute(`SET time_zone = '+08:00'`);
+            
             // First, deactivate any old sessions for this staff
             await connection.execute(
                 `UPDATE staff_session SET is_active = 0 WHERE staff_id = ? AND staff_type = ?`,
                 [staffId, staffType]
             );
             
-            // Insert new active session with Philippine time
+            // Insert new active session with Philippine time (NOW() will use the session timezone)
             await connection.execute(
                 `INSERT INTO staff_session (staff_id, staff_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-                [staffId, staffType, token, req.ip || req.connection?.remoteAddress || 'unknown', req.get('User-Agent') || 'Mobile App', philippineTime, philippineTime]
+                 VALUES (?, ?, ?, ?, ?, NOW(), NOW(), 1)`,
+                [staffId, staffType, token, req.ip || req.connection?.remoteAddress || 'unknown', req.get('User-Agent') || 'Mobile App']
             );
             console.log(`✅ Staff session created for ${staffType}: ${staffData.first_name} at ${philippineTime}`);
         } catch (sessionError) {
             console.error('❌ Failed to create staff session:', sessionError.message);
             // Try with minimal columns in case table schema is different
             try {
+                await connection.execute(`SET time_zone = '+08:00'`);
                 await connection.execute(
                     `INSERT INTO staff_session (staff_id, staff_type, is_active, login_time, last_activity) 
-                     VALUES (?, ?, 1, ?, ?)`,
-                    [staffId, staffType, philippineTime, philippineTime]
+                     VALUES (?, ?, 1, NOW(), NOW())`,
+                    [staffId, staffType]
                 );
                 console.log(`✅ Staff session created (minimal) for ${staffType}: ${staffData.first_name}`);
             } catch (fallbackError) {
@@ -341,19 +348,22 @@ export const mobileStaffLogout = async (req, res) => {
         console.log('='.repeat(60));
         
         if (staffId && staffType) {
+            // Set session timezone to Philippine time
+            await connection.execute(`SET time_zone = '+08:00'`);
+            
             // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
-            // Update last_logout
+            // Update last_logout using NOW() with correct timezone
             if (staffType === 'inspector') {
-                await connection.execute(`UPDATE inspector SET last_logout = ? WHERE inspector_id = ?`, [philippineTime, staffId]);
+                await connection.execute(`UPDATE inspector SET last_logout = NOW() WHERE inspector_id = ?`, [staffId]);
                 console.log(`✅ Updated last_logout for inspector ${staffId}`);
             } else if (staffType === 'collector') {
-                await connection.execute(`UPDATE collector SET last_logout = ? WHERE collector_id = ?`, [philippineTime, staffId]);
+                await connection.execute(`UPDATE collector SET last_logout = NOW() WHERE collector_id = ?`, [staffId]);
                 console.log(`✅ Updated last_logout for collector ${staffId}`);
             }
             
-            // End staff session (set is_active = 0)
+            // End staff session (set is_active = 0) using NOW() for logout_time and last_activity
             await connection.execute(
-                `UPDATE staff_session SET is_active = 0, logout_time = CURRENT_TIMESTAMP WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+                `UPDATE staff_session SET is_active = 0, logout_time = NOW(), last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
                 [staffId, staffType]
             );
             console.log(`✅ Staff session ended for ${staffType} ${staffId}`);
