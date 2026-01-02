@@ -19,6 +19,12 @@
         <router-view />
       </v-container>
     </v-main>
+
+    <!-- Logout Loading Screen -->
+    <LogoutLoadingScreen 
+      :isVisible="isLoggingOut" 
+      message="Please wait while we securely log you out"
+    />
   </v-app>
 </template>
 
