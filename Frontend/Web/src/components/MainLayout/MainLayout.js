@@ -1,13 +1,15 @@
 import AppHeader from '../Admin/AppHeader/AppHeader.vue'
 import AppSidebar from '../Admin/AppSidebar/AppSidebar.vue'
+import LogoutLoadingScreen from '../Common/LogoutLoadingScreen/LogoutLoadingScreen.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 export default {
   name: 'MainLayout',
-  components: { AppSidebar, AppHeader },
+  components: { AppSidebar, AppHeader, LogoutLoadingScreen },
   data() {
     return {
       pageTitle: 'Dashboard',
+      isLoggingOut: false,
       // Base menu items - will be updated based on user type
       menuItems: [],
       // Define menu items for different user types
@@ -200,16 +202,35 @@ export default {
       console.log('Settings clicked')
     },
     async handleLogoutClick() {
-      console.log('Logout clicked - calling authStore.logout()')
+      console.log('Logout clicked - showing loading screen and calling authStore.logout()')
       
-      // Call authStore.logout() which handles API call to update last_logout
-      const authStore = useAuthStore()
-      await authStore.logout()
+      // Show logout loading screen
+      this.isLoggingOut = true
       
-      // Redirect to login page
-      this.$router.push('/').catch(() => {
-        window.location.href = '/'
-      })
+      try {
+        // Call authStore.logout() which handles API call to update last_logout
+        const authStore = useAuthStore()
+        await authStore.logout()
+        
+        // Small delay to show the animation
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        // Redirect to login page
+        this.$router.push('/').catch(() => {
+          window.location.href = '/'
+        })
+      } catch (error) {
+        console.error('Logout error:', error)
+        // Still redirect even on error
+        this.$router.push('/').catch(() => {
+          window.location.href = '/'
+        })
+      } finally {
+        // Hide loading screen (in case redirect doesn't happen immediately)
+        setTimeout(() => {
+          this.isLoggingOut = false
+        }, 500)
+      }
     },
 
     // NEW: Method to refresh sidebar stall types (can be called when stalls are modified)
