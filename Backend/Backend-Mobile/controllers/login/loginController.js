@@ -17,34 +17,42 @@ export const mobileLogin = async (req, res) => {
       })
     }
 
-    // Step 1: Get applicant credentials and basic info
+    // Step 1: Get applicant credentials and basic info - DIRECT SQL with COLLATE fix
     console.log('🔍 Looking up user:', username)
     
-    // TEMPORARY FIX: Use direct SQL query instead of stored procedure
-    console.log('🛠️ Using direct SQL query as workaround...')
-    const [credentialRows] = await connection.execute(`
-      SELECT 
-        c.registrationid,
-        c.applicant_id,
-        c.user_name,
-        c.password_hash,
-        c.created_date,
-        c.last_login,
-        c.is_active,
-        a.applicant_full_name,
-        a.applicant_contact_number,
-        a.applicant_address,
-        a.applicant_birthdate,
-        a.applicant_civil_status,
-        a.applicant_educational_attainment,
-        COALESCE(a.applicant_email, oi.email_address) as applicant_email
-      FROM credential c
-      INNER JOIN applicant a ON c.applicant_id = a.applicant_id
-      LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
-      WHERE c.user_name = ? 
-        AND c.is_active = 1
-      LIMIT 1
-    `, [username])
+    let credentialRows = [];
+    try {
+      const [credentialResultRows] = await connection.execute(
+        'CALL sp_getCredentialWithApplicant(?)',
+        [username]
+      );
+      credentialRows = credentialResultRows[0] || [];
+    } catch (spError) {
+      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
+      // Fallback to direct SQL with COLLATE to fix collation mismatch
+      // NOTE: The applicant table uses applicant_full_name (not separate first/middle/last name columns)
+      const [directRows] = await connection.execute(`
+        SELECT 
+          c.registrationid,
+          c.applicant_id,
+          c.user_name,
+          c.password_hash,
+          c.is_active,
+          a.applicant_full_name,
+          a.applicant_contact_number,
+          a.applicant_address,
+          a.applicant_birthdate,
+          a.applicant_civil_status,
+          a.applicant_educational_attainment,
+          a.applicant_email
+        FROM credential c
+        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
+          AND c.is_active = 1
+        LIMIT 1
+      `, [username]);
+      credentialRows = directRows;
+    }
 
     console.log('📋 Credential rows found:', credentialRows.length)
     console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
@@ -66,7 +74,6 @@ export const mobileLogin = async (req, res) => {
       has_password_hash: !!userCredentials.password_hash,
       password_hash_preview: userCredentials.password_hash?.substring(0, 15) + '...',
       applicant_full_name: userCredentials.applicant_full_name,
-      applicant_email: userCredentials.applicant_email,
       is_active: userCredentials.is_active
     })
 
@@ -165,59 +172,22 @@ export const mobileLogin = async (req, res) => {
       : {}
     console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
-    // Step 7b: Get stallholder information if user is a stallholder
-    const [stallholderResult] = await connection.execute(`
-      SELECT 
-        sh.stallholder_id,
-        sh.stallholder_name,
-        sh.business_name,
-        sh.business_type,
-        sh.contact_number as stallholder_contact,
-        sh.email as stallholder_email,
-        sh.address as stallholder_address,
-        sh.branch_id,
-        sh.stall_id,
-        sh.contract_start_date,
-        sh.contract_end_date,
-        sh.contract_status,
-        sh.compliance_status,
-        sh.payment_status,
-        s.stall_no,
-        s.size,
-        s.rental_price as monthly_rent,
-        s.stall_location,
-        b.branch_name,
-        b.area as branch_area
-      FROM stallholder sh
-      INNER JOIN stall s ON sh.stall_id = s.stall_id
-      INNER JOIN branch b ON sh.branch_id = b.branch_id
-      WHERE sh.applicant_id = ?
-      LIMIT 1
-    `, [userCredentials.applicant_id])
+    // Step 7b: Get stallholder information if user is a stallholder using stored procedure
+    const [stallholderRows] = await connection.execute(
+      'CALL sp_getFullStallholderInfo(?)',
+      [userCredentials.applicant_id]
+    )
     
-    const stallholderInfo = stallholderResult.length > 0 ? stallholderResult[0] : null
+    const stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
     console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
-    // Step 7c: Get application status
-    const [applicationResult] = await connection.execute(`
-      SELECT 
-        app.application_id,
-        app.stall_id,
-        app.application_status as status,
-        app.application_date,
-        s.stall_no,
-        s.rental_price,
-        b.branch_name
-      FROM application app
-      INNER JOIN stall s ON app.stall_id = s.stall_id
-      INNER JOIN floor f ON s.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ?
-      ORDER BY app.application_date DESC
-      LIMIT 1
-    `, [userCredentials.applicant_id])
+    // Step 7c: Get application status using stored procedure
+    const [applicationRows] = await connection.execute(
+      'CALL sp_getLatestApplicationInfo(?)',
+      [userCredentials.applicant_id]
+    )
     
-    const applicationInfo = applicationResult.length > 0 ? applicationResult[0] : null
+    const applicationInfo = applicationRows[0]?.length > 0 ? applicationRows[0][0] : null
     console.log('📄 Application info:', applicationInfo ? applicationInfo.status : 'No application')
 
     // Step 8: Update last login using stored procedure
@@ -378,7 +348,7 @@ export const mobileLogin = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message // Always show error message for debugging
     })
   } finally {
     await connection.end()
@@ -434,17 +404,12 @@ export const submitApplication = async (req, res) => {
       })
     }
 
-    // Check 2-application limit per branch
-    // TEMPORARY FIX: Use direct SQL query instead of stored procedure
-    const [branchApplications] = await connection.execute(`
-      SELECT COUNT(*) as count 
-      FROM application app
-      JOIN stall s ON app.stall_id = s.stall_id
-      JOIN section sec ON s.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ? AND b.branch_id = ?
-    `, [applicant_id, stall.branch_id])
+    // Check 2-application limit per branch using stored procedure
+    const [branchAppRows] = await connection.execute(
+      'CALL sp_countBranchApplicationsForApplicant(?, ?)',
+      [applicant_id, stall.branch_id]
+    )
+    const branchApplications = branchAppRows[0]
 
     if (branchApplications[0].count >= 2) {
       return res.status(400).json({

@@ -42,14 +42,15 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
 
-// Add request logging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-  }
-  next();
-});
+// Request logging disabled to prevent console flooding
+// Enable for debugging: uncomment below
+// app.use((req, res, next) => {
+//   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+//   if (req.body && Object.keys(req.body).length > 0) {
+//     console.log('Request body:', JSON.stringify(req.body, null, 2));
+//   }
+//   next();
+// });
 
 // ===== ROUTES =====
 

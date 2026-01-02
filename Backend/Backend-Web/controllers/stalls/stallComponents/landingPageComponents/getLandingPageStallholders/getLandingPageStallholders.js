@@ -3,7 +3,7 @@ import { createConnection } from '../../../../../config/database.js';
 /**
  * Get landing page stallholders list
  * Returns paginated list of active stallholders with search and filter
- * Uses direct query to avoid collation issues with stored procedures on DigitalOcean
+ * Uses stored procedure with dynamic SQL for collation handling on DigitalOcean
  * 
  * @route GET /api/stalls/public/stallholders
  * @access Public
@@ -24,63 +24,18 @@ export const getLandingPageStallholders = async (req, res) => {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 20;
     const offset = (pageNum - 1) * limitNum;
-    const searchPattern = search ? `%${search}%` : null;
+    const searchTerm = search || null;
     const branchFilter = branch ? parseInt(branch) : null;
+    const businessTypeFilter = businessType || null;
     
-    // Build query dynamically to avoid collation issues
-    let query = `
-      SELECT 
-        sh.stallholder_id,
-        sh.stallholder_name,
-        sh.business_name,
-        sh.business_type,
-        sh.contact_number,
-        sh.email,
-        s.stall_no,
-        s.stall_location,
-        b.branch_name,
-        b.branch_id,
-        sh.contract_status,
-        sh.compliance_status
-      FROM stallholder sh
-      LEFT JOIN stall s ON sh.stall_id = s.stall_id
-      LEFT JOIN branch b ON sh.branch_id = b.branch_id
-      WHERE sh.contract_status = 'Active'
-    `;
+    console.log('📊 Executing stallholders SP with params:', { searchTerm, branchFilter, businessTypeFilter, limitNum, offset });
     
-    const params = [];
-    
-    // Add search filter with COLLATE to handle collation differences
-    if (searchPattern) {
-      query += ` AND (
-        sh.stallholder_name COLLATE utf8mb4_unicode_ci LIKE ? COLLATE utf8mb4_unicode_ci OR
-        sh.business_name COLLATE utf8mb4_unicode_ci LIKE ? COLLATE utf8mb4_unicode_ci OR
-        sh.business_type COLLATE utf8mb4_unicode_ci LIKE ? COLLATE utf8mb4_unicode_ci OR
-        s.stall_no COLLATE utf8mb4_unicode_ci LIKE ? COLLATE utf8mb4_unicode_ci OR
-        b.branch_name COLLATE utf8mb4_unicode_ci LIKE ? COLLATE utf8mb4_unicode_ci
-      )`;
-      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
-    }
-    
-    // Add branch filter
-    if (branchFilter) {
-      query += ` AND sh.branch_id = ?`;
-      params.push(branchFilter);
-    }
-    
-    // Add business type filter
-    if (businessType && businessType !== '') {
-      query += ` AND sh.business_type COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci`;
-      params.push(businessType);
-    }
-    
-    // Add ordering and pagination - embed LIMIT/OFFSET directly to avoid prepared statement issues
-    query += ` ORDER BY sh.stallholder_name ASC LIMIT ${limitNum} OFFSET ${offset}`;
-    
-    console.log('📊 Executing stallholders query with params:', params);
-    
-    // Use query() instead of execute() to avoid prepared statement issues
-    const [stallholders] = await connection.query(query, params);
+    // Use stored procedure for landing page stallholders
+    const [rows] = await connection.execute(
+      'CALL sp_getLandingPageStallholdersList(?, ?, ?, ?, ?)',
+      [searchTerm, branchFilter, businessTypeFilter, limitNum, offset]
+    );
+    const stallholders = rows[0];
     
     console.log(`📊 Landing page stallholders fetched: ${stallholders.length} records`);
     
