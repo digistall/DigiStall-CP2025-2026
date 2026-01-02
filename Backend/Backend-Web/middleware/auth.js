@@ -57,14 +57,7 @@ const authenticateToken = (req, res, next) => {
         role: userType, // Use the actual userType instead of defaulting
       };
 
-      console.log("🔍 Authenticated user details:", {
-        username: req.user.username,
-        userType: req.user.userType,
-        role: req.user.role,
-        userId: req.user.userId,
-        branchId: req.user.branchId, // ✅ Log branchId
-        permissions: req.user.permissions, // ✅ Log permissions
-      });
+      // User authenticated silently
 
       next();
     }

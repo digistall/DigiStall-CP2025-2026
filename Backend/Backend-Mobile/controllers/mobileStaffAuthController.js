@@ -41,12 +41,8 @@ async function logStaffActivity(activityData) {
 
         const philippineTime = getPhilippineTime();
         
-        await connection.execute(`
-            INSERT INTO staff_activity_log 
-            (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-             module, ip_address, user_agent, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
+        // Use stored procedure for activity logging
+        await connection.execute(`CALL sp_logStaffActivity(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             staffType,
             staffId,
             staffName,
@@ -88,63 +84,72 @@ export const mobileStaffLogin = async (req, res) => {
             });
         }
         
-        // Try to find inspector first
+        // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
         let staffData = null;
         let staffType = null;
         
-        // Check inspector table (inspector table uses 'password' column, not 'password_hash')
-        const [inspectors] = await connection.execute(`
-            SELECT 
-                i.inspector_id as staff_id,
-                i.username,
-                i.first_name,
-                i.last_name,
-                i.middle_name,
-                i.email,
-                i.contact_no,
-                i.status,
-                i.password as password_hash,
-                ia.branch_id,
-                b.branch_name
-            FROM inspector i
-            LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
-            LEFT JOIN branch b ON ia.branch_id = b.branch_id
-            WHERE (i.username = ? OR i.email = ?)
-              AND i.status = 'active'
-            LIMIT 1
-        `, [username, username]);
-        
-        if (inspectors.length > 0) {
-            staffData = inspectors[0];
-            staffType = 'inspector';
-            console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
-        } else {
-            // Check collector table
-            const [collectors] = await connection.execute(`
+        // Check inspector table first (with COLLATE to fix collation mismatch)
+        // NOTE: Inspector table only has 'password' column (not password_hash)
+        try {
+            const [inspectors] = await connection.execute(`
                 SELECT 
-                    c.collector_id as staff_id,
-                    c.username,
-                    c.first_name,
-                    c.last_name,
-                    c.middle_name,
-                    c.email,
-                    c.contact_no,
-                    c.status,
-                    c.password_hash,
-                    ca.branch_id,
+                    i.inspector_id,
+                    i.username,
+                    i.first_name,
+                    i.last_name,
+                    i.email,
+                    i.password as password_hash,
+                    i.contact_no,
+                    i.status,
+                    ia.branch_id,
                     b.branch_name
-                FROM collector c
-                LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
-                LEFT JOIN branch b ON ca.branch_id = b.branch_id
-                WHERE (c.username = ? OR c.email = ?)
-                  AND c.status = 'active'
+                FROM inspector i
+                LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status COLLATE utf8mb4_general_ci = 'Active'
+                LEFT JOIN branch b ON ia.branch_id = b.branch_id
+                WHERE i.username COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci 
+                  AND i.status COLLATE utf8mb4_general_ci = 'active'
                 LIMIT 1
-            `, [username, username]);
+            `, [username]);
             
-            if (collectors.length > 0) {
-                staffData = collectors[0];
-                staffType = 'collector';
-                console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
+            if (inspectors && inspectors.length > 0) {
+                staffData = inspectors[0];
+                staffType = 'inspector';
+                console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
+            }
+        } catch (err) {
+            console.warn('⚠️ Error checking inspector:', err.message);
+        }
+        
+        // If not inspector, check collector table (with COLLATE to fix collation mismatch)
+        if (!staffData) {
+            try {
+                const [collectors] = await connection.execute(`
+                    SELECT 
+                        c.collector_id,
+                        c.username,
+                        c.first_name,
+                        c.last_name,
+                        c.email,
+                        c.password_hash,
+                        c.contact_no,
+                        c.status,
+                        ca.branch_id,
+                        b.branch_name
+                    FROM collector c
+                    LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status COLLATE utf8mb4_general_ci = 'Active'
+                    LEFT JOIN branch b ON ca.branch_id = b.branch_id
+                    WHERE c.username COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci 
+                      AND c.status COLLATE utf8mb4_general_ci = 'active'
+                    LIMIT 1
+                `, [username]);
+                
+                if (collectors && collectors.length > 0) {
+                    staffData = collectors[0];
+                    staffType = 'collector';
+                    console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
+                }
+            } catch (err) {
+                console.warn('⚠️ Error checking collector:', err.message);
             }
         }
         
@@ -196,12 +201,17 @@ export const mobileStaffLogin = async (req, res) => {
         
         console.log('✅ Password verified for:', username);
         
+        // Get the correct staff ID field based on type
+        // The stored procedures return the ID as 'staff_id' (aliased)
+        // Fallback to inspector_id/collector_id for backwards compatibility
+        const staffId = staffData.staff_id || (staffType === 'inspector' ? staffData.inspector_id : staffData.collector_id);
+        
         // Generate JWT token
         const token = jwt.sign(
             {
-                staffId: staffData.staff_id,
+                staffId: staffId,
                 staffType: staffType,
-                userId: staffData.staff_id,
+                userId: staffId,
                 userType: staffType,
                 email: staffData.email,
                 branchId: staffData.branch_id,
@@ -211,24 +221,61 @@ export const mobileStaffLogin = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
         
-        // Update last login with Philippine time
+        // Update last login with Philippine time - DIRECT SQL (more reliable than stored procedures)
         const philippineTime = getPhilippineTime();
+        console.log(`📅 Updating last_login for ${staffType} ${staffId} at ${philippineTime}`);
+        
+        // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
+        // Update last_login in inspector/collector table
         if (staffType === 'inspector') {
             await connection.execute(
-                "UPDATE inspector SET last_login = ? WHERE inspector_id = ?",
-                [philippineTime, staffData.staff_id]
+                `UPDATE inspector SET last_login = ? WHERE inspector_id = ?`,
+                [philippineTime, staffId]
             );
+            console.log(`✅ Updated last_login for inspector ${staffId}`);
         } else {
             await connection.execute(
-                "UPDATE collector SET last_login = ? WHERE collector_id = ?",
-                [philippineTime, staffData.staff_id]
+                `UPDATE collector SET last_login = ? WHERE collector_id = ?`,
+                [philippineTime, staffId]
             );
+            console.log(`✅ Updated last_login for collector ${staffId}`);
+        }
+        
+        // Create/update staff session for online status tracking (DIRECT SQL)
+        console.log(`📊 Creating/updating staff session for ${staffType} ${staffId}...`);
+        try {
+            // First, deactivate any old sessions for this staff
+            await connection.execute(
+                `UPDATE staff_session SET is_active = 0 WHERE staff_id = ? AND staff_type = ?`,
+                [staffId, staffType]
+            );
+            
+            // Insert new active session with Philippine time
+            await connection.execute(
+                `INSERT INTO staff_session (staff_id, staff_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+                [staffId, staffType, token, req.ip || req.connection?.remoteAddress || 'unknown', req.get('User-Agent') || 'Mobile App', philippineTime, philippineTime]
+            );
+            console.log(`✅ Staff session created for ${staffType}: ${staffData.first_name} at ${philippineTime}`);
+        } catch (sessionError) {
+            console.error('❌ Failed to create staff session:', sessionError.message);
+            // Try with minimal columns in case table schema is different
+            try {
+                await connection.execute(
+                    `INSERT INTO staff_session (staff_id, staff_type, is_active, login_time, last_activity) 
+                     VALUES (?, ?, 1, ?, ?)`,
+                    [staffId, staffType, philippineTime, philippineTime]
+                );
+                console.log(`✅ Staff session created (minimal) for ${staffType}: ${staffData.first_name}`);
+            } catch (fallbackError) {
+                console.error('❌ Fallback session creation also failed:', fallbackError.message);
+            }
         }
         
         // Log the login activity
         await logStaffActivity({
             staffType: staffType,
-            staffId: staffData.staff_id,
+            staffId: staffId,
             staffName: `${staffData.first_name} ${staffData.last_name}`,
             branchId: staffData.branch_id,
             actionType: 'LOGIN',
@@ -246,8 +293,8 @@ export const mobileStaffLogin = async (req, res) => {
             message: `${staffType.charAt(0).toUpperCase() + staffType.slice(1)} login successful`,
             token,
             user: {
-                id: staffData.staff_id,
-                staffId: staffData.staff_id,
+                id: staffId,
+                staffId: staffId,
                 staffType: staffType,
                 role: staffType,
                 userType: staffType,
@@ -289,48 +336,37 @@ export const mobileStaffLogout = async (req, res) => {
         console.log('='.repeat(60));
         console.log('📱 MOBILE STAFF LOGOUT REQUEST');
         console.log('📱 Timestamp:', new Date().toISOString());
-        console.log('📱 req.body:', JSON.stringify(req.body, null, 2));
-        console.log('📱 req.user:', JSON.stringify(req.user, null, 2));
-        console.log('📱 Extracted staffId:', staffId, '(type:', typeof staffId, ')');
-        console.log('📱 Extracted staffType:', staffType);
+        console.log('📱 Extracted staffId:', staffId, 'staffType:', staffType);
         console.log('📱 Philippine time:', philippineTime);
         console.log('='.repeat(60));
         
         if (staffId && staffType) {
-            // Update last_logout based on staff type
+            // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
+            // Update last_logout
             if (staffType === 'inspector') {
-                const [result] = await connection.execute(
-                    'UPDATE inspector SET last_logout = ? WHERE inspector_id = ?',
-                    [philippineTime, staffId]
-                );
-                console.log(`✅ Updated last_logout for inspector ${staffId} at ${philippineTime}`);
-                console.log(`   - affectedRows: ${result.affectedRows}`);
+                await connection.execute(`UPDATE inspector SET last_logout = ? WHERE inspector_id = ?`, [philippineTime, staffId]);
+                console.log(`✅ Updated last_logout for inspector ${staffId}`);
             } else if (staffType === 'collector') {
-                const [result] = await connection.execute(
-                    'UPDATE collector SET last_logout = ? WHERE collector_id = ?',
-                    [philippineTime, staffId]
-                );
-                console.log(`✅ Updated last_logout for collector ${staffId} at ${philippineTime}`);
-                console.log(`   - affectedRows: ${result.affectedRows}`);
-            } else {
-                console.warn(`⚠️ Unknown staffType: ${staffType}`);
+                await connection.execute(`UPDATE collector SET last_logout = ? WHERE collector_id = ?`, [philippineTime, staffId]);
+                console.log(`✅ Updated last_logout for collector ${staffId}`);
             }
+            
+            // End staff session (set is_active = 0)
+            await connection.execute(
+                `UPDATE staff_session SET is_active = 0, logout_time = CURRENT_TIMESTAMP WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+                [staffId, staffType]
+            );
+            console.log(`✅ Staff session ended for ${staffType} ${staffId}`);
             
             // Get staff name for activity log
             let staffName = 'Unknown';
             if (staffType === 'inspector') {
-                const [rows] = await connection.execute(
-                    'SELECT first_name, last_name FROM inspector WHERE inspector_id = ?',
-                    [staffId]
-                );
+                const [rows] = await connection.execute(`SELECT first_name, last_name FROM inspector WHERE inspector_id = ?`, [staffId]);
                 if (rows.length > 0) {
                     staffName = `${rows[0].first_name} ${rows[0].last_name}`;
                 }
             } else if (staffType === 'collector') {
-                const [rows] = await connection.execute(
-                    'SELECT first_name, last_name FROM collector WHERE collector_id = ?',
-                    [staffId]
-                );
+                const [rows] = await connection.execute(`SELECT first_name, last_name FROM collector WHERE collector_id = ?`, [staffId]);
                 if (rows.length > 0) {
                     staffName = `${rows[0].first_name} ${rows[0].last_name}`;
                 }

@@ -23,13 +23,10 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   const JWT_SECRET = getJwtSecret(); // Get secret at runtime
 
-  console.log('🔍 [STALLHOLDER DEBUG] Auth header received:', authHeader ? 'Present' : 'Missing');
-  console.log('🔍 [STALLHOLDER DEBUG] Token extracted:', token ? `${token.substring(0, 20)}...` : 'None');
-  console.log('🔍 [STALLHOLDER DEBUG] Request URL:', req.url);
-  console.log('🔍 [STALLHOLDER DEBUG] Request method:', req.method);
+  // Debug logs disabled to prevent console flooding
+  // Enable for debugging authentication issues if needed
 
   if (!token) {
-    console.log('❌ [STALLHOLDER DEBUG] No token provided');
     return res.status(401).json({
       success: false,
       message: 'Access token required',
@@ -39,11 +36,10 @@ const authenticateToken = (req, res, next) => {
 
   verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
-      console.error('❌ [STALLHOLDER DEBUG] Token verification error:', err);
-      console.error('❌ [STALLHOLDER DEBUG] Error name:', err.name);
-      console.error('❌ [STALLHOLDER DEBUG] Error message:', err.message);
-      console.error('❌ [STALLHOLDER DEBUG] JWT_SECRET being used:', JWT_SECRET.substring(0, 20) + '...');
-      console.error('❌ [STALLHOLDER DEBUG] Token received (first 50 chars):', token.substring(0, 50) + '...');
+      // Only log actual errors, not routine token issues
+      if (err.name !== 'TokenExpiredError' && err.name !== 'JsonWebTokenError') {
+        console.error('❌ Token verification error:', err.message);
+      }
 
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({
