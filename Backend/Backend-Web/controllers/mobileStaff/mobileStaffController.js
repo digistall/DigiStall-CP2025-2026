@@ -50,13 +50,13 @@ export async function createInspector(req, res) {
 
         connection = await createConnection();
 
-        // Check if email already exists
-        const [existingEmail] = await connection.execute(
-            'SELECT inspector_id FROM inspector WHERE email = ?',
+        // Check if email already exists using stored procedure
+        const [existingResult] = await connection.execute(
+            'CALL sp_checkInspectorEmailExists(?)',
             [email]
         );
 
-        if (existingEmail.length > 0) {
+        if (existingResult[0] && existingResult[0].length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'An inspector with this email already exists'
@@ -70,30 +70,27 @@ export async function createInspector(req, res) {
 
         console.log(`📱 Creating inspector: ${firstName} ${lastName} (${username})`);
 
-        // Use direct insert (stored procedure is unreliable)
-        const [insertResult] = await connection.query(
-            `INSERT INTO inspector (username, first_name, last_name, middle_name, email, password, contact_no, date_hired, status)
-             VALUES (?, ?, ?, '', ?, ?, ?, CURDATE(), 'active')`,
+        // Create inspector using stored procedure
+        const [insertResult] = await connection.execute(
+            'CALL sp_createInspectorDirect(?, ?, ?, ?, ?, ?)',
             [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
         );
 
-        const inspectorId = insertResult.insertId;
+        const inspectorId = insertResult[0]?.[0]?.inspector_id;
         console.log(`✅ Inspector created with ID: ${inspectorId}`);
 
-        // Create assignment
-        await connection.query(
-            `INSERT INTO inspector_assignment (inspector_id, branch_id, start_date, status, remarks)
-             VALUES (?, ?, CURDATE(), 'Active', 'Newly hired inspector')`,
-            [inspectorId, branchId]
+        // Create assignment using stored procedure
+        await connection.execute(
+            'CALL sp_createInspectorAssignmentDirect(?, ?, ?)',
+            [inspectorId, branchId, 'Newly hired inspector']
         );
         console.log(`✅ Inspector assignment created for branch ${branchId}`);
 
-        // Log the action
+        // Log the action using stored procedure
         try {
-            await connection.query(
-                `INSERT INTO inspector_action_log (inspector_id, branch_id, business_manager_id, action_type, action_date, remarks)
-                 VALUES (?, ?, ?, 'New Hire', NOW(), ?)`,
-                [inspectorId, branchId, branchManagerId, `Inspector ${firstName} ${lastName} was hired`]
+            await connection.execute(
+                'CALL sp_logInspectorAction(?, ?, ?, ?, ?)',
+                [inspectorId, branchId, branchManagerId, 'New Hire', `Inspector ${firstName} ${lastName} was hired`]
             );
         } catch (logError) {
             console.log('⚠️ Could not log action:', logError.message);
@@ -149,65 +146,70 @@ export async function createCollector(req, res) {
 
         connection = await createConnection();
 
-        // Check if collector table exists, create if not
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS collector (
-                collector_id INT NOT NULL AUTO_INCREMENT,
-                username VARCHAR(50) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                first_name VARCHAR(100) NOT NULL,
-                last_name VARCHAR(100) NOT NULL,
-                middle_name VARCHAR(100) DEFAULT NULL,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                contact_no VARCHAR(20) DEFAULT NULL,
-                date_created DATETIME DEFAULT CURRENT_TIMESTAMP,
-                date_hired DATE DEFAULT (CURDATE()),
-                status ENUM('active','inactive') DEFAULT 'active',
-                termination_date DATE DEFAULT NULL,
-                termination_reason VARCHAR(255) DEFAULT NULL,
-                last_login TIMESTAMP NULL DEFAULT NULL,
-                PRIMARY KEY (collector_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-        `);
+        // Check if collector table exists using stored procedure
+        const [tableResult] = await connection.execute('CALL sp_checkCollectorTableExists()');
 
-        // Check if collector_assignment table exists
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS collector_assignment (
-                assignment_id INT NOT NULL AUTO_INCREMENT,
-                collector_id INT NOT NULL,
-                branch_id INT NOT NULL,
-                start_date DATE DEFAULT (CURDATE()),
-                end_date DATE DEFAULT NULL,
-                status ENUM('Active','Inactive','Transferred') DEFAULT 'Active',
-                remarks TEXT DEFAULT NULL,
-                PRIMARY KEY (assignment_id),
-                KEY fk_collector_assignment (collector_id),
-                KEY fk_collector_branch (branch_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-        `);
+        if (!tableResult[0] || tableResult[0].length === 0) {
+            // Collector table does not exist, create it
+            await connection.execute(`
+                CREATE TABLE IF NOT EXISTS collector (
+                    collector_id INT NOT NULL AUTO_INCREMENT,
+                    username VARCHAR(50) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL,
+                    first_name VARCHAR(100) NOT NULL,
+                    last_name VARCHAR(100) NOT NULL,
+                    middle_name VARCHAR(100) DEFAULT NULL,
+                    email VARCHAR(255) NOT NULL UNIQUE,
+                    contact_no VARCHAR(20) DEFAULT NULL,
+                    date_created DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    date_hired DATE DEFAULT (CURDATE()),
+                    status ENUM('active','inactive') DEFAULT 'active',
+                    termination_date DATE DEFAULT NULL,
+                    termination_reason VARCHAR(255) DEFAULT NULL,
+                    last_login TIMESTAMP NULL DEFAULT NULL,
+                    last_logout TIMESTAMP NULL DEFAULT NULL,
+                    PRIMARY KEY (collector_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+            `);
 
-        // Check if collector_action_log table exists
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS collector_action_log (
-                action_id INT NOT NULL AUTO_INCREMENT,
-                collector_id INT NOT NULL,
-                branch_id INT DEFAULT NULL,
-                business_manager_id INT DEFAULT NULL,
-                action_type ENUM('New Hire','Termination','Rehire','Transfer') NOT NULL,
-                action_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                remarks TEXT DEFAULT NULL,
-                PRIMARY KEY (action_id),
-                KEY fk_collector_action_log (collector_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-        `);
+            // Also create collector_assignment and collector_action_log tables
+            await connection.execute(`
+                CREATE TABLE IF NOT EXISTS collector_assignment (
+                    assignment_id INT NOT NULL AUTO_INCREMENT,
+                    collector_id INT NOT NULL,
+                    branch_id INT NOT NULL,
+                    start_date DATE DEFAULT (CURDATE()),
+                    end_date DATE DEFAULT NULL,
+                    status ENUM('Active','Inactive','Transferred') DEFAULT 'Active',
+                    remarks TEXT DEFAULT NULL,
+                    PRIMARY KEY (assignment_id),
+                    KEY fk_collector_assignment (collector_id),
+                    KEY fk_collector_branch (branch_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+            `);
 
-        // Check if email already exists
-        const [existingEmail] = await connection.execute(
-            'SELECT collector_id FROM collector WHERE email = ?',
+            await connection.execute(`
+                CREATE TABLE IF NOT EXISTS collector_action_log (
+                    action_id INT NOT NULL AUTO_INCREMENT,
+                    collector_id INT NOT NULL,
+                    branch_id INT DEFAULT NULL,
+                    business_manager_id INT DEFAULT NULL,
+                    action_type ENUM('New Hire','Termination','Rehire','Transfer') NOT NULL,
+                    action_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    remarks TEXT DEFAULT NULL,
+                    PRIMARY KEY (action_id),
+                    KEY fk_collector_action_log (collector_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+            `);
+        }
+
+        // Check if email already exists using stored procedure
+        const [existingResult] = await connection.execute(
+            'CALL sp_checkCollectorEmailExists(?)',
             [email]
         );
 
-        if (existingEmail.length > 0) {
+        if (existingResult[0] && existingResult[0].length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'A collector with this email already exists'
@@ -221,27 +223,24 @@ export async function createCollector(req, res) {
 
         console.log(`📱 Creating collector: ${firstName} ${lastName} (${username})`);
 
-        // Insert collector
+        // Create collector using stored procedure
         const [insertResult] = await connection.execute(
-            `INSERT INTO collector (username, password_hash, first_name, last_name, email, contact_no, date_hired, status)
-             VALUES (?, ?, ?, ?, ?, ?, CURDATE(), 'active')`,
-            [username, hashedPassword, firstName, lastName, email, phoneNumber || null]
+            'CALL sp_createCollectorDirect(?, ?, ?, ?, ?, ?)',
+            [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
         );
 
-        const collectorId = insertResult.insertId;
+        const collectorId = insertResult[0]?.[0]?.collector_id;
 
-        // Create assignment
+        // Create assignment using stored procedure
         await connection.execute(
-            `INSERT INTO collector_assignment (collector_id, branch_id, start_date, status, remarks)
-             VALUES (?, ?, CURDATE(), 'Active', 'Newly hired collector')`,
-            [collectorId, branchId]
+            'CALL sp_createCollectorAssignmentDirect(?, ?, ?)',
+            [collectorId, branchId, 'Newly hired collector']
         );
 
-        // Log the action
+        // Log the action using stored procedure
         await connection.execute(
-            `INSERT INTO collector_action_log (collector_id, branch_id, business_manager_id, action_type, action_date, remarks)
-             VALUES (?, ?, ?, 'New Hire', NOW(), ?)`,
-            [collectorId, branchId, branchManagerId, `Collector ${firstName} ${lastName} was hired`]
+            'CALL sp_logCollectorAction(?, ?, ?, ?, ?)',
+            [collectorId, branchId, branchManagerId, 'New Hire', `Collector ${firstName} ${lastName} was hired`]
         );
 
         console.log('✅ Collector created successfully');
@@ -280,67 +279,26 @@ export async function getInspectorsByBranch(req, res) {
     try {
         // Get branchId from query param first, then from token
         const branchId = req.query.branchId || req.user?.branchId;
-        
-        console.log('📱 Fetching inspectors for branch:', branchId);
 
         connection = await createConnection();
+        
+        // Set session timezone to Philippine time for correct timestamp conversion
+        await connection.execute(`SET time_zone = '+08:00'`);
 
-        let query;
-        let params;
+        let inspectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided
-            // Use LEFT JOIN and filter in WHERE to include inspectors with or without assignment
-            query = `
-                SELECT 
-                    i.inspector_id,
-                    i.username,
-                    i.first_name,
-                    i.last_name,
-                    i.email,
-                    i.contact_no,
-                    i.date_hired,
-                    i.status,
-                    i.last_login,
-                    i.last_logout,
-                    COALESCE(ia.branch_id, ?) as branch_id,
-                    COALESCE(b.branch_name, 'Unassigned') as branch_name
-                FROM inspector i
-                LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
-                LEFT JOIN branch b ON ia.branch_id = b.branch_id
-                WHERE (ia.branch_id = ? OR ia.branch_id IS NULL)
-                  AND i.status IN ('active', 'Active')
-                ORDER BY i.date_hired DESC
-            `;
-            params = [branchId, branchId];
+            // Filter by branch if branchId is provided using stored procedure
+            const [result] = await connection.execute(
+                'CALL sp_getInspectorsByBranch(?)',
+                [branchId]
+            );
+            inspectors = result[0] || [];
         } else {
-            // Return all inspectors if no branchId (for admin view)
-            query = `
-                SELECT 
-                    i.inspector_id,
-                    i.username,
-                    i.first_name,
-                    i.last_name,
-                    i.email,
-                    i.contact_no,
-                    i.date_hired,
-                    i.status,
-                    i.last_login,
-                    i.last_logout,
-                    ia.branch_id,
-                    b.branch_name
-                FROM inspector i
-                LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status = 'Active'
-                LEFT JOIN branch b ON ia.branch_id = b.branch_id
-                WHERE i.status IN ('active', 'Active')
-                ORDER BY i.date_hired DESC
-            `;
-            params = [];
+            // Return all inspectors if no branchId (for admin view) using stored procedure
+            const [result] = await connection.execute('CALL sp_getInspectorsAll()');
+            inspectors = result[0] || [];
         }
-
-        const [inspectors] = await connection.query(query, params);
-
-        console.log(`✅ Found ${inspectors.length} inspectors${branchId ? ` for branch ${branchId}` : ''}`);
 
         res.json({
             success: true,
@@ -368,18 +326,17 @@ export async function getCollectorsByBranch(req, res) {
     try {
         // Get branchId from query param first, then from token
         const branchId = req.query.branchId || req.user?.branchId;
-        
-        console.log('📱 Fetching collectors for branch:', branchId);
 
         connection = await createConnection();
+        
+        // Set session timezone to Philippine time for correct timestamp conversion
+        await connection.execute(`SET time_zone = '+08:00'`);
 
-        // Check if table exists first
-        const [tables] = await connection.execute(
-            "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'collector'"
-        );
+        // Check if table exists first using stored procedure
+        const [tableResult] = await connection.execute('CALL sp_checkCollectorTableExists()');
 
-        if (tables.length === 0) {
-            console.log('⚠️ Collector table does not exist yet');
+        if (!tableResult[0] || tableResult[0].length === 0) {
+            // Collector table does not exist yet
             return res.json({
                 success: true,
                 data: [],
@@ -387,59 +344,20 @@ export async function getCollectorsByBranch(req, res) {
             });
         }
 
-        let query;
-        let params;
+        let collectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided
-            query = `
-                SELECT 
-                    c.collector_id,
-                    c.first_name,
-                    c.last_name,
-                    c.email,
-                    c.contact_no,
-                    c.date_hired,
-                    c.status,
-                    c.date_created,
-                    c.last_login,
-                    c.last_logout,
-                    ca.branch_id,
-                    b.branch_name
-                FROM collector c
-                LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
-                LEFT JOIN branch b ON ca.branch_id = b.branch_id
-                WHERE ca.branch_id = ?
-                ORDER BY c.date_created DESC
-            `;
-            params = [branchId];
+            // Filter by branch if branchId is provided using stored procedure
+            const [result] = await connection.execute(
+                'CALL sp_getCollectorsByBranch(?)',
+                [branchId]
+            );
+            collectors = result[0] || [];
         } else {
-            // Return all collectors if no branchId (for admin view)
-            query = `
-                SELECT 
-                    c.collector_id,
-                    c.first_name,
-                    c.last_name,
-                    c.email,
-                    c.contact_no,
-                    c.date_hired,
-                    c.status,
-                    c.date_created,
-                    c.last_login,
-                    c.last_logout,
-                    ca.branch_id,
-                    b.branch_name
-                FROM collector c
-                LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status = 'Active'
-                LEFT JOIN branch b ON ca.branch_id = b.branch_id
-                ORDER BY c.date_created DESC
-            `;
-            params = [];
+            // Return all collectors if no branchId (for admin view) using stored procedure
+            const [result] = await connection.execute('CALL sp_getCollectorsAll()');
+            collectors = result[0] || [];
         }
-
-        const [collectors] = await connection.execute(query, params);
-
-        console.log(`✅ Found ${collectors.length} collectors${branchId ? ` for branch ${branchId}` : ''}`);
 
         res.json({
             success: true,
@@ -470,30 +388,23 @@ export async function terminateInspector(req, res) {
 
         connection = await createConnection();
 
-        // Update inspector status
+        // Terminate inspector using stored procedure
         await connection.execute(
-            `UPDATE inspector SET status = 'inactive', termination_date = CURDATE(), termination_reason = ? WHERE inspector_id = ?`,
-            [reason || 'Terminated by manager', id]
+            'CALL sp_terminateInspector(?, ?)',
+            [id, reason || 'Terminated by manager']
         );
 
-        // Update assignment
-        await connection.execute(
-            `UPDATE inspector_assignment SET status = 'Inactive', end_date = CURDATE() WHERE inspector_id = ? AND status = 'Active'`,
+        // Get branch for logging using stored procedure
+        const [assignmentResult] = await connection.execute(
+            'CALL sp_getInspectorBranchAssignment(?)',
             [id]
         );
+        const branchId = assignmentResult[0]?.[0]?.branch_id || null;
 
-        // Get branch for logging
-        const [assignment] = await connection.execute(
-            'SELECT branch_id FROM inspector_assignment WHERE inspector_id = ? LIMIT 1',
-            [id]
-        );
-        const branchId = assignment.length > 0 ? assignment[0].branch_id : null;
-
-        // Log termination
+        // Log termination using stored procedure
         await connection.execute(
-            `INSERT INTO inspector_action_log (inspector_id, branch_id, business_manager_id, action_type, remarks)
-             VALUES (?, ?, ?, 'Termination', ?)`,
-            [id, branchId, branchManagerId, reason || 'Terminated by manager']
+            'CALL sp_logInspectorAction(?, ?, ?, ?, ?)',
+            [id, branchId, branchManagerId, 'Termination', reason || 'Terminated by manager']
         );
 
         res.json({
@@ -525,30 +436,23 @@ export async function terminateCollector(req, res) {
 
         connection = await createConnection();
 
-        // Update collector status
+        // Terminate collector using stored procedure
         await connection.execute(
-            `UPDATE collector SET status = 'inactive', termination_date = CURDATE(), termination_reason = ? WHERE collector_id = ?`,
-            [reason || 'Terminated by manager', id]
+            'CALL sp_terminateCollector(?, ?)',
+            [id, reason || 'Terminated by manager']
         );
 
-        // Update assignment
-        await connection.execute(
-            `UPDATE collector_assignment SET status = 'Inactive', end_date = CURDATE() WHERE collector_id = ? AND status = 'Active'`,
+        // Get branch for logging using stored procedure
+        const [assignmentResult] = await connection.execute(
+            'CALL sp_getCollectorBranchAssignment(?)',
             [id]
         );
+        const branchId = assignmentResult[0]?.[0]?.branch_id || null;
 
-        // Get branch for logging
-        const [assignment] = await connection.execute(
-            'SELECT branch_id FROM collector_assignment WHERE collector_id = ? LIMIT 1',
-            [id]
-        );
-        const branchId = assignment.length > 0 ? assignment[0].branch_id : null;
-
-        // Log termination
+        // Log termination using stored procedure
         await connection.execute(
-            `INSERT INTO collector_action_log (collector_id, branch_id, business_manager_id, action_type, remarks)
-             VALUES (?, ?, ?, 'Termination', ?)`,
-            [id, branchId, branchManagerId, reason || 'Terminated by manager']
+            'CALL sp_logCollectorAction(?, ?, ?, ?, ?)',
+            [id, branchId, branchManagerId, 'Termination', reason || 'Terminated by manager']
         );
 
         res.json({
@@ -597,16 +501,23 @@ export async function resetStaffPassword(req, res) {
         const password = newPassword || generateSecurePassword();
         const hashedPassword = await bcrypt.hash(password, 12);
         
-        // Update password based on staff type
-        const table = staffType === 'inspector' ? 'inspector' : 'collector';
-        const idColumn = staffType === 'inspector' ? 'inspector_id' : 'collector_id';
+        // Update password using appropriate stored procedure based on staff type
+        let result;
+        if (staffType === 'inspector') {
+            const [spResult] = await connection.execute(
+                'CALL sp_resetInspectorPassword(?, ?)',
+                [staffId, hashedPassword]
+            );
+            result = spResult[0]?.[0];
+        } else {
+            const [spResult] = await connection.execute(
+                'CALL sp_resetCollectorPassword(?, ?)',
+                [staffId, hashedPassword]
+            );
+            result = spResult[0]?.[0];
+        }
         
-        const [result] = await connection.execute(
-            `UPDATE ${table} SET password_hash = ? WHERE ${idColumn} = ?`,
-            [hashedPassword, staffId]
-        );
-        
-        if (result.affectedRows === 0) {
+        if (!result || result.affected_rows === 0) {
             return res.status(404).json({
                 success: false,
                 message: `${staffType} with ID ${staffId} not found`

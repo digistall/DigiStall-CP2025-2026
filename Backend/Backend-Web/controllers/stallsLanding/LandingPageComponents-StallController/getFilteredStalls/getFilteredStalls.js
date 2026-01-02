@@ -1,6 +1,6 @@
 import { createConnection } from "../../../config/database.js";
 
-// Get filtered stalls (supports both area and branch parameters)
+// Get filtered stalls (supports both area and branch parameters) - Uses stored procedure
 export const getFilteredStalls = async (req, res) => {
   let connection;
   try {
@@ -20,126 +20,40 @@ export const getFilteredStalls = async (req, res) => {
 
     connection = await createConnection();
 
-    let query = `
-      SELECT 
-        s.stall_id as id,
-        s.stall_no as stallNumber,
-        s.stall_location as location,
-        s.size as dimensions,
-        s.rental_price,
-        s.price_type,
-        s.status,
-        s.description,
-        s.stall_image as imageUrl,
-        s.is_available as isAvailable,
-        sec.section_name as section,
-        f.floor_name as floor,
-        f.floor_number,
-        b.area,
-        b.location as branchLocation,
-        b.branch_name as branch,
-        b.branch_id as branchId,
-        bm.first_name as manager_first_name,
-        bm.last_name as manager_last_name
-      FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
-      WHERE s.status = 'Active' AND s.is_available = 1
-    `;
-
-    const queryParams = [];
-
-    // Support both branch (new) and area (legacy) filters
-    const filterParam = branch || area;
-    const filterColumn = branch ? "branch_name" : "area";
-
-    if (filterParam) {
-      query += ` AND b.${filterColumn} = ?`;
-      queryParams.push(filterParam);
-    }
-
-    // Location filter
-    if (location) {
-      query += " AND b.location = ?";
-      queryParams.push(location);
-    }
-
-    // Section filter
-    if (section) {
-      query += " AND sec.section_name = ?";
-      queryParams.push(section);
-    }
-
-    // Availability filter
-    if (availability !== undefined) {
-      const isAvailable = availability === "true" || availability === true;
-      query += " AND s.is_available = ?";
-      queryParams.push(isAvailable ? 1 : 0);
-    }
-
-    // Search filter (enhanced to include branch names)
-    if (search) {
-      query += ` AND (
-        s.stall_no LIKE ? OR 
-        s.stall_location LIKE ? OR 
-        s.description LIKE ? OR
-        b.area LIKE ? OR
-        b.branch_name LIKE ? OR
-        b.location LIKE ?
-      )`;
-      const searchPattern = `%${search}%`;
-      queryParams.push(
-        searchPattern,
-        searchPattern,
-        searchPattern,
-        searchPattern,
-        searchPattern,
-        searchPattern
-      );
-    }
-
-    // Price range filters
-    if (minPrice && !isNaN(minPrice)) {
-      query += " AND s.rental_price >= ?";
-      queryParams.push(parseFloat(minPrice));
-    }
-
-    if (maxPrice && !isNaN(maxPrice)) {
-      query += " AND s.rental_price <= ?";
-      queryParams.push(parseFloat(maxPrice));
-    }
-
-    // Handle priceRange parameter (e.g., "1000-5000")
+    // Process price range parameter
+    let actualMinPrice = minPrice ? parseFloat(minPrice) : null;
+    let actualMaxPrice = maxPrice ? parseFloat(maxPrice) : null;
+    
     if (priceRange && typeof priceRange === "string") {
       const [min, max] = priceRange.split("-").map((p) => parseFloat(p.trim()));
-      if (!isNaN(min)) {
-        query += " AND s.rental_price >= ?";
-        queryParams.push(min);
-      }
-      if (!isNaN(max)) {
-        query += " AND s.rental_price <= ?";
-        queryParams.push(max);
-      }
+      if (!isNaN(min)) actualMinPrice = min;
+      if (!isNaN(max)) actualMaxPrice = max;
     }
 
-    // Sorting
-    let orderBy = "s.created_at DESC";
-    if (sortBy === "price-low") {
-      orderBy = "s.rental_price ASC";
-    } else if (sortBy === "price-high") {
-      orderBy = "s.rental_price DESC";
-    } else if (sortBy === "newest") {
-      orderBy = "s.created_at DESC";
-    } else if (sortBy === "oldest") {
-      orderBy = "s.created_at ASC";
-    }
+    // Map sortBy to stored procedure format
+    let sortParam = "default";
+    if (sortBy === "price-low") sortParam = "price_asc";
+    else if (sortBy === "price-high") sortParam = "price_desc";
+    else if (sortBy === "newest") sortParam = "newest";
+    else if (sortBy === "oldest") sortParam = "oldest";
 
-    query += ` ORDER BY ${orderBy} LIMIT ?`;
-    queryParams.push(parseInt(limit));
-
-    const [stalls] = await connection.execute(query, queryParams);
+    // Use stored procedure instead of dynamic SQL building
+    const [rows] = await connection.execute(
+      'CALL sp_getFilteredStalls(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        branch || null,
+        area || null,
+        location || null,
+        section || null,
+        actualMinPrice,
+        actualMaxPrice,
+        search || null,
+        sortParam,
+        parseInt(limit)
+      ]
+    );
+    const stalls = rows[0]; // First result set from stored procedure
+    const stalls = rows[0]; // First result set from stored procedure
 
     // Format stalls to match the expected frontend response structure
     const formattedStalls = stalls.map((stall) => {
@@ -170,6 +84,7 @@ export const getFilteredStalls = async (req, res) => {
       };
     });
 
+    const filterParam = branch || area;
     console.log(
       `✅ Found ${formattedStalls.length} filtered stalls ${
         filterParam ? `in ${branch ? "branch" : "area"} '${filterParam}'` : ""
