@@ -1,15 +1,18 @@
 import AppHeader from '../Admin/AppHeader/AppHeader.vue'
 import AppSidebar from '../Admin/AppSidebar/AppSidebar.vue'
 import LogoutLoadingScreen from '../Common/LogoutLoadingScreen/LogoutLoadingScreen.vue'
+import LogoutConfirmationDialog from '../Common/LogoutConfirmationDialog/LogoutConfirmationDialog.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 export default {
   name: 'MainLayout',
-  components: { AppSidebar, AppHeader, LogoutLoadingScreen },
+  components: { AppSidebar, AppHeader, LogoutLoadingScreen, LogoutConfirmationDialog },
   data() {
     return {
       pageTitle: 'Dashboard',
       isLoggingOut: false,
+      showLogoutConfirm: false,
+      currentUserName: '',
       // Base menu items - will be updated based on user type
       menuItems: [],
       // Define menu items for different user types
@@ -79,6 +82,7 @@ export default {
   },
   mounted() {
     this.setMenuItemsBasedOnUserType()
+    this.loadCurrentUserName()
   },
   watch: {
     // update header title on route change
@@ -201,18 +205,38 @@ export default {
     handleSettingsClick() {
       console.log('Settings clicked')
     },
-    async handleLogoutClick() {
-      console.log('Logout clicked - showing loading screen and calling authStore.logout()')
+    loadCurrentUserName() {
+      try {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+        this.currentUserName = currentUser.name || currentUser.username || currentUser.firstName || ''
+      } catch (error) {
+        console.error('Error loading user name:', error)
+        this.currentUserName = ''
+      }
+    },
+    handleLogoutClick() {
+      console.log('Logout clicked - showing confirmation dialog')
+      this.loadCurrentUserName()
+      this.showLogoutConfirm = true
+    },
+    async handleLogoutConfirm() {
+      console.log('Logout confirmed - starting logout process')
       
-      // Show logout loading screen
+      // Start the logout process
       this.isLoggingOut = true
+      
+      // Small delay to show loading state in the dialog
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Close the confirmation dialog
+      this.showLogoutConfirm = false
       
       try {
         // Call authStore.logout() which handles API call to update last_logout
         const authStore = useAuthStore()
         await authStore.logout()
         
-        // Small delay to show the animation
+        // Small delay to show the loading screen animation
         await new Promise(resolve => setTimeout(resolve, 1500))
         
         // Redirect to login page
