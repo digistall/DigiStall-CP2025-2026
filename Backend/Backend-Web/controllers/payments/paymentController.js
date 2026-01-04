@@ -724,6 +724,7 @@ const PaymentController = {
         message: 'Violation payment processed successfully',
         data: {
           reportId: paymentResult.report_id,
+          paymentId: paymentResult.payment_id, 
           status: paymentResult.status,
           paymentDate: paymentResult.payment_date,
           paymentReference: paymentResult.payment_reference,
