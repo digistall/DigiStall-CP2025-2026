@@ -41,14 +41,13 @@ export const createAdminUser = async (req, res) => {
     const saltRounds = 10;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
-    // Insert new admin
-    const [result] = await connection.execute(
-      `INSERT INTO admin (admin_username, admin_password_hash, email, first_name, last_name, status, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+    // Insert new admin using stored procedure
+    const [[result]] = await connection.execute(
+      'CALL createAdmin(?, ?, ?, ?, ?, ?)',
       [admin_username, password_hash, email, first_name, last_name, status]
     );
 
-    const adminId = result.insertId;
+    const adminId = result.admin_id;
 
     console.log('✅ Admin user created successfully:', admin_username);
 

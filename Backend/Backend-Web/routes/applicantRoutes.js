@@ -7,12 +7,35 @@ import {
   approveApplicant,
   updateApplicantStatus,
   declineApplicant,
+  deleteApplicant,
   searchApplicants,
   // New participant functions
   getAllParticipants,
   getParticipantsByBranch,
-  getParticipantsByStall
+  getParticipantsByStall,
+  autoCleanupApplicants,
+  triggerCleanup
 } from '../controllers/applicants/applicantsController.js'
+
+// Import document controller and multer config
+import {
+  uploadApplicantDocuments,
+  getApplicantDocuments,
+  deleteApplicantDocument,
+  deleteAllDocuments
+} from '../controllers/applicants/applicantDocumentController.js'
+import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
+
+// Import BLOB document controller for cloud storage
+import {
+  uploadApplicantDocumentBlob,
+  getApplicantDocumentBlob,
+  getApplicantDocumentBlobById,
+  getApplicantDocuments as getApplicantDocumentsBlob,
+  deleteApplicantDocumentBlob,
+  updateDocumentVerificationStatus,
+  getApplicantDocumentByType
+} from '../controllers/applicants/applicantDocumentBlobController.js'
 
 const router = express.Router()
 
@@ -44,5 +67,62 @@ router.put('/:id/approve', approveApplicant)
 
 // Decline applicant
 router.put('/:id/decline', declineApplicant)
+
+// Delete applicant (for auto-cleanup of expired rejected applicants)
+router.delete('/:id', deleteApplicant)
+
+// Auto-cleanup routes
+router.post('/cleanup/auto', autoCleanupApplicants)    // Automatic cleanup of rejected applicants older than 30 days
+router.post('/cleanup/trigger', triggerCleanup)       // Manual trigger for admin use
+
+// =============================================
+// APPLICANT DOCUMENT ROUTES
+// =============================================
+// Upload documents for an applicant (signature, house_location, valid_id)
+router.post(
+  '/:applicant_id/documents',
+  uploadApplicantDocs,
+  uploadApplicantDocuments
+)
+
+// Get all documents for an applicant
+router.get('/:applicant_id/documents', getApplicantDocuments)
+
+// Delete a specific document
+router.delete('/:applicant_id/documents/:filename', deleteApplicantDocument)
+
+// Delete all documents for an applicant
+router.delete('/:applicant_id/documents', deleteAllDocuments)
+
+// =============================================
+// APPLICANT DOCUMENT BLOB ROUTES (Cloud Storage)
+// =============================================
+// Upload document as BLOB (base64)
+// POST /api/applicants/documents/blob/upload
+router.post('/documents/blob/upload', uploadApplicantDocumentBlob)
+
+// Get document by applicant ID and document type (returns binary)
+// GET /api/applicants/documents/blob/:applicant_id/:document_type_id
+router.get('/documents/blob/:applicant_id/:document_type_id', getApplicantDocumentBlob)
+
+// Get document by document ID (returns binary)
+// GET /api/applicants/documents/blob/id/:document_id
+router.get('/documents/blob/id/:document_id', getApplicantDocumentBlobById)
+
+// Get all documents for applicant (returns metadata with optional base64)
+// GET /api/applicants/:applicant_id/documents/blob
+router.get('/:applicant_id/documents/blob', getApplicantDocumentsBlob)
+
+// Get document by type name (e.g., signature, valid_id)
+// GET /api/applicants/documents/blob/type/:applicant_id/:document_type
+router.get('/documents/blob/type/:applicant_id/:document_type', getApplicantDocumentByType)
+
+// Delete document BLOB
+// DELETE /api/applicants/documents/blob/:document_id
+router.delete('/documents/blob/:document_id', deleteApplicantDocumentBlob)
+
+// Update document verification status
+// PUT /api/applicants/documents/blob/:document_id/verify
+router.put('/documents/blob/:document_id/verify', updateDocumentVerificationStatus)
 
 export default router

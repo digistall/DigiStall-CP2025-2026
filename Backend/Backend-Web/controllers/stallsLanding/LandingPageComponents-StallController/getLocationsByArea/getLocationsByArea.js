@@ -1,6 +1,6 @@
-import { createConnection } from "../../../config/database.js";
+﻿import { createConnection } from "../../../config/database.js";
 
-// Get locations by area or branch (supports both for backward compatibility)
+// Get locations by area or branch (supports both for backward compatibility) - Uses stored procedure
 export const getLocationsByArea = async (req, res) => {
   let connection;
   try {
@@ -9,7 +9,7 @@ export const getLocationsByArea = async (req, res) => {
     // Support both branch (new) and area (legacy) parameters
     const filterParam = branch || area;
     const filterType = branch ? 'branch' : 'area';
-    const filterColumn = branch ? 'branch_name' : 'area';
+    const filterByBranch = branch ? true : false;
 
     if (!filterParam) {
       console.log("❌ No area or branch parameter provided");
@@ -21,11 +21,9 @@ export const getLocationsByArea = async (req, res) => {
 
     connection = await createConnection();
 
-    // Query locations based on branch_name (preferred) or area (legacy)
-    const [locations] = await connection.execute(
-      `SELECT DISTINCT location, branch_name as branch FROM branch WHERE ${filterColumn} = ? AND status = "Active" ORDER BY location`,
-      [filterParam]
-    );
+    // Use stored procedure instead of direct SQL
+    const [rows] = await connection.execute('CALL sp_getLocationsByArea(?, ?)', [filterParam, filterByBranch]);
+    const locations = rows[0]; // First result set from stored procedure
 
     // Format the data to include both location and branch information
     const locationList = locations.map((row) => ({
@@ -57,3 +55,4 @@ export const getLocationsByArea = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+

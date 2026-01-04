@@ -1,5 +1,6 @@
 import RaffleCard from '../RaffleCard/RaffleCard.vue'
 import SearchAndFilter from '../SearchAndFilter/SearchAndFilter.vue'
+import LoadingOverlay from '../../../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 import participantsService from '../../../../../services/participantsService.js'
 
@@ -8,6 +9,7 @@ export default {
   components: {
     RaffleCard,
     SearchAndFilter,
+    LoadingOverlay,
   },
   data() {
     return {

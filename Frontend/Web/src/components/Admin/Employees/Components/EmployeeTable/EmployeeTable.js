@@ -3,7 +3,7 @@
   props: {
     employees: Array,
   },
-  emits: ['edit-employee', 'manage-permissions', 'toggle-status', 'reset-password'],
+  emits: ['edit-employee', 'manage-permissions', 'toggle-status', 'reset-password', 'fire-employee'],
 
   data() {
     return {
@@ -50,8 +50,32 @@
       this.closeActionsDialog()
     },
 
+    handleFireEmployee() {
+      this.$emit('fire-employee', this.selectedEmployee)
+      this.closeActionsDialog()
+    },
+
     getStatusColor(status) {
-      return status === 'active' ? 'success' : 'warning'
+      return status?.toLowerCase() === 'active' ? 'success' : 'warning'
+    },
+
+    capitalizeStatus(status) {
+      if (!status) return 'Unknown'
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+    },
+
+    getRoleColor(employee) {
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
+      }
+      return 'primary' // Web employee
+    },
+
+    getRoleIcon(employee) {
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'mdi-clipboard-check' : 'mdi-account-cash'
+      }
+      return 'mdi-account' // Web employee
     },
 
     getPermissionText(permission) {
@@ -65,18 +89,35 @@
         stallholders: 'Stallholders',
         collectors: 'Collectors',
         stalls: 'Stalls',
+        mobile_inspector: 'Mobile Inspector',
+        mobile_collector: 'Mobile Collector',
       }
       return permissionLabels[permission] || permission
     },
 
     formatDate(date) {
       if (!date) return 'Never'
-      return new Date(date).toLocaleDateString()
+      // Database stores UTC, add 8 hours to get Philippine time
+      const utcDate = new Date(date)
+      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
+      return new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }).format(phDate)
     },
 
     formatTime(date) {
-      if (!date) return 'Never'
-      return new Date(date).toLocaleTimeString()
+      if (!date) return ''
+      // Database stores UTC, add 8 hours to get Philippine time
+      const utcDate = new Date(date)
+      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
+      return new Intl.DateTimeFormat('en-PH', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      }).format(phDate)
     },
 
     showPermissionsPopup(employee, event) {

@@ -8,17 +8,28 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const Header = ({ onMenuPress, title = "DigiStall" }) => {
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    text: '#1f2937',
+    textSecondary: '#374151',
+  }
+};
+
+const Header = ({ onMenuPress, title = "DigiStall", theme = defaultTheme, isDarkMode = false }) => {
+  const colors = theme?.colors || defaultTheme.colors;
+  
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.surface }]}>
       <TouchableOpacity 
         style={styles.menuButton}
         onPress={onMenuPress}
       >
-        <Text style={styles.menuIcon}>☰</Text>
+        <Text style={[styles.menuIcon, { color: colors.textSecondary }]}>☰</Text>
       </TouchableOpacity>
       
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       
       <View style={styles.placeholder} />
     </View>
@@ -32,7 +43,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: width * 0.04,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -52,14 +62,12 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: width * 0.06,
-    color: '#374151',
     minHeight: 24,
     fontWeight: '300',
   },
   title: {
     fontSize: width * 0.045,
     fontWeight: '600',
-    color: '#1f2937',
     textAlign: 'center',
   },
   placeholder: {

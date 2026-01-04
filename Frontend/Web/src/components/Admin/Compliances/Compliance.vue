@@ -3,14 +3,28 @@
 <template>
   <v-app>
     <!-- Main Content -->
-    <v-main>
+    <v-main class="compliance-main-content">
+      <!-- Standardized Loading Overlay - contained within main content -->
+      <LoadingOverlay 
+        :loading="isLoading" 
+        text="Loading compliance records..."
+        :full-page="false"
+      />
+
       <v-row>
         <v-col cols="12">
           <!-- Search Component -->
           <ComplianceSearch @search="handleSearch" />
 
+          <!-- Error State -->
+          <v-alert v-if="error" type="error" class="ma-4" dismissible @click:close="error = null">
+            <strong>Error:</strong> {{ error }}
+            <v-btn variant="text" size="small" @click="loadComplianceData" class="ml-2">Retry</v-btn>
+          </v-alert>
+
           <!-- Table Component -->
           <ComplianceTable
+            v-if="!error"
             :searchQuery="searchQuery"
             :activeFilter="activeFilter"
             :complianceList="complianceList"

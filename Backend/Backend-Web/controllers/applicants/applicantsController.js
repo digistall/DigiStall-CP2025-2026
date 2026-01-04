@@ -15,6 +15,7 @@ import { approveApplicant } from './applicantsComponents/approveApplicant.js'
 import { declineApplicant } from './applicantsComponents/declineApplicant.js'
 import { updateApplicantStatus } from './applicantsComponents/updateApplicantStatus.js'
 import { storeCredentials, getAllCredentials } from './applicantsComponents/credentialsController.js'
+import { autoCleanupApplicants, triggerCleanup } from './applicantsComponents/autoCleanup.js'
 
 // Import participant-specific components (approved applicants with stalls)
 import { getAllParticipants } from './applicantsComponents/getAllParticipants.js'
@@ -37,6 +38,8 @@ export {
   updateApplicantStatus,      // Update applicant status (for frontend compatibility)
   storeCredentials,           // Store credentials for mobile app
   getAllCredentials,          // Get all stored credentials
+  autoCleanupApplicants,      // Auto-cleanup rejected applicants older than 30 days
+  triggerCleanup,             // Manual cleanup trigger for admin use
   
   // Participant-specific functions (approved applicants with active stalls)
   getAllParticipants,         // Get all active participants (approved applicants with stalls)

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/authStore'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -36,13 +37,17 @@ export default {
     userType() {
       return sessionStorage.getItem('userType') || 'branch-manager'
     },
+    isSystemAdministrator() {
+      return this.userType === 'system_administrator'
+    },
     isAdmin() {
-      return this.userType === 'admin'
+      return this.userType === 'system_administrator' || this.userType === 'stall_business_owner'
     },
     isEmployee() {
-      return this.userType === 'employee'
+      return this.userType === 'business_employee'
     },
     currentUserData() {
+      if (this.isSystemAdministrator) return this.adminData
       if (this.isAdmin) return this.adminData
       if (this.isEmployee) return this.employeeData
       return this.branchManagerData
@@ -55,16 +60,19 @@ export default {
       // Show the full name and area/location designation
       if (this.currentUserData) {
         const fullName =
-          this.currentUserData.fullName || (this.isAdmin ? 'Administrator' : 'Branch Manager')
+          this.currentUserData.fullName || (this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Administrator' : 'Business Manager')
         const designation = this.currentUserData.designation || ''
         return designation ? `${fullName} - ${designation}` : fullName
       }
-      return this.isAdmin ? 'System Administrator' : 'Branch Manager'
+      return this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Stall Business Owner' : 'Business Manager'
     },
     displayLocation() {
       // Show area and location
-      if (this.isAdmin) {
+      if (this.isSystemAdministrator) {
         return 'System Administration'
+      }
+      if (this.isAdmin) {
+        return 'Business Owner Portal'
       }
       if (this.currentUserData?.area && this.currentUserData?.location) {
         return `${this.currentUserData.area}`
@@ -73,8 +81,12 @@ export default {
     },
     displayLocationText() {
       // Show formatted location text for the new design
-      if (this.isAdmin) {
+      if (this.isSystemAdministrator) {
         return 'System Administration'
+      }
+      
+      if (this.isAdmin) {
+        return 'Business Owner Portal'
       }
       
       // For employees, prioritize branch name
@@ -138,7 +150,14 @@ export default {
         })
         
         // Use the stored user data directly
-        if (this.isAdmin) {
+        if (this.isSystemAdministrator) {
+          this.adminData = {
+            username: currentUser.username || 'sysadmin',
+            fullName: currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'System Administrator',
+            email: currentUser.email || 'sysadmin@nagastall.com',
+            role: 'System Administrator'
+          }
+        } else if (this.isAdmin) {
           this.adminData = {
             username: currentUser.username || 'admin',
             fullName: currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Administrator',
@@ -148,14 +167,6 @@ export default {
         } else if (this.isEmployee) {
           // Get branch name from various possible sources
           const branchName = currentUser.branchName || currentUser.branch_name || currentUser.branch?.branch_name || currentUser.branch?.name || null
-          
-          console.log('👤 Employee Data Debug:', {
-            branchName: branchName,
-            currentUser_branchName: currentUser.branchName,
-            currentUser_branch_name: currentUser.branch_name,
-            currentUser_branch: currentUser.branch,
-            fullUser: currentUser
-          })
           
           this.employeeData = {
             username: currentUser.username || currentUser.employee_username || 'employee',
@@ -174,16 +185,6 @@ export default {
           // Get branch name from various possible sources
           const branchName = currentUser.branchName || currentUser.branch_name || currentUser.branch?.branch_name || currentUser.branch?.name || null
           
-          console.log('🏢 Branch Manager Data Debug:', {
-            branchName: branchName,
-            currentUser_branchName: currentUser.branchName,
-            currentUser_branch_name: currentUser.branch_name,
-            currentUser_branch: currentUser.branch,
-            currentUser_branch_name_from_nested: currentUser.branch?.name,
-            currentUser_area: currentUser.area,
-            currentUser_location: currentUser.location
-          })
-          
           this.branchManagerData = {
             username: currentUser.username || currentUser.manager_username || 'manager',
             fullName: currentUser.fullName || `${currentUser.firstName || currentUser.first_name || ''} ${currentUser.lastName || currentUser.last_name || ''}`.trim() || 'Branch Manager',
@@ -194,11 +195,8 @@ export default {
             branchId: currentUser.branchId || currentUser.branch_id || currentUser.branch?.id,
             branchName: branchName
           }
-          
-          console.log('✅ Final Branch Manager Data:', this.branchManagerData)
         }
         
-        console.log('✅ User data loaded from session storage')
         return
       }
       
@@ -308,7 +306,7 @@ export default {
         if (storedCurrentUser) {
           try {
             const userData = JSON.parse(storedCurrentUser)
-            if (userData.userType === 'employee') {
+            if (userData.userType === 'business_employee') {
               // Get branch name from various possible sources
               const branchName = userData.branchName || userData.branch_name || userData.branch?.branch_name || userData.branch?.name || null
               
@@ -481,31 +479,21 @@ export default {
     },
 
     async handleLogoutClick() {
-      console.log('Logout clicked')
+      console.log('Logout clicked - calling authStore.logout()')
       this.closeProfilePopup()
 
-      // Clear any stored user data
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('branchManagerData')
-      sessionStorage.removeItem('adminData')
-      sessionStorage.removeItem('branchManagerId')
-      sessionStorage.removeItem('adminId')
-      localStorage.removeItem('currentUser')
-      localStorage.removeItem('authToken')
-
-      // Clear axios header
-      delete axios.defaults.headers.common['Authorization']
+      // Call authStore.logout() which handles:
+      // 1. API call to update last_logout in database
+      // 2. Clearing all storage (localStorage, sessionStorage)
+      // 3. Clearing axios headers
+      // 4. Clearing data cache
+      const authStore = useAuthStore()
+      await authStore.logout()
 
       // Clear component data
       this.branchManagerData = null
       this.adminData = null
-
-      // Clear Vuex store if you're using it
-      if (this.$store && this.$store.dispatch) {
-        this.$store.dispatch('auth/logout')
-      }
+      this.employeeData = null
 
       // Navigate to login page
       this.$router.push('/')
@@ -586,25 +574,8 @@ export default {
     // Setup authentication
     this.setupAuthInterceptor()
 
-    // Debug session storage contents
-    console.log('🔍 AppHeader mounted - Debug session storage:')
-    console.log('  - authToken:', sessionStorage.getItem('authToken') ? 'Present' : 'Missing')
-    console.log('  - userType:', sessionStorage.getItem('userType'))
-    console.log('  - currentUser:', sessionStorage.getItem('currentUser'))
-    console.log('  - branchManagerData:', sessionStorage.getItem('branchManagerData'))
-    console.log('  - adminData:', sessionStorage.getItem('adminData'))
-    console.log('  - employeeData:', sessionStorage.getItem('employeeData'))
-
     // Fetch user data based on user type when component mounts
     await this.fetchUserData()
-    
-    // Log final state
-    console.log('🔍 AppHeader final user data state:')
-    console.log('  - userType:', this.userType)
-    console.log('  - currentUserData:', this.currentUserData)
-    console.log('  - displayUsername:', this.displayUsername)
-    console.log('  - displayLocationText:', this.displayLocationText)
-    console.log('  - defaultEmail:', this.defaultEmail)
   },
 
   beforeUnmount() {

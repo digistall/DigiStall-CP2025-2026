@@ -22,8 +22,24 @@ export default {
           return "status-pending";
         case "incomplete":
           return "status-incomplete";
+        case "in-progress":
+          return "status-in-progress";
         default:
           return "";
+      }
+    },
+    getSeverityClass(severity) {
+      switch ((severity || '').toLowerCase()) {
+        case "minor":
+          return "severity-minor";
+        case "moderate":
+          return "severity-moderate";
+        case "major":
+          return "severity-major";
+        case "critical":
+          return "severity-critical";
+        default:
+          return "severity-moderate";
       }
     },
   },

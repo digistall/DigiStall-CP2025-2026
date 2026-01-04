@@ -1,52 +1,52 @@
-import { createConnection } from '../../../config/database.js'
+﻿import { createConnection } from '../../../config/database.js'
 
-// Get stall by ID (only if it belongs to the authenticated branch manager)
+// Get stall by ID using stored procedure
 export const getStallById = async (req, res) => {
   let connection;
   try {
     const { id } = req.params;
-    const branchManagerId = req.user?.branchManagerId || req.user?.userId;
+    const userType = req.user?.userType || req.user?.role;
+    const userId = req.user?.userId;
+    const branchId = req.user?.branchId;
 
-    if (!branchManagerId) {
+    if (!userId) {
       return res.status(400).json({
         success: false,
-        message: 'Branch manager ID not found in authentication token',
+        message: 'User ID not found in authentication token',
       });
     }
 
     connection = await createConnection();
 
-    const [stalls] = await connection.execute(
-      `SELECT 
-        s.*,
-        s.stall_id as id,
-        sec.section_name,
-        f.floor_name,
-        b.branch_name
-      FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-      WHERE s.stall_id = ? AND bm.branch_manager_id = ?`,
-      [id, branchManagerId]
+    // Call stored procedure - it handles ALL authorization
+    const [result] = await connection.execute(
+      `CALL sp_getStallById_complete(?, ?, ?, ?, @success, @message)`,
+      [id, userId, userType, branchId]
     );
 
-    if (stalls.length === 0) {
+    // Get output parameters
+    const [outParams] = await connection.execute(
+      `SELECT @success as success, @message as message`
+    );
+
+    const { success, message } = outParams[0];
+    const stalls = result[0] || [];
+
+    if (!success || stalls.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Stall not found or you do not have permission to view it',
+        message: message || 'Stall not found',
       });
     }
 
     res.json({
       success: true,
-      message: 'Stall retrieved successfully',
+      message: message,
       data: stalls[0]
     });
 
   } catch (error) {
-    console.error('❌ Get stall by ID error:', error);
+    console.error(' Get stall by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve stall',

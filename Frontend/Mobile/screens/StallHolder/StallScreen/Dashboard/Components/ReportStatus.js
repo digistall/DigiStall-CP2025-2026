@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   reportItem: {
     borderLeftWidth: 3,
-    borderLeftColor: '#2563eb',
+    borderLeftColor: '#002181',
     paddingLeft: width * 0.03,
     marginBottom: width * 0.03,
     paddingVertical: width * 0.02,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   viewAllButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#002181',
     borderRadius: 6,
     paddingVertical: width * 0.025,
     alignItems: 'center',

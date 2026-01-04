@@ -8,29 +8,12 @@ export const getApplicantById = async (req, res) => {
 
     connection = await createConnection();
 
-    const [applicants] = await connection.execute(
-      `SELECT 
-        applicant_id,
-        first_name,
-        last_name,
-        email,
-        contact_number,
-        address,
-        business_type,
-        business_name,
-        business_description,
-        preferred_area,
-        preferred_location,
-        application_status,
-        applied_date,
-        created_at,
-        updated_at
-      FROM applicant
-      WHERE applicant_id = ?`,
+    const [[applicant]] = await connection.execute(
+      'CALL getApplicantById(?)',
       [id]
     );
 
-    if (applicants.length === 0) {
+    if (!applicant) {
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
@@ -40,7 +23,7 @@ export const getApplicantById = async (req, res) => {
     res.json({
       success: true,
       message: 'Applicant retrieved successfully',
-      data: applicants[0]
+      data: applicant
     });
 
   } catch (error) {
