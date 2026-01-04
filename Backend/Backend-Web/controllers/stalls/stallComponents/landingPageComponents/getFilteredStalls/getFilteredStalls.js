@@ -30,7 +30,7 @@ export const getFilteredStalls = async (req, res) => {
         s.price_type,
         s.status,
         s.description,
-        s.stall_image as imageUrl,
+        si.image_url as imageUrl,
         s.is_available as isAvailable,
         sec.section_name as section,
         f.floor_name as floor,
@@ -44,7 +44,8 @@ export const getFilteredStalls = async (req, res) => {
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.status = 'Active' AND s.is_available = 1
     `;
 

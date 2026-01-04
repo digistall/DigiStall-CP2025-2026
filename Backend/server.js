@@ -1,13 +1,15 @@
+// Load environment variables FIRST (before any other imports)
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { createConnection } from './config/database.js';
+import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authMiddleware from './middleware/auth.js';
-
-// Load environment variables
-dotenv.config();
+import { activityLogger } from './Backend-Web/middleware/activityLogger.js';
+import './Backend-Web/services/cleanupScheduler.js'; // Initialize cleanup scheduler
 
 // Import Web routes (from Backend-Web)
 import webAuthRoutes from './Backend-Web/routes/authRoutes.js';
@@ -17,11 +19,20 @@ import webLandingApplicantRoutes from './Backend-Web/routes/landingApplicantRout
 import webStallRoutes from './Backend-Web/routes/stallRoutes.js';
 import webBranchRoutes from './Backend-Web/routes/branchRoutes.js';
 import webEmployeeRoutes from './Backend-Web/routes/employeeRoutes.js';
+import stallholderRoutes from './Backend-Web/routes/stallholderRoutes.js';
+import paymentRoutes from './Backend-Web/routes/paymentRoutes.js';
+import complianceRoutes from './Backend-Web/routes/complianceRoutes.js';
+import complaintRoutes from './Backend-Web/routes/complaintRoutes.js';
+import subscriptionRoutes from './Backend-Web/routes/subscriptionRoutes.js';
+import mobileStaffRoutes from './Backend-Web/routes/mobileStaffRoutes.js';
+import staffActivityLogRoutes from './Backend-Web/routes/activityLog/staffActivityLogRoutes.js';
 
 // Import Mobile routes (from Backend-Mobile)
 import mobileAuthRoutes from './Backend-Mobile/routes/authRoutes.js';
 import mobileStallRoutes from './Backend-Mobile/routes/stallRoutes.js';
 import mobileApplicationRoutes from './Backend-Mobile/routes/applicationRoutes.js';
+import mobileStallholderRoutes from './Backend-Mobile/routes/stallholderRoutes.js';
+import mobileInspectorRoutes from './Backend-Mobile/routes/inspectorRoutes.js';
 
 const app = express();
 const WEB_PORT = process.env.WEB_PORT || 3001;
@@ -32,6 +43,22 @@ app.use(cors(corsConfig));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Serve static files for uploaded documents
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/uploads', express.static(path.join(__dirname, 'Backend-Mobile', 'uploads')));
+
+// Serve stall images from digistall_uploads path (for Docker compatibility)
+// In Docker: /app/uploads/stalls, locally: C:/xampp/htdocs/digistall_uploads/stalls
+const stallUploadsDir = process.env.UPLOAD_DIR_STALLS || 'C:/xampp/htdocs/digistall_uploads/stalls';
+app.use('/digistall_uploads/stalls', express.static(stallUploadsDir));
+
+// Serve applicant documents from digistall_uploads path
+const applicantUploadsDir = process.env.UPLOAD_DIR_APPLICANTS || 'C:/xampp/htdocs/digistall_uploads/applicants';
+app.use('/digistall_uploads/applicants', express.static(applicantUploadsDir));
+
 // ===== WEB ROUTES (Backend-Web functionality) =====
 // Public web routes (no authentication required)
 app.use('/api/auth', webAuthRoutes);
@@ -41,17 +68,28 @@ app.use('/api/landing-applicants', webLandingApplicantRoutes); // Landing page a
 app.use('/api/employees', webEmployeeRoutes);     // Employee routes (login is public, others protected internally)
 
 // Management web routes (authentication required)
-app.use('/api/applicants', authMiddleware.authenticateToken, webApplicantRoutes);
-app.use('/api/branches', authMiddleware.authenticateToken, webBranchRoutes);
+app.use('/api/applicants', authMiddleware.authenticateToken, activityLogger, webApplicantRoutes);
+app.use('/api/branches', authMiddleware.authenticateToken, activityLogger, webBranchRoutes);
+app.use('/api/stallholders', authMiddleware.authenticateToken, activityLogger, stallholderRoutes);
+app.use('/api/payments', authMiddleware.authenticateToken, activityLogger, paymentRoutes);
+app.use('/api/compliances', authMiddleware.authenticateToken, activityLogger, complianceRoutes);
+app.use('/api/complaints', authMiddleware.authenticateToken, activityLogger, complaintRoutes);
+app.use('/api/subscriptions', activityLogger, subscriptionRoutes); // Subscription management (System Admin only - auth handled internally)
+app.use('/api/mobile-staff', authMiddleware.authenticateToken, activityLogger, mobileStaffRoutes); // Mobile staff (inspectors/collectors)
+app.use('/api/activity-logs', staffActivityLogRoutes); // Staff activity logs (auth handled internally)
+console.log('📊 Activity log routes registered at /api/activity-logs');
+console.log('📊 Activity logger middleware enabled for protected routes');
 
 // ===== MOBILE ROUTES (Backend-Mobile functionality) =====
-// Mobile API routes with /mobile prefix to differentiate
-app.use('/mobile/api/auth', mobileAuthRoutes);
-app.use('/mobile/api/stalls', mobileStallRoutes);
-app.use('/mobile/api/applications', mobileApplicationRoutes);
+// Mobile API routes with /api/mobile prefix
+app.use('/api/mobile/auth', mobileAuthRoutes);
+app.use('/api/mobile/stalls', mobileStallRoutes);
+app.use('/api/mobile/applications', mobileApplicationRoutes);
+app.use('/api/mobile/stallholder', mobileStallholderRoutes); // Stallholder document management for mobile
+app.use('/api/mobile/inspector', mobileInspectorRoutes); // Inspector routes for mobile
 
 // Mobile areas endpoint (separate from stalls)
-app.get('/mobile/api/areas', async (req, res) => {
+app.get('/api/mobile/areas', async (req, res) => {
   const { getAvailableAreas } = await import('./Backend-Mobile/controllers/stall/stallController.js');
   getAvailableAreas(req, res);
 });
@@ -68,7 +106,7 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         web: `http://localhost:${WEB_PORT}`,
-        mobile: `Mobile API available at /mobile/api/*`
+        mobile: `Mobile API available at /api/mobile/*`
       }
     });
   } catch (error) {
@@ -102,9 +140,10 @@ app.get('/', (req, res) => {
         branches: '/api/branches/*'
       },
       mobile: {
-        auth: '/mobile/api/auth/*',
-        stalls: '/mobile/api/stalls/*',
-        applications: '/mobile/api/applications/*'
+        auth: '/api/mobile/auth/*',
+        stalls: '/api/mobile/stalls/*',
+        applications: '/api/mobile/applications/*',
+        areas: '/api/mobile/areas'
       }
     }
   });
@@ -116,30 +155,35 @@ app.use(errorHandler);
 // ===== SERVER STARTUP =====
 const startServer = async () => {
   try {
-    // Test database connection
+    // Test database connection and initialize tables
     console.log('🔧 Testing database connection...');
     const connection = await createConnection();
     await connection.end();
     console.log('✅ Database connection successful');
     
-    // Start the server
-    const server = app.listen(WEB_PORT, () => {
+    // Initialize database tables
+    await initializeDatabase();
+    console.log('✅ Database tables initialized');
+    
+    // Start the server on all interfaces
+    const server = app.listen(WEB_PORT, '0.0.0.0', () => {
       console.log(`
 🚀 Naga Stall Management System - Unified Backend
 📍 Server running on port ${WEB_PORT}
+📡 Listening on all interfaces (0.0.0.0)
 🌐 Environment: ${process.env.NODE_ENV || 'development'}
 ⏰ Started at: ${new Date().toISOString()}
 
 📋 Available Services:
    🏪 Web API          - Landing Page and Management functions
-   📱 Mobile API       - Mobile application functions (/mobile/api/*)
+   📱 Mobile API       - Mobile application functions (/api/mobile/*)
 
 🔗 Health Check: http://localhost:${WEB_PORT}/api/health
 📚 API Documentation: http://localhost:${WEB_PORT}/
 
 🎯 Service Endpoints:
    Web Frontend:    http://localhost:${WEB_PORT}/api/*
-   Mobile App:      http://localhost:${WEB_PORT}/mobile/api/*
+   Mobile App:      http://localhost:${WEB_PORT}/api/mobile/*
       `);
     });
 

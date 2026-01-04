@@ -1,29 +1,44 @@
 import AppHeader from '../Admin/AppHeader/AppHeader.vue'
 import AppSidebar from '../Admin/AppSidebar/AppSidebar.vue'
+import LogoutLoadingScreen from '../Common/LogoutLoadingScreen/LogoutLoadingScreen.vue'
+import LogoutConfirmationDialog from '../Common/LogoutConfirmationDialog/LogoutConfirmationDialog.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 export default {
   name: 'MainLayout',
-  components: { AppSidebar, AppHeader },
+  components: { AppSidebar, AppHeader, LogoutLoadingScreen, LogoutConfirmationDialog },
   data() {
     return {
       pageTitle: 'Dashboard',
+      isLoggingOut: false,
+      showLogoutConfirm: false,
+      currentUserName: '',
       // Base menu items - will be updated based on user type
       menuItems: [],
       // Define menu items for different user types
-      adminMenuItems: [
+      systemAdministratorMenuItems: [
+        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/system-admin/dashboard' },
+        { id: 2, icon: 'mdi-account-multiple', name: 'Business Owners', route: '/system-admin/business-owners' },
+        { id: 3, icon: 'mdi-cash-multiple', name: 'Payments', route: '/system-admin/payments' },
+        { id: 4, icon: 'mdi-chart-box', name: 'Reports', route: '/system-admin/reports' },
+      ],
+      businessOwnerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         { id: 3, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
+        { id: 4, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
+        { id: 5, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
+        { id: 50, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
       ],
-      branchManagerMenuItems: [
+      businessManagerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
         { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
         { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
       ],
-      // Employee menu items based on permissions
-      employeeMenuItems: {
+      // Business Employee menu items based on permissions
+      businessEmployeeMenuItems: {
         dashboard: { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
         payments: { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         applicants: { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
@@ -56,6 +71,9 @@ export default {
         8: '/app/stallholders', // Stallholders
         9: '/app/stalls', // Stalls
         10: '/app/collectors', // Collectors
+        11: '/app/inspectors', // Inspectors
+        12: '/app/compliances', // Compliances (for Business Owner in More)
+        13: '/app/subscription', // My Subscription (for Business Owner in More)
         // Submenu items for Stalls
         91: '/app/stalls/raffles', // Raffles submenu
         92: '/app/stalls/auctions', // Auctions submenu
@@ -64,6 +82,7 @@ export default {
   },
   mounted() {
     this.setMenuItemsBasedOnUserType()
+    this.loadCurrentUserName()
   },
   watch: {
     // update header title on route change
@@ -83,58 +102,70 @@ export default {
 
       console.log('🔧 Setting menu items for user type:', userType)
 
-      if (userType === 'admin' || currentUser.userType === 'admin') {
-        this.menuItems = [...this.adminMenuItems]
-        // Update routes for admin
-        this.allMenuRoutes[3] = '/app/branch'
-      } else if (userType === 'employee') {
-        // Employee: Show only features based on permissions
-        const employeePermissions = JSON.parse(
-          sessionStorage.getItem('employeePermissions') || '[]',
+      if (userType === 'system_administrator' || currentUser.userType === 'system_administrator') {
+        this.menuItems = [...this.systemAdministratorMenuItems]
+        console.log('🔧 System Administrator menu items loaded')
+      } else if (userType === 'stall_business_owner' || currentUser.userType === 'stall_business_owner') {
+        this.menuItems = [...this.businessOwnerMenuItems]
+        // Update routes for business owner - Branch is already at ID 3
+        console.log('🔧 Business Owner menu items loaded with features matching Business Manager')
+      } else if (userType === 'business_employee') {
+        // Business Employee: Show only features based on permissions
+        let employeePermissions = JSON.parse(
+          sessionStorage.getItem('employeePermissions') || '{}',
         )
-        console.log('🔧 Employee permissions:', employeePermissions)
+        console.log('🔧 Business Employee permissions:', employeePermissions)
+
+        // Helper function to check permission (handles both array and object formats)
+        const hasPermission = (perm) => {
+          if (Array.isArray(employeePermissions)) {
+            return employeePermissions.includes(perm)
+          } else {
+            return employeePermissions[perm] === true
+          }
+        }
 
         this.menuItems = []
         let menuId = 1
 
-        // Always show dashboard for employees
-        if (employeePermissions.includes('dashboard')) {
-          this.menuItems.push({ ...this.employeeMenuItems.dashboard, id: menuId++ })
+        // Always show dashboard for business employees
+        if (hasPermission('dashboard')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.dashboard, id: menuId++ })
         }
 
         // Add menu items based on permissions
-        if (employeePermissions.includes('payments')) {
-          this.menuItems.push({ ...this.employeeMenuItems.payments, id: menuId++ })
+        if (hasPermission('payments')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.payments, id: menuId++ })
         }
-        if (employeePermissions.includes('applicants')) {
-          this.menuItems.push({ ...this.employeeMenuItems.applicants, id: menuId++ })
+        if (hasPermission('applicants')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.applicants, id: menuId++ })
         }
-        if (employeePermissions.includes('complaints')) {
-          this.menuItems.push({ ...this.employeeMenuItems.complaints, id: menuId++ })
+        if (hasPermission('complaints')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.complaints, id: menuId++ })
         }
-        if (employeePermissions.includes('compliances')) {
-          this.menuItems.push({ ...this.employeeMenuItems.compliances, id: menuId++ })
+        if (hasPermission('compliances')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.compliances, id: menuId++ })
         }
-        if (employeePermissions.includes('vendors')) {
-          this.menuItems.push({ ...this.employeeMenuItems.vendors, id: menuId++ })
+        if (hasPermission('vendors')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.vendors, id: menuId++ })
         }
-        if (employeePermissions.includes('stallholders')) {
-          this.menuItems.push({ ...this.employeeMenuItems.stallholders, id: menuId++ })
+        if (hasPermission('stallholders')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.stallholders, id: menuId++ })
         }
-        if (employeePermissions.includes('collectors')) {
-          this.menuItems.push({ ...this.employeeMenuItems.collectors, id: menuId++ })
+        if (hasPermission('collectors')) {
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.collectors, id: menuId++ })
         }
-        if (employeePermissions.includes('stalls')) {
-          this.menuItems.push({ ...this.employeeMenuItems.stalls, id: menuId++ })
-        }
+        // NOTE: Stalls menu is handled separately in AppSidebar.vue for business employees
+        // because it needs special submenu handling (Raffles/Auctions)
+        // Do NOT add stalls to menuItems here for business employees
 
         // If no permissions, show only dashboard
         if (this.menuItems.length === 0) {
-          this.menuItems.push({ ...this.employeeMenuItems.dashboard, id: 1 })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.dashboard, id: 1 })
         }
       } else {
-        // Default to branch manager menu
-        this.menuItems = [...this.branchManagerMenuItems]
+        // Default to business manager menu
+        this.menuItems = [...this.businessManagerMenuItems]
         this.allMenuRoutes[3] = '/app/applicants'
       }
     },
@@ -174,19 +205,56 @@ export default {
     handleSettingsClick() {
       console.log('Settings clicked')
     },
+    loadCurrentUserName() {
+      try {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+        this.currentUserName = currentUser.name || currentUser.username || currentUser.firstName || ''
+      } catch (error) {
+        console.error('Error loading user name:', error)
+        this.currentUserName = ''
+      }
+    },
     handleLogoutClick() {
-      console.log('Logout clicked')
-      // Clear authentication data
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('branchManagerId')
-      sessionStorage.removeItem('adminId')
-
-      // Redirect to login page
-      this.$router.push('/').catch(() => {
-        window.location.href = '/'
-      })
+      console.log('Logout clicked - showing confirmation dialog')
+      this.loadCurrentUserName()
+      this.showLogoutConfirm = true
+    },
+    async handleLogoutConfirm() {
+      console.log('Logout confirmed - starting logout process')
+      
+      // Start the logout process
+      this.isLoggingOut = true
+      
+      // Small delay to show loading state in the dialog
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Close the confirmation dialog
+      this.showLogoutConfirm = false
+      
+      try {
+        // Call authStore.logout() which handles API call to update last_logout
+        const authStore = useAuthStore()
+        await authStore.logout()
+        
+        // Small delay to show the loading screen animation
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        // Redirect to login page
+        this.$router.push('/').catch(() => {
+          window.location.href = '/'
+        })
+      } catch (error) {
+        console.error('Logout error:', error)
+        // Still redirect even on error
+        this.$router.push('/').catch(() => {
+          window.location.href = '/'
+        })
+      } finally {
+        // Hide loading screen (in case redirect doesn't happen immediately)
+        setTimeout(() => {
+          this.isLoggingOut = false
+        }, 500)
+      }
     },
 
     // NEW: Method to refresh sidebar stall types (can be called when stalls are modified)

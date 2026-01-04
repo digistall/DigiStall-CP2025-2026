@@ -14,6 +14,8 @@ export const corsConfig = {
       'http://localhost:5174',
       'http://localhost:3000',
       'http://localhost:8080',
+      'http://68.183.154.125',  // DigitalOcean production server
+      'http://68.183.154.125:80', // DigitalOcean with explicit port
     ]
 
     if (allowedOrigins.includes(origin)) {

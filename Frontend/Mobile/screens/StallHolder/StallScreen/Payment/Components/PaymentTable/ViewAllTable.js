@@ -15,6 +15,7 @@ const ViewAllTable = ({
   onClose,
   paymentRecords,
   selectedPaymentMethod,
+  theme,
 }) => {
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
@@ -43,14 +44,14 @@ const ViewAllTable = ({
   };
 
   const renderPaymentRecord = (record) => (
-    <TouchableOpacity key={record.id} style={styles.recordCard}>
+    <TouchableOpacity key={record.id} style={[styles.recordCard, theme && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.recordHeader}>
-        <Text style={styles.recordDescription}>{record.description}</Text>
+        <Text style={[styles.recordDescription, theme && { color: theme.colors.text }]}>{record.description}</Text>
         <Text style={styles.recordAmount}>{record.amount}</Text>
       </View>
 
       <View style={styles.recordDetails}>
-        <Text style={styles.recordDate}>{record.date}</Text>
+        <Text style={[styles.recordDate, theme && { color: theme.colors.textSecondary }]}>{record.date}</Text>
         <View style={styles.recordMeta}>
           <View
             style={[
@@ -71,8 +72,8 @@ const ViewAllTable = ({
         </View>
       </View>
 
-      <View style={styles.recordFooter}>
-        <Text style={styles.referenceText}>Ref: {record.reference}</Text>
+      <View style={[styles.recordFooter, theme && { borderTopColor: theme.colors.border }]}>
+        <Text style={[styles.referenceText, theme && { color: theme.colors.textSecondary }]}>Ref: {record.reference}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -85,22 +86,22 @@ const ViewAllTable = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, theme && { backgroundColor: theme.colors.surface }]}>
           {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
+          <View style={[styles.modalHeader, theme && { borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.modalTitle, theme && { color: theme.colors.text }]}>
               {selectedPaymentMethod
                 ? `All ${selectedPaymentMethod.name} Transactions`
                 : "All Payment Records"}
             </Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>✕</Text>
+            <TouchableOpacity style={[styles.closeButton, theme && { backgroundColor: theme.colors.background }]} onPress={onClose}>
+              <Text style={[styles.closeButtonText, theme && { color: theme.colors.textSecondary }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
           {/* Records Count */}
-          <View style={styles.recordsCount}>
-            <Text style={styles.recordsCountText}>
+          <View style={[styles.recordsCount, theme && { backgroundColor: theme.colors.background }]}>
+            <Text style={[styles.recordsCountText, theme && { color: theme.colors.textSecondary }]}>
               Total Records: {paymentRecords.length}
             </Text>
           </View>

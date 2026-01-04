@@ -3,9 +3,36 @@ import { StyleSheet, Dimensions } from "react-native";
 const { width, height } = Dimensions.get("window");
 
 export const styles = StyleSheet.create({
+  mainContainer: {
+    marginHorizontal: 16,
+    marginVertical: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+
+  mainBackgroundImage: {
+    borderRadius: 16,
+    opacity: 0.5,
+  },
+
+  mainOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0)",
+    borderRadius: 16,
+  },
+
   container: {
-    flex: 1,
     paddingVertical: 16,
+    zIndex: 1,
   },
 
   sectionTitle: {
@@ -38,6 +65,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "transparent",
     position: "relative",
+    overflow: "hidden",
   },
 
   selectedCard: {
@@ -164,5 +192,34 @@ export const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+
+  buttonWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+
+  proceedButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+
+  proceedButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
 });

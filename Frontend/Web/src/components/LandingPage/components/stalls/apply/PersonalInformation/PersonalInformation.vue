@@ -1,18 +1,32 @@
 <template>
     <div class="overlay">
         <div class="form-container">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div v-for="step in totalSteps" :key="step" class="step-dot" 
+                    :class="{ 'active': step === currentStep, 'completed': step < currentStep }">
+                    {{ step }}
+                </div>
+            </div>
+            
             <h3>Provide Personal Information</h3>
             <p>The submitted application will be reviewed by the MEPO Administrator for approval.</p>
+
+            <!-- Error Message Display -->
+            <div v-if="errorMessage" class="error-message-box">
+                <span class="error-text">{{ errorMessage }}</span>
+            </div>
+
             <br>
             <form @submit.prevent>
                 <label>
                     Full Name:
-                    <input type="text" v-model="fullName" required />
+                    <input type="text" v-model="fullName" required :class="{ 'input-error': errors.fullName }" />
                 </label>
 
                 <label>
                     Highest Educational Attainment:
-                    <select v-model="education" required>
+                    <select v-model="education" required :class="{ 'input-error': errors.education }">
                         <option disabled value="">Please select</option>
                         <option v-for="level in educationLevels" :key="level" :value="level">{{ level }}</option>
                     </select>
@@ -20,13 +34,29 @@
 
                 <label>
                     Date of Birth:
-                    <input type="date" v-model="birthdate" required />
-                    <span v-if="calculatedAge !== null" class="age-display">Age: {{ calculatedAge }} years old</span>
+                    <input type="text" v-model="formattedBirthdate" @click="datePickerMenu = true" required readonly
+                        placeholder="Click to select date" :class="{ 'input-error': errors.birthdate }"
+                        style="cursor: pointer;" />
+                    
+                    <v-dialog v-model="datePickerMenu" width="auto" :z-index="9999999">
+                        <v-date-picker 
+                            v-model="birthdateDate" 
+                            @update:model-value="updateBirthdate" 
+                            :max="maxDate"
+                            show-adjacent-months 
+                            header="Select Birth Date"
+                        ></v-date-picker>
+                    </v-dialog>
+                    
+                    <span v-if="calculatedAge !== null" class="age-display"
+                        :class="{ 'age-error': calculatedAge < 18 }">
+                        Age: {{ calculatedAge }} years old
+                    </span>
                 </label>
 
                 <label>
                     Civil Status:
-                    <select v-model="civilStatus" required>
+                    <select v-model="civilStatus" required :class="{ 'input-error': errors.civilStatus }">
                         <option disabled value="">Please select</option>
                         <option v-for="status in civilStatusOptions" :key="status" :value="status">{{ status }}</option>
                     </select>
@@ -34,12 +64,15 @@
 
                 <label>
                     Contact Number:
-                    <input type="tel" v-model="contactNumber" required />
+                    <input type="tel" v-model="contactNumber" required placeholder="09XXXXXXXXX"
+                        :class="{ 'input-error': errors.contactNumber }" />
+                    <small class="input-hint">Format: 09XXXXXXXXX (11 digits)</small>
                 </label>
 
                 <label>
                     Mailing Address:
-                    <input type="text" v-model="mailingAddress" required />
+                    <input type="text" v-model="mailingAddress" required
+                        :class="{ 'input-error': errors.mailingAddress }" />
                 </label>
 
                 <div class="buttons">
@@ -56,15 +89,38 @@ export default {
     emits: ['close', 'next'],
     props: {
         stall: Object,
+        savedData: {
+            type: Object,
+            default: null
+        },
+        currentStep: {
+            type: Number,
+            default: 1
+        },
+        totalSteps: {
+            type: Number,
+            default: 4
+        }
     },
     data() {
         return {
             fullName: '',
             education: '',
             birthdate: '',
+            birthdateDate: null,
+            datePickerMenu: false,
             civilStatus: '',
             contactNumber: '',
             mailingAddress: '',
+            errorMessage: '',
+            errors: {
+                fullName: false,
+                education: false,
+                birthdate: false,
+                civilStatus: false,
+                contactNumber: false,
+                mailingAddress: false
+            },
             educationLevels: [
                 'No Formal Education',
                 'Elementary Graduate',
@@ -83,6 +139,22 @@ export default {
             ],
         };
     },
+    mounted() {
+        // Initialize form with saved data if available
+        if (this.savedData) {
+            this.fullName = this.savedData.fullName || '';
+            this.education = this.savedData.education || '';
+            this.birthdate = this.savedData.birthdate || '';
+            this.civilStatus = this.savedData.civilStatus || '';
+            this.contactNumber = this.savedData.contactNumber || '';
+            this.mailingAddress = this.savedData.mailingAddress || '';
+            
+            // Initialize date picker date if birthdate exists
+            if (this.birthdate) {
+                this.birthdateDate = new Date(this.birthdate);
+            }
+        }
+    },
     computed: {
         calculatedAge() {
             if (!this.birthdate) return null;
@@ -97,27 +169,84 @@ export default {
             }
 
             return age;
+        },
+        formattedBirthdate() {
+            if (!this.birthdate) return '';
+            const date = new Date(this.birthdate);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        maxDate() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
         }
     },
     methods: {
+        updateBirthdate(date) {
+            if (date) {
+                this.birthdateDate = date;
+                // Fix timezone issue by creating date in local timezone
+                const selectedDate = new Date(date);
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                this.birthdate = `${year}-${month}-${day}`;
+                this.datePickerMenu = false;
+            }
+        },
+        clearErrors() {
+            this.errorMessage = '';
+            this.errors = {
+                fullName: false,
+                education: false,
+                birthdate: false,
+                civilStatus: false,
+                contactNumber: false,
+                mailingAddress: false
+            };
+        },
+        showError(message, fields = []) {
+            this.errorMessage = message;
+            fields.forEach(field => {
+                if (this.errors.hasOwnProperty(field)) {
+                    this.errors[field] = true;
+                }
+            });
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                this.errorMessage = '';
+            }, 5000);
+        },
         goNext() {
+            this.clearErrors();
+
             const name = this.fullName.trim();
             const contact = this.contactNumber.trim();
             const address = this.mailingAddress.trim();
 
+            // Check required fields
             if (!name || !this.education || !this.birthdate || !this.civilStatus || !contact || !address) {
-                console.error("Please fill in all required fields.");
+                const missingFields = [];
+                if (!name) missingFields.push('fullName');
+                if (!this.education) missingFields.push('education');
+                if (!this.birthdate) missingFields.push('birthdate');
+                if (!this.civilStatus) missingFields.push('civilStatus');
+                if (!contact) missingFields.push('contactNumber');
+                if (!address) missingFields.push('mailingAddress');
+
+                this.showError("Please fill in all required fields.", missingFields);
                 return;
             }
 
+            // Check age requirement
             if (this.calculatedAge < 18) {
-                console.error("Applicant must be at least 18 years old.");
+                this.showError("Applicant must be at least 18 years old to apply.", ['birthdate']);
                 return;
             }
 
+            // Check phone number format
             const phonePattern = /^09\d{9}$/;
             if (!phonePattern.test(contact)) {
-                console.error("Contact number must be 11 digits and start with '09'.");
+                this.showError("Contact number must be 11 digits and start with '09' (e.g., 09123456789).", ['contactNumber']);
                 return;
             }
 
@@ -140,4 +269,24 @@ export default {
 
 <style scoped>
 @import '@/assets/LandingPage/css/applicationformstyle.css';
+</style>
+
+<!-- Unscoped styles to fix Vuetify date picker z-index -->
+<style>
+/* Force date picker to appear above the overlay (must be higher than 999999 used by application modal) */
+.v-overlay-container {
+    z-index: 9999999 !important;
+}
+
+.v-overlay.v-menu {
+    z-index: 9999999 !important;
+}
+
+.v-overlay__content {
+    z-index: 9999999 !important;
+}
+
+.v-picker {
+    z-index: 9999999 !important;
+}
 </style>

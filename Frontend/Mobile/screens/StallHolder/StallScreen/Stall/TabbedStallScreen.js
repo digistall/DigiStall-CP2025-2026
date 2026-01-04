@@ -14,14 +14,27 @@ import {
 // Import components
 import SearchFilterBar from './components/SearchFilter/SearchFilterBar';
 import StallCard from './components/StallCard';
+import StallDetailsModal from './components/StallDetailsModal';
 
 // Import services
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import FavoritesService from '../../../../services/FavoritesService';
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Responsive layout constants
+const isTablet = SCREEN_WIDTH >= 768;
+const numColumns = isTablet ? 2 : 1;
+const containerPadding = 16;
+const cardMargin = 12;
+const CARD_WIDTH = isTablet 
+  ? (SCREEN_WIDTH - (containerPadding * 2) - (cardMargin * (numColumns - 1))) / numColumns 
+  : SCREEN_WIDTH - (containerPadding * 2);
 
 const TabbedStallScreen = () => {
+  const { theme, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('Fixed Price'); // Default to Fixed Price
   const [stallsData, setStallsData] = useState([]);
   const [filteredStalls, setFilteredStalls] = useState([]);
@@ -33,23 +46,27 @@ const TabbedStallScreen = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null);
   const [availableFilters, setAvailableFilters] = useState(['ALL']);
+  
+  // Favorites state
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  
+  // Stall details modal state
+  const [selectedStall, setSelectedStall] = useState(null);
+  const [showStallDetails, setShowStallDetails] = useState(false);
 
   // Tab configuration
   const tabs = [
     { 
       id: 'Fixed Price', 
       label: 'Fixed Price', 
-      icon: require('../../../../assets/Home-Image/Fixed.png')
     },
     { 
       id: 'Auction', 
       label: 'Auction', 
-      icon: require('../../../../assets/Home-Image/Auction.png')
     },
     { 
       id: 'Raffle', 
       label: 'Raffle', 
-      icon: require('../../../../assets/Home-Image/Raffle.png')
     },
   ];
 
@@ -61,7 +78,60 @@ const TabbedStallScreen = () => {
   // Filter and sort stalls when data or filters change
   useEffect(() => {
     filterAndSortStalls();
-  }, [stallsData, selectedFilter, selectedSort, searchText]);
+  }, [stallsData, selectedFilter, selectedSort, searchText, favoriteIds]);
+
+  // Load favorites when user data is available
+  useEffect(() => {
+    if (userData?.user?.applicant_id) {
+      loadFavorites();
+    }
+  }, [userData]);
+
+  // Load favorites from storage
+  const loadFavorites = async () => {
+    try {
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) return;
+      
+      const favorites = await FavoritesService.getFavorites(applicantId);
+      setFavoriteIds(favorites);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  // Toggle favorite status
+  const handleToggleFavorite = async (stallId) => {
+    try {
+      const applicantId = userData?.user?.applicant_id;
+      if (!applicantId) return;
+      
+      const isNowFavorite = await FavoritesService.toggleFavorite(applicantId, stallId);
+      
+      // Update local state
+      setFavoriteIds(prev => {
+        if (isNowFavorite) {
+          return [Number(stallId), ...prev.filter(id => id !== Number(stallId))];
+        } else {
+          return prev.filter(id => id !== Number(stallId));
+        }
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  // Handle opening stall details modal
+  const handleOpenStallDetails = (stall) => {
+    setSelectedStall(stall);
+    setShowStallDetails(true);
+  };
+
+  // Handle closing stall details modal
+  const handleCloseStallDetails = () => {
+    setShowStallDetails(false);
+    setSelectedStall(null);
+  };
 
   const loadUserDataAndStalls = async () => {
     try {
@@ -194,6 +264,9 @@ const TabbedStallScreen = () => {
         break;
     }
 
+    // Sort favorites first
+    filtered = FavoritesService.sortWithFavoritesFirst(filtered, favoriteIds);
+
     setFilteredStalls(filtered);
   };
 
@@ -265,15 +338,16 @@ const TabbedStallScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.id}
             style={[
               styles.tab,
-              activeTab === tab.id && styles.activeTab
+              { backgroundColor: isDark ? theme.colors.card : '#f8f9fa' },
+              activeTab === tab.id && [styles.activeTab, { backgroundColor: theme.colors.primary }]
             ]}
             onPress={() => handleTabPress(tab.id)}
           >
@@ -287,6 +361,7 @@ const TabbedStallScreen = () => {
             />
             <Text style={[
               styles.tabText,
+              { color: theme.colors.textSecondary },
               activeTab === tab.id && styles.activeTabText
             ]}>
               {tab.label}
@@ -304,13 +379,15 @@ const TabbedStallScreen = () => {
         searchText={searchText}
         onSearchChange={setSearchText}
         availableFilters={availableFilters}
+        theme={theme}
+        isDark={isDark}
       />
 
       {/* Stalls List */}
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Loading {activeTab} stalls...</Text>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading {activeTab} stalls...</Text>
         </View>
       ) : (
         <ScrollView 
@@ -321,30 +398,38 @@ const TabbedStallScreen = () => {
           {filteredStalls.length > 0 ? (
             <>
               <View style={styles.resultsHeader}>
-                <Text style={styles.resultsText}>
+                <Text style={[styles.resultsText, { color: theme.colors.text }]}>
                   {filteredStalls.length} {activeTab} stall{filteredStalls.length !== 1 ? 's' : ''} found
                 </Text>
               </View>
               
-              {filteredStalls.map((stall) => (
-                <StallCard
-                  key={stall.id}
-                  stall={stall}
-                  onApply={() => handleStallApplication(stall.id)}
-                  isApplying={applying === stall.id}
-                  stallType={activeTab}
-                />
-              ))}
+              <View style={styles.stallsGrid}>
+                {filteredStalls.map((stall) => (
+                  <StallCard
+                    key={stall.id}
+                    stall={stall}
+                    onApply={() => handleStallApplication(stall.id)}
+                    applying={applying === stall.id}
+                    stallType={activeTab}
+                    theme={theme}
+                    isDark={isDark}
+                    cardWidth={CARD_WIDTH}
+                    isFavorite={favoriteIds.includes(Number(stall.id))}
+                    onToggleFavorite={handleToggleFavorite}
+                    onPress={handleOpenStallDetails}
+                  />
+                ))}
+              </View>
             </>
           ) : (
-            <View style={styles.emptyContainer}>
+            <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
               <Image 
                 source={require('../../../../assets/Home-Image/StallIcon.png')} 
-                style={styles.emptyIcon}
+                style={[styles.emptyIcon, { tintColor: theme.colors.textSecondary }]}
                 resizeMode="contain"
               />
-              <Text style={styles.emptyTitle}>No {activeTab} Stalls Found</Text>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No {activeTab} Stalls Found</Text>
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
                 {searchText || selectedFilter !== 'ALL' 
                   ? 'Try adjusting your search or filter criteria'
                   : `No ${activeTab} stalls are currently available in your area`
@@ -354,6 +439,19 @@ const TabbedStallScreen = () => {
           )}
         </ScrollView>
       )}
+
+      {/* Stall Details Modal */}
+      <StallDetailsModal
+        visible={showStallDetails}
+        stall={selectedStall}
+        onClose={handleCloseStallDetails}
+        onApply={handleStallApplication}
+        applying={applying === selectedStall?.id}
+        theme={theme}
+        isDark={isDark}
+        isFavorite={selectedStall ? favoriteIds.includes(Number(selectedStall.id)) : false}
+        onToggleFavorite={handleToggleFavorite}
+      />
     </View>
   );
 };
@@ -386,12 +484,6 @@ const styles = StyleSheet.create({
   activeTab: {
     backgroundColor: '#007bff',
   },
-  tabIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 6,
-    tintColor: '#6b7280',
-  },
   activeTabIcon: {
     tintColor: '#ffffff',
   },
@@ -420,14 +512,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stallsListContent: {
-    paddingVertical: 16, // Only vertical padding
+    paddingVertical: 16,
+    paddingHorizontal: containerPadding,
+  },
+  // Grid wrapper for tablet layout
+  stallsGrid: {
+    flexDirection: isTablet ? 'row' : 'column',
+    flexWrap: 'wrap',
+    justifyContent: isTablet ? 'flex-start' : 'center',
+    gap: cardMargin,
   },
   resultsHeader: {
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginBottom: 12,
+    backgroundColor: 'transparent',
   },
   resultsText: {
     fontSize: 14,

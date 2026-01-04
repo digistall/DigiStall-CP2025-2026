@@ -1,31 +1,74 @@
 import mysql from 'mysql2/promise'
 import process from 'process'
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+// Load .env from parent Backend folder
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
+
+// Check if using cloud database
+const isCloudDB = process.env.DB_SSL === 'true' || process.env.DB_HOST?.includes('ondigitalocean.com')
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'naga_stall',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: isCloudDB ? 5 : 10, // Lower limit for cloud to avoid exhaustion
   queueLimit: 0,
+  // Set charset for MySQL 8 compatibility
+  charset: 'utf8mb4',
+  // Timeout settings for cloud database (only valid ones for createConnection)
+  connectTimeout: 60000, // 60 seconds - time to establish connection
+  // Keep connection alive
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  // SSL required for DigitalOcean
+  ...(isCloudDB && {
+    ssl: { rejectUnauthorized: false }
+  })
 }
 
 console.log('🔧 Database Config:', {
   host: dbConfig.host,
+  port: dbConfig.port,
   user: dbConfig.user,
   database: dbConfig.database,
   passwordSet: !!dbConfig.password,
+  ssl: isCloudDB ? 'enabled' : 'disabled'
 })
 
 export async function createConnection() {
-  try {
-    const connection = await mysql.createConnection(dbConfig)
-    return connection
-  } catch (error) {
-    console.error('❌ Database connection failed:', error)
-    throw error
+  let retries = 3
+  let lastError
+  
+  while (retries > 0) {
+    try {
+      const connection = await mysql.createConnection(dbConfig)
+      
+      // Test the connection
+      await connection.ping()
+      
+      return connection
+    } catch (error) {
+      lastError = error
+      retries--
+      
+      console.error(`❌ Database connection attempt failed (${3 - retries}/3):`, error.message)
+      
+      if (retries > 0) {
+        console.log(`⏳ Retrying in 2 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+    }
   }
+  
+  console.error('❌ All database connection attempts failed')
+  throw lastError
 }
 
 export async function testConnection() {

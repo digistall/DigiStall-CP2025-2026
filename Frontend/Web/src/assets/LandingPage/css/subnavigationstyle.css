@@ -37,6 +37,56 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+/* Navigation wrapper for the scrollable area */
+.nav-wrapper {
+  flex: 1;
+  overflow: hidden;
+  max-width: calc(100% - 80px); /* Account for arrow buttons */
+}
+
+/* Navigation arrow buttons */
+.nav-arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.25);
+  font-size: 20px;
+  z-index: 10;
+}
+
+.nav-arrow:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.35);
+}
+
+.nav-arrow:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+.nav-arrow i {
+  font-size: 18px;
+}
+
+.left-arrow {
+  margin-right: 8px;
+}
+
+.right-arrow {
+  margin-left: 8px;
 }
 
 /* Professional Area Buttons */
@@ -54,7 +104,6 @@
   min-width: 120px;
   white-space: nowrap;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   flex-shrink: 0; /* Prevent buttons from shrinking */
 }
@@ -147,37 +196,27 @@
   overflow-y: hidden;
   gap: 1rem;
   padding: 0.5rem 0;
-  scrollbar-width: thin;
-  scrollbar-color: #007bff #e9ecef;
-  justify-content: center; /* Center buttons when they fit */
+  scrollbar-width: none; /* Hide scrollbar for arrow navigation */
+  justify-content: flex-start;
   align-items: center;
   max-width: 100%;
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
+  scroll-behavior: smooth;
 }
 
-/* When content overflows, switch to flex-start for scrolling */
-.scrollable-container.overflow-scrolling {
+/* Hide scrollbar completely for arrow navigation */
+.scrollable-container.arrow-navigation {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollable-container.arrow-navigation::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* When using arrow navigation, always use flex-start */
+.scrollable-container.arrow-navigation {
   justify-content: flex-start;
-}
-
-/* Custom scrollbar styling */
-.scrollable-container::-webkit-scrollbar {
-  height: 6px;
-}
-
-.scrollable-container::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #007bff, #0056b3);
-  border-radius: 3px;
-  transition: background 0.3s ease;
-}
-
-.scrollable-container::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #0056b3, #004085);
-}
-
-.scrollable-container::-webkit-scrollbar-track {
-  background: #e9ecef;
-  border-radius: 3px;
 }
 
 /* Transitions */

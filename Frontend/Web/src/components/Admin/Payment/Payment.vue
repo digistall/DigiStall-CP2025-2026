@@ -3,7 +3,14 @@
   <v-app>
     <div class="payment-page">
       <!-- Main Content -->
-      <v-main>
+      <v-main class="payment-main-content">
+        <!-- Standardized Loading Overlay - contained within main content -->
+        <LoadingOverlay 
+          :loading="loading" 
+          text="Loading payment data..."
+          :full-page="false"
+        />
+
         <v-container fluid class="main-content">
           <v-row>
             <v-col cols="12">
@@ -15,7 +22,10 @@
 
               <!-- Stall Applicants Payment Section -->
               <transition name="slide-fade" mode="out-in">
-                <StallPayments v-if="selectedPaymentType === 'stall'" />
+                <StallPayments 
+                  v-if="selectedPaymentType === 'stall'" 
+                  @loading="handleLoading"
+                />
                 
                 <!-- Vendor Applicants Payment Section (Blank for now) -->
                 <div v-else class="vendor-section">

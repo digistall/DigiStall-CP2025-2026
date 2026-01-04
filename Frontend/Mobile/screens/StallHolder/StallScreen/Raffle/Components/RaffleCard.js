@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { useTheme } from '../../Settings/components/ThemeComponents/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -18,6 +19,7 @@ const RaffleCard = ({
   endTime = null,
   onPress 
 }) => {
+  const { theme, isDark } = useTheme();
   const [timeLeft, setTimeLeft] = useState('');
   const [isActive, setIsActive] = useState(isLive);
 
@@ -53,7 +55,10 @@ const RaffleCard = ({
   }, [endTime]);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor: theme.colors.card }]} 
+      onPress={onPress}
+    >
       <View style={styles.imageContainer}>
         <Image source={{ uri: image }} style={styles.image} />
         {isActive && (
@@ -65,13 +70,19 @@ const RaffleCard = ({
       
       <View style={styles.content}>
         <View style={styles.stallInfo}>
-          <Text style={styles.stallNumber}>STALL# {stall}</Text>
-          <Text style={styles.location}>{location}</Text>
+          <Text style={[
+            styles.stallNumber, 
+            { 
+              color: theme.colors.textSecondary,
+              backgroundColor: isDark ? theme.colors.surface : '#f3f4f6'
+            }
+          ]}>STALL# {stall}</Text>
+          <Text style={[styles.location, { color: theme.colors.text }]}>{location}</Text>
         </View>
         
         <View style={styles.actionContainer}>
           {isActive ? (
-            <TouchableOpacity style={styles.raffleButton}>
+            <TouchableOpacity style={[styles.raffleButton, { backgroundColor: theme.colors.primary }]}>
               <Text style={styles.raffleButtonText}>RAFFLE ONGOING</Text>
             </TouchableOpacity>
           ) : (

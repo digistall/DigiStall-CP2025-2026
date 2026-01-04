@@ -1,14 +1,14 @@
 <template>
   <v-dialog v-model="model" max-width="900">
-    <v-card class="pa-4">
-      <v-card-title class="d-flex justify-space-between align-center">
-        <span class="text-h6 font-weight-bold">Vendor Details</span>
-        <v-btn icon="mdi-close" variant="text" @click="model = false" />
+    <v-card class="add-stallholder-modal">
+      <v-card-title class="modal-header">
+        <h2 class="modal-title">Vendor Details</h2>
+        <v-btn icon class="close-btn" @click="model = false">
+          <v-icon color="white">mdi-close</v-icon>
+        </v-btn>
       </v-card-title>
 
-      <v-divider />
-
-      <v-card-text class="pt-6">
+      <v-card-text class="modal-content">
         <!-- Header: Photo + Identity -->
         <v-row>
           <v-col cols="12" md="3" class="d-flex justify-center">

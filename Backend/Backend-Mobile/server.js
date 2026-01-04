@@ -10,6 +10,8 @@ import loginRoutes from './routes/loginRouter.js';
 import stallRoutes from './routes/stallRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
+import stallholderRoutes from './routes/stallholderRoutes.js';
+import inspectorRoutes from './routes/inspectorRoutes.js';
 
 const app = express();
 const PORT = process.env.MOBILE_PORT || 5001;
@@ -42,6 +44,8 @@ app.use('/api/mobile/auth', loginRoutes);
 app.use('/api/mobile/stalls', stallRoutes);
 app.use('/api/mobile/users', userRoutes);
 app.use('/api/mobile/applications', applicationRoutes);
+app.use('/api/mobile/stallholder', stallholderRoutes);
+app.use('/api/mobile/inspector', inspectorRoutes);
 
 // ===== HEALTH CHECK =====
 app.get('/api/mobile/health', async (req, res) => {
@@ -86,13 +90,15 @@ app.get('/', (req, res) => {
     features: {
       authentication: 'Mobile user login and session management',
       stalls: 'Stall browsing and application management',
-      applications: 'Application tracking and status updates'
+      applications: 'Application tracking and status updates',
+      stallholder: 'Stallholder document management and uploads'
     },
     endpoints: {
       auth: '/api/mobile/auth',
       stalls: '/api/mobile/stalls',
       users: '/api/mobile/users',
       applications: '/api/mobile/applications',
+      stallholder: '/api/mobile/stallholder',
       health: '/api/mobile/health'
     }
   });
@@ -119,6 +125,7 @@ app.use('*', (req, res) => {
       '/api/mobile/stalls',
       '/api/mobile/users',
       '/api/mobile/applications',
+      '/api/mobile/stallholder',
       '/api/mobile/health'
     ]
   });

@@ -1,5 +1,12 @@
 <template>
   <div class="active-auctions">
+    <!-- Standardized Loading Overlay - contained within auctions section -->
+    <LoadingOverlay 
+      :loading="loading && auctions.length === 0" 
+      text="Loading active auctions..."
+      :full-page="false"
+    />
+
     <!-- Search and Filters Section -->
     <SearchAndFilter
       :auctions-data="activeAuctions"
@@ -9,19 +16,9 @@
     <!-- Auctions Cards Section -->
     <v-card>
       <v-card-text>
-        <!-- Loading State -->
-        <div v-if="loading && auctions.length === 0" class="text-center py-8">
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="60"
-          ></v-progress-circular>
-          <p class="mt-4">Loading active auctions...</p>
-        </div>
-
         <!-- No Data State -->
         <div
-          v-else-if="!loading && filteredAuctions.length === 0"
+          v-if="!loading && filteredAuctions.length === 0"
           class="text-center py-8"
         >
           <v-icon size="64" color="grey lighten-1">mdi-gavel</v-icon>

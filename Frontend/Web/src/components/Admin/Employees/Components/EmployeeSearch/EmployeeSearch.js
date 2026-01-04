@@ -4,9 +4,13 @@
     search: String,
     statusFilter: String,
     permissionFilter: String,
-    permissionOptions: Array
+    permissionOptions: Array,
+    showActivityLog: {
+      type: Boolean,
+      default: true
+    }
   },
-  emits: ['update:search', 'update:statusFilter', 'update:permissionFilter', 'reset'],
+  emits: ['update:search', 'update:statusFilter', 'update:permissionFilter', 'reset', 'open-activity-log'],
   data() {
     return {
       showFilterPanel: false,

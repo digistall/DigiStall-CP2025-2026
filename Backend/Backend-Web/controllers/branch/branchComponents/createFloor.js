@@ -19,13 +19,13 @@ export const createFloor = async (req, res) => {
 
   // Authorization check based on user type
   let branch_id;
-  if (userType === "branch_manager" || userType === "branch-manager") {
-    // Branch manager authorization (existing logic)
-    const branch_manager_id = req.user?.branchManagerId || userId;
-    if (!branch_manager_id) {
+  if (userType === "business_manager") {
+    // Business manager authorization (existing logic)
+    const business_manager_id = req.user?.businessManagerId || userId;
+    if (!business_manager_id) {
       return res.status(401).json({ 
         success: false, 
-        message: "Branch manager ID not found" 
+        message: "Business manager ID not found" 
       });
     }
 
@@ -33,10 +33,10 @@ export const createFloor = async (req, res) => {
     try {
       connection = await createConnection();
       
-      // Get the branch_id for this branch manager
+      // Get the branch_id for this business manager
       const [branchResult] = await connection.execute(
-        "SELECT branch_id FROM branch_manager WHERE branch_manager_id = ?",
-        [branch_manager_id]
+        "SELECT branch_id FROM business_manager WHERE business_manager_id = ?",
+        [business_manager_id]
       );
 
       if (branchResult.length === 0) {
@@ -56,7 +56,7 @@ export const createFloor = async (req, res) => {
     } finally {
       if (connection) await connection.end();
     }
-  } else if (userType === "employee") {
+  } else if (userType === "business_employee") {
     // Employee authorization - check permissions
     const permissions = req.user?.permissions || [];
     const hasFloorsPermission = Array.isArray(permissions)
@@ -114,12 +114,12 @@ export const createFloor = async (req, res) => {
       });
     }
 
-    const [result] = await connection.execute(
-      "INSERT INTO floor (branch_id, floor_number, floor_name, status, created_at) VALUES (?, ?, ?, ?, NOW())",
-      [branch_id, floor_number, floor_name, status || 'Active']
+    const [[result]] = await connection.execute(
+      "CALL createFloor(?, ?, ?, ?)",
+      [branch_id, floor_name, floor_number, branch_id]
     );
     
-    const floor_id = result.insertId;
+    const floor_id = result.floor_id;
     
     console.log(`✅ Floor created successfully by ${userType}:`, {
       floor_id,

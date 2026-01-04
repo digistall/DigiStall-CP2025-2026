@@ -5,7 +5,7 @@
       <div class="table-header">
         <div class="header-row">
           <div class="header-cell employee-col">Employee</div>
-          <div class="header-cell username-col">Username</div>
+          <div class="header-cell role-col">Role</div>
           <div class="header-cell status-col">Status</div>
           <div class="header-cell permissions-col">Permissions</div>
           <div class="header-cell login-col">Last Login</div>
@@ -13,7 +13,7 @@
       </div>
 
       <!-- Table Body -->
-      <div class="table-body">
+      <div class="table-body scrollable-table-wrapper">
         <div v-if="employees.length === 0" class="no-data-container">
           <v-icon size="64" color="grey-lighten-2">mdi-account-off</v-icon>
           <p class="no-data-text">No employees found</p>
@@ -44,9 +44,14 @@
               </div>
             </div>
 
-            <div class="table-cell username-col">
-              <v-chip size="small" color="primary" variant="outlined">
-                {{ employee.employee_username }}
+            <div class="table-cell role-col">
+              <v-chip
+                :color="getRoleColor(employee)"
+                size="small"
+                variant="tonal"
+              >
+                <v-icon size="14" class="me-1">{{ getRoleIcon(employee) }}</v-icon>
+                {{ employee.display_role || 'Web Employee' }}
               </v-chip>
             </div>
 
@@ -56,7 +61,7 @@
                 size="small"
                 variant="flat"
               >
-                {{ employee.status }}
+                {{ capitalizeStatus(employee.status) }}
               </v-chip>
             </div>
 
@@ -77,15 +82,25 @@
                 >
                   {{ getPermissionText(permission) }}
                 </v-chip>
-                <v-chip
+                <v-tooltip 
                   v-if="(employee.permissions || []).length > 2"
                   size="x-small"
                   color="grey"
                   variant="outlined"
                   class="permission-chip more-chip"
                 >
-                  +{{ (employee.permissions || []).length - 2 }} more
-                </v-chip>
+                  <template v-slot:activator="{ props }">
+                    <v-chip
+                      v-bind="props"
+                      size="x-small"
+                      color="grey"
+                      variant="outlined"
+                      class="permission-chip permission-more-chip"
+                    >
+                      +{{ (employee.permissions || []).length - 2 }} more
+                    </v-chip>
+                  </template>
+                </v-tooltip>
               </div>
             </div>
 
@@ -174,13 +189,24 @@
 
             <v-btn
               block
-              color="red"
+              color="warning"
               variant="flat"
-              class="simple-action-btn mb-4"
+              class="simple-action-btn mb-3"
               @click="handleResetPassword"
             >
               <v-icon class="me-2">mdi-key-variant</v-icon>
               Reset Password
+            </v-btn>
+
+            <v-btn
+              block
+              color="red-darken-3"
+              variant="flat"
+              class="simple-action-btn mb-4"
+              @click="handleFireEmployee"
+            >
+              <v-icon class="me-2">mdi-account-remove</v-icon>
+              Fire Employee
             </v-btn>
 
             <v-btn

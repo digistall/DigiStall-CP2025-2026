@@ -18,6 +18,8 @@ export default {
       loading: false,
       showAddBranchDialog: false,
       showAssignManagerDialog: false,
+      showDeleteDialog: false,
+      branchToDelete: null,
       selectedBranch: null,
       popup: {
         show: false,
@@ -142,24 +144,42 @@ export default {
       this.showNotification('Edit functionality coming soon', 'info')
     },
 
-    async deleteBranch(branch) {
-      if (confirm(`Are you sure you want to delete "${branch.branch_name}"?`)) {
-        try {
-          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-          const apiBaseUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`
-          await axios.delete(`${apiBaseUrl}/branches/${branch.branch_id}`, {
-            headers: {
-              Authorization: `Bearer ${sessionStorage.getItem('authToken')}`,
-            },
-          })
+    openDeleteDialog(branch) {
+      this.branchToDelete = branch
+      this.showDeleteDialog = true
+    },
 
-          this.branches = this.branches.filter((b) => b.branch_id !== branch.branch_id)
-          this.showNotification('Branch deleted successfully!', 'success')
-        } catch (error) {
-          console.error('Error deleting branch:', error)
-          this.showNotification('Error deleting branch', 'error')
-        }
+    async deleteBranch(branch) {
+      // This method is now called from BranchList, so we open the dialog
+      this.openDeleteDialog(branch)
+    },
+
+    async confirmDelete() {
+      if (!this.branchToDelete) return
+
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        const apiBaseUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`
+        await axios.delete(`${apiBaseUrl}/branches/${this.branchToDelete.branch_id}`, {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem('authToken')}`,
+          },
+        })
+
+        this.branches = this.branches.filter((b) => b.branch_id !== this.branchToDelete.branch_id)
+        this.showNotification('Branch deleted successfully!', 'success')
+        this.showDeleteDialog = false
+        this.branchToDelete = null
+      } catch (error) {
+        console.error('Error deleting branch:', error)
+        this.showNotification('Error deleting branch', 'error')
+        this.showDeleteDialog = false
       }
+    },
+
+    cancelDelete() {
+      this.showDeleteDialog = false
+      this.branchToDelete = null
     },
 
     showNotification(message, color = 'success', operation = '', operationType = 'branch') {

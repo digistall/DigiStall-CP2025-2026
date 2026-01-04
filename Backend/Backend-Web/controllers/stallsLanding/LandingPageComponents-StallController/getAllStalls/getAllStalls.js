@@ -1,39 +1,14 @@
 import { createConnection } from "../../../config/database.js";
 
-// Get all stalls (for landing page)
+// Get all stalls (for landing page) - Uses stored procedure
 export const getAllStalls = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
 
-    const [stalls] = await connection.execute(`
-      SELECT 
-        s.stall_id as id,
-        s.stall_no as stallNumber,
-        s.stall_location as location,
-        s.size as dimensions,
-        s.rental_price,
-        s.price_type,
-        s.status,
-        s.description,
-        s.stall_image as imageUrl,
-        s.is_available as isAvailable,
-        sec.section_name as section,
-        f.floor_name as floor,
-        f.floor_number,
-        b.area,
-        b.location as branchLocation,
-        b.branch_name as branch,
-        bm.first_name as manager_first_name,
-        bm.last_name as manager_last_name
-      FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
-      WHERE s.status = 'Active' AND s.is_available = 1
-      ORDER BY s.created_at DESC
-    `);
+    // Use stored procedure instead of direct SQL
+    const [rows] = await connection.execute('CALL sp_getAllStallsForLanding()');
+    const stalls = rows[0]; // First result set from stored procedure
 
     console.log(`🔍 Raw stalls from database:`, stalls.length);
     if (stalls.length > 0) {
@@ -64,6 +39,8 @@ export const getAllStalls = async (req, res) => {
         branch: stall.branch, 
         branchLocation: stall.branchLocation,
         price: formattedPrice,
+        priceType: stall.price_type, 
+        price_type: stall.price_type,
         dimensions: stall.dimensions || "Contact for details",
         floor: stall.floor,
         section: stall.section,

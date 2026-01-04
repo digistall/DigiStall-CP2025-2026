@@ -1,0 +1,91 @@
+# DigitalOcean App Platform Configuration (Using Existing Database)
+# DigiStall - Stall Management System
+# Use this if you already have a DigitalOcean Managed Database
+
+name: digistall
+
+# Region - Singapore for best latency to Philippines
+region: sgp
+
+# ===== SERVICES =====
+services:
+  # Backend API Service
+  - name: digistall-api
+    github:
+      branch: FullBranch
+      deploy_on_push: true
+      repo: digistall/DigiStall-CP2025-2026
+    source_dir: /Backend/Backend-Web
+    http_port: 3001
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    routes:
+      - path: /api
+    build_command: npm install
+    run_command: node server.js
+    envs:
+      # Server Configuration
+      - key: NODE_ENV
+        value: production
+        scope: RUN_TIME
+      - key: WEB_PORT
+        value: "3001"
+        scope: RUN_TIME
+      # Use your existing DigitalOcean Managed Database
+      - key: DB_HOST
+        value: dbaas-db-2078449-do-user-29954926-0.f.db.ondigitalocean.com
+        scope: RUN_TIME
+      - key: DB_PORT
+        value: "25060"
+        scope: RUN_TIME
+      - key: DB_USER
+        value: doadmin
+        scope: RUN_TIME
+      - key: DB_PASSWORD
+        type: SECRET
+        value: REPLACE_WITH_YOUR_DB_PASSWORD
+        scope: RUN_TIME
+      - key: DB_NAME
+        value: naga_stall
+        scope: RUN_TIME
+      - key: DB_SSL
+        value: "true"
+        scope: RUN_TIME
+      # JWT Configuration - Generate secure keys!
+      - key: JWT_SECRET
+        type: SECRET
+        value: REPLACE_WITH_SECURE_JWT_SECRET
+        scope: RUN_TIME
+      - key: JWT_REFRESH_SECRET
+        type: SECRET
+        value: REPLACE_WITH_SECURE_REFRESH_SECRET
+        scope: RUN_TIME
+      # Mobile App Download URL
+      - key: MOBILE_APP_DOWNLOAD_URL
+        value: https://expo.dev/accounts/genosexe02/projects/digistall/builds
+        scope: RUN_TIME
+
+# ===== STATIC SITES =====
+static_sites:
+  # Frontend Web Application
+  - name: digistall-web
+    github:
+      branch: FullBranch
+      deploy_on_push: true
+      repo: digistall/DigiStall-CP2025-2026
+    source_dir: /Frontend/Web
+    build_command: npm install && npm run build
+    output_dir: dist
+    index_document: index.html
+    error_document: index.html
+    routes:
+      - path: /
+    envs:
+      - key: VITE_API_URL
+        value: ${APP_URL}/api
+        scope: BUILD_TIME
+
+# ===== ALERTS =====
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED

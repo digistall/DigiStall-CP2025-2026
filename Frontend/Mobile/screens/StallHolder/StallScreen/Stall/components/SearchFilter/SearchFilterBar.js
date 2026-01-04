@@ -2,8 +2,17 @@ import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import SearchBar from './SearchBar';
 import FilterButton from './FilterButton';
+import { useTheme } from '../../../Settings/components/ThemeComponents/ThemeContext';
 
 const { width } = Dimensions.get('window');
+
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    border: '#e5e7eb',
+  }
+};
 
 const SearchFilterBar = ({ 
   searchText, 
@@ -18,14 +27,23 @@ const SearchFilterBar = ({
     { label: 'Price: Low to High', value: 'price_asc' },
     { label: 'Price: High to Low', value: 'price_desc' },
     { label: 'Default', value: 'default' }
-  ]
+  ],
+  theme: propTheme,
+  isDark: propIsDark,
 }) => {
+  const contextTheme = useTheme();
+  const theme = propTheme || contextTheme?.theme || defaultTheme;
+  const isDark = propIsDark !== undefined ? propIsDark : contextTheme?.isDark || false;
+  const colors = theme?.colors || defaultTheme.colors;
+  
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <SearchBar 
         searchText={searchText}
         onSearchChange={onSearchChange}
         placeholder={searchPlaceholder}
+        theme={theme}
+        isDark={isDark}
       />
       
       <FilterButton
@@ -35,6 +53,8 @@ const SearchFilterBar = ({
         onSortSelect={onSortSelect}
         filters={filters}
         sortOptions={sortOptions}
+        theme={theme}
+        isDark={isDark}
       />
     </View>
   );
@@ -45,9 +65,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: width * 0.04,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
     alignItems: 'center',
   },
 });

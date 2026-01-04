@@ -7,6 +7,45 @@
   background-color: #fafafa;
   min-height: calc(100vh - 64px);
   padding: 24px;
+  position: relative;
+}
+
+/* Dashboard Header */
+.dashboard-header {
+  padding: 8px 0;
+}
+
+.dashboard-header h1 {
+  color: rgb(0, 33, 129);
+  margin: 0;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
 }
 
 /* Page Header Styles */
@@ -26,11 +65,32 @@
   border-radius: 12px;
   transition: all 0.3s ease;
   min-height: 120px;
+  position: relative;
 }
 
 .metric-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Download Button for Metric Cards */
+.metric-card .download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.metric-card:hover .download-btn {
+  opacity: 1;
+}
+
+.metric-card .download-btn:hover {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
 .metric-content {
@@ -89,6 +149,23 @@
   padding: 16px 24px !important;
   font-size: 1.1rem !important;
   font-weight: 600 !important;
+  display: flex;
+  align-items: center;
+}
+
+/* Download Button for Chart Cards */
+.chart-download-btn {
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+}
+
+.chart-card:hover .chart-download-btn {
+  opacity: 1;
+}
+
+.chart-download-btn:hover {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
 .chart-container {
@@ -119,6 +196,43 @@
 /* Data Table Cards */
 .data-table-card {
   border-radius: 12px !important;
+}
+
+/* Fixed height table scroll container */
+.table-scroll-container {
+  height: 350px;
+  min-height: 350px;
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Empty state inside scroll container */
+.table-scroll-container .empty-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .table-header {

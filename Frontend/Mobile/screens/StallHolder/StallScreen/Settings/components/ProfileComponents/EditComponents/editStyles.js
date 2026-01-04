@@ -2,6 +2,7 @@ import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
+// Legacy static styles (for backward compatibility)
 export const editStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
@@ -52,5 +53,59 @@ export const editStyles = StyleSheet.create({
   inputError: { borderColor: "#ef4444" },
   errorText: { color: "#ef4444", fontSize: width * 0.035, marginTop: 4 },
   disabledInput: { backgroundColor: "#f3f4f6", color: "#9ca3af" },
+  bottomSpacing: { height: height * 0.05 },
+});
+
+// Dynamic themed styles function
+export const createThemedEditStyles = (theme) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: width * 0.04,
+    paddingVertical: height * 0.02,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    zIndex: 1000,
+  },
+  closeButton: { padding: 8 },
+  headerTitle: { fontSize: width * 0.05, fontWeight: "bold", color: theme.colors.text },
+  saveButton: { backgroundColor: theme.colors.primary, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8 },
+  saveButtonText: { color: "white", fontSize: width * 0.04, fontWeight: "600" },
+  scrollView: { flex: 1 },
+  scrollViewContent: { flexGrow: 1, paddingBottom: Platform.OS === "ios" ? 40 : 60 },
+  sectionHeader: { paddingHorizontal: width * 0.04, paddingTop: height * 0.02, paddingBottom: height * 0.01 },
+  sectionTitle: { fontSize: width * 0.045, fontWeight: "bold", color: theme.colors.text },
+  section: {
+    backgroundColor: theme.colors.card,
+    marginHorizontal: width * 0.04,
+    marginBottom: height * 0.015,
+    borderRadius: 12,
+    padding: width * 0.04,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  inputGroup: { marginBottom: height * 0.02 },
+  inputLabel: { fontSize: width * 0.04, fontWeight: "600", color: theme.colors.textSecondary, marginBottom: 6 },
+  input: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: width * 0.04,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.surface,
+    minHeight: Platform.OS === "android" ? 45 : 40,
+  },
+  multilineInput: { height: height * 0.1, textAlignVertical: "top" },
+  inputError: { borderColor: "#ef4444" },
+  errorText: { color: "#ef4444", fontSize: width * 0.035, marginTop: 4 },
+  disabledInput: { backgroundColor: theme.colors.background, color: theme.colors.textTertiary },
   bottomSpacing: { height: height * 0.05 },
 });
