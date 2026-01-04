@@ -47,6 +47,11 @@ export default function App() {
         <NavigationContainer>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="LoginScreen" component={LoginScreen} />
+            <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
+            <Stack.Screen name="StallHome" component={StallHome} />
+            <Stack.Screen name="VendorHome" component={VendorHome} />
+            <Stack.Screen name="InspectorHome" component={InspectorHome} />
+            <Stack.Screen name="CollectorHome" component={CollectorHome} />
           </Stack.Navigator>
         </NavigationContainer>
       </ThemeProvider>

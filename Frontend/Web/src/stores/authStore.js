@@ -123,6 +123,9 @@ export const useAuthStore = defineStore('auth', () => {
           sessionStorage.setItem('currentUser', userData);
           sessionStorage.setItem('userType', parsedUser.userType);
           
+          // Start activity tracking since user is authenticated
+          startActivityTracking();
+          
           console.log('✅ Auth store initialized with existing session');
         } catch (parseError) {
           console.error('❌ Error parsing session data:', parseError);
@@ -274,6 +277,9 @@ export const useAuthStore = defineStore('auth', () => {
         // Update store state
         user.value = userData;
         isAuthenticated.value = true;
+        
+        // Start activity tracking to keep user marked as "online"
+        startActivityTracking();
 
         SecureLogger.auth('Login successful', { userType: userData.userType, hasToken: !!token });
         return { success: true, user: userData };
@@ -297,6 +303,83 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     try {
       isLoading.value = true;
+      
+      // Stop activity tracking
+      stopActivityTracking();
+      
+      // Get user info before clearing for API call
+      const currentUserData = user.value;
+      const currentUserType = localStorage.getItem('userType') || sessionStorage.getItem('userType');
+      const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      
+      // Also try to get currentUser from storage if user.value is null
+      let storedUser = null;
+      if (!currentUserData) {
+        try {
+          const storedUserStr = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+          if (storedUserStr) {
+            storedUser = JSON.parse(storedUserStr);
+          }
+        } catch (e) {
+          console.warn('Could not parse stored user:', e);
+        }
+      }
+      
+      const userDataToUse = currentUserData || storedUser;
+      
+      // Try to get user ID from multiple sources
+      let userId = userDataToUse?.id || 
+                   userDataToUse?.userId || 
+                   userDataToUse?.employeeId || 
+                   userDataToUse?.business_employee_id ||
+                   userDataToUse?.managerId ||
+                   userDataToUse?.manager_id ||
+                   userDataToUse?.business_manager_id ||
+                   userDataToUse?.adminId ||
+                   userDataToUse?.admin_id ||
+                   userDataToUse?.business_owner_id ||
+                   userDataToUse?.system_admin_id;
+      
+      // Also try from sessionStorage
+      if (!userId) {
+        userId = sessionStorage.getItem('employeeId') || 
+                 sessionStorage.getItem('branchManagerId') ||
+                 sessionStorage.getItem('adminId');
+      }
+      
+      console.log('='.repeat(60));
+      console.log('🔐 FRONTEND LOGOUT INITIATED');
+      console.log('🔐 user.value:', JSON.stringify(currentUserData, null, 2));
+      console.log('🔐 storedUser:', JSON.stringify(storedUser, null, 2));
+      console.log('🔐 userDataToUse:', JSON.stringify(userDataToUse, null, 2));
+      console.log('🔐 Extracted userId:', userId, '(type:', typeof userId, ')');
+      console.log('🔐 userType:', currentUserType);
+      console.log('🔐 authToken present:', !!authToken);
+      console.log('='.repeat(60));
+      
+      // Call logout API to update last_logout in database
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        console.log('🔐 Calling logout API:', `${apiUrl}/auth/logout`);
+        console.log('🔐 Request body:', { userId, userType: currentUserType });
+        
+        const response = await axios.post(`${apiUrl}/auth/logout`, {
+          userId: userId,
+          userType: currentUserType
+        }, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        });
+        console.log('✅ Logout API response:', response.data);
+      } catch (apiError) {
+        console.warn('⚠️ Logout API error (continuing with local cleanup):', apiError.message);
+        if (apiError.response) {
+          console.warn('⚠️ API response:', apiError.response.data);
+        }
+      }
       
       // Clear localStorage (this triggers storage event for cross-tab sync)
       localStorage.removeItem('authToken');
@@ -475,6 +558,83 @@ export const useAuthStore = defineStore('auth', () => {
     sessionStorage.setItem('currentUser', JSON.stringify(user.value));
   }
 
+  // ===== ACTIVITY TRACKING =====
+  let activityInterval = null;
+  let lastActivityTime = Date.now();
+  
+  /**
+   * Update last activity time (called on user interactions)
+   */
+  function recordActivity() {
+    lastActivityTime = Date.now();
+  }
+  
+  /**
+   * Send heartbeat to server to update last_login (activity timestamp)
+   * This keeps the user marked as "online" in the dashboard
+   */
+  async function sendActivityHeartbeat() {
+    if (!isAuthenticated.value || !user.value) return;
+    
+    const userId = user.value.id || user.value.userId;
+    const userType = user.value.userType || localStorage.getItem('userType');
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    if (!userId || !userType || !authToken) return;
+    
+    try {
+      await axios.post(`${API_BASE_URL}/auth/heartbeat`, {
+        userId,
+        userType
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      // Silent success - no console logging to reduce noise
+    } catch (error) {
+      // Silent fail - don't spam console with heartbeat errors
+    }
+  }
+  
+  /**
+   * Start activity tracking - sends heartbeat every 5 minutes
+   */
+  function startActivityTracking() {
+    if (activityInterval) {
+      clearInterval(activityInterval);
+    }
+    
+    // Send initial heartbeat
+    sendActivityHeartbeat();
+    
+    // Send heartbeat every 5 minutes to keep user marked as active
+    activityInterval = setInterval(() => {
+      // Only send heartbeat if user has been active in the last 5 minutes
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      if (lastActivityTime > fiveMinutesAgo) {
+        sendActivityHeartbeat();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    // Track user activity (mouse move, key press, click)
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, recordActivity, { passive: true });
+    });
+  }
+  
+  /**
+   * Stop activity tracking
+   */
+  function stopActivityTracking() {
+    if (activityInterval) {
+      clearInterval(activityInterval);
+      activityInterval = null;
+    }
+  }
+
   // ===== RETURN =====
   return {
     // State
@@ -505,6 +665,9 @@ export const useAuthStore = defineStore('auth', () => {
     canAccessRoute,
     clearError,
     setError,
-    updateUser
+    updateUser,
+    startActivityTracking,
+    stopActivityTracking,
+    recordActivity
   };
 });

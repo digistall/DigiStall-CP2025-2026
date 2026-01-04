@@ -8,6 +8,9 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "./Settings/components/ThemeComponents/ThemeContext";
+import ApiService from "../../../services/ApiService";
+import UserStorageService from "../../../services/UserStorageService";
+import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
 
 // nav bar and sidebar components
 import Header from "../StallComponents/header";
@@ -34,8 +37,45 @@ const StallHome = ({ navigation }) => {
   // Single source of truth for current screen
   const [currentScreen, setCurrentScreen] = useState("stall");
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Prevent multiple clicks
+    if (isLoggingOut) {
+      console.log('⏳ Logout already in progress, ignoring...');
+      return;
+    }
+    
+    // Close sidebar first
+    setSidebarVisible(false);
+    
+    // Show logout loading screen
+    setIsLoggingOut(true);
+    
+    try {
+      // Get user data before clearing
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const userId = userData?.user?.applicant_id || userData?.user?.id;
+      
+      // Call logout API to update last_logout in database
+      if (token) {
+        await ApiService.mobileLogout(token, userId);
+        console.log('✅ Logout API called - last_logout updated');
+      }
+      
+      // Add small delay to show the animation (1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Clear local storage
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      await UserStorageService.clearUserData();
+    } finally {
+      setIsLoggingOut(false);
+    }
+    
     navigation.navigate("LoginScreen");
   };
 
@@ -174,6 +214,13 @@ const StallHome = ({ navigation }) => {
           activeMenuItem={currentScreen}
           theme={theme}
           isDarkMode={isDarkMode}
+        />
+
+        {/* Logout Loading Screen */}
+        <LogoutLoadingScreen 
+          visible={isLoggingOut}
+          message="Logging out..."
+          subMessage="Please wait while we securely log you out"
         />
       </SafeAreaView>
     </SafeAreaProvider>

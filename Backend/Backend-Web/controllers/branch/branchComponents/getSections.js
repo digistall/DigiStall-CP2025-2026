@@ -27,31 +27,27 @@ export const getSections = async (req, res) => {
     let sections = [];
 
     if (branchFilter === null) {
-      // System administrator: Get all sections
-      const [result] = await connection.execute(`SELECT s.* FROM section s`);
-      sections = result;
+      // System administrator: Get all sections using stored procedure
+      const [rows] = await connection.execute('CALL sp_getAllSections()');
+      sections = rows[0];
     } else if (branchFilter.length === 0) {
       // No branches accessible
       sections = [];
     } else if (branchFilter.length === 1) {
-      // Single branch (business manager or employee)
-      const [result] = await connection.execute(
-        `SELECT s.* FROM section s
-         INNER JOIN floor f ON s.floor_id = f.floor_id
-         WHERE f.branch_id = ?`,
+      // Single branch (business manager or employee) using stored procedure
+      const [rows] = await connection.execute(
+        'CALL sp_getSectionsByBranch(?)',
         [branchFilter[0]]
       );
-      sections = result;
+      sections = rows[0];
     } else {
-      // Multiple branches (business owner)
-      const placeholders = branchFilter.map(() => '?').join(',');
-      const [result] = await connection.execute(
-        `SELECT s.* FROM section s
-         INNER JOIN floor f ON s.floor_id = f.floor_id
-         WHERE f.branch_id IN (${placeholders})`,
-        branchFilter
+      // Multiple branches (business owner) using stored procedure with dynamic SQL
+      const branchIds = branchFilter.join(',');
+      const [rows] = await connection.execute(
+        'CALL sp_getSectionsByBranches(?)',
+        [branchIds]
       );
-      sections = result;
+      sections = rows[0];
     }
 
     console.log(`✅ Found ${sections.length} sections for ${userType} (ID: ${userId})`);

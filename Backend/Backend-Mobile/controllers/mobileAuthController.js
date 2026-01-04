@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js'
+import { createConnection } from '../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
@@ -20,12 +20,34 @@ export const mobileLogin = async (req, res) => {
       });
     }
     
-    // Query mobile users from credential table using stored procedure
-    console.log('🔍 Calling stored procedure getMobileUserByUsername with:', username);
-    const [users] = await connection.execute(
-      'CALL getMobileUserByUsername(?)',
-      [username]
-    );
+    // ===== DIRECT SQL - Get mobile user from credential table =====
+    console.log('🔍 Querying mobile user with username:', username);
+    let users = [];
+    
+    try {
+      // Try stored procedure first
+      const [spResult] = await connection.execute('CALL getMobileUserByUsername(?)', [username]);
+      users = spResult[0] || [];
+    } catch (spError) {
+      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
+      // Fallback to direct SQL with COLLATE to fix collation mismatch
+      const [rows] = await connection.execute(`
+        SELECT 
+          c.registrationid,
+          c.user_name,
+          c.password_hash,
+          a.applicant_id,
+          CONCAT(a.applicant_first_name, ' ', IFNULL(a.applicant_middle_name, ''), ' ', a.applicant_last_name) AS applicant_full_name,
+          a.applicant_contact_number,
+          o.email_address AS applicant_email
+        FROM credential c
+        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+        LEFT JOIN other_info o ON a.applicant_id = o.applicant_id
+        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
+        LIMIT 1
+      `, [username]);
+      users = rows;
+    }
     
     console.log('📋 Stored procedure returned:', users.length, 'users');
     if (users.length > 0) {
@@ -79,91 +101,78 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Password verified for:', username);
 
-    // ===== FETCH COMPLETE USER DATA =====
+    // ===== FETCH COMPLETE USER DATA - WITH DIRECT SQL FALLBACKS =====
     const applicantId = user.applicant_id;
 
+    // Helper function to run SP or direct SQL
+    const executeQuery = async (spCall, directSql, params) => {
+      try {
+        const [result] = await connection.execute(spCall, params);
+        return result[0] || [];
+      } catch (err) {
+        console.warn(`⚠️ SP failed, using direct SQL`);
+        try {
+          const [rows] = await connection.execute(directSql, params);
+          return rows;
+        } catch (directErr) {
+          console.warn(`⚠️ Direct SQL also failed:`, directErr.message);
+          return [];
+        }
+      }
+    };
+
     // Get spouse information
-    const [spouseData] = await connection.execute(
-      `SELECT * FROM spouse WHERE applicant_id = ?`,
+    const spouseData = await executeQuery(
+      'CALL sp_getSpouseByApplicantId(?)',
+      'SELECT * FROM spouse WHERE applicant_id = ?',
       [applicantId]
     );
     console.log('👫 Spouse data:', spouseData.length > 0 ? 'Found' : 'Not found');
 
     // Get business information
-    const [businessData] = await connection.execute(
-      `SELECT * FROM business_information WHERE applicant_id = ?`,
+    const businessData = await executeQuery(
+      'CALL sp_getBusinessInfoByApplicantId(?)',
+      'SELECT * FROM business_info WHERE applicant_id = ?',
       [applicantId]
     );
     console.log('💼 Business data:', businessData.length > 0 ? 'Found' : 'Not found');
 
     // Get other information
-    const [otherData] = await connection.execute(
-      `SELECT * FROM other_information WHERE applicant_id = ?`,
+    const otherData = await executeQuery(
+      'CALL sp_getOtherInfoByApplicantId(?)',
+      'SELECT * FROM other_info WHERE applicant_id = ?',
       [applicantId]
     );
     console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
 
-    // Get application status
-    const [applicationData] = await connection.execute(
-      `SELECT 
-        app.application_id,
-        app.stall_id,
-        app.application_status,
-        app.application_date,
-        s.stall_no,
-        s.rental_price,
-        s.stall_location,
-        s.size,
-        sec.section_id,
-        f.floor_id,
-        b.branch_id,
-        b.branch_name
-      FROM application app
-      LEFT JOIN stall s ON app.stall_id = s.stall_id
-      LEFT JOIN section sec ON s.section_id = sec.section_id
-      LEFT JOIN floor f ON sec.floor_id = f.floor_id
-      LEFT JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ?
-      ORDER BY app.application_date DESC
-      LIMIT 1`,
+    // Get application status with fallback
+    const applicationData = await executeQuery(
+      'CALL sp_getLatestApplicationByApplicantId(?)',
+      `SELECT a.*, s.stall_number, s.stall_name, b.branch_name 
+       FROM application a 
+       LEFT JOIN stall s ON a.stall_id = s.stall_id 
+       LEFT JOIN branch b ON s.branch_id = b.branch_id 
+       WHERE a.applicant_id = ? 
+       ORDER BY a.created_at DESC LIMIT 1`,
       [applicantId]
     );
-    console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0].application_status : 'Not found');
+    console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
 
-    // Get stallholder information (if approved)
-    const [stallholderData] = await connection.execute(
-      `SELECT 
-        sh.stallholder_id,
-        sh.stallholder_name,
-        sh.contact_number,
-        sh.email,
-        sh.address,
-        sh.business_name,
-        sh.business_type,
-        sh.branch_id,
-        sh.stall_id,
-        sh.contract_start_date,
-        sh.contract_end_date,
-        sh.contract_status,
-        sh.lease_amount,
-        sh.monthly_rent,
-        sh.payment_status,
-        sh.compliance_status,
-        s.stall_no,
-        s.stall_location,
-        s.size,
-        b.branch_name
-      FROM stallholder sh
-      LEFT JOIN stall s ON sh.stall_id = s.stall_id
-      LEFT JOIN branch b ON sh.branch_id = b.branch_id
-      WHERE sh.applicant_id = ?`,
+    // Get stallholder information (if approved) with fallback
+    const stallholderData = await executeQuery(
+      'CALL sp_getStallholderByApplicantId(?)',
+      'SELECT * FROM stallholder WHERE applicant_id = ?',
       [applicantId]
     );
-    console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0].stallholder_id + ')' : 'Not found');
+    console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
 
-    // Get applicant full details
-    const [applicantData] = await connection.execute(
-      `SELECT * FROM applicant WHERE applicant_id = ?`,
+    // Get applicant full details with fallback
+    const applicantData = await executeQuery(
+      'CALL sp_getApplicantById(?)',
+      `SELECT a.*, c.user_name, c.applicant_email 
+       FROM applicant a 
+       LEFT JOIN credential c ON a.applicant_id = c.applicant_id 
+       WHERE a.applicant_id = ?`,
       [applicantId]
     );
     
@@ -389,9 +398,68 @@ export const mobileVerifyToken = async (req, res) => {
 
 // ===== MOBILE LOGOUT =====
 export const mobileLogout = async (req, res) => {
-  // Since we're using stateless JWT, logout is handled client-side
-  res.status(200).json({
-    success: true,
-    message: 'Logout successful. Please remove the token from client storage.'
-  });
+  let connection;
+  
+  try {
+    connection = await createConnection();
+    
+    // Debug: Log the entire request to see what we're receiving
+    console.log('📱 Mobile logout request received');
+    console.log('📱 req.user:', JSON.stringify(req.user, null, 2));
+    console.log('📱 req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📱 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    
+    // Get user info from JWT token (set by auth middleware) or from body
+    const applicantId = req.user?.userId || req.user?.applicantId || req.body?.applicantId || req.body?.userId;
+    
+    console.log('📱 Extracted applicant ID:', applicantId);
+    
+    if (applicantId) {
+      // Get Philippine time
+      const now = new Date();
+      const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const year = phTime.getFullYear();
+      const month = String(phTime.getMonth() + 1).padStart(2, '0');
+      const day = String(phTime.getDate()).padStart(2, '0');
+      const hours = String(phTime.getHours()).padStart(2, '0');
+      const minutes = String(phTime.getMinutes()).padStart(2, '0');
+      const seconds = String(phTime.getSeconds()).padStart(2, '0');
+      const philippineTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      
+      console.log('📱 Updating credential table with time:', philippineTime);
+      
+      // Update last_logout in credential table using stored procedure
+      const [result] = await connection.execute(
+        'CALL sp_updateCredentialLastLogout(?, ?)',
+        [applicantId, philippineTime]
+      );
+      const affectedRows = result[0]?.[0]?.affected_rows || 0;
+      
+      console.log(`✅ Updated last_logout for applicant ${applicantId} at ${philippineTime}, affected rows: ${affectedRows}`);
+      
+      if (affectedRows === 0) {
+        console.warn(`⚠️ No rows updated - applicant_id ${applicantId} may not exist in credential table`);
+      }
+    } else {
+      console.warn('⚠️ No applicant ID found in request - cannot update last_logout');
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.'
+    });
+    
+  } catch (error) {
+    console.error('❌ Mobile logout error:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Still return success even if database update fails (client-side logout should work)
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.'
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
 };

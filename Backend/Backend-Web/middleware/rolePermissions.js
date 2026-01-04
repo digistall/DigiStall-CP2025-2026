@@ -51,15 +51,13 @@ export const getOwnerBranches = async (req, connection = null) => {
       shouldCloseConnection = true;
     }
 
-    // Get all branches for this owner through their managers
-    const [branches] = await localConnection.execute(
-      `SELECT DISTINCT bm.branch_id
-       FROM business_owner_managers bom
-       INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
-       WHERE bom.business_owner_id = ? AND bom.status = 'Active'`,
+    // Get all branches for this owner through their managers using stored procedure
+    const [result] = await localConnection.execute(
+      `CALL sp_getBranchIdsForOwner(?)`,
       [userId]
     );
 
+    const branches = result[0] || [];
     const branchIds = branches.map(b => b.branch_id);
     console.log(`✅ Business owner ${userId} has access to branches:`, branchIds);
     
@@ -91,18 +89,16 @@ export const getBranchFilter = async (req, connection = null) => {
   const userBranchId = req.user?.branchId;
   const userId = req.user?.userId;
 
-  console.log('🔍 getBranchFilter called:', { userType, userBranchId, userId });
+  // Debug logging disabled to prevent console flooding
 
   // System administrators see everything
   if (userType === 'system_administrator') {
-    console.log('✅ System administrator - no branch filter');
     return null;
   }
 
   // Business owners see all their branches
   if (userType === 'stall_business_owner') {
     const ownerBranches = await getOwnerBranches(req, connection);
-    console.log('✅ Business owner branch filter:', ownerBranches);
     return ownerBranches;
   }
 
@@ -110,7 +106,7 @@ export const getBranchFilter = async (req, connection = null) => {
   if (userType === 'business_manager' || userType === 'business_employee') {
     // If branchId is not in token or is undefined, look it up from database
     if (userBranchId === null || userBranchId === undefined) {
-      console.log('⚠️ branchId not in token, looking up from database...');
+      // branchId not in token, looking up from database
       let localConnection = connection;
       let shouldCloseConnection = false;
       
@@ -122,12 +118,12 @@ export const getBranchFilter = async (req, connection = null) => {
         
         if (userType === 'business_manager') {
           const [result] = await localConnection.execute(
-            'SELECT branch_id FROM business_manager WHERE business_manager_id = ?',
+            'CALL sp_getBranchIdForManager(?)',
             [userId]
           );
-          if (result.length > 0) {
-            const branchId = result[0].branch_id;
-            console.log(`✅ Manager branch filter (from DB):`, [branchId]);
+          const rows = result[0] || [];
+          if (rows.length > 0) {
+            const branchId = rows[0].branch_id;
             return [branchId];
           } else {
             console.error('❌ No branch found for business_manager:', userId);
@@ -135,12 +131,12 @@ export const getBranchFilter = async (req, connection = null) => {
           }
         } else if (userType === 'business_employee') {
           const [result] = await localConnection.execute(
-            'SELECT branch_id FROM business_employee WHERE business_employee_id = ?',
+            'CALL sp_getBranchIdForEmployee(?)',
             [userId]
           );
-          if (result.length > 0) {
-            const branchId = result[0].branch_id;
-            console.log(`✅ Employee branch filter (from DB):`, [branchId]);
+          const rows = result[0] || [];
+          if (rows.length > 0) {
+            const branchId = rows[0].branch_id;
             return [branchId];
           } else {
             console.error('❌ No branch found for business_employee:', userId);
@@ -157,12 +153,10 @@ export const getBranchFilter = async (req, connection = null) => {
       }
     }
     
-    console.log('✅ Manager/Employee branch filter (from token):', [userBranchId]);
     return [userBranchId];
   }
 
   // Default: restrict to user's branch
-  console.log('⚠️ Unknown user type, defaulting to user branch:', [userBranchId]);
   return userBranchId ? [userBranchId] : [];
 };
 

@@ -99,22 +99,21 @@ const storeRefreshToken = async (connection, userId, userType, refreshToken, req
     [userId, userType, 'new_login']
   );
 
-  // Store new refresh token
+  // Store new refresh token using stored procedure
   const [result] = await connection.execute(
-    `INSERT INTO refresh_tokens 
-    (user_id, user_type, refresh_token, access_token_jti, device_fingerprint, ip_address, user_agent, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    'CALL sp_storeRefreshToken(?, ?, ?, ?, ?, ?, ?, ?)',
     [userId, userType, hashedToken, accessTokenJti, deviceFingerprint, ipAddress, userAgent, expiresAt]
   );
 
-  // Log activity
+  const tokenId = result[0]?.[0]?.token_id;
+
+  // Log activity using stored procedure
   await connection.execute(
-    `INSERT INTO token_activity_log (token_id, user_id, user_type, activity_type, ip_address, user_agent, success)
-    VALUES (?, ?, ?, 'login', ?, ?, TRUE)`,
-    [result.insertId, userId, userType, ipAddress, userAgent]
+    'CALL sp_logTokenActivity(?, ?, ?, ?, ?, ?, ?)',
+    [tokenId, userId, userType, 'login', ipAddress, userAgent, true]
   );
 
-  return result.insertId;
+  return tokenId;
 };
 
 // ===== AUTHENTICATION ENDPOINTS =====
@@ -342,13 +341,13 @@ export const refreshToken = async (req, res) => {
       });
     }
     
-    // Check if token exists and is active in database
+    // Check if token exists and is active in database using stored procedure
     const hashedToken = hashToken(refreshToken);
-    const [tokenRows] = await connection.execute(
-      `SELECT * FROM refresh_tokens 
-      WHERE refresh_token = ? AND is_active = TRUE AND expires_at > NOW()`,
+    const [tokenResult] = await connection.execute(
+      'CALL sp_getActiveRefreshToken(?)',
       [hashedToken]
     );
+    const tokenRows = tokenResult[0] || [];
     
     if (tokenRows.length === 0) {
       console.log('❌ Refresh token not found or expired in database');
@@ -449,19 +448,18 @@ export const refreshToken = async (req, res) => {
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
     
-    // Update last used time
+    // Update last used time using stored procedure
     await connection.execute(
-      'UPDATE refresh_tokens SET last_used_at = NOW() WHERE token_id = ?',
+      'CALL sp_updateRefreshTokenLastUsed(?)',
       [tokenData.token_id]
     );
     
-    // Log activity
+    // Log activity using stored procedure
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'] || '';
     await connection.execute(
-      `INSERT INTO token_activity_log (token_id, user_id, user_type, activity_type, ip_address, user_agent, success)
-      VALUES (?, ?, ?, 'refresh', ?, ?, TRUE)`,
-      [tokenData.token_id, tokenData.user_id, tokenData.user_type, ipAddress, userAgent]
+      'CALL sp_logTokenActivity(?, ?, ?, ?, ?, ?, ?)',
+      [tokenData.token_id, tokenData.user_id, tokenData.user_type, 'refresh', ipAddress, userAgent, true]
     );
     
     console.log('✅ Token refreshed successfully for user:', tokenData.user_id);
@@ -508,6 +506,130 @@ export const logout = async (req, res) => {
     // Get refresh token from cookie or body
     const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     
+    // Get user info from multiple sources - try body first, then req.user
+    // Body may contain 'userId' or 'id' depending on frontend
+    let userId = req.body?.userId || req.body?.id || req.user?.userId || req.user?.id;
+    let userType = req.body?.userType || req.user?.userType;
+    
+    // Convert userId to number if it's a string
+    if (userId && typeof userId === 'string') {
+      userId = parseInt(userId, 10);
+    }
+    
+    console.log('='.repeat(60));
+    console.log('📤 WEB LOGOUT REQUEST RECEIVED');
+    console.log('📤 Timestamp:', new Date().toISOString());
+    console.log('📤 req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📤 req.user:', JSON.stringify(req.user, null, 2));
+    console.log('📤 req.cookies:', JSON.stringify(req.cookies, null, 2));
+    console.log('📤 Extracted values:');
+    console.log('   - userId:', userId, '(type:', typeof userId, ')');
+    console.log('   - userType:', userType);
+    console.log('   - hasRefreshToken:', !!refreshToken);
+    console.log('='.repeat(60));
+    
+    const philippineTime = getPhilippineTime();
+    console.log('📤 Philippine time for logout:', philippineTime);
+    
+    // Update last_logout for the user based on their type using stored procedures
+    if (userId && userType) {
+      const normalizedUserType = userType.toLowerCase().trim();
+      console.log('📤 Normalized userType:', normalizedUserType);
+      
+      try {
+        let checkRows = [];
+        let result = null;
+        
+        switch (normalizedUserType) {
+          case 'business_employee':
+          case 'employee':
+            {
+              const [checkResult] = await connection.execute('CALL sp_checkBusinessEmployeeExists(?)', [userId]);
+              checkRows = checkResult[0] || [];
+              if (checkRows.length > 0) {
+                [result] = await connection.execute('CALL sp_updateBusinessEmployeeLastLogout(?, ?)', [userId, philippineTime]);
+                // Also deactivate the employee session for online status tracking
+                try {
+                  await connection.execute(`
+                    UPDATE employee_session 
+                    SET is_active = 0, 
+                        logout_time = ?,
+                        last_activity = ?
+                    WHERE business_employee_id = ? 
+                      AND is_active = 1
+                  `, [philippineTime, philippineTime, userId]);
+                  console.log(`✅ Employee session deactivated for ID ${userId}`);
+                } catch (sessionError) {
+                  console.error('⚠️ Failed to deactivate employee session:', sessionError.message);
+                }
+              }
+            }
+            break;
+          case 'business_manager':
+          case 'branch_manager':
+          case 'manager':
+            {
+              const [checkResult] = await connection.execute('CALL sp_checkBusinessManagerExists(?)', [userId]);
+              checkRows = checkResult[0] || [];
+              if (checkRows.length > 0) {
+                [result] = await connection.execute('CALL sp_updateBusinessManagerLastLogout(?, ?)', [userId, philippineTime]);
+              }
+            }
+            break;
+          case 'stall_business_owner':
+          case 'business_owner':
+          case 'owner':
+            {
+              const [checkResult] = await connection.execute('CALL sp_checkBusinessOwnerExists(?)', [userId]);
+              checkRows = checkResult[0] || [];
+              if (checkRows.length > 0) {
+                [result] = await connection.execute('CALL sp_updateBusinessOwnerLastLogout(?, ?)', [userId, philippineTime]);
+              }
+            }
+            break;
+          case 'system_administrator':
+          case 'admin':
+          case 'system_admin':
+            {
+              const [checkResult] = await connection.execute('CALL sp_checkSystemAdminExists(?)', [userId]);
+              checkRows = checkResult[0] || [];
+              if (checkRows.length > 0) {
+                [result] = await connection.execute('CALL sp_updateSystemAdminLastLogout(?, ?)', [userId, philippineTime]);
+              }
+            }
+            break;
+          default:
+            console.error(`❌ Unhandled userType: "${normalizedUserType}"`);
+            break;
+        }
+        
+        console.log(`📤 User check: found ${checkRows.length} row(s)`);
+        
+        if (checkRows.length === 0) {
+          console.warn(`⚠️ User ${userId} not found`);
+        } else {
+          const affectedRows = result?.[0]?.[0]?.affected_rows || 0;
+          console.log(`✅ UPDATE RESULT: affectedRows: ${affectedRows}`);
+          
+          if (affectedRows === 0) {
+            console.warn(`⚠️ No rows affected! User ${userId} may not exist or last_logout column missing`);
+          } else {
+            console.log(`✅ Successfully updated last_logout for ${userType} ID ${userId} to ${philippineTime}`);
+          }
+        }
+      } catch (updateError) {
+        console.error('❌ DATABASE ERROR updating last_logout:');
+        console.error('   - Error message:', updateError.message);
+        console.error('   - Error code:', updateError.code);
+        console.error('   - SQL state:', updateError.sqlState);
+        console.error('   - Full error:', updateError);
+      }
+    } else {
+      console.warn('⚠️ Missing required data for logout:');
+      console.warn('   - userId:', userId || '(missing)');
+      console.warn('   - userType:', userType || '(missing)');
+    }
+    
     if (!refreshToken) {
       return res.status(200).json({
         success: true,
@@ -518,19 +640,18 @@ export const logout = async (req, res) => {
     // Hash token to find in database
     const hashedToken = hashToken(refreshToken);
     
-    // Revoke token
+    // Revoke token using stored procedure
     await connection.execute(
-      `UPDATE refresh_tokens 
-      SET is_active = FALSE, revoked_at = NOW(), revoke_reason = 'user_logout'
-      WHERE refresh_token = ?`,
-      [hashedToken]
+      'CALL sp_revokeRefreshTokenByHash(?, ?)',
+      [hashedToken, 'user_logout']
     );
     
-    // Log activity
-    const [tokenRows] = await connection.execute(
-      'SELECT token_id, user_id, user_type FROM refresh_tokens WHERE refresh_token = ?',
+    // Log activity using stored procedure
+    const [tokenResult] = await connection.execute(
+      'CALL sp_getRefreshTokenByHash(?)',
       [hashedToken]
     );
+    const tokenRows = tokenResult[0] || [];
     
     if (tokenRows.length > 0) {
       const tokenData = tokenRows[0];
@@ -538,10 +659,39 @@ export const logout = async (req, res) => {
       const userAgent = req.headers['user-agent'] || '';
       
       await connection.execute(
-        `INSERT INTO token_activity_log (token_id, user_id, user_type, activity_type, ip_address, user_agent, success)
-        VALUES (?, ?, ?, 'logout', ?, ?, TRUE)`,
-        [tokenData.token_id, tokenData.user_id, tokenData.user_type, ipAddress, userAgent]
+        'CALL sp_logTokenActivity(?, ?, ?, ?, ?, ?, ?)',
+        [tokenData.token_id, tokenData.user_id, tokenData.user_type, 'logout', ipAddress, userAgent, true]
       );
+      
+      // Also update last_logout if we have token data using stored procedures
+      if (!userId && tokenData.user_id && tokenData.user_type) {
+        try {
+          switch (tokenData.user_type.toLowerCase()) {
+            case 'business_employee':
+            case 'employee':
+              await connection.execute('CALL sp_updateBusinessEmployeeLastLogout(?, ?)', [tokenData.user_id, philippineTime]);
+              break;
+            case 'business_manager':
+            case 'branch_manager':
+            case 'manager':
+              await connection.execute('CALL sp_updateBusinessManagerLastLogout(?, ?)', [tokenData.user_id, philippineTime]);
+              break;
+            case 'stall_business_owner':
+            case 'business_owner':
+            case 'owner':
+              await connection.execute('CALL sp_updateBusinessOwnerLastLogout(?, ?)', [tokenData.user_id, philippineTime]);
+              break;
+            case 'system_administrator':
+            case 'admin':
+            case 'system_admin':
+              await connection.execute('CALL sp_updateSystemAdminLastLogout(?, ?)', [tokenData.user_id, philippineTime]);
+              break;
+          }
+          console.log(`✅ Updated last_logout for ${tokenData.user_type} ${tokenData.user_id} from token data`);
+        } catch (updateError) {
+          console.warn('Could not update last_logout from token:', updateError.message);
+        }
+      }
     }
     
     // Clear refresh token cookie
@@ -640,10 +790,79 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
+/**
+ * HEARTBEAT - Update last_login to keep user marked as "online"
+ * POST /api/auth/heartbeat
+ * This endpoint is called periodically by the frontend to indicate activity
+ */
+export const heartbeat = async (req, res) => {
+  let connection;
+  
+  try {
+    const { userId, userType } = req.body;
+    
+    if (!userId || !userType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing userId or userType'
+      });
+    }
+    
+    connection = await createConnection();
+    const philippineTime = getPhilippineTime();
+    
+    // Update last_login using stored procedures based on userType
+    switch (userType) {
+      case 'business_employee':
+        await connection.execute('CALL sp_heartbeatBusinessEmployee(?, ?)', [userId, philippineTime]);
+        break;
+      case 'business_manager':
+        await connection.execute('CALL sp_heartbeatBusinessManager(?, ?)', [userId, philippineTime]);
+        break;
+      case 'stall_business_owner':
+        await connection.execute('CALL sp_heartbeatBusinessOwner(?, ?)', [userId, philippineTime]);
+        break;
+      case 'system_administrator':
+        await connection.execute('CALL sp_heartbeatSystemAdmin(?, ?)', [userId, philippineTime]);
+        break;
+      case 'inspector':
+        await connection.execute('CALL sp_heartbeatInspector(?, ?)', [userId, philippineTime]);
+        break;
+      case 'collector':
+        await connection.execute('CALL sp_heartbeatCollector(?, ?)', [userId, philippineTime]);
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: `Unknown user type: ${userType}`
+        });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Heartbeat recorded',
+      timestamp: philippineTime
+    });
+    
+  } catch (error) {
+    console.error('❌ Heartbeat error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error recording heartbeat',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
 export default {
   login,
   refreshToken,
   logout,
   verifyToken,
-  getCurrentUser
+  getCurrentUser,
+  heartbeat
 };

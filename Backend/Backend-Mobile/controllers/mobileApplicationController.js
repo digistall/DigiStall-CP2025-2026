@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js'
+import { createConnection } from '../config/database.js'
 
 // ===== SUBMIT MOBILE APPLICATION =====
 export const submitMobileApplication = async (req, res) => {

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/authStore'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -478,51 +479,21 @@ export default {
     },
 
     async handleLogoutClick() {
-      console.log('Logout clicked')
+      console.log('Logout clicked - calling authStore.logout()')
       this.closeProfilePopup()
 
-      // Clear any stored user data
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('branchManagerData')
-      sessionStorage.removeItem('adminData')
-      sessionStorage.removeItem('employeeData')
-      sessionStorage.removeItem('branchManagerId')
-      sessionStorage.removeItem('employeeId')
-      sessionStorage.removeItem('adminId')
-      sessionStorage.removeItem('branchId')
-      sessionStorage.removeItem('userRole')
-      sessionStorage.removeItem('fullName')
-      sessionStorage.removeItem('permissions')
-      sessionStorage.removeItem('employeePermissions')
-      
-      localStorage.removeItem('currentUser')
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('userType')
-      localStorage.removeItem('permissions')
-      localStorage.removeItem('employeePermissions')
-      
-      // Clear all session storage completely
-      sessionStorage.clear()
-      
-      // Clear data cache if available
-      if (window.dataCacheService) {
-        window.dataCacheService.clearAll()
-      }
-
-      // Clear axios header
-      delete axios.defaults.headers.common['Authorization']
+      // Call authStore.logout() which handles:
+      // 1. API call to update last_logout in database
+      // 2. Clearing all storage (localStorage, sessionStorage)
+      // 3. Clearing axios headers
+      // 4. Clearing data cache
+      const authStore = useAuthStore()
+      await authStore.logout()
 
       // Clear component data
       this.branchManagerData = null
       this.adminData = null
       this.employeeData = null
-
-      // Clear Vuex store if you're using it
-      if (this.$store && this.$store.dispatch) {
-        this.$store.dispatch('auth/logout')
-      }
 
       // Navigate to login page
       this.$router.push('/')
