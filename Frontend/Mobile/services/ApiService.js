@@ -259,6 +259,77 @@ class ApiService {
     }
   }
 
+  // Staff (Inspector/Collector) heartbeat - keep marked as online
+  static async staffHeartbeat(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_HEARTBEAT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff heartbeat failed');
+      }
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      // Silent fail for heartbeat - don't spam console
+      return {
+        success: false,
+        message: error.message || 'Heartbeat error'
+      };
+    }
+  }
+
+  // Staff (Inspector/Collector) auto-logout due to inactivity
+  static async staffAutoLogout(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_AUTO_LOGOUT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType,
+          reason: 'inactivity'
+        })
+      });
+
+      const data = await response.json();
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Staff Auto-Logout API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Auto-logout error'
+      };
+    }
+  }
+
   // ===== STALL METHODS =====
 
   // Get all stalls
