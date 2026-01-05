@@ -6,6 +6,23 @@ import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
 
 /**
+ * Convert evidence BLOB Buffer to base64 string for frontend consumption
+ * @param {Object} record - Compliance record with potential evidence Buffer
+ * @returns {Object} Record with evidence converted to base64 string
+ */
+const convertEvidenceToBase64 = (record) => {
+  if (record && record.evidence) {
+    if (Buffer.isBuffer(record.evidence)) {
+      record.evidence = record.evidence.toString('base64');
+    } else if (record.evidence.type === 'Buffer' && Array.isArray(record.evidence.data)) {
+      // Handle case where Buffer was already serialized to JSON
+      record.evidence = Buffer.from(record.evidence.data).toString('base64');
+    }
+  }
+  return record;
+};
+
+/**
  * Get all compliance records with optional filters
  * @route GET /api/compliances
  * @access Protected (requires authentication and compliance permission)
@@ -66,11 +83,14 @@ export const getAllComplianceRecords = async (req, res) => {
 
     console.log(`✅ Found ${complianceRecords.length} compliance records`);
 
+    // Convert evidence BLOB to base64 for each record
+    const processedRecords = complianceRecords.map(convertEvidenceToBase64);
+
     res.status(200).json({
       success: true,
       message: 'Compliance records retrieved successfully',
-      data: complianceRecords,
-      count: complianceRecords.length
+      data: processedRecords,
+      count: processedRecords.length
     });
 
   } catch (error) {
@@ -113,12 +133,15 @@ export const getComplianceRecordById = async (req, res) => {
       });
     }
 
+    // Convert evidence BLOB to base64
+    const processedRecord = convertEvidenceToBase64(record);
+
     console.log('✅ Compliance record found');
 
     res.status(200).json({
       success: true,
       message: 'Compliance record retrieved successfully',
-      data: record
+      data: processedRecord
     });
 
   } catch (error) {
@@ -525,6 +548,148 @@ export const getViolationPenalties = async (req, res) => {
   }
 };
 
+/**
+ * Get evidence photos for a compliance record
+ * The evidence is stored as BLOB in the violation_report table
+ * @route GET /api/compliances/:id/evidence-photos
+ * @access Protected
+ */
+export const getComplianceEvidencePhotos = async (req, res) => {
+  let connection;
+  try {
+    const { id } = req.params;
+    
+    console.log(`📷 Fetching evidence BLOB for compliance ID: ${id}`);
+    
+    connection = await createConnection();
+    
+    // Get the evidence BLOB from violation_report
+    const [records] = await connection.execute(
+      'SELECT report_id, evidence FROM violation_report WHERE report_id = ?',
+      [id]
+    );
+    
+    if (!records || records.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Compliance record not found'
+      });
+    }
+    
+    const evidence = records[0].evidence;
+    
+    // Check if evidence exists and is a Buffer/BLOB
+    if (!evidence) {
+      return res.status(200).json({
+        success: true,
+        message: 'No evidence found',
+        data: {
+          compliance_id: id,
+          has_evidence: false,
+          evidence_base64: null
+        }
+      });
+    }
+    
+    // Convert BLOB to base64
+    let evidenceBase64 = null;
+    if (Buffer.isBuffer(evidence)) {
+      evidenceBase64 = evidence.toString('base64');
+    } else if (typeof evidence === 'string') {
+      // If it's already a string, it might be base64 or text
+      evidenceBase64 = evidence;
+    }
+    
+    console.log(`✅ Evidence BLOB found, size: ${evidence.length} bytes`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Evidence retrieved successfully',
+      data: {
+        compliance_id: id,
+        has_evidence: true,
+        evidence_base64: evidenceBase64,
+        evidence_size: evidence.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching evidence:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch evidence',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get compliance evidence image as binary (like stalls approach)
+ * This serves the BLOB directly as an image - can be used as <img src="/api/compliances/:id/evidence/image">
+ * @route GET /api/compliances/:id/evidence/image
+ * @access Protected
+ */
+export const getComplianceEvidenceImage = async (req, res) => {
+  let connection;
+  try {
+    const { id } = req.params;
+    
+    console.log(`📷 Serving evidence image for compliance ID: ${id}`);
+    
+    connection = await createConnection();
+    
+    // Get the evidence BLOB from violation_report
+    const [records] = await connection.execute(
+      'SELECT report_id, evidence FROM violation_report WHERE report_id = ?',
+      [id]
+    );
+    
+    if (!records || records.length === 0 || !records[0].evidence) {
+      return res.status(404).json({
+        success: false,
+        message: 'Evidence not found'
+      });
+    }
+    
+    const evidence = records[0].evidence;
+    
+    // Determine MIME type from the BLOB data
+    let mimeType = 'image/jpeg'; // Default
+    if (Buffer.isBuffer(evidence)) {
+      // Check magic bytes for image type
+      if (evidence[0] === 0xFF && evidence[1] === 0xD8) {
+        mimeType = 'image/jpeg';
+      } else if (evidence[0] === 0x89 && evidence[1] === 0x50) {
+        mimeType = 'image/png';
+      } else if (evidence[0] === 0x47 && evidence[1] === 0x49) {
+        mimeType = 'image/gif';
+      } else if (evidence[0] === 0x52 && evidence[1] === 0x49) {
+        mimeType = 'image/webp';
+      }
+    }
+    
+    // Set headers for image response (like stallImageBlobController does)
+    res.set('Content-Type', mimeType);
+    res.set('Content-Disposition', `inline; filename="evidence-${id}.jpg"`);
+    res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+    
+    // Send binary data
+    res.send(evidence);
+    
+  } catch (error) {
+    console.error('❌ Error serving evidence image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve evidence image',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
 export default {
   getAllComplianceRecords,
   getComplianceRecordById,
@@ -534,5 +699,7 @@ export default {
   getComplianceStatistics,
   getAllInspectors,
   getAllViolations,
-  getViolationPenalties
+  getViolationPenalties,
+  getComplianceEvidencePhotos,
+  getComplianceEvidenceImage
 };
