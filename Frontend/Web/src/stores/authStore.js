@@ -599,7 +599,61 @@ export const useAuthStore = defineStore('auth', () => {
   }
   
   /**
+   * Auto-logout due to inactivity
+   * Calls the auto-logout API to properly record the logout event
+   */
+  async function autoLogoutDueToInactivity() {
+    if (!isAuthenticated.value || !user.value) return;
+    
+    const userId = user.value.id || user.value.userId;
+    const userType = user.value.userType || localStorage.getItem('userType');
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    console.log('⏰ Auto-logout triggered due to 5 minutes of inactivity');
+    
+    try {
+      // Call auto-logout API to record in activity log
+      await axios.post(`${API_BASE_URL}/auth/auto-logout`, {
+        userId,
+        userType,
+        reason: 'inactivity'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log('✅ Auto-logout recorded in activity log');
+    } catch (error) {
+      console.warn('⚠️ Failed to record auto-logout:', error.message);
+    }
+    
+    // Stop activity tracking
+    stopActivityTracking();
+    
+    // Clear all auth data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('permissions');
+    localStorage.removeItem('employeePermissions');
+    
+    sessionStorage.clear();
+    
+    // Clear axios auth header
+    delete axios.defaults.headers.common['Authorization'];
+    
+    // Clear state
+    user.value = null;
+    isAuthenticated.value = false;
+    
+    // Redirect to login with auto-logout message
+    window.location.href = '/login?reason=inactivity';
+  }
+  
+  /**
    * Start activity tracking - sends heartbeat every 5 minutes
+   * Also monitors for inactivity to trigger auto-logout
    */
   function startActivityTracking() {
     if (activityInterval) {
@@ -609,14 +663,19 @@ export const useAuthStore = defineStore('auth', () => {
     // Send initial heartbeat
     sendActivityHeartbeat();
     
-    // Send heartbeat every 5 minutes to keep user marked as active
+    // Check activity every minute to detect inactivity sooner
     activityInterval = setInterval(() => {
-      // Only send heartbeat if user has been active in the last 5 minutes
       const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      
       if (lastActivityTime > fiveMinutesAgo) {
+        // User has been active in the last 5 minutes, send heartbeat
         sendActivityHeartbeat();
+      } else {
+        // User has been inactive for more than 5 minutes, auto-logout
+        console.log('⏰ Inactivity detected - last activity:', new Date(lastActivityTime).toLocaleString());
+        autoLogoutDueToInactivity();
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 60 * 1000); // Check every minute
     
     // Track user activity (mouse move, key press, click)
     const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
@@ -633,6 +692,12 @@ export const useAuthStore = defineStore('auth', () => {
       clearInterval(activityInterval);
       activityInterval = null;
     }
+    
+    // Remove activity event listeners
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      document.removeEventListener(event, recordActivity);
+    });
   }
 
   // ===== RETURN =====
