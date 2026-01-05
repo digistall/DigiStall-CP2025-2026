@@ -5,8 +5,8 @@
       <!-- Main Content -->
       <v-main class="payment-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
-        <LoadingOverlay 
-          :loading="loading" 
+        <LoadingOverlay
+          :loading="loading"
           text="Loading payment data..."
           :full-page="false"
         />
@@ -22,11 +22,17 @@
 
               <!-- Stall Applicants Payment Section -->
               <transition name="slide-fade" mode="out-in">
-                <StallPayments 
-                  v-if="selectedPaymentType === 'stall'" 
+                <StallPayments
+                  v-if="selectedPaymentType === 'stall'"
                   @loading="handleLoading"
                 />
-                
+
+                <!-- Penalty Payments Section -->
+                <PenaltyPayments
+                  v-else-if="selectedPaymentType === 'penalty'"
+                  @loading="handleLoading"
+                />
+
                 <!-- Vendor Applicants Payment Section (Blank for now) -->
                 <div v-else class="vendor-section">
                   <v-card class="vendor-placeholder" elevation="2">

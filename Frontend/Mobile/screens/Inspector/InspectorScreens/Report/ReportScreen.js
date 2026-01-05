@@ -11,13 +11,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from "../../../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
 import ApiService from "../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
+const MAX_PHOTOS = 5;
 
 const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSuccess, onCancel }) => {
   const { theme, isDark } = useTheme();
@@ -32,6 +35,9 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
   const [evidence, setEvidence] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState("");
+  
+  // Photo evidence state
+  const [evidencePhotos, setEvidencePhotos] = useState([]);
   
   // Selection state
   const [stallholderName, setStallholderName] = useState(
@@ -50,7 +56,107 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
   // Load violation types on mount
   useEffect(() => {
     loadViolationTypes();
+    requestPermissions();
   }, []);
+
+  // Request camera and media library permissions
+  const requestPermissions = async () => {
+    try {
+      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+      const mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (cameraPermission.status !== 'granted' || mediaPermission.status !== 'granted') {
+        console.log('Camera or media library permission not granted');
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    }
+  };
+
+  // Pick photo from camera
+  const takePhoto = async () => {
+    if (evidencePhotos.length >= MAX_PHOTOS) {
+      Alert.alert('Limit Reached', `Maximum ${MAX_PHOTOS} photos allowed per report.`);
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newPhoto = {
+          uri: result.assets[0].uri,
+          type: 'image/jpeg',
+          name: `evidence_${Date.now()}.jpg`,
+        };
+        setEvidencePhotos(prev => [...prev, newPhoto]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  // Pick photo from gallery
+  const pickFromGallery = async () => {
+    if (evidencePhotos.length >= MAX_PHOTOS) {
+      Alert.alert('Limit Reached', `Maximum ${MAX_PHOTOS} photos allowed per report.`);
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_PHOTOS - evidencePhotos.length,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newPhotos = result.assets.map((asset, index) => ({
+          uri: asset.uri,
+          type: 'image/jpeg',
+          name: `evidence_${Date.now()}_${index}.jpg`,
+        }));
+        setEvidencePhotos(prev => [...prev, ...newPhotos].slice(0, MAX_PHOTOS));
+      }
+    } catch (error) {
+      console.error('Error picking photos:', error);
+      Alert.alert('Error', 'Failed to pick photos. Please try again.');
+    }
+  };
+
+  // Remove a photo
+  const removePhoto = (index) => {
+    setEvidencePhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Show photo picker options
+  const showPhotoOptions = () => {
+    Alert.alert(
+      'Add Photo Evidence',
+      'Choose how to add photos',
+      [
+        {
+          text: 'Take Photo',
+          onPress: takePhoto,
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: pickFromGallery,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
   const loadViolationTypes = async () => {
     try {
@@ -120,10 +226,15 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
       return;
     }
 
+    // Build confirmation message
+    const photoInfo = evidencePhotos.length > 0 
+      ? `\nPhotos Attached: ${evidencePhotos.length}` 
+      : '\nPhotos: None';
+
     // Show confirmation
     Alert.alert(
       "Confirm Report Submission",
-      `Are you sure you want to submit this violation report?\n\nStallholder: ${stallholderName}\nStallholder ID: ${stallholderId}\nBranch ID: ${branchId}\nReceipt No: ${receiptNumber}\nViolation: ${selectedViolation.violation_type}`,
+      `Are you sure you want to submit this violation report?\n\nStallholder: ${stallholderName}\nStallholder ID: ${stallholderId}\nBranch ID: ${branchId}\nReceipt No: ${receiptNumber}\nViolation: ${selectedViolation.violation_type}${photoInfo}`,
       [
         {
           text: "Cancel",
@@ -146,14 +257,24 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
                 remarks: remarks.trim() || null
               };
               
-              const response = await ApiService.submitViolationReport(reportData);
+              // Use photo upload API if photos are attached, otherwise use regular API
+              let response;
+              if (evidencePhotos.length > 0) {
+                response = await ApiService.submitViolationReportWithPhotos(reportData, evidencePhotos);
+              } else {
+                response = await ApiService.submitViolationReport(reportData);
+              }
               
               setIsSubmitting(false);
               
               if (response.success) {
+                const successMessage = evidencePhotos.length > 0
+                  ? `The violation report has been successfully submitted with ${evidencePhotos.length} photo(s).`
+                  : "The violation report has been successfully submitted.";
+                  
                 Alert.alert(
                   "Report Submitted",
-                  "The violation report has been successfully submitted.",
+                  successMessage,
                   [
                     {
                       text: "OK",
@@ -163,6 +284,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
                         setRemarks("");
                         setEvidence("");
                         setReceiptNumber("");
+                        setEvidencePhotos([]);
                         if (!preselectedStall && !preselectedStallholder) {
                           setStallholderName("");
                           setStallholderId("");
@@ -397,13 +519,56 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
             textAlignVertical="top"
           />
           
-          {/* Photo upload placeholder */}
-          <TouchableOpacity style={[styles.uploadButton, { borderColor: theme.colors.border }]}>
-            <Ionicons name="camera-outline" size={24} color={theme.colors.textSecondary} />
-            <Text style={[styles.uploadText, { color: theme.colors.textSecondary }]}>
-              Add Photo Evidence (Coming Soon)
+          {/* Photo Evidence Section */}
+          <View style={styles.photoSection}>
+            <Text style={[styles.photoSectionTitle, { color: theme.colors.text }]}>
+              Photo Evidence (Optional - Max {MAX_PHOTOS})
             </Text>
-          </TouchableOpacity>
+            
+            {/* Photo Grid */}
+            {evidencePhotos.length > 0 && (
+              <View style={styles.photoGrid}>
+                {evidencePhotos.map((photo, index) => (
+                  <View key={index} style={styles.photoContainer}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoThumbnail} />
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => removePhoto(index)}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#ef4444" />
+                    </TouchableOpacity>
+                    <Text style={[styles.photoNumber, { color: theme.colors.textSecondary }]}>
+                      {index + 1}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            {/* Add Photo Button */}
+            {evidencePhotos.length < MAX_PHOTOS && (
+              <TouchableOpacity 
+                style={[styles.uploadButton, { borderColor: '#f59e0b' }]}
+                onPress={showPhotoOptions}
+              >
+                <Ionicons name="camera" size={24} color="#f59e0b" />
+                <Text style={[styles.uploadText, { color: '#f59e0b' }]}>
+                  {evidencePhotos.length === 0 
+                    ? 'Add Photo Evidence' 
+                    : `Add More Photos (${evidencePhotos.length}/${MAX_PHOTOS})`}
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {evidencePhotos.length >= MAX_PHOTOS && (
+              <View style={[styles.maxPhotosReached, { backgroundColor: theme.colors.background }]}>
+                <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                <Text style={[styles.maxPhotosText, { color: theme.colors.textSecondary }]}>
+                  Maximum photos reached ({MAX_PHOTOS}/{MAX_PHOTOS})
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Remarks Section */}
@@ -684,6 +849,67 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
+  },
+  // Photo Evidence Styles
+  photoSection: {
+    marginTop: 16,
+  },
+  photoSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
+  photoContainer: {
+    position: 'relative',
+    width: (width - 80) / 3,
+    height: (width - 80) / 3,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  photoThumbnail: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  photoNumber: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    fontSize: 10,
+    fontWeight: '700',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    color: '#ffffff',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  maxPhotosReached: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginTop: 8,
+    gap: 8,
+  },
+  maxPhotosText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
