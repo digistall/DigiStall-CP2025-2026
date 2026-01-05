@@ -60,6 +60,7 @@ export const API_CONFIG = {
     GET_STALLHOLDER_DETAILS: '/api/mobile/inspector/stallholders',
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
+    SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
     
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint
