@@ -14,7 +14,7 @@ import stallholderRoutes from './routes/stallholderRoutes.js';
 import inspectorRoutes from './routes/inspectorRoutes.js';
 
 const app = express();
-const PORT = process.env.MOBILE_PORT || 5001;
+const PORT = process.env.MOBILE_PORT || 3002;
 
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '50mb' }));
