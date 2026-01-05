@@ -206,6 +206,141 @@ export const getViolationTypes = async (req, res) => {
 };
 
 /**
+ * Report a stallholder violation with photo evidence
+ * @route POST /api/mobile/inspector/report-with-photos
+ * @access Protected (Inspector only)
+ */
+export const reportStallholderWithPhotos = async (req, res) => {
+  let connection;
+  
+  try {
+    const staffData = req.user;
+    const inspectorId = staffData.staffId || staffData.staff_id || staffData.id;
+    
+    // Parse the form data (since it's multipart)
+    const {
+      stallholder_id,
+      violation_id,
+      branch_id,
+      stall_id,
+      evidence,
+      remarks,
+      receipt_number
+    } = req.body;
+    
+    // Get uploaded files
+    const uploadedFiles = req.files || [];
+    
+    console.log('📝 Inspector submitting violation report with photos:', {
+      inspectorId,
+      stallholder_id,
+      violation_id,
+      branch_id,
+      stall_id,
+      receipt_number,
+      photosCount: uploadedFiles.length
+    });
+    
+    // Validation
+    if (!stallholder_id || !violation_id || !branch_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: stallholder_id, violation_id, and branch_id are required'
+      });
+    }
+    
+    if (!evidence || evidence.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Evidence description is required'
+      });
+    }
+    
+    if (!receipt_number) {
+      return res.status(400).json({
+        success: false,
+        message: 'Receipt number is required'
+      });
+    }
+    
+    // Build photo paths array for storage
+    const photoPaths = uploadedFiles.map(file => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      return `${year}/${month}/${file.filename}`;
+    });
+    
+    // Append photo paths to evidence description for reference
+    let enhancedEvidence = evidence.trim();
+    if (photoPaths.length > 0) {
+      enhancedEvidence += `\n\n[Photo Evidence: ${photoPaths.length} photo(s) attached - ${photoPaths.join(', ')}]`;
+    }
+    
+    connection = await createConnection();
+    
+    // Use the existing reportStallholder procedure
+    await connection.execute(
+      'CALL reportStallholder(?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        inspectorId,
+        parseInt(stallholder_id),
+        parseInt(violation_id),
+        parseInt(branch_id),
+        stall_id ? parseInt(stall_id) : null,
+        enhancedEvidence,
+        remarks || null,
+        parseInt(receipt_number)
+      ]
+    );
+    
+    console.log('✅ Violation report with photos submitted successfully');
+    console.log('📷 Uploaded photos:', photoPaths);
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Violation report with photo evidence submitted successfully',
+      receipt_number: receipt_number,
+      photos_uploaded: uploadedFiles.length,
+      photo_paths: photoPaths
+    });
+    
+  } catch (error) {
+    console.error('❌ Error submitting violation report with photos:', error);
+    
+    // Handle specific error messages from stored procedure
+    if (error.message && error.message.includes('Invalid violation_id')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid violation type selected'
+      });
+    }
+    if (error.message && error.message.includes('Invalid stallholder_id')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid stallholder ID'
+      });
+    }
+    if (error.message && error.message.includes('No penalty defined')) {
+      return res.status(400).json({
+        success: false,
+        message: 'No penalty defined for this violation type. Please contact administrator.'
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to submit violation report',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
+/**
  * Get stallholder details by ID - Uses stored procedure
  * @route GET /api/mobile/inspector/stallholders/:id
  * @access Protected (Inspector only)
@@ -257,3 +392,4 @@ export const getStallholderById = async (req, res) => {
     }
   }
 };
+
