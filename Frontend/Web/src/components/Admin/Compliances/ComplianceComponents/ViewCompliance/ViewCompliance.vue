@@ -124,12 +124,48 @@
         </div>
 
         <!-- Evidence Section -->
-        <div class="detail-card" v-if="compliance.evidence">
+        <div class="detail-card evidence-card">
           <div class="card-header">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             Evidence
+            <span v-if="imageLoaded" class="photo-count-badge">Photo attached</span>
           </div>
-          <p class="card-value">{{ compliance.evidence }}</p>
+
+          <!-- Evidence Image -->
+          <div class="evidence-photo-container" v-if="showEvidenceSection">
+            <div class="evidence-photo-item" @click="openPhotoViewer">
+              <img
+                :src="evidenceImageSrc"
+                alt="Evidence Photo"
+                class="evidence-photo-thumbnail"
+                @error="handlePhotoError"
+                @load="handlePhotoLoad"
+              />
+              <div class="photo-overlay" v-if="imageLoaded">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><path d="M11 8v6"></path><path d="M8 11h6"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Evidence -->
+          <div class="no-evidence" v-if="imageLoadError || !showEvidenceSection">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
+            <span>No evidence available</span>
+          </div>
+        </div>
+
+        <!-- Photo Viewer Modal -->
+        <div class="photo-viewer-overlay" v-if="showPhotoViewer" @click.self="closePhotoViewer">
+          <div class="photo-viewer-container">
+            <button class="photo-viewer-close" @click="closePhotoViewer">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <img
+              :src="evidenceImageSrc"
+              alt="Evidence Photo"
+              class="photo-viewer-image"
+            />
+          </div>
         </div>
 
         <!-- Payment Section (if paid) -->
