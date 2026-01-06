@@ -168,9 +168,9 @@
       <!-- FOOTER -->
       <div class="modal-footer">
         <button class="modal-button secondary" @click="closeModal">Close</button>
-        <button 
-          v-if="complaints && !isResolved && !isRejected" 
-          class="modal-button resolve" 
+        <button
+          v-if="complaints && !isResolved && !isRejected"
+          class="modal-button resolve"
           @click="openResolveModal"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -190,7 +190,7 @@
           <h3 class="resolve-modal-title">Resolve Complaint</h3>
           <button class="close-button" @click="closeResolveModal">&times;</button>
         </div>
-        
+
         <div class="resolve-modal-body">
           <div class="resolve-info">
             <p><strong>Complaint ID:</strong> {{ complaints?.id }}</p>
@@ -208,7 +208,7 @@
 
           <div class="form-group">
             <label for="resolution-notes">Resolution Notes <span class="required">*</span></label>
-            <textarea 
+            <textarea
               id="resolution-notes"
               v-model="resolveData.resolution_notes"
               class="form-textarea"
@@ -224,8 +224,8 @@
           <button class="modal-button secondary" @click="closeResolveModal" :disabled="isResolving">
             Cancel
           </button>
-          <button 
-            class="modal-button resolve" 
+          <button
+            class="modal-button resolve"
             @click="submitResolve"
             :disabled="isResolving"
           >

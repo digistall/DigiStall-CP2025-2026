@@ -77,7 +77,7 @@ export default {
     // Handle resolve complaint
     async handleResolveComplaint(resolveData) {
       console.log('Resolving complaint:', resolveData)
-      
+
       try {
         const response = await apiClient.put(`/complaints/${resolveData.complaint_id}/resolve`, {
           resolution_notes: resolveData.resolution_notes,
@@ -86,10 +86,10 @@ export default {
 
         if (response.data.success) {
           console.log('✅ Complaint resolved successfully!')
-          
+
           // Show success message
           alert(`Complaint has been ${resolveData.status === 'resolved' ? 'resolved' : 'rejected'} successfully!`)
-          
+
           // Close the modal and reload data
           this.closeViewComplaintsModal()
           await this.loadComplaintsData()
