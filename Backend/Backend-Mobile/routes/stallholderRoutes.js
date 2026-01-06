@@ -19,6 +19,15 @@ import {
   updateStallholderDocumentVerificationStatus
 } from '../controllers/documents/stallholderDocumentBlobController.js';
 
+// Import complaint controller
+import {
+  submitComplaint,
+  getMyComplaints
+} from '../controllers/stallholder/complaintController.js';
+
+// Import auth middleware
+import { verifyToken } from '../middleware/auth.js';
+
 const router = express.Router();
 
 // Get directory path for uploads
@@ -132,5 +141,23 @@ router.delete('/documents/blob/:document_id', deleteStallholderDocumentBlob);
  * @desc Update document verification status
  */
 router.put('/documents/blob/:document_id/verify', updateStallholderDocumentVerificationStatus);
+
+// =============================================
+// STALLHOLDER COMPLAINT ROUTES
+// =============================================
+
+/**
+ * @route POST /api/mobile/stallholder/complaint
+ * @desc Submit a complaint
+ * @access Protected (Stallholder only)
+ */
+router.post('/complaint', verifyToken, submitComplaint);
+
+/**
+ * @route GET /api/mobile/stallholder/complaints
+ * @desc Get stallholder's complaints
+ * @access Protected (Stallholder only)
+ */
+router.get('/complaints', verifyToken, getMyComplaints);
 
 export default router;
