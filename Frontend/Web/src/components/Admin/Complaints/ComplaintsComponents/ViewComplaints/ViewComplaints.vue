@@ -138,10 +138,25 @@
           </div>
         </div>
 
-        <!-- Resolution Notes (if resolved) -->
+        <!-- Resolution Notes (if resolved or rejected) -->
         <div v-if="complaints.resolution_notes" class="info-section resolution-section">
-          <strong class="section-title">Resolution Notes</strong>
+          <strong class="section-title">
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Resolution Notes
+          </strong>
           <p class="section-content">{{ complaints.resolution_notes }}</p>
+          <div v-if="complaints.date_resolved" class="resolution-date">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Resolved on: {{ formatDate(complaints.date_resolved) }}</span>
+          </div>
         </div>
       </div>
 
@@ -153,7 +168,71 @@
       <!-- FOOTER -->
       <div class="modal-footer">
         <button class="modal-button secondary" @click="closeModal">Close</button>
-        <button class="modal-button primary">Edit Complaints</button>
+        <button
+          v-if="complaints && !isResolved && !isRejected"
+          class="modal-button resolve"
+          @click="openResolveModal"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4"></path>
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+          Resolve Complaint
+        </button>
+        <button class="modal-button primary" @click="editComplaints">Edit Complaints</button>
+      </div>
+    </div>
+
+    <!-- Resolve Modal -->
+    <div v-if="showResolveModal" class="resolve-modal-overlay" @click.self="closeResolveModal">
+      <div class="resolve-modal-content">
+        <div class="resolve-modal-header">
+          <h3 class="resolve-modal-title">Resolve Complaint</h3>
+          <button class="close-button" @click="closeResolveModal">&times;</button>
+        </div>
+
+        <div class="resolve-modal-body">
+          <div class="resolve-info">
+            <p><strong>Complaint ID:</strong> {{ complaints?.id }}</p>
+            <p><strong>Type:</strong> {{ complaints?.type }}</p>
+            <p><strong>Subject:</strong> {{ complaints?.subject }}</p>
+          </div>
+
+          <div class="form-group">
+            <label for="resolution-status">Resolution Status</label>
+            <select id="resolution-status" v-model="resolveData.status" class="form-select">
+              <option value="resolved">Resolved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="resolution-notes">Resolution Notes <span class="required">*</span></label>
+            <textarea
+              id="resolution-notes"
+              v-model="resolveData.resolution_notes"
+              class="form-textarea"
+              rows="5"
+              placeholder="Enter detailed notes about the resolution or action taken..."
+              :class="{ 'error': resolveError }"
+            ></textarea>
+            <span v-if="resolveError" class="error-message">{{ resolveError }}</span>
+          </div>
+        </div>
+
+        <div class="resolve-modal-footer">
+          <button class="modal-button secondary" @click="closeResolveModal" :disabled="isResolving">
+            Cancel
+          </button>
+          <button
+            class="modal-button resolve"
+            @click="submitResolve"
+            :disabled="isResolving"
+          >
+            <span v-if="isResolving" class="loading-spinner"></span>
+            <span v-else>{{ resolveData.status === 'resolved' ? 'Mark as Resolved' : 'Mark as Rejected' }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

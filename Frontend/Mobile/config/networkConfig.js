@@ -66,6 +66,10 @@ export const API_CONFIG = {
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
     
+    // Stallholder complaint endpoints
+    SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
+    GET_MY_COMPLAINTS: '/api/mobile/stallholder/complaints',
+    
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint
   },

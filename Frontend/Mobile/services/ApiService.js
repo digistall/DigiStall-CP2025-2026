@@ -97,7 +97,8 @@ class ApiService {
         message: data.message
       };
     } catch (error) {
-      console.error('❌ Staff Login API Error:', error);
+      // Don't log as error - this is expected for non-staff users (stallholders)
+      console.log('ℹ️ Staff login check:', error.message || 'Not a staff user');
       return {
         success: false,
         message: error.message || 'Network error occurred'
@@ -301,11 +302,13 @@ class ApiService {
   }
 
   // Staff (Inspector/Collector) auto-logout due to inactivity
+  // Uses the same endpoint as manual logout since staff-auto-logout may not be deployed
   static async staffAutoLogout(token, staffId, staffType) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
-      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_AUTO_LOGOUT}`, {
+      // Use the working staff-logout endpoint (same functionality)
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGOUT}`, {
         method: 'POST',
         headers: {
           ...API_CONFIG.HEADERS,
@@ -314,12 +317,17 @@ class ApiService {
         body: JSON.stringify({
           staffId: staffId,
           staffType: staffType,
-          reason: 'inactivity'
+          reason: 'inactivity' // Include reason for logging purposes
         })
       });
 
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.message || 'Auto-logout failed');
+      }
+
+      console.log('✅ Staff auto-logout API called - last_logout updated');
       return {
         success: true,
         data: data,
@@ -1584,6 +1592,105 @@ class ApiService {
       return {
         success: false,
         message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // ===== COMPLAINT METHODS =====
+
+  /**
+   * Submit a complaint from stallholder
+   * @param {object} complaintData - The complaint data
+   */
+  static async submitComplaint(complaintData) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_COMPLAINT}`;
+      console.log('🔄 Submitting complaint to:', url);
+      console.log('📝 Complaint data:', complaintData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(complaintData)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit complaint');
+      }
+      
+      console.log('✅ Complaint submitted successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message || 'Complaint submitted successfully'
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Complaint Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get stallholder's complaints
+   */
+  static async getMyComplaints() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_MY_COMPLAINTS}`;
+      console.log('🔄 Fetching complaints from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch complaints');
+      }
+      
+      console.log('✅ Complaints fetched successfully:', data.count);
+      return {
+        success: true,
+        data: data.data || [],
+        count: data.count || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Complaints Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
       };
     }
   }
