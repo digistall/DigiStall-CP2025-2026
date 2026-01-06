@@ -21,6 +21,8 @@
               <TableStall
                 :searchQuery="searchQuery"
                 :activeFilter="activeFilter"
+                @loading-change="handleLoadingChange"
+                @data-ready="handleDataReady"
               />
 
               <!-- Documents View Modal -->

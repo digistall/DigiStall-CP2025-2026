@@ -7,11 +7,9 @@ import Payment from '../components/Admin/Payment/Payment.vue'
 import Applicants from '../components/Admin/Applicants/Applicants.vue'
 import Complaints from '../components/Admin/Complaints/Complaints.vue'
 import Compliances from '../components/Admin/Compliances/Compliance.vue'
-import Inspectors from '../components/Admin/Inspectors/Inspector.vue'
 import Vendors from '../components/Admin/Vendors/Vendors.vue'
 import Stallholders from '../components/Admin/Stallholders/Stallholders.vue'
 import MainLayout from '../components/MainLayout/MainLayout.vue'
-import Collectors from '../components/Admin/Collectors/Collectors.vue'
 import Stalls from '../components/Admin/Stalls/Stalls.vue'
 import BranchManagement from '../components/Admin/Branch/Branch.vue'
 import Employees from '../components/Admin/Employees/Employees.vue'
@@ -157,7 +155,6 @@ const getDashboardPath = () => {
         { perm: 'compliances', route: '/app/compliance' },
         { perm: 'vendors', route: '/app/vendor' },
         { perm: 'stallholders', route: '/app/stallholder' },
-        { perm: 'collectors', route: '/app/collectors' },
         { perm: 'stalls', route: '/app/stalls' }
       ];
       
@@ -344,7 +341,6 @@ const requireDashboardAccess = (to, from, next) => {
         { perm: 'compliances', route: '/app/compliances' },
         { perm: 'vendors', route: '/app/vendors' },
         { perm: 'stallholders', route: '/app/stallholders' },
-        { perm: 'collectors', route: '/app/collectors' },
         { perm: 'stalls', route: '/app/stalls' }
       ]
       
@@ -451,13 +447,6 @@ const router = createRouter({
           beforeEnter: requiresPermission('compliances'),
         },
         {
-          path: 'inspectors',
-          name: 'Inspectors',
-          component: Inspectors,
-          meta: { title: 'Inspectors' },
-          beforeEnter: requiresPermission('compliances'),
-        },
-        {
           path: 'vendors',
           name: 'Vendors',
           component: Vendors,
@@ -470,13 +459,6 @@ const router = createRouter({
           component: Stallholders,
           meta: { title: 'Stallholders' },
           beforeEnter: requiresPermission('stallholders'),
-        },
-        {
-          path: 'collectors',
-          name: 'Collectors',
-          component: Collectors,
-          meta: { title: 'Collectors' },
-          beforeEnter: requiresPermission('collectors'),
         },
         {
           path: 'stalls',

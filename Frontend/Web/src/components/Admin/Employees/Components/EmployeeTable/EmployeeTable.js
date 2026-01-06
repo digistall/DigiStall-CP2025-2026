@@ -65,6 +65,15 @@
     },
 
     getRoleColor(employee) {
+      if (!employee) return 'primary'
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
+      }
+      return 'primary' // Web employee
+    },
+
+    getEmployeeTypeColor(employee) {
+      if (!employee) return 'primary'
       if (employee.employee_type === 'mobile') {
         return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
       }
@@ -72,6 +81,7 @@
     },
 
     getRoleIcon(employee) {
+      if (!employee) return 'mdi-account'
       if (employee.employee_type === 'mobile') {
         return employee.mobile_role === 'inspector' ? 'mdi-clipboard-check' : 'mdi-account-cash'
       }
