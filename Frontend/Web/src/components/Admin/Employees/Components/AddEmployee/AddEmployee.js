@@ -25,7 +25,16 @@ export default {
         lastName: "",
         email: "",
         phoneNumber: "",
+        address: "",
+        assignedLocation: null,
       },
+      // Available locations for collectors
+      availableLocations: [
+        { name: 'Panganiban', value: 'Panganiban' },
+        { name: 'Naga City Market', value: 'Naga City Market' },
+        { name: 'Triangulo', value: 'Triangulo' },
+        { name: 'Concepcion Pequeña', value: 'Concepcion Pequeña' },
+      ],
       rules: {
         required: (value) => !!value || "This field is required",
         email: (value) => {
@@ -40,11 +49,18 @@ export default {
     };
   },
   computed: {
+    isMobileStaff() {
+      if (!this.employee) return false;
+      return this.employee.employee_type === 'mobile' || this.accountType === 'mobile';
+    },
     canSave() {
       if (!this.formValid) return false;
       if (this.isEditMode) return true;
       if (this.accountType === 'mobile') {
-        return this.mobileRole !== null;
+        if (this.mobileRole === null) return false;
+        // Collector requires assigned location
+        if (this.mobileRole === 'collector' && !this.employeeForm.assignedLocation) return false;
+        return true;
       }
       return true;
     },
@@ -66,11 +82,18 @@ export default {
             firstName: newEmployee.first_name || "",
             lastName: newEmployee.last_name || "",
             email: newEmployee.email || "",
-            phoneNumber: newEmployee.phone_number || "",
+            phoneNumber: newEmployee.phone_number || newEmployee.contact_no || "",
+            address: newEmployee.address || "",
+            assignedLocation: newEmployee.assigned_location || newEmployee.location || null,
           };
-          // In edit mode, always show as web employee
-          this.accountType = 'web';
-          this.mobileRole = null;
+          // Set account type and mobile role based on employee data
+          if (newEmployee.employee_type === 'mobile') {
+            this.accountType = 'mobile';
+            this.mobileRole = newEmployee.mobile_role || null;
+          } else {
+            this.accountType = 'web';
+            this.mobileRole = null;
+          }
         } else if (!this.isEditMode) {
           this.resetForm();
         }
@@ -91,6 +114,8 @@ export default {
         lastName: "",
         email: "",
         phoneNumber: "",
+        address: "",
+        assignedLocation: null,
       };
       this.accountType = 'web';
       this.mobileRole = null;
