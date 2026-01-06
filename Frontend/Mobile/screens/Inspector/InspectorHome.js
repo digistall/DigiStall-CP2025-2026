@@ -70,7 +70,7 @@ const InspectorHome = ({ navigation }) => {
   const sendHeartbeat = useCallback(async () => {
     try {
       const userData = await UserStorageService.getUserData();
-      const token = userData?.token;
+      const token = await UserStorageService.getAuthToken();
       const staffId = userData?.staff?.inspector_id || userData?.staff?.staffId;
       
       if (token && staffId) {
@@ -90,13 +90,17 @@ const InspectorHome = ({ navigation }) => {
     
     try {
       const userData = await UserStorageService.getUserData();
-      const token = userData?.token;
+      const token = await UserStorageService.getAuthToken();
       const staffId = userData?.staff?.inspector_id || userData?.staff?.staffId;
+      
+      console.log('🔍 Auto-logout data - token:', token ? 'EXISTS' : 'MISSING', 'staffId:', staffId);
       
       // Call auto-logout API
       if (token && staffId) {
-        await ApiService.staffAutoLogout(token, staffId, 'inspector');
-        console.log('✅ Auto-logout recorded');
+        const result = await ApiService.staffAutoLogout(token, staffId, 'inspector');
+        console.log('✅ Auto-logout API result:', result);
+      } else {
+        console.log('⚠️ Missing token or staffId for auto-logout');
       }
       
       await UserStorageService.clearUserData();

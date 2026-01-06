@@ -57,8 +57,8 @@ export const handleLogin = async (
       setLoadingState({ step: 1, message: 'Verifying credentials...', progress: 20 });
     }
 
-    // Try staff login first (inspector/collector)
-    console.log('🔐 Attempting staff login first...');
+    // Try staff login first (inspector/collector) - silent fail for non-staff users
+    console.log('🔐 Checking if user is staff (inspector/collector)...');
     const staffResponse = await ApiService.mobileStaffLogin(username, password);
 
     if (staffResponse.success) {
@@ -117,8 +117,8 @@ export const handleLogin = async (
       return; // Exit after successful staff login
     }
 
-    // Staff login failed, try regular user login
-    console.log('🔐 Staff login failed, trying regular user login...');
+    // Staff login failed, try regular user login (this is expected for stallholders)
+    console.log('ℹ️ Not a staff user, trying stallholder login...');
     const response = await ApiService.mobileLogin(username, password);
 
     if (response.success) {
