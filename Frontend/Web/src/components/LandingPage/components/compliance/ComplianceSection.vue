@@ -326,14 +326,14 @@ export default {
 
 @media (max-width: 768px) {
   .compliance-section {
-    padding: 80px 20px;
+    padding: 60px 16px;
   }
 
   .section-container {
     flex-direction: column;
     text-align: center;
     justify-content: center;
-    gap: 50px;
+    gap: 40px;
   }
 
   .content-overlay {
@@ -345,6 +345,8 @@ export default {
   .section-badge {
     margin-left: auto;
     margin-right: auto;
+    font-size: 12px;
+    padding: 10px 16px;
   }
 
   .image-container {
@@ -356,16 +358,19 @@ export default {
   }
 
   .background-image {
-    max-width: 400px;
+    max-width: 320px;
   }
 
   .section-title,
   .section-subtitle {
-    font-size: 2.8rem;
+    font-size: 2rem;
+    line-height: 1.2;
   }
 
   .section-description {
     max-width: 100%;
+    font-size: 0.9rem;
+    padding: 0 10px;
   }
   
   .compliance-features {
@@ -373,36 +378,97 @@ export default {
   }
   
   .compliance-feature {
-    max-width: 400px;
+    max-width: 350px;
     width: 100%;
   }
 }
 
 @media (max-width: 480px) {
   .compliance-section {
-    padding: 60px 16px;
+    padding: 50px 14px;
+  }
+
+  .section-badge {
+    font-size: 11px;
+    padding: 8px 14px;
+    gap: 6px;
+  }
+
+  .section-badge i {
+    font-size: 16px;
   }
 
   .section-title,
   .section-subtitle {
-    font-size: 2.2rem;
+    font-size: 1.6rem;
+    line-height: 1.2;
   }
 
   .section-description {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
   }
   
   .compliance-feature {
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
   
   .compliance-feature .feature-icon {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .compliance-feature .feature-icon i {
+    font-size: 18px;
+  }
+
+  .feature-content strong {
+    font-size: 0.9rem;
+  }
+
+  .feature-content span {
+    font-size: 0.75rem;
   }
 
   .background-image {
-    max-width: 320px;
+    max-width: 260px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 360px) {
+  .compliance-section {
+    padding: 40px 12px;
+  }
+
+  .section-title,
+  .section-subtitle {
+    font-size: 1.4rem;
+  }
+
+  .section-description {
+    font-size: 0.8rem;
+  }
+
+  .compliance-feature {
+    padding: 10px 12px;
+  }
+
+  .compliance-feature .feature-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .feature-content strong {
+    font-size: 0.85rem;
+  }
+
+  .feature-content span {
+    font-size: 0.7rem;
+  }
+
+  .background-image {
+    max-width: 220px;
   }
 }
 </style>

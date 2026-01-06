@@ -3,6 +3,8 @@
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createConnection } from './config/database.js';
 
 // Import route files
@@ -13,20 +15,32 @@ import applicationRoutes from './routes/applicationRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import inspectorRoutes from './routes/inspectorRoutes.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-const PORT = process.env.MOBILE_PORT || 5001;
+const PORT = process.env.MOBILE_PORT || 3002;
 
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORS configuration for mobile apps
+// CORS configuration for mobile apps and web frontend
 app.use(cors({
-  origin: ['http://localhost:3003', 'http://10.0.2.2:5001'], // Include Android emulator IP
+  origin: [
+    'http://localhost:3003',    // Mobile dev
+    'http://localhost:3000',    // Web frontend (Vue default)
+    'http://localhost:8080',    // Web frontend (Vue alternate)
+    'http://localhost:5173',    // Vite dev server
+    'http://10.0.2.2:5001'      // Android emulator IP
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Add request logging
 app.use((req, res, next) => {

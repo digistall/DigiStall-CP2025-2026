@@ -62,7 +62,7 @@ BEGIN
         created_at
     FROM staff_activity_log
     WHERE (p_branch_id IS NULL OR branch_id = p_branch_id OR branch_id IS NULL)
-      AND (p_staff_type IS NULL OR staff_type = p_staff_type)
+      AND (p_staff_type IS NULL OR staff_type COLLATE utf8mb4_general_ci = p_staff_type COLLATE utf8mb4_general_ci)
       AND (p_staff_id IS NULL OR staff_id = p_staff_id)
       AND (p_start_date IS NULL OR created_at >= p_start_date)
       AND (p_end_date IS NULL OR created_at <= CONCAT(p_end_date, ' 23:59:59'))
@@ -85,7 +85,7 @@ BEGIN
     SELECT COUNT(*) as total
     FROM staff_activity_log
     WHERE (p_branch_id IS NULL OR branch_id = p_branch_id OR branch_id IS NULL)
-      AND (p_staff_type IS NULL OR staff_type = p_staff_type)
+      AND (p_staff_type IS NULL OR staff_type COLLATE utf8mb4_general_ci = p_staff_type COLLATE utf8mb4_general_ci)
       AND (p_staff_id IS NULL OR staff_id = p_staff_id)
       AND (p_start_date IS NULL OR created_at >= p_start_date)
       AND (p_end_date IS NULL OR created_at <= CONCAT(p_end_date, ' 23:59:59'));
@@ -115,7 +115,8 @@ BEGIN
         status,
         created_at
     FROM staff_activity_log
-    WHERE staff_type = p_staff_type AND staff_id = p_staff_id
+    WHERE staff_type COLLATE utf8mb4_general_ci = p_staff_type COLLATE utf8mb4_general_ci 
+      AND staff_id = p_staff_id
     ORDER BY created_at DESC
     LIMIT p_limit OFFSET p_offset;
 END//
@@ -131,7 +132,8 @@ CREATE PROCEDURE sp_countStaffActivityById(
 BEGIN
     SELECT COUNT(*) as total 
     FROM staff_activity_log
-    WHERE staff_type = p_staff_type AND staff_id = p_staff_id;
+    WHERE staff_type COLLATE utf8mb4_general_ci = p_staff_type COLLATE utf8mb4_general_ci 
+      AND staff_id = p_staff_id;
 END//
 
 -- =============================================

@@ -615,6 +615,69 @@ export const logout = async (req, res) => {
             console.warn(`⚠️ No rows affected! User ${userId} may not exist or last_logout column missing`);
           } else {
             console.log(`✅ Successfully updated last_logout for ${userType} ID ${userId} to ${philippineTime}`);
+            
+            // Log logout activity to staff_activity_log
+            const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+            const userAgent = req.headers['user-agent'] || '';
+            
+            try {
+              // Get staff name for logging
+              let staffName = 'Unknown';
+              switch (normalizedUserType) {
+                case 'business_employee':
+                case 'employee':
+                  {
+                    const [nameResult] = await connection.execute(
+                      'SELECT CONCAT(first_name, " ", last_name) as name FROM business_employee WHERE business_employee_id = ?', 
+                      [userId]
+                    );
+                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                  }
+                  break;
+                case 'business_manager':
+                case 'branch_manager':
+                case 'manager':
+                  {
+                    const [nameResult] = await connection.execute(
+                      'SELECT CONCAT(first_name, " ", last_name) as name FROM business_manager WHERE business_manager_id = ?', 
+                      [userId]
+                    );
+                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                  }
+                  break;
+                case 'stall_business_owner':
+                case 'business_owner':
+                case 'owner':
+                  {
+                    const [nameResult] = await connection.execute(
+                      'SELECT CONCAT(first_name, " ", last_name) as name FROM stall_business_owner WHERE business_owner_id = ?', 
+                      [userId]
+                    );
+                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                  }
+                  break;
+                case 'system_administrator':
+                case 'admin':
+                case 'system_admin':
+                  {
+                    const [nameResult] = await connection.execute(
+                      'SELECT CONCAT(first_name, " ", last_name) as name FROM system_administrator WHERE system_admin_id = ?', 
+                      [userId]
+                    );
+                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                  }
+                  break;
+              }
+              
+              // Log to staff_activity_log
+              await connection.execute(
+                'CALL sp_logStaffActivityLogout(?, ?, ?, ?, ?, ?, ?)',
+                [normalizedUserType, userId, staffName, null, `${staffName} logged out via web`, ipAddress, userAgent]
+              );
+              console.log(`📝 Logout activity logged for ${normalizedUserType} ${staffName}`);
+            } catch (logError) {
+              console.warn('⚠️ Failed to log logout activity:', logError.message);
+            }
           }
         }
       } catch (updateError) {
@@ -858,11 +921,132 @@ export const heartbeat = async (req, res) => {
   }
 };
 
+/**
+ * AUTO-LOGOUT - Handle automatic logout due to inactivity
+ * POST /api/auth/auto-logout
+ * This logs the auto-logout event and updates the user's session status
+ */
+export const autoLogout = async (req, res) => {
+  let connection;
+  
+  try {
+    const { userId, userType, reason } = req.body;
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+    const userAgent = req.headers['user-agent'] || '';
+    
+    console.log('='.repeat(60));
+    console.log('⏰ AUTO-LOGOUT REQUEST RECEIVED');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.log('⏰ userId:', userId, 'userType:', userType, 'reason:', reason);
+    console.log('='.repeat(60));
+    
+    if (!userId || !userType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing userId or userType'
+      });
+    }
+    
+    connection = await createConnection();
+    const philippineTime = getPhilippineTime();
+    
+    // Use stored procedures for auto-logout based on userType
+    const normalizedUserType = userType.toLowerCase().trim();
+    
+    try {
+      switch (normalizedUserType) {
+        case 'business_employee':
+        case 'employee':
+          await connection.execute('CALL sp_autoLogoutBusinessEmployee(?, ?, ?, ?)', 
+            [userId, philippineTime, ipAddress, userAgent]);
+          console.log(`✅ Auto-logout recorded for business_employee ${userId}`);
+          break;
+          
+        case 'business_manager':
+        case 'branch_manager':
+        case 'manager':
+          await connection.execute('CALL sp_autoLogoutBusinessManager(?, ?, ?, ?)', 
+            [userId, philippineTime, ipAddress, userAgent]);
+          console.log(`✅ Auto-logout recorded for business_manager ${userId}`);
+          break;
+          
+        case 'stall_business_owner':
+        case 'business_owner':
+        case 'owner':
+          // For business owner, just log the activity and update last_logout
+          await connection.execute('CALL sp_updateBusinessOwnerLastLogout(?, ?)', [userId, philippineTime]);
+          await connection.execute(`
+            INSERT INTO staff_activity_log 
+            (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, user_agent, status, created_at)
+            SELECT 'business_owner', ?, CONCAT(first_name, ' ', last_name), 'AUTO_LOGOUT',
+                   CONCAT(first_name, ' ', last_name, ' was automatically logged out due to 5 minutes of inactivity'),
+                   'authentication', ?, ?, 'success', ?
+            FROM stall_business_owner WHERE business_owner_id = ?
+          `, [userId, ipAddress, userAgent, philippineTime, userId]);
+          console.log(`✅ Auto-logout recorded for business_owner ${userId}`);
+          break;
+          
+        case 'system_administrator':
+        case 'admin':
+        case 'system_admin':
+          await connection.execute('CALL sp_updateSystemAdminLastLogout(?, ?)', [userId, philippineTime]);
+          await connection.execute(`
+            INSERT INTO staff_activity_log 
+            (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, user_agent, status, created_at)
+            SELECT 'system_administrator', ?, CONCAT(first_name, ' ', last_name), 'AUTO_LOGOUT',
+                   CONCAT(first_name, ' ', last_name, ' was automatically logged out due to 5 minutes of inactivity'),
+                   'authentication', ?, ?, 'success', ?
+            FROM system_administrator WHERE system_admin_id = ?
+          `, [userId, ipAddress, userAgent, philippineTime, userId]);
+          console.log(`✅ Auto-logout recorded for system_administrator ${userId}`);
+          break;
+          
+        case 'inspector':
+          await connection.execute('CALL sp_autoLogoutInspector(?, ?, ?, ?)', 
+            [userId, philippineTime, ipAddress, userAgent]);
+          console.log(`✅ Auto-logout recorded for inspector ${userId}`);
+          break;
+          
+        case 'collector':
+          await connection.execute('CALL sp_autoLogoutCollector(?, ?, ?, ?)', 
+            [userId, philippineTime, ipAddress, userAgent]);
+          console.log(`✅ Auto-logout recorded for collector ${userId}`);
+          break;
+          
+        default:
+          console.warn(`⚠️ Unknown userType for auto-logout: ${normalizedUserType}`);
+      }
+    } catch (dbError) {
+      console.error('❌ Database error during auto-logout:', dbError.message);
+      // Continue anyway - we still want to log out the user
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Auto-logout recorded successfully',
+      timestamp: philippineTime
+    });
+    
+  } catch (error) {
+    console.error('❌ Auto-logout error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error recording auto-logout',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
+
 export default {
   login,
   refreshToken,
   logout,
   verifyToken,
   getCurrentUser,
-  heartbeat
+  heartbeat,
+  autoLogout
 };

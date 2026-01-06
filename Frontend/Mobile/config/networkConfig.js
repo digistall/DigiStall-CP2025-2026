@@ -6,16 +6,18 @@
 
 export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
-  // Mobile API runs on unified server port 3001 at /api/mobile/*
+  // Mobile API runs on Backend-Mobile server (port 3002)
   SERVERS: [
-    // DigitalOcean Production Server (Primary)
-    'http://68.183.154.125:5001',
-    'http://68.183.154.125:3001',
+    // Local Development - Port 3002 (Backend-Mobile Server)
+    'http://192.168.1.101:3002',   // User's current IP
+    'http://192.168.100.241:3002',
+    'http://localhost:3002',
+    'http://192.168.1.101:5001',   // Fallback to old port
+    'http://localhost:5001',
     
-    // Local Development - Port 3001 (Unified Server with Mobile API)
-    'http://192.168.1.101:3001',
-    'http://192.168.100.241:3001',
-    'http://localhost:3001',
+    // DigitalOcean Production Server
+    'http://68.183.154.125:3002',
+    'http://68.183.154.125:5001',
   ],
   
   // Static file server for images (Apache on port 80)
@@ -34,6 +36,8 @@ export const API_CONFIG = {
     VERIFY_TOKEN: '/api/mobile/auth/verify-token',
     LOGOUT: '/api/mobile/auth/logout',
     STAFF_LOGOUT: '/api/mobile/auth/staff-logout',
+    STAFF_HEARTBEAT: '/api/mobile/auth/staff-heartbeat',
+    STAFF_AUTO_LOGOUT: '/api/mobile/auth/staff-auto-logout',
     
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
@@ -60,6 +64,7 @@ export const API_CONFIG = {
     GET_STALLHOLDER_DETAILS: '/api/mobile/inspector/stallholders',
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
+    SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
     
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint

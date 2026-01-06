@@ -724,6 +724,7 @@ const PaymentController = {
         message: 'Violation payment processed successfully',
         data: {
           reportId: paymentResult.report_id,
+          paymentId: paymentResult.payment_id, 
           status: paymentResult.status,
           paymentDate: paymentResult.payment_date,
           paymentReference: paymentResult.payment_reference,
@@ -758,6 +759,96 @@ const PaymentController = {
       res.status(500).json({
         success: false,
         message: 'Failed to process violation payment',
+        error: error.message
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
+  },
+
+  /**
+   * Get penalty payments from penalty_payments table
+   * @route GET /api/payments/penalty
+   */
+  getPenaltyPayments: async (req, res) => {
+    let connection;
+    try {
+      connection = await createConnection();
+      
+      const limit = parseInt(req.query.limit) || 100;
+      const offset = parseInt(req.query.offset) || 0;
+      
+      // Get branch filter for proper multi-branch support
+      const branchFilter = await getBranchFilter(req, connection);
+      
+      let payments;
+      
+      if (branchFilter === null) {
+        // System admin - get all payments using view
+        const [result] = await connection.query(
+          `SELECT * FROM penalty_payments_view ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+          [limit, offset]
+        );
+        payments = result;
+      } else if (branchFilter.length === 0) {
+        // No accessible branches
+        return res.status(200).json({
+          success: true,
+          message: 'Penalty payments retrieved successfully',
+          data: []
+        });
+      } else {
+        // Branch filtered - use view with branch filter
+        const branchIds = branchFilter.join(',');
+        const [result] = await connection.query(
+          `SELECT * FROM penalty_payments_view WHERE FIND_IN_SET(branch_id, ?) > 0 ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+          [branchIds, limit, offset]
+        );
+        payments = result;
+      }
+      
+      // Map database column names to camelCase for frontend
+      const formattedPayments = payments.map(p => ({
+        penaltyPaymentId: p.penalty_payment_id,
+        reportId: p.report_id,
+        stallholderId: p.stallholder_id,
+        violationId: p.violation_id,
+        penaltyId: p.penalty_id,
+        amount: p.amount,
+        paymentDate: p.payment_date,
+        paymentTime: p.payment_time,
+        paymentMethod: p.payment_method,
+        referenceNumber: p.reference_number,
+        paymentStatus: p.payment_status,
+        notes: p.notes,
+        branchId: p.branch_id,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+        stallholderName: p.stallholder_name,
+        stallNo: p.stall_no,
+        branchName: p.branch_name,
+        violationType: p.violation_type,
+        ordinanceNo: p.ordinance_no,
+        violationDetails: p.violation_details,
+        penaltyAmount: p.penalty_amount,
+        penaltyRemarks: p.penalty_remarks,
+        offenseNo: p.offense_no,
+        severity: p.severity,
+        inspectorName: p.inspector_name,
+        collectedBy: p.collected_by_name || '-'
+      }));
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Penalty payments retrieved successfully',
+        data: formattedPayments
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching penalty payments:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch penalty payments',
         error: error.message
       });
     } finally {
