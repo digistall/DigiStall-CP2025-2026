@@ -19,7 +19,7 @@ import Sidebar from "../StallComponents/Sidebar";
 
 // screen components
 import DashboardScreen from "./Dashboard/DashboardScreen";
-import ReportsScreen from "./Report/ReportsScreen";
+import ComplaintScreen from "./Report/ComplaintScreen";
 import RaffleScreen from "./Raffle/RaffleScreen";
 import AuctionScreen from "./Auction/AuctionScreen";
 import SettingsScreen from "./Settings/SettingsScreen";
@@ -115,7 +115,7 @@ const StallHome = ({ navigation }) => {
     const titles = {
       dashboard: "Dashboard",
       stall: "Stall Management",
-      reports: "Reports",
+      reports: "Complaints",
       settings: "Settings",
       notifications: "Notifications",
       documents: "Documents",
@@ -144,6 +144,7 @@ const StallHome = ({ navigation }) => {
     "notifications",
     "stall",
     "documents",
+    "reports",
   ];
 
   // Determine if need to wrap in ScrollView
@@ -157,7 +158,7 @@ const StallHome = ({ navigation }) => {
       case "stall":
         return <TabbedStallScreen />;
       case "reports":
-        return <ReportsScreen />;
+        return <ComplaintScreen />;
       case "settings":
         return <SettingsScreen />;
       case "notifications":

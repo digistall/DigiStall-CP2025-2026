@@ -5,8 +5,8 @@
     <!-- Main Content -->
     <v-main class="complaints-main-content">
       <!-- Standardized Loading Overlay - contained within main content -->
-      <LoadingOverlay 
-        :loading="isLoading" 
+      <LoadingOverlay
+        :loading="isLoading"
         text="Loading complaints..."
         :full-page="false"
       />
@@ -30,6 +30,8 @@
             :isVisible="showViewComplaintsModal"
             :complaints="selectedComplaints"
             @close="closeViewComplaintsModal"
+            @resolve-complaint="handleResolveComplaint"
+            @edit-complaints="handleEditComplaints"
           />
         </v-col>
       </v-row>

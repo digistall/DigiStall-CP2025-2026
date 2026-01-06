@@ -13,7 +13,9 @@ export default {
       },
       searchQuery: '',
       sortBy: 'createdAt',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      showViewModal: false,
+      selectedPayment: null
     }
   },
   computed: {
@@ -149,6 +151,11 @@ export default {
     async refresh() {
       this.pagination.offset = 0;
       await this.fetchPenaltyPayments();
+    },
+
+    viewPayment(payment) {
+      this.selectedPayment = payment;
+      this.showViewModal = true;
     }
   }
 }
