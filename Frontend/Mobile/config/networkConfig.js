@@ -8,14 +8,14 @@ export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   // Mobile API runs on unified server port 3001 at /api/mobile/*
   SERVERS: [
+    // DigitalOcean Production Server (Primary)
+    'http://68.183.154.125:5001',
+    'http://68.183.154.125:3001',
+    
     // Local Development - Port 3001 (Unified Server with Mobile API)
-    'http://192.168.1.101:3001',   // User's current IP
+    'http://192.168.1.101:3001',
     'http://192.168.100.241:3001',
     'http://localhost:3001',
-    
-    // DigitalOcean Production Server
-    'http://68.183.154.125:3001',
-    'http://68.183.154.125:5001',
   ],
   
   // Static file server for images (Apache on port 80)
