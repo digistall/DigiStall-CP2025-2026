@@ -30,6 +30,8 @@
             :isVisible="showViewComplaintsModal"
             :complaints="selectedComplaints"
             @close="closeViewComplaintsModal"
+            @resolve-complaint="handleResolveComplaint"
+            @edit-complaints="handleEditComplaints"
           />
         </v-col>
       </v-row>
