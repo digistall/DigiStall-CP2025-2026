@@ -277,68 +277,154 @@
 
 @media (max-width: 768px) {
   .header-container {
-    flex-direction: column;
-    gap: 15px;
-    padding: 0 20px;
-  }
-
-  .logo-section {
-    gap: 12px;
-  }
-
-  .logo {
-    width: 48px;
-    height: 48px;
-  }
-
-  .city-text {
-    font-size: 20px;
-  }
-
-  .republic-text {
-    font-size: 10px;
-  }
-
-  .nav-menu {
-    gap: 4px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .nav-link {
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-  
-  .nav-link i {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .main-header {
-    padding: 12px 0;
-  }
-
-  .header-container {
-    padding: 0 15px;
+    flex-direction: row;
+    gap: 10px;
+    padding: 0 16px;
   }
 
   .logo-section {
     gap: 10px;
   }
 
+  .logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .city-text {
+    font-size: 18px;
+  }
+
+  .republic-text {
+    font-size: 9px;
+  }
+
   .nav-menu {
     gap: 4px;
+    flex-wrap: nowrap;
   }
 
   .nav-link {
     font-size: 11px;
     padding: 6px 8px;
   }
+  
+  .nav-link i {
+    display: none;
+  }
 
   .login-btn {
+    padding: 8px 14px;
     font-size: 12px;
-    padding: 10px 16px;
+  }
+
+  .login-btn.logged-in {
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-header {
+    padding: 10px 0;
+  }
+
+  .header-container {
+    padding: 0 12px;
+    gap: 10px;
+  }
+
+  .logo-section {
+    gap: 8px;
+  }
+
+  .logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .city-text {
+    font-size: 16px;
+  }
+
+  .republic-text {
+    font-size: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .text-divider {
+    margin: 2px 0;
+  }
+
+  .nav-menu {
+    gap: 2px;
+  }
+
+  .nav-link {
+    font-size: 10px;
+    padding: 5px 6px;
+  }
+
+  .nav-link span {
+    display: none;
+  }
+
+  .nav-link i {
+    display: block;
+    font-size: 16px;
+  }
+
+  .login-btn {
+    font-size: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .login-btn span {
+    display: none;
+  }
+
+  .login-btn i {
+    font-size: 16px;
+  }
+
+  .login-btn.logged-in {
+    min-width: auto;
+  }
+
+  .username-display {
+    display: none;
+  }
+}
+
+/* Extra small devices - make it even more compact */
+@media (max-width: 360px) {
+  .header-container {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .city-text {
+    font-size: 14px;
+  }
+
+  .republic-text {
+    display: none;
+  }
+
+  .text-divider {
+    display: none;
+  }
+
+  .nav-link {
+    padding: 4px 5px;
+  }
+
+  .login-btn {
+    padding: 6px 10px;
   }
 }

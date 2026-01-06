@@ -1,5 +1,6 @@
 import PaymentTypeSelector from './Components/PaymentTypeSelector/PaymentTypeSelector.vue'
 import StallPayments from './Components/StallPayments/StallPayments.vue'
+import PenaltyPayments from './Components/PenaltyPayments/PenaltyPayments.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
@@ -7,6 +8,7 @@ export default {
   components: {
     PaymentTypeSelector,
     StallPayments,
+    PenaltyPayments,
     LoadingOverlay
   },
   data() {
@@ -61,13 +63,13 @@ export default {
       console.log('Payment page initialized')
       console.log('Default payment type:', this.selectedPaymentType)
     },
-    
+
     // Handle payment type change
     handleTypeChange(type) {
       this.selectedPaymentType = type
       console.log('Payment type changed to:', type)
     },
-    
+
     // Handle loading state from child components
     handleLoading(isLoading) {
       this.loading = isLoading

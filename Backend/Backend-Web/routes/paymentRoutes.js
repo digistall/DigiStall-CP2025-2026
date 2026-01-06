@@ -115,4 +115,13 @@ router.post('/violations/pay',
   PaymentController.processViolationPayment
 );
 
+/**
+ * @route GET /api/payments/penalty
+ * @description Get penalty payments (from penalty_payments table)
+ */
+router.get('/penalty', 
+  authMiddleware.authenticateToken,
+  PaymentController.getPenaltyPayments
+);
+
 export default router;

@@ -259,6 +259,77 @@ class ApiService {
     }
   }
 
+  // Staff (Inspector/Collector) heartbeat - keep marked as online
+  static async staffHeartbeat(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_HEARTBEAT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff heartbeat failed');
+      }
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      // Silent fail for heartbeat - don't spam console
+      return {
+        success: false,
+        message: error.message || 'Heartbeat error'
+      };
+    }
+  }
+
+  // Staff (Inspector/Collector) auto-logout due to inactivity
+  static async staffAutoLogout(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_AUTO_LOGOUT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType,
+          reason: 'inactivity'
+        })
+      });
+
+      const data = await response.json();
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Staff Auto-Logout API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Auto-logout error'
+      };
+    }
+  }
+
   // ===== STALL METHODS =====
 
   // Get all stalls
@@ -1203,6 +1274,83 @@ class ApiService {
       
     } catch (error) {
       console.error('❌ Submit Violation Report Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Submit a violation report with photo evidence
+   * @param {object} reportData - The report data
+   * @param {array} photos - Array of photo objects with uri, type, name
+   */
+  static async submitViolationReportWithPhotos(reportData, photos = []) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_VIOLATION_REPORT_WITH_PHOTOS}`;
+      console.log('🔄 Submitting violation report with photos to:', url);
+      console.log('📝 Report data:', reportData);
+      console.log('📷 Photos count:', photos.length);
+      
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      
+      // Add report data fields
+      formData.append('stallholder_id', reportData.stallholder_id.toString());
+      formData.append('violation_id', reportData.violation_id.toString());
+      formData.append('branch_id', reportData.branch_id.toString());
+      if (reportData.stall_id) {
+        formData.append('stall_id', reportData.stall_id.toString());
+      }
+      formData.append('receipt_number', reportData.receipt_number.toString());
+      formData.append('evidence', reportData.evidence);
+      if (reportData.remarks) {
+        formData.append('remarks', reportData.remarks);
+      }
+      
+      // Add photos
+      photos.forEach((photo, index) => {
+        formData.append('evidence_photos', {
+          uri: photo.uri,
+          type: photo.type || 'image/jpeg',
+          name: photo.name || `evidence_${index + 1}.jpg`
+        });
+      });
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit violation report');
+      }
+      
+      console.log('✅ Violation report with photos submitted successfully');
+      return {
+        success: true,
+        message: data.message,
+        photos_uploaded: data.photos_uploaded,
+        photo_paths: data.photo_paths
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Violation Report With Photos Error:', error);
       return {
         success: false,
         message: error.message || 'Network error occurred'
