@@ -97,7 +97,8 @@ class ApiService {
         message: data.message
       };
     } catch (error) {
-      console.error('❌ Staff Login API Error:', error);
+      // Don't log as error - this is expected for non-staff users (stallholders)
+      console.log('ℹ️ Staff login check:', error.message || 'Not a staff user');
       return {
         success: false,
         message: error.message || 'Network error occurred'
