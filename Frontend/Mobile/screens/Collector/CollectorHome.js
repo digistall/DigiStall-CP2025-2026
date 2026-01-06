@@ -57,7 +57,7 @@ const CollectorHome = () => {
   const sendHeartbeat = useCallback(async () => {
     try {
       const data = await UserStorageService.getUserData();
-      const token = data?.token;
+      const token = await UserStorageService.getAuthToken();
       const staffId = data?.staff?.collector_id || data?.staff?.staffId;
       
       if (token && staffId) {
@@ -77,12 +77,16 @@ const CollectorHome = () => {
     
     try {
       const data = await UserStorageService.getUserData();
-      const token = data?.token;
+      const token = await UserStorageService.getAuthToken();
       const staffId = data?.staff?.collector_id || data?.staff?.staffId;
       
+      console.log('🔍 Auto-logout data - token:', token ? 'EXISTS' : 'MISSING', 'staffId:', staffId);
+      
       if (token && staffId) {
-        await ApiService.staffAutoLogout(token, staffId, 'collector');
-        console.log('✅ Auto-logout recorded');
+        const result = await ApiService.staffAutoLogout(token, staffId, 'collector');
+        console.log('✅ Auto-logout API result:', result);
+      } else {
+        console.log('⚠️ Missing token or staffId for auto-logout');
       }
       
       await UserStorageService.clearUserData();
