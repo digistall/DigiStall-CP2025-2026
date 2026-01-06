@@ -1,8 +1,8 @@
 # DigiStall - Naga City Stall Management System
 ## Complete System Documentation
 
-**Last Updated:** January 4, 2026  
-**System Version:** 1.0.0  
+**Last Updated:** January 5, 2026  
+**System Version:** 1.0.1  
 **Status:** Production Ready
 
 ---
@@ -1105,25 +1105,66 @@ stall_business_owner (1)
 
 All stored procedures have been updated to handle Philippine Time (UTC+8):
 
-#### Session Management
-- `create_employee_session` - Create web session (timezone-aware)
-- `update_session_activity` - Update last activity timestamp
-- `end_employee_session` - End session on logout
-- `get_active_sessions` - Get all active sessions (web + mobile staff)
+#### Session Management (Migration 327)
+- `sp_createOrUpdateEmployeeSession` - Create/update web session for online status tracking
+- `sp_updateEmployeeSessionActivity` - Update last activity timestamp
+- `sp_endEmployeeSession` - End session on logout
+- `sp_getActiveEmployeeSessions` - Get all active web sessions with employee info
+- `sp_getActiveEmployeeSessionsByBranch` - Get active sessions filtered by branch
 - `create_staff_session` - Create mobile staff session
 - `end_staff_session` - End mobile staff session
 
+#### Staff Activity Logging (Migration 323)
+- `sp_insertStaffActivityLog` - Insert staff activity log entry
+- `sp_getAllStaffActivities` - Get activities with filters (branch, type, date)
+- `sp_countStaffActivities` - Count activities with filters
+- `sp_getStaffActivityById` - Get activities for specific staff
+- `sp_countStaffActivityById` - Count activities for specific staff
+- `sp_getActivitySummaryByType` - Get activity summary grouped by staff type
+- `sp_getActivitySummaryByAction` - Get top 10 action types
+- `sp_getMostActiveStaff` - Get top 10 most active staff
+- `sp_getRecentFailedActions` - Get recent failed actions
+- `sp_clearAllActivityLogs` - Clear all activity logs
+
 #### Payment Processing
+- `sp_getOnsitePaymentsAll` / `sp_getOnsitePaymentsByBranches` - On-site payment queries
+- `sp_getOnlinePaymentsAll` / `sp_getOnlinePaymentsByBranches` - Online payment queries
+- `sp_approvePayment` / `sp_declinePayment` - Payment approval/rejection
+- `sp_getPaymentStatsAll` / `sp_getPaymentStatsByBranches` - Payment statistics
 - `process_payment` - Process payment with late fee/early discount calculation
 - `calculate_late_fee` - Calculate late fees based on days overdue
 - `apply_early_discount` - Apply 25% discount for early payments (5+ days)
-- `get_overdue_payments` - Get list of overdue payments
 
-#### Compliance & Applications
-- `create_compliance_record` - Log compliance violations
-- `process_application` - Process stall application
-- `assign_stall_to_winner` - Assign stall to raffle/auction winner
-- `create_stallholder_from_applicant` - Convert approved applicant to stallholder
+#### Authentication (Migrations 307, 312, 314)
+- `sp_getSystemAdminByUsername` - System admin login query
+- `sp_getBusinessOwnerByUsername` - Business owner login query
+- `sp_getBusinessManagerByUsername` - Business manager login query
+- `sp_getBusinessEmployeeByUsername` - Business employee login query
+- `sp_getInspectorByUsername` / `sp_getCollectorByUsername` - Mobile staff login
+- `sp_storeRefreshToken` / `sp_getRefreshTokenByHash` - JWT refresh token management
+- `sp_logStaffActivityLogin` / `sp_logStaffActivityLogout` - Activity logging
+- `sp_update*LastLoginNow` - Update last login timestamps
+- `sp_update*LastLogout` - Update last logout timestamps
+
+#### Landing Page (Migration 324)
+- `sp_getLandingPageStallsList` - Get stalls with search, filter, pagination
+- `sp_getLandingPageStallholdersList` - Get stallholders with search, filter
+- `sp_getLandingPageStats` - Get landing page statistics
+
+#### Employee & Staff Management (Migrations 309, 310)
+- `sp_getAllEmployeesAll` / `sp_getAllEmployeesByBranches` - Employee queries
+- `sp_getEmployeeByIdWithBranch` - Get employee with branch info
+- `sp_terminateEmployee` / `sp_logoutEmployee` - Employee termination/logout
+- `sp_checkInspectorEmailExists` / `sp_checkCollectorEmailExists` - Email validation
+
+#### Stallholder Management (Migration 313)
+- `sp_getAllStallholdersAll` / `sp_getAllStallholdersByBranches` - Stallholder queries
+- `sp_getFirstFloorByBranch` / `sp_getFirstSectionByFloor` - Location helpers
+
+#### Branch & Role Permissions (Migration 311)
+- `sp_getBranchIdForManager` - Get branch for manager
+- `sp_getBranchIdForEmployee` - Get branch for employee
+- `sp_getBranchIdsForOwner` - Get all branches for owner
 
 #### Timezone Conversion
 All procedures use `CONVERT_TZ(datetime, '+00:00', '+08:00')` for proper timezone handling.
@@ -1142,13 +1183,42 @@ All procedures use `CONVERT_TZ(datetime, '+00:00', '+08:00')` for proper timezon
 
 Location: `database/migrations/`
 
-Numbered migration files (001-xxx) for incremental database updates:
+Numbered migration files (001-328) for incremental database updates:
+
+#### Core Tables (001-040)
 - `001_addInspector.sql` - Inspector table creation
 - `002_addOnsitePayment.sql` - On-site payment support
 - `003_assignManagerToBusinessOwner.sql` - Manager assignments
 - `004_CanCustomizeDocuments.sql` - Document customization
-- `005_checkComplianceRecordExists.sql` - Compliance checking
-- ... (additional migrations)
+- `005-040` - Various table creation and updates
+
+#### Stored Procedures - Authentication (307-315)
+- `307_sp_mobileStaffAuth.sql` - Mobile staff authentication procedures
+- `308_sp_paymentController.sql` - Payment operations procedures
+- `309_sp_employeeController.sql` - Employee CRUD procedures
+- `310_sp_mobileStaffController.sql` - Mobile staff management procedures
+- `311_sp_rolePermissions.sql` - Branch filter operations
+- `312_sp_enhancedAuth.sql` - Enhanced JWT authentication
+- `313_sp_stallholderController.sql` - Stallholder operations
+- `314_sp_unifiedAuthController.sql` - Unified authentication
+- `315_sp_mobileAuthController.sql` - Mobile authentication
+
+#### Stored Procedures - Features (316-328)
+- `316_sp_landingPageStalls.sql` - Landing page stall queries
+- `317_sp_mobileStallController.sql` - Mobile stall operations
+- `318_sp_stallImageBlob.sql` - Stall image blob storage
+- `319_sp_stallholderDocuments.sql` - Stallholder document management
+- `320_sp_mobileLogin.sql` - Mobile login procedures
+- `321_sp_inspectorController.sql` - Inspector operations
+- `322_sp_mobileDocumentBlobController.sql` - Mobile document blobs
+- `323_sp_staffActivityLog.sql` - Staff activity logging (9 procedures)
+- `323_sp_remaining_raw_queries.sql` - Additional query conversions
+- `324_fix_staff_activity_and_auto_logout.sql` - Staff activity table fixes
+- `324_sp_landing_page_queries.sql` - Landing page stored procedures
+- `325_sp_getFloorsSections.sql` - Floor/section queries
+- `326_sp_mobileStallImageBlob.sql` - Mobile stall image blobs
+- `327_sp_employeeSessionManagement.sql` - Employee session tracking (5 procedures)
+- `328_fix_penalty_payment_recording.sql` - Penalty payment fixes
 
 ### Full Schema Export
 
@@ -1948,16 +2018,79 @@ See `DROPLET_DEPLOYMENT_GUIDE.md` for detailed instructions.
 
 ---
 
-#### 7. 🔄 Stored Procedure Migration
-**Status:** Ongoing migration from inline SQL to stored procedures.
+#### 7. 🔄 Stored Procedure Migration (Ongoing - Jan 2026)
+**Status:** Major progress - 20+ migration files completed with 100+ stored procedures.
 
-**Completed:**
-- ✅ Session management procedures
-- ✅ Payment processing procedures
-- ✅ Compliance tracking procedures
-- ✅ Application processing procedures
+**Completed Migrations:**
+- ✅ `307_sp_mobileStaffAuth.sql` - Mobile staff authentication (9 procedures)
+- ✅ `308_sp_paymentController.sql` - Payment operations (8 procedures)
+- ✅ `309_sp_employeeController.sql` - Employee CRUD operations
+- ✅ `310_sp_mobileStaffController.sql` - Mobile staff management
+- ✅ `311_sp_rolePermissions.sql` - Branch filter operations
+- ✅ `312_sp_enhancedAuth.sql` - Enhanced JWT authentication (15+ procedures)
+- ✅ `313_sp_stallholderController.sql` - Stallholder operations
+- ✅ `314_sp_unifiedAuthController.sql` - Unified authentication
+- ✅ `315_sp_mobileAuthController.sql` - Mobile authentication
+- ✅ `316_sp_landingPageStalls.sql` - Landing page queries
+- ✅ `317_sp_mobileStallController.sql` - Mobile stall operations
+- ✅ `318-319` - Document blob storage procedures
+- ✅ `320_sp_mobileLogin.sql` - Mobile login procedures
+- ✅ `321_sp_inspectorController.sql` - Inspector operations
+- ✅ `322_sp_mobileDocumentBlobController.sql` - Mobile document blobs
+- ✅ `323_sp_staffActivityLog.sql` - Staff activity logging (9 procedures)
+- ✅ `324_sp_landing_page_queries.sql` - Landing page stored procedures
+- ✅ `325_sp_getFloorsSections.sql` - Floor/section queries
+- ✅ `326_sp_mobileStallImageBlob.sql` - Mobile stall image blobs
+- ✅ `327_sp_employeeSessionManagement.sql` - Employee session tracking (5 procedures)
 
 **Reference:** `docs/STORED_PROCEDURE_MIGRATION_STATUS.md`
+
+---
+
+#### 8. 📝 Staff Activity Logging System (Jan 5, 2026)
+**Problem:** Need comprehensive tracking of all staff activities.
+
+**Solutions Implemented:**
+- ✅ Created `staff_activity_log` table with complete audit fields
+- ✅ Implemented 9 stored procedures for activity management
+- ✅ Support for filtering by branch, staff type, date range
+- ✅ Activity summary reports by staff type and action
+- ✅ Failed action tracking for security auditing
+- ✅ Auto-logout logging for session management
+
+**Stored Procedures Created:**
+- `sp_insertStaffActivityLog` - Insert activity log entry
+- `sp_getAllStaffActivities` - Get activities with filters
+- `sp_countStaffActivities` - Count activities for pagination
+- `sp_getStaffActivityById` - Get specific staff activities
+- `sp_getActivitySummaryByType` - Summary by staff type
+- `sp_getActivitySummaryByAction` - Top 10 actions
+- `sp_getMostActiveStaff` - Top 10 active staff
+- `sp_getRecentFailedActions` - Recent failed actions
+- `sp_clearAllActivityLogs` - Clear all logs
+
+**Files:** `database/migrations/323_sp_staffActivityLog.sql`, `324_fix_staff_activity_and_auto_logout.sql`
+
+---
+
+#### 9. 👥 Employee Session Management Enhancement (Jan 5, 2026)
+**Problem:** Need better employee online status tracking and session management.
+
+**Solutions Implemented:**
+- ✅ Created comprehensive session tracking procedures
+- ✅ Support for creating/updating sessions
+- ✅ Activity timestamp updates
+- ✅ Session termination on logout
+- ✅ Active session queries (all and by branch)
+
+**Stored Procedures Created:**
+- `sp_createOrUpdateEmployeeSession` - Create/update session
+- `sp_updateEmployeeSessionActivity` - Update last activity
+- `sp_endEmployeeSession` - End session on logout
+- `sp_getActiveEmployeeSessions` - Get all active sessions
+- `sp_getActiveEmployeeSessionsByBranch` - Filter by branch
+
+**File:** `database/migrations/327_sp_employeeSessionManagement.sql`
 
 ---
 
@@ -2085,11 +2218,11 @@ mysql -h [host] -u admin -p naga_stall_digitalocean \
 ## Contact & Support
 
 - **System:** Naga City Stall Management System (DigiStall)
-- **Version:** 1.0.0
+- **Version:** 1.0.1
 - **Status:** Production Ready
 - **Production URL:** http://68.183.154.125
 - **API Health:** http://68.183.154.125/api/health
 
 ---
 
-*Documentation last updated: January 4, 2026*
+*Documentation last updated: January 5, 2026*
