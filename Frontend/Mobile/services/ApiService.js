@@ -1587,6 +1587,105 @@ class ApiService {
       };
     }
   }
+
+  // ===== COMPLAINT METHODS =====
+
+  /**
+   * Submit a complaint from stallholder
+   * @param {object} complaintData - The complaint data
+   */
+  static async submitComplaint(complaintData) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_COMPLAINT}`;
+      console.log('🔄 Submitting complaint to:', url);
+      console.log('📝 Complaint data:', complaintData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(complaintData)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit complaint');
+      }
+      
+      console.log('✅ Complaint submitted successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message || 'Complaint submitted successfully'
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Complaint Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get stallholder's complaints
+   */
+  static async getMyComplaints() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_MY_COMPLAINTS}`;
+      console.log('🔄 Fetching complaints from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch complaints');
+      }
+      
+      console.log('✅ Complaints fetched successfully:', data.count);
+      return {
+        success: true,
+        data: data.data || [],
+        count: data.count || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Complaints Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
 }
 
 export default ApiService;
