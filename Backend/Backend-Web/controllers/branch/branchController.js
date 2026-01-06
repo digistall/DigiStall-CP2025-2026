@@ -15,8 +15,12 @@ import { getBranchesByArea } from './branchComponents/getBranchesByArea.js'
 import { getAreas } from './branchComponents/getAreas.js'
 import { getFloors } from './branchComponents/getFloors.js'
 import { createFloor } from './branchComponents/createFloor.js'
+import { updateFloor } from './branchComponents/updateFloor.js'
+import { deleteFloor } from './branchComponents/deleteFloor.js'
 import { getSections } from './branchComponents/getSections.js'
 import { createSection } from './branchComponents/createSection.js'
+import { updateSection } from './branchComponents/updateSection.js'
+import { deleteSection } from './branchComponents/deleteSection.js'
 import { getFloorsWithSections } from './branchComponents/getFloorsWithSections.js'
 import { getAreasByCity } from './branchComponents/getAreasByCity.js'
 import { getAreaById } from './branchComponents/getAreaById.js'
@@ -38,8 +42,12 @@ export {
   getAreas,
   getFloors,
   createFloor,
+  updateFloor,
+  deleteFloor,
   getSections,
   createSection,
+  updateSection,
+  deleteSection,
   getFloorsWithSections,
   getAreasByCity,
   getAreaById,

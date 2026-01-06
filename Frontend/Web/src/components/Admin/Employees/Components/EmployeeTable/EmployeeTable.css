@@ -21,11 +21,11 @@
 .header-row,
 .table-row {
   display: grid;
-  grid-template-columns: 3fr 1.5fr 1fr 2fr 1.5fr;
-  min-height: 60px;
+  grid-template-columns: 2fr 1.2fr 0.8fr 1.5fr 1fr;
+  min-height: 56px;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: 4px;
+  padding: 0 12px;
   width: 100%;
 }
 
@@ -50,7 +50,7 @@
 
 .header-cell,
 .table-cell {
-  padding: 16px 8px;
+  padding: 12px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,10 +60,10 @@
 
 .header-cell {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: white;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -71,7 +71,7 @@
 }
 
 .table-cell {
-  font-size: 15px;
+  font-size: 14px;
   color: #2c3e50;
   word-wrap: break-word;
   overflow: hidden;
@@ -83,7 +83,7 @@
   justify-content: flex-start;
 }
 
-.username-col,
+.role-col,
 .status-col,
 .login-col,
 .actions-col {

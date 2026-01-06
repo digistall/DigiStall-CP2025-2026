@@ -67,6 +67,17 @@ export default {
       return [...new Set(types)].filter(Boolean).sort()
     },
     availabilityOptions() {
+      // For business_manager and business_employee, hide "Occupied" option
+      // since they can only see Available/Unavailable stalls
+      const userType = sessionStorage.getItem('userType')
+      if (userType === 'business_manager' || userType === 'business_employee') {
+        return [
+          { text: 'All', value: null },
+          { text: 'Available', value: true },
+          { text: 'Unavailable', value: false },
+        ]
+      }
+      // For system_administrator and stall_business_owner, show all options
       return [
         { text: 'All', value: null },
         { text: 'Available', value: true },
@@ -261,12 +272,12 @@ export default {
       const userType = sessionStorage.getItem('userType')
 
       // Admins and branch managers always have access (check both formats)
-      if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
+      if (userType === 'system_administrator' || userType === 'stall_business_owner' || userType === 'business_manager') {
         return true
       }
 
       // For employees, check specific permissions - Handle both new and old formats
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try new format first (object)
         const permissions = JSON.parse(sessionStorage.getItem('permissions') || '{}')
         if (permissions.stalls === true) {

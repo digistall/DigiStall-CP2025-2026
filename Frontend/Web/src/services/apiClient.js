@@ -36,8 +36,19 @@ const processQueue = (error, token = null) => {
 // Automatically add Authorization header with access token
 apiClient.interceptors.request.use(
   (config) => {
-    // Get access token
-    const token = authService.getAccessToken();
+    // Get access token - try multiple possible keys for compatibility
+    const token = authService.getAccessToken() || 
+                  sessionStorage.getItem('authToken') || 
+                  sessionStorage.getItem('accessToken');
+    
+    // Debug logging for stallholders endpoint
+    if (config.url && config.url.includes('stallholders')) {
+      console.log('🔍 [STALLHOLDER DEBUG] Making request to:', config.url);
+      console.log('🔍 [STALLHOLDER DEBUG] Token from authService:', authService.getAccessToken() ? 'Found' : 'Not found');
+      console.log('🔍 [STALLHOLDER DEBUG] Token from sessionStorage authToken:', sessionStorage.getItem('authToken') ? 'Found' : 'Not found');
+      console.log('🔍 [STALLHOLDER DEBUG] Token from sessionStorage accessToken:', sessionStorage.getItem('accessToken') ? 'Found' : 'Not found');
+      console.log('🔍 [STALLHOLDER DEBUG] Final token to use:', token ? `${token.substring(0, 20)}...` : 'None');
+    }
     
     // Add token to headers if available
     if (token) {
@@ -83,11 +94,18 @@ apiClient.interceptors.response.use(
     if (!needsRefresh) {
       // If not a token expiry issue, reject immediately
       console.error('❌ 401 Error (not token expiry):', errorData?.message);
+      console.log('🔍 [DEBUG] Error response data:', errorData);
+      console.log('🔍 [DEBUG] Current auth token exists:', !!sessionStorage.getItem('authToken'));
+      console.log('🔍 [DEBUG] Current user exists:', !!sessionStorage.getItem('currentUser'));
       
-      // If requires authentication, redirect to login
-      if (errorData?.requiresAuth) {
+      // Only redirect to login if specifically required AND user is not already authenticated
+      // This prevents unnecessary redirects when user is already logged in
+      if (errorData?.requiresAuth && !sessionStorage.getItem('authToken')) {
+        console.log('❌ No auth token found - clearing auth and redirecting to login');
         authService.clearAuthData();
         window.location.href = '/login';
+      } else {
+        console.log('⚠️ 401 error but user has token - not redirecting, letting component handle error');
       }
       
       return Promise.reject(error);

@@ -138,34 +138,19 @@
       </v-col>
     </v-row>
 
-    <!-- Professional Loading Overlay -->
-    <v-overlay v-model="loading" class="loading-overlay" persistent :opacity="0.95">
-      <div class="loading-container">
-        <v-card class="loading-card pa-8 text-center" elevation="12">
-          <div class="loading-content">
-            <!-- Animated Logo -->
-            <div class="loading-logo-container mb-4">
-              <img
-                src="../../../assets/DigiStall-Logo.png"
-                alt="Loading..."
-                class="loading-logo pulse-animation"
-              />
-            </div>
-
-            <!-- Loading Text -->
-            <h3 class="loading-title mb-2">{{ loadingText }}</h3>
-            <p class="loading-subtitle mb-4">{{ loadingSubtext }}</p>
-
-            <!-- Loading Progress Dots -->
-            <div class="loading-dots">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
-            </div>
-          </div>
-        </v-card>
-      </div>
-    </v-overlay>
+    <!-- Professional Full-Screen Loading Screen -->
+    <LoadingScreen
+      :visible="showLoadingScreen"
+      :userName="loggedInUserName"
+      :userRole="loggedInUserRole"
+      :branchName="loggedInBranchName"
+      :duration="3000"
+      :currentLoadingStep="currentLoadingStep"
+      :currentProgress="currentProgress"
+      :isRealProgress="true"
+      @loading-complete="onLoadingComplete"
+      @ready-to-navigate="onReadyToNavigate"
+    />
 
     <!-- Success Notification Popup -->
     <UniversalPopup

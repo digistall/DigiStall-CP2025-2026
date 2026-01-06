@@ -11,8 +11,8 @@ import { ref, computed } from 'vue';
 import axios from 'axios';
 import SecureLogger from '../utils/secureLogger.js';
 
-// API Base URL - Backend runs on port 3001
-const API_BASE_URL = 'http://localhost:3001/api';
+// API Base URL - Uses environment variable for production, fallback for local dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const useAuthStore = defineStore('auth', () => {
   // ===== STATE =====
@@ -46,24 +46,31 @@ export const useAuthStore = defineStore('auth', () => {
   });
 
   /**
-   * Check if user is admin
+   * Check if user is system administrator
    */
-  const isAdmin = computed(() => {
-    return user.value?.userType === 'admin';
+  const isSystemAdministrator = computed(() => {
+    return user.value?.userType === 'system_administrator';
   });
 
   /**
-   * Check if user is branch manager
+   * Check if user is stall business owner
    */
-  const isBranchManager = computed(() => {
-    return user.value?.userType === 'branch_manager';
+  const isStallBusinessOwner = computed(() => {
+    return user.value?.userType === 'stall_business_owner';
   });
 
   /**
-   * Check if user is employee
+   * Check if user is business manager
    */
-  const isEmployee = computed(() => {
-    return user.value?.userType === 'employee';
+  const isBusinessManager = computed(() => {
+    return user.value?.userType === 'business_manager';
+  });
+
+  /**
+   * Check if user is business employee
+   */
+  const isBusinessEmployee = computed(() => {
+    return user.value?.userType === 'business_employee';
   });
 
   /**
@@ -115,6 +122,9 @@ export const useAuthStore = defineStore('auth', () => {
           sessionStorage.setItem('authToken', token);
           sessionStorage.setItem('currentUser', userData);
           sessionStorage.setItem('userType', parsedUser.userType);
+          
+          // Start activity tracking since user is authenticated
+          startActivityTracking();
           
           console.log('✅ Auth store initialized with existing session');
         } catch (parseError) {
@@ -190,6 +200,37 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true;
       error.value = null;
 
+      // Clear all existing authentication data first to prevent data mixing
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('permissions');
+      localStorage.removeItem('employeePermissions');
+      
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('currentUser');
+      sessionStorage.removeItem('userType');
+      sessionStorage.removeItem('permissions');
+      sessionStorage.removeItem('employeePermissions');
+      sessionStorage.removeItem('branchManagerData');
+      sessionStorage.removeItem('employeeData');
+      sessionStorage.removeItem('adminData');
+      sessionStorage.removeItem('branchManagerId');
+      sessionStorage.removeItem('employeeId');
+      sessionStorage.removeItem('adminId');
+      sessionStorage.removeItem('branchId');
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('fullName');
+      sessionStorage.clear();
+      
+      // Clear data cache service if available
+      if (window.dataCacheService) {
+        window.dataCacheService.clearAll();
+      }
+      
+      // Clear axios auth header
+      delete axios.defaults.headers.common['Authorization'];
+
       SecureLogger.auth('Attempting authentication');
 
       const loginUrl = `${API_BASE_URL}/auth/login`;
@@ -236,6 +277,9 @@ export const useAuthStore = defineStore('auth', () => {
         // Update store state
         user.value = userData;
         isAuthenticated.value = true;
+        
+        // Start activity tracking to keep user marked as "online"
+        startActivityTracking();
 
         SecureLogger.auth('Login successful', { userType: userData.userType, hasToken: !!token });
         return { success: true, user: userData };
@@ -260,6 +304,83 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       isLoading.value = true;
       
+      // Stop activity tracking
+      stopActivityTracking();
+      
+      // Get user info before clearing for API call
+      const currentUserData = user.value;
+      const currentUserType = localStorage.getItem('userType') || sessionStorage.getItem('userType');
+      const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      
+      // Also try to get currentUser from storage if user.value is null
+      let storedUser = null;
+      if (!currentUserData) {
+        try {
+          const storedUserStr = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+          if (storedUserStr) {
+            storedUser = JSON.parse(storedUserStr);
+          }
+        } catch (e) {
+          console.warn('Could not parse stored user:', e);
+        }
+      }
+      
+      const userDataToUse = currentUserData || storedUser;
+      
+      // Try to get user ID from multiple sources
+      let userId = userDataToUse?.id || 
+                   userDataToUse?.userId || 
+                   userDataToUse?.employeeId || 
+                   userDataToUse?.business_employee_id ||
+                   userDataToUse?.managerId ||
+                   userDataToUse?.manager_id ||
+                   userDataToUse?.business_manager_id ||
+                   userDataToUse?.adminId ||
+                   userDataToUse?.admin_id ||
+                   userDataToUse?.business_owner_id ||
+                   userDataToUse?.system_admin_id;
+      
+      // Also try from sessionStorage
+      if (!userId) {
+        userId = sessionStorage.getItem('employeeId') || 
+                 sessionStorage.getItem('branchManagerId') ||
+                 sessionStorage.getItem('adminId');
+      }
+      
+      console.log('='.repeat(60));
+      console.log('🔐 FRONTEND LOGOUT INITIATED');
+      console.log('🔐 user.value:', JSON.stringify(currentUserData, null, 2));
+      console.log('🔐 storedUser:', JSON.stringify(storedUser, null, 2));
+      console.log('🔐 userDataToUse:', JSON.stringify(userDataToUse, null, 2));
+      console.log('🔐 Extracted userId:', userId, '(type:', typeof userId, ')');
+      console.log('🔐 userType:', currentUserType);
+      console.log('🔐 authToken present:', !!authToken);
+      console.log('='.repeat(60));
+      
+      // Call logout API to update last_logout in database
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        console.log('🔐 Calling logout API:', `${apiUrl}/auth/logout`);
+        console.log('🔐 Request body:', { userId, userType: currentUserType });
+        
+        const response = await axios.post(`${apiUrl}/auth/logout`, {
+          userId: userId,
+          userType: currentUserType
+        }, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        });
+        console.log('✅ Logout API response:', response.data);
+      } catch (apiError) {
+        console.warn('⚠️ Logout API error (continuing with local cleanup):', apiError.message);
+        if (apiError.response) {
+          console.warn('⚠️ API response:', apiError.response.data);
+        }
+      }
+      
       // Clear localStorage (this triggers storage event for cross-tab sync)
       localStorage.removeItem('authToken');
       localStorage.removeItem('currentUser');
@@ -273,7 +394,25 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('userType');
       sessionStorage.removeItem('permissions');
       sessionStorage.removeItem('employeePermissions');
+      
+      // Clear all branch manager and employee specific data
+      sessionStorage.removeItem('branchManagerData');
+      sessionStorage.removeItem('employeeData');
+      sessionStorage.removeItem('adminData');
+      sessionStorage.removeItem('branchManagerId');
+      sessionStorage.removeItem('employeeId');
+      sessionStorage.removeItem('adminId');
+      sessionStorage.removeItem('branchId');
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('fullName');
+      
+      // Clear ALL session storage completely
       sessionStorage.clear();
+      
+      // Clear data cache service if available
+      if (window.dataCacheService) {
+        window.dataCacheService.clearAll();
+      }
       
       // Clear axios auth header
       delete axios.defaults.headers.common['Authorization'];
@@ -345,13 +484,15 @@ export const useAuthStore = defineStore('auth', () => {
   function hasPermission(...permissions) {
     if (!user.value) return false;
     
-    // Admins and managers have all permissions
-    if (user.value.userType === 'admin' || user.value.userType === 'branch_manager') {
+    // System administrators, stall business owners, and business managers have all permissions
+    if (user.value.userType === 'system_administrator' || 
+        user.value.userType === 'stall_business_owner' || 
+        user.value.userType === 'business_manager') {
       return true;
     }
     
-    // Check employee permissions
-    if (user.value.userType === 'employee' && user.value.permissions) {
+    // Check business employee permissions
+    if (user.value.userType === 'business_employee' && user.value.permissions) {
       // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
       if (Array.isArray(user.value.permissions)) {
         // Array format: check if permission exists in array
@@ -417,6 +558,148 @@ export const useAuthStore = defineStore('auth', () => {
     sessionStorage.setItem('currentUser', JSON.stringify(user.value));
   }
 
+  // ===== ACTIVITY TRACKING =====
+  let activityInterval = null;
+  let lastActivityTime = Date.now();
+  
+  /**
+   * Update last activity time (called on user interactions)
+   */
+  function recordActivity() {
+    lastActivityTime = Date.now();
+  }
+  
+  /**
+   * Send heartbeat to server to update last_login (activity timestamp)
+   * This keeps the user marked as "online" in the dashboard
+   */
+  async function sendActivityHeartbeat() {
+    if (!isAuthenticated.value || !user.value) return;
+    
+    const userId = user.value.id || user.value.userId;
+    const userType = user.value.userType || localStorage.getItem('userType');
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    if (!userId || !userType || !authToken) return;
+    
+    try {
+      await axios.post(`${API_BASE_URL}/auth/heartbeat`, {
+        userId,
+        userType
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      // Silent success - no console logging to reduce noise
+    } catch (error) {
+      // Silent fail - don't spam console with heartbeat errors
+    }
+  }
+  
+  /**
+   * Auto-logout due to inactivity
+   * Calls the auto-logout API to properly record the logout event
+   */
+  async function autoLogoutDueToInactivity() {
+    if (!isAuthenticated.value || !user.value) return;
+    
+    const userId = user.value.id || user.value.userId;
+    const userType = user.value.userType || localStorage.getItem('userType');
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    console.log('⏰ Auto-logout triggered due to 5 minutes of inactivity');
+    
+    try {
+      // Call auto-logout API to record in activity log
+      await axios.post(`${API_BASE_URL}/auth/auto-logout`, {
+        userId,
+        userType,
+        reason: 'inactivity'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log('✅ Auto-logout recorded in activity log');
+    } catch (error) {
+      console.warn('⚠️ Failed to record auto-logout:', error.message);
+    }
+    
+    // Stop activity tracking
+    stopActivityTracking();
+    
+    // Clear all auth data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('permissions');
+    localStorage.removeItem('employeePermissions');
+    
+    sessionStorage.clear();
+    
+    // Clear axios auth header
+    delete axios.defaults.headers.common['Authorization'];
+    
+    // Clear state
+    user.value = null;
+    isAuthenticated.value = false;
+    
+    // Redirect to login with auto-logout message
+    window.location.href = '/login?reason=inactivity';
+  }
+  
+  /**
+   * Start activity tracking - sends heartbeat every 5 minutes
+   * Also monitors for inactivity to trigger auto-logout
+   */
+  function startActivityTracking() {
+    if (activityInterval) {
+      clearInterval(activityInterval);
+    }
+    
+    // Send initial heartbeat
+    sendActivityHeartbeat();
+    
+    // Check activity every minute to detect inactivity sooner
+    activityInterval = setInterval(() => {
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      
+      if (lastActivityTime > fiveMinutesAgo) {
+        // User has been active in the last 5 minutes, send heartbeat
+        sendActivityHeartbeat();
+      } else {
+        // User has been inactive for more than 5 minutes, auto-logout
+        console.log('⏰ Inactivity detected - last activity:', new Date(lastActivityTime).toLocaleString());
+        autoLogoutDueToInactivity();
+      }
+    }, 60 * 1000); // Check every minute
+    
+    // Track user activity (mouse move, key press, click)
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, recordActivity, { passive: true });
+    });
+  }
+  
+  /**
+   * Stop activity tracking
+   */
+  function stopActivityTracking() {
+    if (activityInterval) {
+      clearInterval(activityInterval);
+      activityInterval = null;
+    }
+    
+    // Remove activity event listeners
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      document.removeEventListener(event, recordActivity);
+    });
+  }
+
   // ===== RETURN =====
   return {
     // State
@@ -430,9 +713,10 @@ export const useAuthStore = defineStore('auth', () => {
     authenticated,
     userRole,
     userPermissions,
-    isAdmin,
-    isBranchManager,
-    isEmployee,
+    isSystemAdministrator,
+    isStallBusinessOwner,
+    isBusinessManager,
+    isBusinessEmployee,
     userFullName,
     userBranchId,
     
@@ -446,6 +730,9 @@ export const useAuthStore = defineStore('auth', () => {
     canAccessRoute,
     clearError,
     setError,
-    updateUser
+    updateUser,
+    startActivityTracking,
+    stopActivityTracking,
+    recordActivity
   };
 });

@@ -1,6 +1,6 @@
 // ===== ENHANCED AUTHENTICATION ROUTES =====
 // Complete JWT authentication with refresh tokens
-// Routes: /login, /logout, /refresh, /verify-token, /me
+// Routes: /login, /logout, /refresh, /verify-token, /me, /auto-logout
 
 import express from 'express';
 import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
@@ -9,7 +9,9 @@ import {
   refreshToken,
   logout,
   verifyToken,
-  getCurrentUser
+  getCurrentUser,
+  autoLogout,
+  heartbeat
 } from '../controllers/auth/enhancedAuthController.js';
 
 // Legacy authentication (for backward compatibility)
@@ -31,7 +33,7 @@ router.post('/refresh', refreshToken);                  // POST /api/auth/refres
 router.get('/verify-token', verifyToken);               // GET /api/auth/verify-token - Verify token validity
 
 // Utility endpoints (public)
-router.post('/create-admin', createAdminUser);          // POST /api/auth/create-admin - Create admin user
+router.post('/create-business-owner', createAdminUser);          // POST /api/auth/create-business-owner - Create business owner user
 router.post('/hash-password', createPasswordHash);      // POST /api/auth/hash-password - Generate password hash
 router.get('/test-db', testDb);                        // GET /api/auth/test-db - Test database connection
 
@@ -39,12 +41,14 @@ router.get('/test-db', testDb);                        // GET /api/auth/test-db 
 router.use(enhancedAuthMiddleware.authenticateToken);   // Apply auth middleware to routes below
 
 router.post('/logout', logout);                         // POST /api/auth/logout - Logout and revoke tokens
+router.post('/auto-logout', autoLogout);                // POST /api/auth/auto-logout - Auto-logout due to inactivity
+router.post('/heartbeat', heartbeat);                   // POST /api/auth/heartbeat - Keep user marked as online
 router.get('/me', getCurrentUser);                      // GET /api/auth/me - Get current user info
 
 // ===== LEGACY ENDPOINTS (Backward Compatibility) =====
-router.post('/admin/login', adminLogin);                // POST /api/auth/admin/login - Admin login (legacy)
-router.post('/branch_manager/login', branchManagerLogin); // POST /api/auth/branch_manager/login - Branch manager login (legacy)
-router.get('/branch-manager-info', getCurrentUser);     // GET /api/auth/branch-manager-info - Get branch manager info (alias)
-router.get('/admin-info', getCurrentUser);              // GET /api/auth/admin-info - Get admin info (alias)
+router.post('/business-owner/login', adminLogin);                // POST /api/auth/business-owner/login - Business Owner login (legacy)
+router.post('/business-manager/login', branchManagerLogin); // POST /api/auth/business-manager/login - Business Manager login (legacy)
+router.get('/business-manager-info', getCurrentUser);     // GET /api/auth/business-manager-info - Get business manager info (alias)
+router.get('/business-owner-info', getCurrentUser);              // GET /api/auth/business-owner-info - Get business owner info (alias)
 
 export default router;

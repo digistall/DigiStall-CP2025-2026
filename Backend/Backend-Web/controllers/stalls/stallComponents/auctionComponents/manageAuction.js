@@ -197,13 +197,13 @@ export const cancelAuction = async (req, res) => {
 
     // Update auction status
     await connection.execute(
-      'UPDATE auction SET auction_status = "Cancelled", updated_at = NOW() WHERE auction_id = ?',
+      `UPDATE auction SET auction_status = 'Cancelled', updated_at = NOW() WHERE auction_id = ?`,
       [auctionId]
     );
 
     // Update stall status
     await connection.execute(
-      'UPDATE stall SET raffle_auction_status = "Cancelled" WHERE stall_id = ?',
+      `UPDATE stall SET raffle_auction_status = 'Cancelled' WHERE stall_id = ?`,
       [auction.stall_id]
     );
 

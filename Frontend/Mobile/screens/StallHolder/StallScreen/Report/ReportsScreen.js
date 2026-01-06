@@ -5,13 +5,16 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 const ReportsScreen = () => {
+  const { theme, isDark } = useTheme();
+  
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Reports Screen</Text>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Text style={[styles.title, { color: theme.colors.text }]}>Reports Screen</Text>
     </View>
   );
 };
@@ -26,7 +29,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: width * 0.07,
     fontWeight: 'bold',
-    color: '#1f2937',
     textAlign: 'center',
   },
 });

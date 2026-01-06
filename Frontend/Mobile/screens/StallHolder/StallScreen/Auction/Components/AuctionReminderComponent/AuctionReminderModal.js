@@ -8,10 +8,12 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../../Settings/components/ThemeComponents/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
 const AuctionReminderModal = ({ visible, onClose }) => {
+  const { theme, isDark } = useTheme();
   const [checkboxes, setCheckboxes] = useState({
     reminders: false,
     terms: false,
@@ -26,29 +28,29 @@ const AuctionReminderModal = ({ visible, onClose }) => {
   return (
     <Modal transparent animationType="fade" visible={visible}>
       <View style={styles.overlay}>
-        <View style={styles.modalBox}>
-          <Text style={styles.title}>Auction Reminders</Text>
+        <View style={[styles.modalBox, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Auction Reminders</Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             Please make sure you have read and understood the following:
           </Text>
 
           {/* ScrollView to handle smaller screens */}
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.reminderList}>
-              <Text style={styles.text}>
+              <Text style={[styles.text, { color: theme.colors.text }]}>
                 1. Please make sure you have prepared all required physical
                 documents before attending the auction.
               </Text>
-              <Text style={styles.text}>
+              <Text style={[styles.text, { color: theme.colors.text }]}>
                 2. Once you pre-register for a stall, you cannot undo the
                 action. Your information and participation will be recorded.
               </Text>
-              <Text style={styles.text}>
+              <Text style={[styles.text, { color: theme.colors.text }]}>
                 3. Follow the marketplace rules and guidelines during the
                 auction.
               </Text>
-              <Text style={styles.text}>
+              <Text style={[styles.text, { color: theme.colors.text }]}>
                 4. If you win the auction, you must pay for the stall awarded to
                 you by the MEPO.
               </Text>
@@ -56,7 +58,7 @@ const AuctionReminderModal = ({ visible, onClose }) => {
 
             {/* Two Checkboxes */}
             <TouchableOpacity
-              style={styles.checkboxContainer}
+              style={[styles.checkboxContainer, { backgroundColor: isDark ? theme.colors.card : '#F3F4F6' }]}
               onPress={() => toggleCheckbox("reminders")}
               activeOpacity={0.7}
             >
@@ -65,24 +67,24 @@ const AuctionReminderModal = ({ visible, onClose }) => {
                   checkboxes.reminders ? "checkbox-outline" : "square-outline"
                 }
                 size={24}
-                color={checkboxes.reminders ? "#2563EB" : "#6B7280"}
+                color={checkboxes.reminders ? theme.colors.primary : theme.colors.textTertiary}
               />
-              <Text style={styles.checkboxText}>
+              <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
                 I have read and understood the auction reminders.
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.checkboxContainer}
+              style={[styles.checkboxContainer, { backgroundColor: isDark ? theme.colors.card : '#F3F4F6' }]}
               onPress={() => toggleCheckbox("terms")}
               activeOpacity={0.7}
             >
               <Ionicons
                 name={checkboxes.terms ? "checkbox-outline" : "square-outline"}
                 size={24}
-                color={checkboxes.terms ? "#2563EB" : "#6B7280"}
+                color={checkboxes.terms ? theme.colors.primary : theme.colors.textTertiary}
               />
-              <Text style={styles.checkboxText}>
+              <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
                 I agree to the Terms & Conditions.
               </Text>
             </TouchableOpacity>
@@ -90,7 +92,7 @@ const AuctionReminderModal = ({ visible, onClose }) => {
 
           {/* Confirm Button */}
           <TouchableOpacity
-            style={[styles.closeButton, !allChecked && styles.disabledButton]}
+            style={[styles.closeButton, { backgroundColor: theme.colors.primary }, !allChecked && styles.disabledButton]}
             onPress={onClose}
             disabled={!allChecked}
           >

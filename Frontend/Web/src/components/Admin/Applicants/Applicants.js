@@ -3,6 +3,8 @@ import VendorSearchFilter from './Components/Search/ApplicantsSearch.vue'
 import VendorApplicantsTable from './Components/Table/ApplicantsTable.vue'
 import ApproveApplicants from './Components/ApproveApplicants/ApproveApplicants.vue'
 import DeclineApplicants from './Components/DeclineApplicants/DeclineApplicants.vue'
+import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -14,12 +16,20 @@ export default {
     VendorApplicantsTable,
     ApproveApplicants,
     DeclineApplicants,
+    ToastNotification,
+    LoadingOverlay,
   },
   data() {
     return {
       pageTitle: 'Applicants',
       searchQuery: '',
       filterCriteria: null,
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'success',
+      },
       // Dropdown functionality
       currentApplicantType: 'Stall Applicants',
       showDropdown: false,
@@ -254,6 +264,24 @@ export default {
       this.fetchStallApplicants()
     }
 
+    // Opt-in: use table scrolling inside page instead of page scrollbar
+    try {
+      document.body.classList.add('no-page-scroll')
+      document.documentElement.classList.add('no-page-scroll')
+      try {
+        const prevHtmlOverflow = document.documentElement.style.overflow
+        const prevBodyOverflow = document.body.style.overflow
+        document.documentElement.dataset._prevOverflow = prevHtmlOverflow || ''
+        document.body.dataset._prevOverflow = prevBodyOverflow || ''
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      /* ignore */
+    }
+
     // Remove frontend auto-cleanup - now handled by backend
     // this.startAutoCleanupTimer()
   },
@@ -262,6 +290,22 @@ export default {
     // Clear auto-cleanup timer
     if (this.autoCleanupTimer) {
       clearInterval(this.autoCleanupTimer)
+    }
+    try {
+      document.body.classList.remove('no-page-scroll')
+      document.documentElement.classList.remove('no-page-scroll')
+      try {
+        const prevHtml = document.documentElement.dataset._prevOverflow || ''
+        const prevBody = document.body.dataset._prevOverflow || ''
+        document.documentElement.style.overflow = prevHtml
+        document.body.style.overflow = prevBody
+        delete document.documentElement.dataset._prevOverflow
+        delete document.body.dataset._prevOverflow
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      /* ignore */
     }
   },
   methods: {
@@ -360,6 +404,14 @@ export default {
     async handleRecheck(applicant) {
       console.log('🔄 Re-checking rejected applicant:', applicant)
 
+      // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+      const applicantId = applicant.applicant_id || 
+        (applicant.id && typeof applicant.id === 'string' 
+          ? parseInt(applicant.id.replace('#', ''), 10) 
+          : applicant.id)
+
+      console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
       try {
         // Make API call to update status to "Under Review" in the backend database
         const token =
@@ -372,7 +424,7 @@ export default {
         }
 
         const response = await fetch(
-          `${API_BASE_URL}/applicants/${applicant.applicant_id || applicant.id}/status`,
+          `${API_BASE_URL}/applicants/${applicantId}/status`,
           {
             method: 'PUT',
             headers: {
@@ -404,7 +456,7 @@ export default {
 
         if (result.success) {
           // Update local data only after successful backend update
-          this.updateApplicantStatus(applicant.applicant_id || applicant.id, 'Under Review')
+          this.updateApplicantStatus(applicantId, 'Under Review')
 
           // Show success message
           if (this.$toast) {
@@ -447,6 +499,12 @@ export default {
         })
       }
 
+      // Show success toast
+      this.showToast(
+        `✅ Applicant ${result.applicant?.fullName || ''} approved successfully`,
+        'success',
+      )
+
       // Refresh the applicant list
       if (this.currentApplicantType === 'Stall Applicants') {
         this.refreshStallApplicants()
@@ -470,6 +528,12 @@ export default {
           },
         )
       }
+
+      // Show success toast
+      this.showToast(
+        `🚫 Applicant ${result.applicant?.fullName || ''} declined`,
+        'delete',
+      )
 
       // Refresh the applicant list to show updated status
       if (this.currentApplicantType === 'Stall Applicants') {
@@ -954,7 +1018,7 @@ export default {
         const result = await response.json();
         
         if (result.success) {
-          alert(`Cleanup completed: ${result.data.deletedCount} expired applicants removed`);
+          this.showToast(`✅ Cleanup completed: ${result.data.deletedCount} expired applicants removed`, 'success');
           // Refresh the applicants list
           await this.fetchStallApplicants();
         } else {
@@ -962,8 +1026,15 @@ export default {
         }
       } catch (error) {
         console.error('❌ Manual cleanup error:', error);
-        alert(`Failed to trigger cleanup: ${error.message}`);
+        this.showToast(`❌ Failed to trigger cleanup: ${error.message}`, 'error');
       }
+    },
+
+    // Toast notification helper
+    showToast(message, type = 'success') {
+      this.toast.show = true;
+      this.toast.message = message;
+      this.toast.type = type;
     },
   },
 }
