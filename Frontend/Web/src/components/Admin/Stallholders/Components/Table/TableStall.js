@@ -141,6 +141,7 @@ export default {
     async fetchStallholders() {
       this.loading = true
       this.dataReady = false // Reset data ready state
+      this.$emit('loading-change', true) // Notify parent
       try {
         const params = {}
         if (this.branchId) {
@@ -164,13 +165,16 @@ export default {
         }
 
         this.dataReady = true // Mark data as ready
+        this.$emit('data-ready') // Notify parent that data is ready
       } catch (error) {
         console.error('Error fetching stallholders:', error)
         this.$emit('error', 'Failed to load stallholders')
         this.stallholders = []
         this.dataReady = true // Still mark as ready, even with empty data
+        this.$emit('data-ready') // Notify parent
       } finally {
         this.loading = false
+        this.$emit('loading-change', false) // Notify parent
       }
     },
 
