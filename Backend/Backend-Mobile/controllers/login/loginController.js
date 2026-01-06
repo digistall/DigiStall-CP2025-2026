@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 import { createConnection } from '../../config/database.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
@@ -330,9 +331,28 @@ export const mobileLogin = async (req, res) => {
       }
     }
 
+    // Generate JWT token for authentication
+    const token = jwt.sign(
+      {
+        userId: userCredentials.applicant_id,
+        applicantId: userCredentials.applicant_id,
+        username: userCredentials.user_name,
+        userType: 'stallholder',
+        registrationId: userCredentials.registrationid,
+        stallholderId: stallholderInfo?.stallholder_id || null,
+        isStallholder: !!stallholderInfo,
+        branchId: stallholderInfo?.branch_id || applicationInfo?.branch_id || null
+      },
+      process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024',
+      { expiresIn: '24h' }
+    );
+
+    console.log('🔐 JWT token generated for user:', userCredentials.user_name);
+
     res.json({
       success: true,
       message: 'Mobile login successful',
+      token: token,
       data: responseData
     })
 
