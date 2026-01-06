@@ -124,7 +124,7 @@ const Sidebar = ({
     },
     {
       id: "reports",
-      title: "Reports", 
+      title: "Complaints", 
       icon: require("../../../assets/report-icon.png"),
       isImage: true,
     },
