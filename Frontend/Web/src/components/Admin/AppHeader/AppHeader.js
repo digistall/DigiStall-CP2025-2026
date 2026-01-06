@@ -478,27 +478,15 @@ export default {
       this.$emit('settings-click')
     },
 
-    async handleLogoutClick() {
-      console.log('Logout clicked - calling authStore.logout()')
+    handleLogoutClick() {
+      console.log('Logout clicked - emitting to MainLayout')
       this.closeProfilePopup()
 
-      // Call authStore.logout() which handles:
-      // 1. API call to update last_logout in database
-      // 2. Clearing all storage (localStorage, sessionStorage)
-      // 3. Clearing axios headers
-      // 4. Clearing data cache
-      const authStore = useAuthStore()
-      await authStore.logout()
-
-      // Clear component data
-      this.branchManagerData = null
-      this.adminData = null
-      this.employeeData = null
-
-      // Navigate to login page
-      this.$router.push('/')
-
-      // Emit logout event
+      // Emit logout event to MainLayout which handles the full logout flow:
+      // 1. Shows confirmation dialog
+      // 2. On confirm, calls authStore.logout() for API/storage cleanup
+      // 3. Navigates to /logout page for animated logout screen
+      // 4. Logout page redirects to / after animation
       this.$emit('logout-click')
     },
 

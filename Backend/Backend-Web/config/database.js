@@ -103,11 +103,16 @@ export async function initializeDatabase() {
   try {
     console.log('🔧 Checking database connection...')
 
-    // Create connection without specifying database first
+    // Create connection without specifying database first (include SSL for cloud DB)
     const tempConnection = await mysql.createConnection({
       host: dbConfig.host,
+      port: dbConfig.port,
       user: dbConfig.user,
       password: dbConfig.password,
+      connectTimeout: 60000,
+      ...(isCloudDB && {
+        ssl: { rejectUnauthorized: false }
+      })
     })
 
     // Create database if it doesn't exist
