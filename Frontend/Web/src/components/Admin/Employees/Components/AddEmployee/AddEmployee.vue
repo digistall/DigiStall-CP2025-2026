@@ -158,8 +158,8 @@
             ></v-text-field>
           </div>
 
-          <!-- Web Permissions Section (only for web account type) -->
-          <div class="permissions-section" v-if="accountType === 'web' || isEditMode">
+          <!-- Web Permissions Section (only for web account type, NOT for mobile staff in edit mode) -->
+          <div class="permissions-section" v-if="accountType === 'web' && (!isEditMode || (isEditMode && !isMobileStaff))">
             <h3 class="section-title">
               <v-icon class="section-icon">mdi-shield-account</v-icon>
               Web System Permissions
@@ -196,13 +196,60 @@
 
           <!-- Mobile Access Info (only for mobile account type) -->
           <div class="mobile-info-section" v-if="accountType === 'mobile' && !isEditMode">
+            <!-- Collector-specific fields - Address and Assigned Location -->
+            <div v-if="mobileRole === 'collector'" class="collector-fields mt-4">
+              <h3 class="section-title">
+                <v-icon class="section-icon">mdi-map-marker</v-icon>
+                Assignment Information
+              </h3>
+
+              <v-text-field
+                v-model="employeeForm.address"
+                label="Address"
+                variant="outlined"
+                prepend-inner-icon="mdi-home-map-marker"
+                density="comfortable"
+                placeholder="Enter collector's home address"
+              ></v-text-field>
+
+              <v-select
+                v-model="employeeForm.assignedLocation"
+                label="Assigned Location *"
+                :items="availableLocations"
+                item-title="name"
+                item-value="value"
+                :rules="[rules.required]"
+                variant="outlined"
+                prepend-inner-icon="mdi-map-marker-radius"
+                density="comfortable"
+                required
+              ></v-select>
+            </div>
+
+            <!-- Inspector-specific fields - Assigned Location (optional, can add more later) -->
+            <div v-if="mobileRole === 'inspector'" class="inspector-fields mt-4">
+              <h3 class="section-title">
+                <v-icon class="section-icon">mdi-map-marker</v-icon>
+                Assignment Information
+              </h3>
+
+              <v-text-field
+                v-model="employeeForm.address"
+                label="Address"
+                variant="outlined"
+                prepend-inner-icon="mdi-home-map-marker"
+                density="comfortable"
+                placeholder="Enter inspector's home address"
+              ></v-text-field>
+            </div>
+
+            <!-- Alert message -->
             <v-alert
               type="info"
               variant="tonal"
               class="mobile-alert"
             >
               <div class="alert-content">
-                <v-icon class="alert-icon">mdi-information</v-icon>
                 <div class="alert-text">
                   <div class="alert-title">Mobile App Credentials</div>
                   <div class="alert-description">
@@ -230,6 +277,54 @@
                 <li><v-icon size="16" color="success">mdi-check</v-icon> Track collection routes</li>
               </ul>
             </div>
+          </div>
+
+          <!-- Mobile Staff Edit Mode Section -->
+          <div class="mobile-edit-section" v-if="isEditMode && isMobileStaff">
+            <v-alert
+              type="info"
+              variant="tonal"
+              class="mobile-alert mb-4"
+            >
+              <div class="alert-content">
+                <v-icon class="alert-icon">mdi-cellphone</v-icon>
+                <div class="alert-text">
+                  <div class="alert-title">Mobile Staff Account</div>
+                  <div class="alert-description">
+                    This is a {{ mobileRole === 'inspector' ? 'Inspector' : 'Collector' }} account for the mobile app.
+                  </div>
+                </div>
+              </div>
+            </v-alert>
+
+            <h3 class="section-title">
+              <v-icon class="section-icon">mdi-map-marker</v-icon>
+              Assignment Information
+            </h3>
+
+            <v-text-field
+              v-model="employeeForm.address"
+              label="Address"
+              variant="outlined"
+              prepend-inner-icon="mdi-home-map-marker"
+              density="comfortable"
+              placeholder="Enter address"
+            ></v-text-field>
+
+            <!-- Collector-specific: Assigned Location -->
+            <v-select
+              v-if="mobileRole === 'collector'"
+              v-model="employeeForm.assignedLocation"
+              label="Assigned Location *"
+              :items="availableLocations"
+              item-title="name"
+              item-value="value"
+              :rules="[rules.required]"
+              variant="outlined"
+              prepend-inner-icon="mdi-map-marker-radius"
+              density="comfortable"
+              required
+            ></v-select>
           </div>
         </v-form>
       </v-card-text>
