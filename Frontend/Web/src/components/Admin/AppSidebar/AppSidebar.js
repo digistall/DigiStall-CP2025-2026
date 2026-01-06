@@ -82,20 +82,6 @@ export default {
             },
           ],
         },
-        { 
-          id: 10, 
-          icon: 'mdi-account-cash', 
-          name: 'Collectors', 
-          route: '/app/collectors',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
-        },
-        { 
-          id: 11, 
-          icon: 'mdi-account-eye', 
-          name: 'Inspectors', 
-          route: '/app/inspectors',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
-        },
         {
           id: 13,
           icon: 'mdi-credit-card-outline',
