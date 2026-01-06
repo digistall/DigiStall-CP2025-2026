@@ -55,11 +55,7 @@ const authenticateToken = (req, res, next) => {
         role: userType,
       };
 
-      console.log("✅ Token verified for user:", {
-        userId: req.user.userId,
-        userType: req.user.userType,
-        username: req.user.username,
-      });
+      // Token verified silently
 
       next();
     }

@@ -1,15 +1,14 @@
 import { createConnection } from "../../../config/database.js";
 
-// Get available branches - NEW endpoint to support branch-based architecture
+// Get available branches - Uses stored procedure - NEW endpoint to support branch-based architecture
 export const getBranches = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
 
-    // Get distinct branch names instead of areas
-    const [branches] = await connection.execute(
-      'SELECT DISTINCT branch_name as branch FROM branch WHERE status = "Active" ORDER BY branch_name'
-    );
+    // Use stored procedure instead of direct SQL
+    const [rows] = await connection.execute('CALL sp_getBranches()');
+    const branches = rows[0]; // First result set from stored procedure
 
     // Format the data to match frontend expectations
     // Frontend expects array of objects with 'branch' property

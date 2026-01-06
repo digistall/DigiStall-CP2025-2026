@@ -44,8 +44,42 @@ export default {
           if (userData) {
             try {
               const user = JSON.parse(userData)
-              console.log('→ Redirecting to dashboard for:', user.userType)
-              this.$router.push('/app/dashboard')
+              console.log('→ Redirecting based on permissions for:', user.userType)
+              
+              // Smart redirect based on user type and permissions
+              let redirectPath = '/app/dashboard'
+              
+              if (user.userType === 'system_administrator') {
+                redirectPath = '/system-admin/dashboard'
+              } else if (user.userType === 'business_employee' && user.permissions) {
+                const permissions = user.permissions
+                const hasPermission = (perm) => {
+                  if (Array.isArray(permissions)) return permissions.includes(perm)
+                  return permissions[perm] === true
+                }
+                
+                if (!hasPermission('dashboard')) {
+                  // Find first available page
+                  const permissionRoutes = [
+                    { perm: 'payments', route: '/app/payment' },
+                    { perm: 'applicants', route: '/app/applicants' },
+                    { perm: 'complaints', route: '/app/complaints' },
+                    { perm: 'compliances', route: '/app/compliance' },
+                    { perm: 'vendors', route: '/app/vendor' },
+                    { perm: 'stallholders', route: '/app/stallholder' },
+                    { perm: 'collectors', route: '/app/collectors' },
+                    { perm: 'stalls', route: '/app/stalls' }
+                  ]
+                  for (const { perm, route } of permissionRoutes) {
+                    if (hasPermission(perm)) {
+                      redirectPath = route
+                      break
+                    }
+                  }
+                }
+              }
+              
+              this.$router.push(redirectPath)
             } catch (e) {
               console.error('Error parsing user data:', e)
               window.location.reload()
@@ -59,3 +93,6 @@ export default {
   }
 };
 </script>
+
+<style src="@/assets/css/fonts.css"></style>
+<style src="@/assets/css/scrollable-tables.css"></style>

@@ -5,13 +5,13 @@
       <v-col cols="12" md="6" lg="4">
         <v-text-field
           v-model="searchQuery"
-          label="Search stallholder"
+          label="Search anything"
           prepend-inner-icon="mdi-magnify"
           variant="outlined"
           clearable
           hide-details
           class="search-field"
-          placeholder="Search"
+          placeholder="Search ID, Type, Inspector, Stallholder, or Status..."
         ></v-text-field>
       </v-col>
 
@@ -52,32 +52,120 @@
                   <div class="status-buttons">
                     <button
                       class="status-btn"
-                      :class="{ active: activeFilter === 'all' }"
-                      @click="setFilter('all')"
+                      :class="{ active: filters.status === 'all' }"
+                      @click="filters.status = 'all'"
                     >
                       All
                     </button>
                     <button
                       class="status-btn"
-                      :class="{ active: activeFilter === 'active' }"
-                      @click="setFilter('active')"
-                    >
-                      Active
-                    </button>
-                    <button
-                      class="status-btn"
-                      :class="{ active: activeFilter === 'incomplete' }"
-                      @click="setFilter('incomplete')"
-                    >
-                      Incomplete
-                    </button>
-                    <button
-                      class="status-btn"
-                      :class="{ active: activeFilter === 'pending' }"
-                      @click="setFilter('pending')"
+                      :class="{ active: filters.status === 'pending' }"
+                      @click="filters.status = 'pending'"
                     >
                       Pending
                     </button>
+                    <button
+                      class="status-btn"
+                      :class="{ active: filters.status === 'in-progress' }"
+                      @click="filters.status = 'in-progress'"
+                    >
+                      In Progress
+                    </button>
+                    <button
+                      class="status-btn"
+                      :class="{ active: filters.status === 'complete' }"
+                      @click="filters.status = 'complete'"
+                    >
+                      Complete
+                    </button>
+                    <button
+                      class="status-btn"
+                      :class="{ active: filters.status === 'incomplete' }"
+                      @click="filters.status = 'incomplete'"
+                    >
+                      Incomplete
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Severity Filter -->
+                <div class="filter-group">
+                  <label class="filter-label">Severity</label>
+                  <div class="status-buttons">
+                    <button
+                      class="status-btn"
+                      :class="{ active: filters.severity === 'all' }"
+                      @click="filters.severity = 'all'"
+                    >
+                      All
+                    </button>
+                    <button
+                      class="status-btn severity-low"
+                      :class="{ active: filters.severity === 'low' }"
+                      @click="filters.severity = 'low'"
+                    >
+                      Low
+                    </button>
+                    <button
+                      class="status-btn severity-medium"
+                      :class="{ active: filters.severity === 'medium' }"
+                      @click="filters.severity = 'medium'"
+                    >
+                      Medium
+                    </button>
+                    <button
+                      class="status-btn severity-high"
+                      :class="{ active: filters.severity === 'high' }"
+                      @click="filters.severity = 'high'"
+                    >
+                      High
+                    </button>
+                    <button
+                      class="status-btn severity-critical"
+                      :class="{ active: filters.severity === 'critical' }"
+                      @click="filters.severity = 'critical'"
+                    >
+                      Critical
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="filter-group">
+                  <label class="filter-label">Compliance Type</label>
+                  <v-select
+                    v-model="filters.type"
+                    :items="typeOptions"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    class="filter-select"
+                  ></v-select>
+                </div>
+
+                <!-- Date Range Filter -->
+                <div class="filter-group">
+                  <label class="filter-label">Date Range</label>
+                  <div class="date-range-wrapper">
+                    <v-text-field
+                      v-model="filters.dateFrom"
+                      type="date"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      label="From"
+                      class="date-input"
+                    ></v-text-field>
+                    <span class="date-separator">to</span>
+                    <v-text-field
+                      v-model="filters.dateTo"
+                      type="date"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      label="To"
+                      class="date-input"
+                    ></v-text-field>
                   </div>
                 </div>
 

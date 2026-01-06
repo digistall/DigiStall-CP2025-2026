@@ -22,7 +22,8 @@ const FilterButton = ({
     { label: 'Price: Low to High', value: 'price_asc' },
     { label: 'Price: High to Low', value: 'price_desc' },
     { label: 'Default', value: 'default' }
-  ]
+  ],
+  theme
 }) => {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
 
@@ -44,7 +45,7 @@ const FilterButton = ({
 
   const renderFilterSection = ({ item: section }) => (
     <View style={styles.sectionContainer}>
-      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <Text style={[styles.sectionTitle, theme && { color: theme.colors.primary }]}>{section.title}</Text>
       {section.options.map((option) => (
         <TouchableOpacity
           key={option.key}
@@ -56,12 +57,13 @@ const FilterButton = ({
         >
           <Text style={[
             styles.dropdownItemText,
-            option.isSelected && styles.activeDropdownItemText
+            option.isSelected && styles.activeDropdownItemText,
+            theme && { color: option.isSelected ? theme.colors.primary : theme.colors.text }
           ]}>
             {option.label}
           </Text>
           {option.isSelected && (
-            <Icon name="check" size={16} color="#002181" />
+            <Icon name="check" size={16} color={theme ? theme.colors.primary : "#002181"} />
           )}
         </TouchableOpacity>
       ))}
@@ -97,14 +99,15 @@ const FilterButton = ({
       <TouchableOpacity
         style={[
           styles.filterButton,
-          hasActiveFilters && styles.filterButtonActive
+          hasActiveFilters && styles.filterButtonActive,
+          theme && { backgroundColor: theme.colors.surface }
         ]}
         onPress={toggleFilterDropdown}
       >
         <Icon 
           name="filter-list" 
           size={20} 
-          color={hasActiveFilters ? "#002181" : "#6b7280"} 
+          color={hasActiveFilters ? (theme ? theme.colors.primary : "#002181") : (theme ? theme.colors.textSecondary : "#6b7280")} 
         />
         {hasActiveFilters && (
           <View style={styles.filterBadge}>
@@ -127,14 +130,14 @@ const FilterButton = ({
           activeOpacity={1}
           onPress={() => setIsFilterVisible(false)}
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter & Sort</Text>
+          <View style={[styles.modalContent, theme && { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.modalHeader, theme && { borderBottomColor: theme.colors.border }]}>
+              <Text style={[styles.modalTitle, theme && { color: theme.colors.text }]}>Filter & Sort</Text>
               <TouchableOpacity 
                 onPress={() => setIsFilterVisible(false)}
                 style={styles.closeButton}
               >
-                <Icon name="close" size={20} color="#6b7280" />
+                <Icon name="close" size={20} color={theme ? theme.colors.textSecondary : "#6b7280"} />
               </TouchableOpacity>
             </View>
             
@@ -142,7 +145,7 @@ const FilterButton = ({
               data={filterSections}
               keyExtractor={(item) => item.id}
               renderItem={renderFilterSection}
-              ItemSeparatorComponent={() => <View style={styles.divider} />}
+              ItemSeparatorComponent={() => <View style={[styles.divider, theme && { backgroundColor: theme.colors.border }]} />}
               showsVerticalScrollIndicator={false}
               style={styles.filterList}
             />

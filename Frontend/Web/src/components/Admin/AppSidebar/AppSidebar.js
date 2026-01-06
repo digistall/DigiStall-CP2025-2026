@@ -42,13 +42,21 @@ export default {
           name: 'Employees',
           route: '/app/employees',
           description: 'Manage employee accounts and permissions',
+          roles: ['business_manager', 'stall_business_owner', 'system_administrator'], // Available for all management roles
         },
-        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors' },
+        { 
+          id: 7, 
+          icon: 'mdi-account-group', 
+          name: 'Vendors', 
+          route: '/app/vendors',
+          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
+        },
         {
           id: 8,
           icon: 'mdi-account-multiple',
           name: 'Stallholders',
           route: '/app/stallholders',
+          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
         },
         {
           id: 9,
@@ -56,6 +64,7 @@ export default {
           name: 'Stalls',
           route: '/app/stalls',
           hasSubMenu: true,
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
           subItems: [
             {
               id: 91,
@@ -73,30 +82,59 @@ export default {
             },
           ],
         },
-        { id: 10, icon: 'mdi-account-cash', name: 'Collectors', route: '/app/collectors' },
+        { 
+          id: 10, 
+          icon: 'mdi-account-cash', 
+          name: 'Collectors', 
+          route: '/app/collectors',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
+        { 
+          id: 11, 
+          icon: 'mdi-account-eye', 
+          name: 'Inspectors', 
+          route: '/app/inspectors',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
+        {
+          id: 13,
+          icon: 'mdi-credit-card-outline',
+          name: 'My Subscription',
+          route: '/app/subscription',
+          roles: ['stall_business_owner'], // Only for Business Owner
+          description: 'View and manage your subscription plan',
+        },
       ],
     }
   },
   computed: {
+    // Check if current user is system administrator
+    isSystemAdministrator() {
+      const userType = sessionStorage.getItem('userType')
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      return userType === 'system_administrator' || currentUser.userType === 'system_administrator'
+    },
+
     // Check if current user is admin
     isAdmin() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-      return userType === 'admin' || currentUser.userType === 'admin'
+      return userType === 'system_administrator' || userType === 'stall_business_owner' || 
+             currentUser.userType === 'system_administrator' || currentUser.userType === 'stall_business_owner'
     },
 
     // Check if current user is employee
     isEmployee() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-      return userType === 'employee' || currentUser.userType === 'employee'
+      return userType === 'business_employee' || currentUser.userType === 'business_employee'
     },
 
     // Get current user permissions - Return as object { permission: true/false }
     userPermissions() {
       const userType = sessionStorage.getItem('userType')
 
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try to get permissions from currentUser first (most reliable)
         const currentUser = sessionStorage.getItem('currentUser')
         if (currentUser) {
@@ -149,7 +187,7 @@ export default {
       }
     },
 
-    // Check if user is branch manager (has access to everything)
+    // Check if user is branch manager or business owner (has access to everything in More menu)
     isBranchManager() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
@@ -158,6 +196,10 @@ export default {
         currentUser.userType === 'branch_manager' ||
         userType === 'branch-manager' ||
         currentUser.userType === 'branch-manager' ||
+        userType === 'business_manager' ||
+        currentUser.userType === 'business_manager' ||
+        userType === 'stall_business_owner' ||
+        currentUser.userType === 'stall_business_owner' ||
         this.isAdmin
       )
     },
@@ -165,9 +207,9 @@ export default {
     // Check if user has any stalls-related permission
     hasStallsPermission() {
       if (this.isBranchManager || this.isAdmin) return true
-      
+
       const perms = this.userPermissions
-      
+
       // Handle both array and object formats
       if (Array.isArray(perms)) {
         return perms.includes('read_stalls') || perms.includes('write_stalls') || perms.includes('stalls')
@@ -177,64 +219,31 @@ export default {
       }
     },
 
-    // Filter sidebar items based on user permissions
+    // Filter sidebar items based on user permissions and roles
     filteredMoreItems() {
       console.log('🔍 Filtering sidebar items...')
-      console.log('User type:', sessionStorage.getItem('userType'))
-      console.log('Employee permissions raw:', sessionStorage.getItem('employeePermissions'))
-      console.log('Permissions raw:', sessionStorage.getItem('permissions'))
+      const userType = sessionStorage.getItem('userType')
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      const actualUserType = userType || currentUser.userType
+      
+      console.log('User type:', actualUserType)
       console.log('Is branch manager:', this.isBranchManager)
-      console.log('User permissions computed:', this.userPermissions)
 
-      if (this.isBranchManager) {
-        console.log('✅ Branch manager - showing all items')
-        return this.moreItems // Branch managers see everything
-      }
-
-      const filteredItems = this.moreItems.filter((item) => {
-        // Map sidebar items to their required permissions
-        const permissionMap = {
-          6: 'employees', // Employees (only branch managers should see this)
-          7: 'vendors', // Vendors
-          8: 'stallholders', // Stallholders
-          9: 'stalls', // Stalls (check read_stalls or write_stalls)
-          10: 'collectors', // Collectors
-        }
-
-        const requiredPermission = permissionMap[item.id]
-
-        // If no permission mapping, show to everyone (fallback)
-        if (!requiredPermission) return true
-
-        // Hide employees section from non-managers (employees section is only for branch managers)
-        if (item.id === 6) return this.isBranchManager
-
-        // Special handling for stalls - check for read_stalls or write_stalls
-        if (item.id === 9) {
-          const hasStalls = this.hasStallsPermission
-          console.log(`🏪 Stalls permission check: ${hasStalls}`)
-          return hasStalls
-        }
-
-        // Check if user has the required permission (handle both array and object formats)
-        let hasPermission = false
-        if (Array.isArray(this.userPermissions)) {
-          hasPermission = this.userPermissions.includes(requiredPermission)
-        } else {
-          hasPermission = this.userPermissions[requiredPermission] === true
+      // Filter items based on role definitions
+      const filtered = this.moreItems.filter((item) => {
+        // If item has roles specified, check if user's role is in the allowed roles
+        if (item.roles && item.roles.length > 0) {
+          const hasRole = item.roles.includes(actualUserType)
+          console.log(`Item ${item.name} (ID ${item.id}): ${hasRole ? '✅ Allowed' : '❌ Denied'} for role ${actualUserType}`)
+          return hasRole
         }
         
-        console.log(
-          `Item ${item.name} (ID: ${item.id}) - Required: ${requiredPermission}, Has permission: ${hasPermission}`,
-        )
-        return hasPermission
+        // If no roles specified, allow for branch managers only (legacy items)
+        return this.isBranchManager
       })
-
-      console.log(
-        '✅ Filtered items:',
-        filteredItems.map((item) => item.name),
-      )
-      return filteredItems
+      
+      console.log(`✅ Filtered ${filtered.length} items from ${this.moreItems.length} total`)
+      return filtered
     },
 
     // Get filtered submenu items based on available stall types
@@ -303,7 +312,7 @@ export default {
     eventBus.on(EVENTS.STALL_ADDED, this.handleStallEvent)
     eventBus.on(EVENTS.STALL_DELETED, this.handleStallEvent)
     eventBus.on(EVENTS.STALL_UPDATED, this.handleStallEvent)
-    
+
     // Listen for storage changes (cross-tab logout sync)
     window.addEventListener('storage', this.handleStorageChange)
   },
@@ -358,7 +367,7 @@ export default {
         console.log('Has stalls permission:', this.hasStallsPermission)
 
         // EXTRA DEFENSIVE CHECK: If this is an employee, double-check permissions
-        if (userType === 'employee') {
+        if (userType === 'business_employee') {
           // Check new format first
           const permissions = sessionStorage.getItem('permissions')
           if (permissions) {
@@ -536,23 +545,23 @@ export default {
     // Handle storage changes from other tabs (cross-tab sync)
     handleStorageChange(event) {
       console.log('🔄 Storage change detected:', event.key)
-      
+
       // Check if authToken was removed (logout in another tab)
       if (event.key === 'authToken' && !event.newValue) {
         console.log('🚪 Logout detected from another tab - redirecting to login...')
-        
+
         // Clear all session data
         sessionStorage.clear()
         localStorage.clear()
-        
+
         // Redirect to login
         window.location.href = '/login'
       }
-      
+
       // Check if new login detected in another tab
       if (event.key === 'authToken' && event.newValue) {
         console.log('🔐 Login detected from another tab - reloading page...')
-        
+
         // Reload the page to update the UI with new session
         window.location.reload()
       }

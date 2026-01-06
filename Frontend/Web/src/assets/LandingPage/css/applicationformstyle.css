@@ -2,23 +2,82 @@
     box-sizing: border-box;
 }
 
+/* Step Indicator Styles */
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.step-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: #e5e5e5;
+    color: #999;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.step-dot.active {
+    background-color: #002B5B;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 43, 91, 0.3);
+    transform: scale(1.1);
+}
+
+.step-dot.completed {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Connect the dots with a line */
+.step-dot:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 2px;
+    background-color: #e5e5e5;
+}
+
+.step-dot.completed:not(:last-child)::after {
+    background-color: #28a745;
+}
+
+.step-dot.active:not(:last-child)::after {
+    background-color: #e5e5e5;
+}
+
 .overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.09);
-    backdrop-filter: blur(2px);
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
     overflow-y: auto;
     overflow-x: hidden;
     animation: fadeIn 0.3s ease-out;
-    padding: 20px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    z-index: 1000;
+    z-index: 999999;
 }
 
 @keyframes fadeIn {
@@ -28,14 +87,16 @@
 
 .form-container {
     background: rgb(249, 249, 255);
-    padding: 28px;
+    padding: 20px 28px;
     border-radius: 16px;
-    width: 100%;
+    width: 95%;
     max-width: 600px;
     min-width: 320px;
+    max-height: 95vh;
+    overflow-y: auto;
     box-shadow: 
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        0 20px 25px -5px rgba(0, 0, 0, 0.15),
+        0 10px 10px -5px rgba(0, 0, 0, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
     animation: slideUp 0.4s ease-out;
     margin: auto;
@@ -54,7 +115,7 @@
 }
 
 .form-container h3 {
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     font-size: clamp(20px, 4vw, 24px);
     font-weight: 700;
     color: #002B5B;
@@ -62,7 +123,7 @@
 }
 
 .form-container p {
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     font-size: clamp(12px, 2.5vw, 14px);
     color: #666;
     text-align: center;
@@ -72,7 +133,7 @@
 form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 14px;
 }
 
 label {
@@ -130,7 +191,7 @@ select {
 }
 
 .buttons {
-    margin-top: 28px;
+    margin-top: 20px;
     display: flex;
     justify-content: flex-end;
     gap: 16px;
@@ -422,6 +483,15 @@ button.btn-close:hover {
 :deep(.v-picker) {
     min-width: 328px !important;
     max-width: 380px !important;
+}
+
+/* Fix: Ensure date picker menu appears above the form overlay */
+:deep(.v-overlay--active) {
+    z-index: 2000 !important;
+}
+
+:deep(.v-menu > .v-overlay__content) {
+    z-index: 2001 !important;
 }
 
 @media (max-width: 768px) {

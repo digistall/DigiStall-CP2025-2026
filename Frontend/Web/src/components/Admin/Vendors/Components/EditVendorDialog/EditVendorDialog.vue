@@ -1,15 +1,17 @@
 <template>
-  <v-dialog v-model="model" max-width="1200" persistent>
-    <v-card>
-      <v-card-title class="d-flex align-center justify-space-between">
-        <div class="text-h6 font-weight-bold">
-          {{ step === 1 ? 'Edit Vendor Form - Page 1' : 'Edit Vendor Form - Page 2' }}
-        </div>
+  <v-dialog v-model="model" max-width="900" persistent>
+    <v-card class="add-stallholder-modal">
+      <!-- Header -->
+      <v-card-title class="modal-header">
+        <h2 class="modal-title">
+          {{ step === 1 ? 'Edit Vendor — Personal Details' : 'Edit Vendor — Business Details' }}
+        </h2>
+        <v-btn icon class="close-btn" @click="cancel">
+          <v-icon color="white">mdi-close</v-icon>
+        </v-btn>
       </v-card-title>
 
-      <v-divider />
-
-      <v-card-text class="pt-6">
+      <v-card-text class="modal-content">
         <v-row>
           <!-- PAGE 1 -->
           <v-col v-if="step === 1" cols="12">
@@ -259,19 +261,33 @@
         </v-row>
       </v-card-text>
 
-      <v-divider />
-
-      <v-card-actions class="px-6 py-4">
-        <v-btn variant="tonal" color="grey" @click="cancel">Cancel</v-btn>
+      <v-card-actions class="modal-footer">
         <v-spacer />
-        <v-btn v-if="step === 2" variant="tonal" color="grey" class="mr-2" @click="step = 1"
-          >Previous</v-btn
-        >
-        <v-btn v-if="step === 1" color="primary" @click="goNext">Next</v-btn>
-        <v-btn v-else color="primary" @click="submit">Submit</v-btn>
+        <v-btn class="submit-btn" v-if="step === 1" color="primary" @click="goNext">NEXT</v-btn>
+        <v-btn class="submit-btn" v-else color="primary" @click="submit">SUBMIT</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script src="./EditVendorDialog.js"></script>
+
+<style scoped>
+.v-card-title {
+  background: #f5f5f7;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.v-card-text {
+  padding-top: 0.5rem;
+}
+
+.v-card-actions {
+  padding: 16px 24px;
+}
+</style>

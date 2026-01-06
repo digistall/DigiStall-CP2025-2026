@@ -7,7 +7,7 @@ export const getAreas = async (req, res) => {
     connection = await createConnection();
     
     const [areas] = await connection.execute(
-      'SELECT DISTINCT area FROM branch WHERE status = "Active" ORDER BY area ASC'
+      "SELECT DISTINCT area FROM branch WHERE status = 'Active' ORDER BY area ASC"
     );
     
     res.json({

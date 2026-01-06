@@ -59,8 +59,8 @@ export function configureDevelopmentSecurity() {
   // Enable debug logging in development
   SecureLogger.enableDebugLogs();
   
-  // Show security reminder in development
-  console.warn('🔒 DEVELOPMENT MODE: Debug logging enabled. Disable in production!');
+  // Security reminder (uncomment if needed for debugging)
+  // console.warn('🔒 DEVELOPMENT MODE: Debug logging enabled. Disable in production!');
 }
 
 /**

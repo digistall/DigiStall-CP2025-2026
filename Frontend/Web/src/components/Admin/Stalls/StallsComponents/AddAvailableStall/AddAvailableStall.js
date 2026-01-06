@@ -16,10 +16,11 @@ export default {
         price: '',
         floorId: '',
         sectionId: '',
-        size: '',
+        areaSqm: '', // Changed from size to areaSqm (square meters like MASTERLIST)
+        baseRate: '', // NEW: Base rate from MASTERLIST (RENTAL RATE 2010)
         location: '',
         description: '',
-        image: null,
+        images: [], // Changed from image to images array
         isAvailable: true,
         priceType: 'Fixed Price',
         applicationDeadline: '', // Will store calculated deadline when activated
@@ -27,7 +28,8 @@ export default {
         deadlineTime: '23:00', // Time of day for deadline (11:00 PM)
         deadlineActivated: false, // Whether the deadline timer has been activated
       },
-      // Price type options
+      calculatedMonthlyRent: '', // NEW: Auto-calculated monthly rent
+      imagePreviews: [], // Store image preview URLs
       priceTypeOptions: [
         {
           title: '🏷️ Fixed Price',
@@ -63,18 +65,21 @@ export default {
           if (!value) return 'Time is required for raffle/auction stalls'
           return true
         },
+        imageCount: (value) => {
+          if (!value || value.length === 0) return true // Images are optional
+          return value.length <= 10 || 'Maximum 10 images allowed'
+        },
+        imageSize: (value) => {
+          if (!value || value.length === 0) return true
+          const oversized = value.filter(file => file.size > 10 * 1024 * 1024) // 10MB
+          return oversized.length === 0 || 'Each image must be less than 10MB'
+        },
       },
       // UPDATED: Dynamic options loaded from API
       floorOptions: [],
       sectionOptions: [],
       allSections: [], // Store all sections for filtering by floor
       loading: false,
-      // Success popup states
-      showSuccessPopup: false,
-      popupState: 'loading', // 'loading' or 'success'
-      successMessage: '',
-      popupTimeout: null,
-      refreshTimeout: null, // Added for auto-refresh timing
       lastAddedStall: null, // Store the last added stall data for real-time updates
       // API base URL
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -232,16 +237,86 @@ export default {
       this.resetForm()
     },
 
+    // Image handling methods
+    handleImageSelection(files) {
+      console.log('📸 handleImageSelection called with:', files)
+      console.log('  - Type:', typeof files)
+      console.log('  - Is Array:', Array.isArray(files))
+      console.log('  - Length:', files?.length || 0)
+
+      // Clear previous previews
+      this.imagePreviews.forEach(preview => {
+        if (preview && typeof preview === 'string' && preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview)
+        }
+      })
+      this.imagePreviews = []
+
+      // Handle null/undefined/empty
+      if (!files || (Array.isArray(files) && files.length === 0)) {
+        console.log('  ❌ No files to process')
+        return
+      }
+
+      // Convert to array if needed (some events pass FileList)
+      const filesArray = Array.isArray(files) ? files : Array.from(files)
+      console.log('  ✅ Files array created with', filesArray.length, 'files')
+
+      // Generate previews using object URLs (faster than base64)
+      const maxImages = Math.min(filesArray.length, 10)
+      for (let i = 0; i < maxImages; i++) {
+        const file = filesArray[i]
+        if (file && file instanceof File) {
+          const preview = URL.createObjectURL(file)
+          this.imagePreviews.push(preview)
+          console.log(`  ✅ Preview ${i + 1} created:`, file.name, `(${(file.size / 1024).toFixed(2)} KB)`)
+        } else {
+          console.warn(`  ⚠️ Item ${i} is not a valid File object:`, file)
+        }
+      }
+
+      console.log('📸 Total previews generated:', this.imagePreviews.length)
+      console.log('📸 Preview URLs:', this.imagePreviews)
+    },
+
+    getImagePreview(file) {
+      return URL.createObjectURL(file)
+    },
+
+    removeImage(index) {
+      console.log('🗑️ Removing image at index:', index)
+      if (this.newStall.images && Array.isArray(this.newStall.images)) {
+        // Revoke the object URL to free memory
+        if (this.imagePreviews[index]?.startsWith('blob:')) {
+          URL.revokeObjectURL(this.imagePreviews[index])
+        }
+
+        // Remove from both arrays
+        this.newStall.images.splice(index, 1)
+        this.imagePreviews.splice(index, 1)
+
+        console.log('  ✅ Removed. Remaining images:', this.newStall.images.length)
+      }
+    },
+
     resetForm() {
+      // Clean up image preview URLs
+      this.imagePreviews.forEach(preview => {
+        if (preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview)
+        }
+      })
+
       this.newStall = {
         stallNumber: '',
         price: '',
         floorId: '',
         sectionId: '',
-        size: '',
+        areaSqm: '', // Changed from size to areaSqm
+        baseRate: '', // Base rate for auto-calculation
         location: '',
         description: '',
-        image: null,
+        images: [],
         isAvailable: true,
         priceType: 'Fixed Price',
         applicationDeadline: '', // Will store calculated deadline when activated
@@ -249,52 +324,11 @@ export default {
         deadlineTime: '23:00', // Time of day for deadline (11:00 PM)
         deadlineActivated: false, // Whether the deadline timer has been activated
       }
+      this.calculatedMonthlyRent = '' // Reset calculated rent
+      this.imagePreviews = [] // Clear image previews
       if (this.$refs.form) {
         this.$refs.form.resetValidation()
       }
-    },
-
-    showSuccessAnimation(message) {
-      this.successMessage = message
-      this.popupState = 'loading'
-      this.showSuccessPopup = true
-
-      // Transition to success state after loading animation
-      setTimeout(() => {
-        this.popupState = 'success'
-
-        // Auto close after 2 seconds and emit stall-added event
-        this.popupTimeout = setTimeout(() => {
-          this.closeSuccessPopup()
-
-          // Emit local event for parent component
-          this.$emit('stall-added', this.lastAddedStall)
-
-          // NEW: Emit global event for real-time sidebar update
-          eventBus.emit(EVENTS.STALL_ADDED, {
-            stallData: this.lastAddedStall,
-            priceType: this.lastAddedStall?.priceType || this.lastAddedStall?.price_type,
-            message: 'Stall added successfully',
-          })
-        }, 2000)
-      }, 1500)
-    },
-
-    closeSuccessPopup() {
-      if (this.popupTimeout) {
-        clearTimeout(this.popupTimeout)
-        this.popupTimeout = null
-      }
-      if (this.refreshTimeout) {
-        clearTimeout(this.refreshTimeout)
-        this.refreshTimeout = null
-      }
-      this.showSuccessPopup = false
-      this.popupState = 'loading'
-      this.successMessage = ''
-
-      // Close the add stall modal after success popup closes
-      this.closeModal()
     },
 
     async convertImageToBase64(file) {
@@ -320,16 +354,25 @@ export default {
 
       try {
         // FIXED: Use the correct field names and include floor_id for new schema
+        // UPDATED: Changed size to areaSqm and added baseRate for auto-calculation
         const stallData = {
           stallNumber: this.newStall.stallNumber, // Backend expects 'stallNumber'
-          price: parseFloat(this.newStall.price), // Backend expects 'price'
+          price: parseFloat(this.newStall.price), // Backend expects 'price' (monthly rent)
           location: this.newStall.location, // Backend expects 'location'
-          size: this.newStall.size, // Send size directly
+          size: this.newStall.areaSqm ? `${this.newStall.areaSqm} sq.m` : '', // Format as "17.16 sq.m"
+          areaSqm: parseFloat(this.newStall.areaSqm) || 0, // NEW: Area in square meters
+          baseRate: parseFloat(this.newStall.baseRate) || 0, // NEW: Base rate (RENTAL RATE 2010)
           floorId: this.newStall.floorId, // FIXED: Send floorId for new schema
           sectionId: this.newStall.sectionId, // FIXED: Send sectionId instead of section
           description: this.newStall.description,
           isAvailable: this.newStall.isAvailable,
           priceType: this.newStall.priceType,
+        }
+
+        // Calculate rate per sq.m if area is provided
+        if (stallData.areaSqm > 0 && stallData.price > 0) {
+          stallData.ratePerSqm = Math.round((stallData.price / stallData.areaSqm) * 100) / 100
+          console.log(`📊 Rate per Sq.m: ${stallData.price} / ${stallData.areaSqm} = ${stallData.ratePerSqm}`)
         }
 
         // FIXED: Calculate deadline datetime for raffle/auction stalls
@@ -354,38 +397,12 @@ export default {
           })
         }
 
-        // Convert image to base64 if uploaded
-        if (this.newStall.image) {
-          try {
-            stallData.image = await this.convertImageToBase64(this.newStall.image)
-          } catch (imageError) {
-            console.error('Error converting image:', imageError)
-            this.$emit('show-message', {
-              type: 'warning',
-              text: 'Image upload failed, but stall will be created without image.',
-            })
-          }
-        }
-
         console.log('Sending stall data to backend:', stallData)
 
         // Get auth token from sessionStorage
         const token = sessionStorage.getItem('authToken')
 
-        // ✅ DEBUGGING: Log session storage data
-        console.log('🔍 FRONTEND DEBUG - Session Storage:')
-        console.log('- authToken exists:', !!token)
-        console.log('- currentUser:', JSON.parse(sessionStorage.getItem('currentUser') || '{}'))
-        console.log('- userType:', sessionStorage.getItem('userType'))
-        console.log('- branchId:', sessionStorage.getItem('branchId'))
-        console.log('- employeeId:', sessionStorage.getItem('employeeId'))
-        console.log(
-          '- employeePermissions:',
-          JSON.parse(sessionStorage.getItem('employeePermissions') || '[]'),
-        )
-
         if (!token) {
-          // FIXED: Corrected the emit call - was missing 'show-message' event name
           this.$emit('show-message', {
             type: 'error',
             text: 'Authentication token not found. Please login again.',
@@ -394,25 +411,58 @@ export default {
           return
         }
 
-        // Prepare headers
-        const headers = {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+        // Create FormData for multipart upload
+        const formData = new FormData()
+
+        // Append stall data fields
+        Object.keys(stallData).forEach(key => {
+          formData.append(key, stallData[key])
+        })
+
+        // Convert images to base64 for BLOB storage (cloud deployment)
+        if (this.newStall.images && this.newStall.images.length > 0) {
+          console.log('📸 Converting images to base64 for BLOB storage:', this.newStall.images.length)
+          const base64Images = []
+
+          for (let i = 0; i < this.newStall.images.length; i++) {
+            const file = this.newStall.images[i]
+            try {
+              const base64Data = await this.convertImageToBase64(file)
+              base64Images.push({
+                image_data: base64Data,
+                mime_type: file.type,
+                file_name: file.name
+              })
+              console.log(`  ✅ Image ${i + 1}: ${file.name} converted to base64`)
+            } catch (err) {
+              console.error(`  ❌ Failed to convert image ${i + 1}:`, err)
+            }
+          }
+
+          // Send base64 images as JSON string
+          if (base64Images.length > 0) {
+            formData.append('base64Images', JSON.stringify(base64Images))
+            console.log(`📸 ${base64Images.length} images prepared for BLOB storage`)
+          }
         }
 
         console.log('Making API request to:', `${this.apiBaseUrl}/stalls`)
 
-        // Make API call to backend
+        // Make API call to backend with FormData
         const response = await fetch(`${this.apiBaseUrl}/stalls`, {
           method: 'POST',
-          headers: headers,
-          body: JSON.stringify(stallData),
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // Don't set Content-Type - let browser set it with boundary for multipart
+          },
+          body: formData,
         })
 
         console.log('Response status:', response.status)
 
         const result = await response.json()
         console.log('Backend response:', result)
+        console.log('Backend response data:', result.data)
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -431,17 +481,26 @@ export default {
         }
 
         if (result.success) {
-          // Store the stall data for later use
+          // Store the stall data for later use - use backend data first
           this.lastAddedStall = result.data || stallData
 
-          // Show success popup animation
-          this.showSuccessAnimation(result.message || 'Stall added successfully!')
+          console.log('✅ Stall added successfully!')
+          console.log('📦 Stall data from backend:', this.lastAddedStall)
+          console.log('🏢 Floor name:', this.lastAddedStall.floor_name)
+          console.log('🏪 Section name:', this.lastAddedStall.section_name)
 
-          // ENHANCED: Additional success actions
-          console.log('Stall added successfully - will show real-time update after popup')
+          // Emit local event for parent component
+          this.$emit('stall-added', this.lastAddedStall)
 
-          // Do NOT emit immediately - wait for popup to close to avoid double-display
-          // The event will be emitted from the popup timeout
+          // Emit global event for real-time sidebar update
+          eventBus.emit(EVENTS.STALL_ADDED, {
+            stallData: this.lastAddedStall,
+            priceType: this.lastAddedStall?.priceType || this.lastAddedStall?.price_type,
+            message: result.message || 'Stall added successfully!',
+          })
+
+          // Close the modal
+          this.closeModal()
         } else {
           throw new Error(result.message || 'Failed to add stall')
         }
@@ -514,15 +573,53 @@ export default {
       return true
     },
 
-    // Validate size format
-    validateSize(value) {
-      if (!value) return 'Size is required'
-      // Allow formats like "3x2m", "3x2", "3 x 2m", etc.
-      const sizePattern = /^\d+\s*[x×]\s*\d+\s*m?$/i
-      if (!sizePattern.test(value)) {
-        return 'Invalid format. Use format like "3x2m" or "3x2"'
+    // Validate area in square meters (no longer dimension format)
+    validateAreaSqm(value) {
+      if (!value) return 'Area is required'
+      const numValue = parseFloat(value)
+      if (isNaN(numValue) || numValue <= 0) {
+        return 'Area must be a positive number (e.g., 17.16)'
+      }
+      if (numValue > 1000) {
+        return 'Area seems too large. Please verify the value.'
       }
       return true
+    },
+
+    // Calculate rental price from RENTAL RATE (2010)
+    // Formula from MASTERLIST:
+    // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+    // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+    calculateRentalPrice() {
+      const rentalRate2010 = parseFloat(this.newStall.baseRate)
+      if (rentalRate2010 && rentalRate2010 > 0) {
+        // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2
+        const monthlyRent = Math.round(rentalRate2010 * 2 * 100) / 100
+        // Discounted rate for early payment = Monthly Rent × 0.75
+        const discountedRate = Math.round(monthlyRent * 0.75 * 100) / 100
+
+        this.calculatedMonthlyRent = monthlyRent.toFixed(2)
+
+        // Auto-update price field for Fixed Price type (use full monthly rent)
+        if (this.newStall.priceType === 'Fixed Price') {
+          this.newStall.price = monthlyRent.toString()
+        }
+
+        console.log(`📊 RENTAL RATE 2010: ${rentalRate2010} | Monthly Rent (×2): ${monthlyRent} | Discounted: ${discountedRate}`)
+      } else {
+        this.calculatedMonthlyRent = ''
+        if (this.newStall.priceType === 'Fixed Price') {
+          this.newStall.price = ''
+        }
+      }
+    },
+
+    // Calculate from area (optional - for rate per sq.m calculation)
+    calculateRentalFromArea() {
+      // Area change doesn't affect rental calculation directly
+      // Rental is calculated from Base Rate × 1.5
+      // Area is used for rate_per_sqm = Monthly Rent / Area
+      console.log(`📐 Area updated: ${this.newStall.areaSqm} sq.m`)
     },
 
     // Validate location text
@@ -543,30 +640,39 @@ export default {
     handleSubmissionError(error) {
       console.error('Form submission error:', error)
 
-      // Clear any existing success popup
-      this.closeSuccessPopup()
-
       let userMessage = 'An error occurred while adding the stall.'
+      let autoRedirect = false
 
       if (error.message.includes('network') || error.message.includes('fetch')) {
-        userMessage = 'Network error. Please check your connection and try again.'
+        userMessage = '❌ Network Error: Unable to connect to server. Please check your connection and try again.'
       } else if (error.message.includes('authentication') || error.message.includes('token')) {
-        userMessage = 'Session expired. Please login again.'
-        // Auto redirect to login after showing message
-        setTimeout(() => {
-          this.$router.push('/login')
-        }, 3000)
+        userMessage = '🔒 Session Expired: Please login again to continue.'
+        autoRedirect = true
       } else if (error.message.includes('already exists')) {
-        userMessage =
-          'This stall number already exists in your branch. Please use a different number.'
+        userMessage = `⚠️ Duplicate Stall: ${error.message}`
+      } else if (error.message.includes('Access denied')) {
+        userMessage = `🚫 Access Denied: ${error.message}`
+      } else if (error.message.includes('Invalid section')) {
+        userMessage = `⚠️ Invalid Section: ${error.message}`
+      } else if (error.message.includes('Bad request')) {
+        userMessage = `⚠️ Validation Error: ${error.message}`
       } else if (error.message) {
-        userMessage = error.message
+        userMessage = `❌ Error: ${error.message}`
       }
 
       this.$emit('show-message', {
         type: 'error',
         text: userMessage,
+        operation: 'add',
+        operationType: 'stall'
       })
+
+      // Auto redirect to login if session expired
+      if (autoRedirect) {
+        setTimeout(() => {
+          this.$router.push('/login')
+        }, 3000)
+      }
     },
   },
 
@@ -586,7 +692,8 @@ export default {
         this.newStall.stallNumber &&
         this.newStall.price &&
         this.newStall.location &&
-        this.newStall.size &&
+        this.newStall.areaSqm && // Changed from size to areaSqm
+        this.newStall.baseRate && // Added baseRate check
         this.newStall.floorId &&
         this.newStall.sectionId
 
@@ -699,11 +806,20 @@ export default {
       }
     },
 
-    // Watch for image file changes
+    // Watch for image file changes (deprecated - now using images array)
     'newStall.image'(newFile) {
       if (newFile) {
         console.log('Image file selected:', newFile.name, newFile.size)
       }
+    },
+
+    // Watch for images array changes
+    'newStall.images': {
+      handler(newImages) {
+        console.log('🔄 Images watcher triggered, images count:', newImages?.length || 0)
+        this.handleImageSelection(newImages)
+      },
+      deep: true
     },
 
     // Watch for form changes to debug (only in development)
@@ -768,6 +884,13 @@ export default {
       clearTimeout(this.refreshTimeout)
       this.refreshTimeout = null
     }
+
+    // Clean up image preview URLs to prevent memory leaks
+    this.imagePreviews.forEach(preview => {
+      if (preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview)
+      }
+    })
   },
 
   // Error handling for the component

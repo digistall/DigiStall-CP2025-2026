@@ -11,7 +11,8 @@ import process from 'process';
 
 const { verify } = jwt;
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+// Helper function to get JWT secret at runtime (after dotenv.config() has run)
+const getJwtSecret = () => process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 /**
  * Authenticate JWT Token
@@ -20,6 +21,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-t
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const JWT_SECRET = getJwtSecret(); // Get secret at runtime
+
+  // Debug logs disabled to prevent console flooding
+  // Enable for debugging authentication issues if needed
 
   if (!token) {
     return res.status(401).json({
@@ -31,7 +36,10 @@ const authenticateToken = (req, res, next) => {
 
   verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
-      console.error('❌ Token verification error:', err);
+      // Only log actual errors, not routine token issues
+      if (err.name !== 'TokenExpiredError' && err.name !== 'JsonWebTokenError') {
+        console.error('❌ Token verification error:', err.message);
+      }
 
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({
@@ -129,14 +137,14 @@ const authorizePermission = (...requiredPermissions) => {
 
     const userRole = req.user.userType || req.user.role;
 
-    // Admins and branch managers have all permissions
-    if (userRole === 'admin' || userRole === 'branch_manager') {
+    // System administrators and stall business owners have all permissions
+    if (userRole === 'system_administrator' || userRole === 'stall_business_owner' || userRole === 'business_manager') {
       console.log(`✅ Permission granted to ${userRole} (admin/manager override)`);
       return next();
     }
 
-    // For employees, check specific permissions
-    if (userRole === 'employee') {
+    // For business employees, check specific permissions
+    if (userRole === 'business_employee') {
       const userPermissions = req.user.permissions || {};
       
       // Check if user has at least one of the required permissions
@@ -231,19 +239,27 @@ const authorizeRoleOrPermission = (allowedRoles = [], allowedPermissions = []) =
 };
 
 /**
- * Admin Only Middleware
- * Shorthand for admin-only routes
+ * System Administrator Only Middleware
+ * Shorthand for system admin-only routes
  */
-const adminOnly = () => {
-  return authorizeRole('admin');
+const systemAdminOnly = () => {
+  return authorizeRole('system_administrator');
 };
 
 /**
- * Branch Manager or Admin Middleware
- * Shorthand for manager/admin routes
+ * Stall Business Owner Only Middleware
+ * Shorthand for business owner-only routes
  */
-const managerOrAdmin = () => {
-  return authorizeRole('admin', 'branch_manager');
+const businessOwnerOnly = () => {
+  return authorizeRole('stall_business_owner');
+};
+
+/**
+ * Business Manager or Business Owner Middleware
+ * Shorthand for manager/owner routes
+ */
+const managerOrOwner = () => {
+  return authorizeRole('stall_business_owner', 'business_manager');
 };
 
 /**
@@ -261,12 +277,12 @@ const checkBranchAccess = (req, res, next) => {
 
   const userRole = req.user.userType || req.user.role;
 
-  // Admins have access to all branches
-  if (userRole === 'admin') {
+  // System administrators and stall business owners have access to all branches
+  if (userRole === 'system_administrator' || userRole === 'stall_business_owner') {
     return next();
   }
 
-  // For branch managers and employees, check branch match
+  // For business managers and business employees, check branch match
   const userBranchId = req.user.branchId;
   const requestedBranchId = req.params.branchId || req.body.branchId || req.query.branchId;
 
@@ -299,6 +315,7 @@ const checkBranchAccess = (req, res, next) => {
 const optionalAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
+  const JWT_SECRET = getJwtSecret(); // Get secret at runtime
 
   if (!token) {
     req.user = null;
@@ -330,8 +347,9 @@ export default {
   authorizeRole,
   authorizePermission,
   authorizeRoleOrPermission,
-  adminOnly,
-  managerOrAdmin,
+  systemAdminOnly,
+  businessOwnerOnly,
+  managerOrOwner,
   checkBranchAccess,
   optionalAuth
 };
@@ -342,8 +360,9 @@ export {
   authorizeRole,
   authorizePermission,
   authorizeRoleOrPermission,
-  adminOnly,
-  managerOrAdmin,
+  systemAdminOnly,
+  businessOwnerOnly,
+  managerOrOwner,
   checkBranchAccess,
   optionalAuth
 };

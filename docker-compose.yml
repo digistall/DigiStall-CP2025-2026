@@ -1,40 +1,66 @@
-# ===== DOCKER COMPOSE - DIGISTALL SIMPLIFIED =====
-# Setup: Web Frontend and Backend only
-# Database runs manually (external)
+# ===== DOCKER COMPOSE - DIGISTALL =====
+# All dependencies are bundled inside Docker images
+# No need to install packages locally - just run: docker-compose up --build
+# Team members can clone and run without installing node_modules
 
 services:
-  # Backend API Server
-  backend:
+  # Backend Web API Server (Port 5000)
+  backend-web:
     build:
-      context: ./Backend
+      context: ./Backend/Backend-Web
       dockerfile: Dockerfile
-    container_name: digistall-backend
+    container_name: digistall-backend-web
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3001
+      WEB_PORT: 5000
       # Connect to external database
-      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_HOST: ${DB_HOST:-db.cjunttcqcwlh.ap-southeast-1.rds.amazonaws.com}
       DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER:-root}
+      DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-}
-      DB_NAME: ${DB_NAME:-naga_stall}
+      DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://68.183.154.125}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://68.183.154.125,http://localhost}
+      # Upload directories (Docker-compatible paths)
+      UPLOAD_DIR_STALLS: /app/uploads/stalls
+      UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
     ports:
-      - "3001:3001"
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
     networks:
       - digistall-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+
+  # Backend Mobile API Server (Port 5001)
+  backend-mobile:
+    build:
+      context: ./Backend/Backend-Mobile
+      dockerfile: Dockerfile
+    container_name: digistall-backend-mobile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MOBILE_PORT: 5001
+      # Connect to external database
+      DB_HOST: ${DB_HOST:-db.cjunttcqcwlh.ap-southeast-1.rds.amazonaws.com}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
+      # Upload directories (Docker-compatible paths)
+      UPLOAD_DIR_STALLS: /app/uploads/stalls
+      UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - digistall-network
 
   # Frontend Web Application
   frontend-web:
@@ -44,7 +70,7 @@ services:
     container_name: digistall-frontend-web
     restart: unless-stopped
     depends_on:
-      - backend
+      - backend-web
     environment:
       VITE_API_URL: /api
     ports:

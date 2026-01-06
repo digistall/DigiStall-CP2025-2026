@@ -39,7 +39,7 @@ export const createBranch = async (req, res) => {
     
     // Get admin_id (assuming there's only one admin for now)
     const [adminResult] = await connection.execute(
-      'SELECT admin_id FROM admin WHERE status = "Active" LIMIT 1'
+      `SELECT admin_id FROM admin WHERE status = 'Active' LIMIT 1`
     );
     
     if (adminResult.length === 0) {

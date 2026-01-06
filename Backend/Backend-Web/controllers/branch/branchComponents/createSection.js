@@ -19,16 +19,16 @@ export const createSection = async (req, res) => {
   }
 
   // Authorization check based on user type
-  if (userType === "branch_manager" || userType === "branch-manager") {
-    // Branch manager authorization (existing logic)
-    const branch_manager_id = req.user?.branchManagerId || userId;
-    if (!branch_manager_id) {
+  if (userType === "business_manager") {
+    // Business manager authorization (existing logic)
+    const business_manager_id = req.user?.businessManagerId || userId;
+    if (!business_manager_id) {
       return res.status(401).json({ 
         success: false, 
-        message: "Branch manager ID not found" 
+        message: "Business manager ID not found" 
       });
     }
-  } else if (userType === "employee") {
+  } else if (userType === "business_employee") {
     // Employee authorization - check permissions
     const permissions = req.user?.permissions || [];
     const hasSectionsPermission = Array.isArray(permissions)
@@ -67,15 +67,15 @@ export const createSection = async (req, res) => {
     // Validate floor_id exists and belongs to user's branch
     let floorQuery, floorParams;
     
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager: Check floor belongs to their branch
-      const branch_manager_id = req.user?.branchManagerId || userId;
+    if (userType === "business_manager") {
+      // Business manager: Check floor belongs to their branch
+      const business_manager_id = req.user?.businessManagerId || userId;
       floorQuery = `SELECT f.* FROM floor f
                    INNER JOIN branch b ON f.branch_id = b.branch_id
-                   INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-                   WHERE f.floor_id = ? AND bm.branch_manager_id = ?`;
-      floorParams = [floor_id, branch_manager_id];
-    } else if (userType === "employee") {
+                   INNER JOIN business_manager bm ON b.branch_id = bm.branch_id
+                   WHERE f.floor_id = ? AND bm.business_manager_id = ?`;
+      floorParams = [floor_id, business_manager_id];
+    } else if (userType === "business_employee") {
       // Employee: Check floor belongs to their branch
       const branchId = req.user?.branchId;
       if (!branchId) {
@@ -98,9 +98,12 @@ export const createSection = async (req, res) => {
       });
     }
     
+    // Get branch_id from the floor
+    const branch_id = floor[0].branch_id;
+    
     const [[result]] = await connection.execute(
       "CALL createSection(?, ?, ?)",
-      [floor_id, section_name, status || 'Active']
+      [floor_id, section_name, branch_id]
     );
     
     const section_id = result.section_id;

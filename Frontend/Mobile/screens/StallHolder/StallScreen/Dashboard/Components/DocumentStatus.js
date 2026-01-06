@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#002181',
     borderRadius: 3,
   },
   documentItem: {
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   manageButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#002181',
     borderRadius: 6,
     paddingVertical: width * 0.025,
     alignItems: 'center',

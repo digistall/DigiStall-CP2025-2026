@@ -19,7 +19,7 @@ const AUTH_ENDPOINTS = {
 
 // Token storage keys
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'accessToken',
+  ACCESS_TOKEN: 'authToken',  // Changed from 'accessToken' to 'authToken' for consistency
   USER_DATA: 'userData',
   TOKEN_EXPIRY: 'tokenExpiry'
 };
@@ -97,11 +97,29 @@ class AuthService {
    */
   async logout() {
     try {
-      // Call logout endpoint to revoke refresh token
-      await axios.post(AUTH_ENDPOINTS.LOGOUT, {}, {
+      // Get user info from storage for the API call
+      const storedUser = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+      const userType = localStorage.getItem('userType') || sessionStorage.getItem('userType');
+      let userId = null;
+      
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          userId = userData.id || userData.userId || userData.employeeId || userData.managerId || userData.adminId;
+        } catch (e) {
+          console.warn('Could not parse user data for logout');
+        }
+      }
+      
+      // Call logout endpoint to revoke refresh token and update last_logout
+      await axios.post(AUTH_ENDPOINTS.LOGOUT, {
+        userId: userId,
+        userType: userType
+      }, {
         withCredentials: true,
         headers: this.getAuthHeaders()
       });
+      console.log('✅ Logout API called - last_logout updated');
     } catch (error) {
       console.error('❌ Logout API error:', error);
       // Continue with local cleanup even if API fails
@@ -331,13 +349,15 @@ class AuthService {
     const user = this.getUserData();
     if (!user) return false;
     
-    // Admins and managers have all permissions
-    if (user.userType === 'admin' || user.userType === 'branch_manager') {
+    // System administrators, stall business owners, and business managers have all permissions
+    if (user.userType === 'system_administrator' || 
+        user.userType === 'stall_business_owner' || 
+        user.userType === 'business_manager') {
       return true;
     }
     
-    // Check employee permissions
-    if (user.userType === 'employee' && user.permissions) {
+    // Check business employee permissions
+    if (user.userType === 'business_employee' && user.permissions) {
       return permissions.some(permission => 
         user.permissions[permission] === true || user.permissions[permission] === 1
       );

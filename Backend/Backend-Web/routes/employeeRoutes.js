@@ -1,5 +1,6 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import {
   createEmployee,
   getAllEmployees,
@@ -10,14 +11,15 @@ import {
   loginEmployee,
   logoutEmployee,
   resetEmployeePassword,
-  getEmployeesByBranch
+  getEmployeesByBranch,
+  getActiveSessions
 } from '../controllers/employees/employeeController.js';
 
 const router = express.Router();
 
 /**
- * Employee Management Routes
- * All routes for employee CRUD operations, authentication, and management
+ * Business Employee Management Routes
+ * All routes for business employee CRUD operations, authentication, and management
  */
 
 // ========================================
@@ -26,7 +28,7 @@ const router = express.Router();
 
 /**
  * @route   POST /api/employees/login
- * @desc    Employee login with username and password
+ * @desc    Business Employee login with username and password
  * @access  Public
  * @body    { username, password }
  */
@@ -40,37 +42,44 @@ router.post('/login', loginEmployee);
 router.use(authMiddleware.authenticateToken);
 
 // ========================================
-// EMPLOYEE CRUD OPERATIONS
+// BUSINESS EMPLOYEE CRUD OPERATIONS
 // ========================================
 
 /**
  * @route   POST /api/employees
- * @desc    Create new employee with auto-generated credentials
- * @access  Manager
+ * @desc    Create new business employee with auto-generated credentials
+ * @access  Business Manager and Business Owner
  * @body    { firstName, lastName, email, phoneNumber, branchId, permissions, createdByManager }
  */
 router.post('/', createEmployee);
 
 /**
  * @route   GET /api/employees
- * @desc    Get all employees with filtering options (filtered by user's branch)
- * @access  Manager
+ * @desc    Get all business employees with filtering options (filtered by user's branch)
+ * @access  Business Manager and Business Owner
  * @query   ?status=active&search=john&page=1&limit=50&sortBy=created_at&sortOrder=DESC
  */
 router.get('/', getAllEmployees);
 
 /**
+ * @route   GET /api/employees/sessions/active
+ * @desc    Get active employee sessions for online status tracking
+ * @access  Business Manager and Business Owner
+ */
+router.get('/sessions/active', getActiveSessions);
+
+/**
  * @route   GET /api/employees/:id
- * @desc    Get employee by ID with detailed information
- * @access  Manager
+ * @desc    Get business employee by ID with detailed information
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  */
 router.get('/:id', getEmployeeById);
 
 /**
  * @route   PUT /api/employees/:id
- * @desc    Update employee information
- * @access  Manager
+ * @desc    Update business employee information
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  * @body    { firstName, lastName, email, phoneNumber, permissions, status, updatedBy }
  */
@@ -78,8 +87,8 @@ router.put('/:id', updateEmployee);
 
 /**
  * @route   PUT /api/employees/:id/permissions
- * @desc    Update employee permissions
- * @access  Manager
+ * @desc    Update business employee permissions
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  * @body    { permissions }
  */
@@ -87,8 +96,8 @@ router.put('/:id/permissions', updateEmployeePermissions);
 
 /**
  * @route   DELETE /api/employees/:id
- * @desc    Delete (deactivate) employee
- * @access  Manager
+ * @desc    Delete (deactivate) business employee
+ * @access  Business Manager and Business Owner
  * @params  id - Employee ID
  * @body    { deletedBy }
  */
@@ -114,7 +123,7 @@ router.get('/branch/:branchId', getEmployeesByBranch);
 /**
  * @route   POST /api/employees/:id/reset-password
  * @desc    Reset employee password by manager
- * @access  Manager
+ * @access  Manager and Business Owner
  * @params  id - Employee ID
  * @body    { newPassword, resetBy }
  */
