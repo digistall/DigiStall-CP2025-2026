@@ -144,9 +144,13 @@ export const handleLogin = async (
       await UserStorageService.saveUserData(userData);
       
       // Save JWT token if provided
+      console.log('🔍 DEBUG - response.token value:', response.token ? 'EXISTS' : 'UNDEFINED/NULL');
       if (response.token) {
         await UserStorageService.saveAuthToken(response.token);
         console.log('🔐 Auth token saved for persistent login');
+        console.log('🔐 Token preview:', response.token.substring(0, 30) + '...');
+      } else {
+        console.log('⚠️ WARNING: No token received from backend! Token is:', response.token);
       }
       
       if (setLoadingState) {
