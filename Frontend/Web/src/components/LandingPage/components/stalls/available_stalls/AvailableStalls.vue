@@ -108,9 +108,10 @@
     <StallApplicationContainer v-if="showApplyForm" :stall="selectedStall" :showForm="showApplyForm"
       @close="closeApplyForm" />
 
-    <!-- Stall Details Modal -->
-    <transition name="modal-fade">
-      <div v-if="showStallDetails" class="modal-overlay" @click.self="closeStallDetails">
+    <!-- Stall Details Modal - Teleported to body for full-screen overlay -->
+    <Teleport to="body">
+      <transition name="modal-fade">
+        <div v-if="showStallDetails" class="modal-overlay" @click.self="closeStallDetails">
         <div class="modal-container professional">
           <!-- Close button floating -->
           <button class="close-btn-floating" @click="closeStallDetails">
@@ -250,8 +251,10 @@
         </div>
       </div>
     </transition>
+    </Teleport>
 
-    <!-- Fullscreen Image Viewer -->
+    <!-- Fullscreen Image Viewer - Teleported to body for full-screen overlay -->
+    <Teleport to="body">
     <transition name="fade">
       <div v-if="showFullscreenViewer" class="fullscreen-viewer" @click.self="closeFullscreenViewer">
         <button class="fullscreen-close" @click="closeFullscreenViewer">
@@ -300,6 +303,7 @@
         </div>
       </div>
     </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -851,3 +855,64 @@ export default {
 </script>
 
 <style scoped src="../../../../../assets/css/availablestallstyle.css"></style>
+<!-- Non-scoped styles for Teleported elements (modal-overlay and fullscreen-viewer) -->
+<style>
+/* Modal Overlay - Teleported to body, needs global styles */
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999 !important;
+  padding: 20px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Fullscreen Viewer - Teleported to body */
+.fullscreen-viewer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 9999999 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal fade transition */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+/* Fade transition for fullscreen viewer */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -340,19 +340,18 @@ export const mobileLogin = async (req, res) => {
         userType: 'stallholder',
         registrationId: userCredentials.registrationid,
         stallholderId: stallholderInfo?.stallholder_id || null,
-        isStallholder: !!stallholderInfo,
-        branchId: stallholderInfo?.branch_id || applicationInfo?.branch_id || null
+        isStallholder: !!stallholderInfo
       },
       process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024',
-      { expiresIn: '24h' }
+      { expiresIn: '7d' } // Token valid for 7 days
     );
-
+    
     console.log('🔐 JWT token generated for user:', userCredentials.user_name);
 
     res.json({
       success: true,
       message: 'Mobile login successful',
-      token: token,
+      token: token,  // ← TOKEN NOW INCLUDED!
       data: responseData
     })
 

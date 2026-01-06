@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,9 @@ import {
   Image,
   ScrollView,
   Modal,
-  Dimensions
+  Dimensions,
+  AppState,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,6 +19,8 @@ import ApiService from '../../services/ApiService';
 import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
 
 const { width } = Dimensions.get('window');
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+const HEARTBEAT_INTERVAL = 60 * 1000; // 1 minute
 
 const CollectorHome = () => {
   const navigation = useNavigation();
@@ -24,10 +28,115 @@ const CollectorHome = () => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [activeScreen, setActiveScreen] = useState('home');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  // Activity tracking for auto-logout
+  const lastActivityRef = useRef(Date.now());
+  const heartbeatIntervalRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
+  
+  // Record user activity
+  const recordActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+  
+  // PanResponder to track touch activity
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => {
+        recordActivity();
+        return false;
+      },
+      onMoveShouldSetPanResponder: () => {
+        recordActivity();
+        return false;
+      },
+    })
+  ).current;
+  
+  // Send heartbeat to server
+  const sendHeartbeat = useCallback(async () => {
+    try {
+      const data = await UserStorageService.getUserData();
+      const token = data?.token;
+      const staffId = data?.staff?.collector_id || data?.staff?.staffId;
+      
+      if (token && staffId) {
+        await ApiService.staffHeartbeat(token, staffId, 'collector');
+      }
+    } catch (error) {
+      // Silent fail for heartbeat
+    }
+  }, []);
+  
+  // Auto-logout due to inactivity
+  const performAutoLogout = useCallback(async () => {
+    if (isLoggingOut) return;
+    
+    console.log('⏰ Auto-logout triggered due to inactivity');
+    setIsLoggingOut(true);
+    
+    try {
+      const data = await UserStorageService.getUserData();
+      const token = data?.token;
+      const staffId = data?.staff?.collector_id || data?.staff?.staffId;
+      
+      if (token && staffId) {
+        await ApiService.staffAutoLogout(token, staffId, 'collector');
+        console.log('✅ Auto-logout recorded');
+      }
+      
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Auto-logout error:', error);
+      await UserStorageService.clearUserData();
+    } finally {
+      setIsLoggingOut(false);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LoginScreen', params: { reason: 'inactivity' } }],
+      });
+    }
+  }, [isLoggingOut, navigation]);
 
   useEffect(() => {
     loadUserData();
-  }, []);
+    
+    // Send initial heartbeat
+    sendHeartbeat();
+    
+    // Set up heartbeat interval (check every minute)
+    heartbeatIntervalRef.current = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityRef.current;
+      
+      if (timeSinceActivity < INACTIVITY_TIMEOUT) {
+        sendHeartbeat();
+      } else {
+        console.log('⏰ Inactivity detected:', Math.round(timeSinceActivity / 1000), 'seconds');
+        performAutoLogout();
+      }
+    }, HEARTBEAT_INTERVAL);
+    
+    // Handle app state changes
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        const timeSinceActivity = Date.now() - lastActivityRef.current;
+        if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+          performAutoLogout();
+        } else {
+          recordActivity();
+          sendHeartbeat();
+        }
+      }
+      appStateRef.current = nextAppState;
+    });
+    
+    return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
+      appStateSubscription.remove();
+    };
+  }, [sendHeartbeat, performAutoLogout, recordActivity]);
 
   const loadUserData = async () => {
     try {
@@ -254,10 +363,10 @@ const CollectorHome = () => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setSidebarVisible(true)}>
+          <TouchableOpacity onPress={() => { setSidebarVisible(true); recordActivity(); }}>
             <Ionicons name="menu" size={28} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>

@@ -56,7 +56,6 @@ export default {
           name: 'Stallholders',
           route: '/app/stallholders',
         },
-        collectors: { id: 8, icon: 'mdi-account-cash', name: 'Collectors', route: '/app/collectors' },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
       },
       // Define all possible menu routes including "more items" (6-10) and submenu items (91-92)
@@ -70,8 +69,6 @@ export default {
         7: '/app/vendors', // Vendors
         8: '/app/stallholders', // Stallholders
         9: '/app/stalls', // Stalls
-        10: '/app/collectors', // Collectors
-        11: '/app/inspectors', // Inspectors
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
         // Submenu items for Stalls
@@ -152,12 +149,10 @@ export default {
         if (hasPermission('stallholders')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.stallholders, id: menuId++ })
         }
-        if (hasPermission('collectors')) {
-          this.menuItems.push({ ...this.businessEmployeeMenuItems.collectors, id: menuId++ })
-        }
         // NOTE: Stalls menu is handled separately in AppSidebar.vue for business employees
         // because it needs special submenu handling (Raffles/Auctions)
         // Do NOT add stalls to menuItems here for business employees
+        // NOTE: Collectors and Inspectors are now managed through Employee Management page
 
         // If no permissions, show only dashboard
         if (this.menuItems.length === 0) {
@@ -222,11 +217,11 @@ export default {
     async handleLogoutConfirm() {
       console.log('Logout confirmed - starting logout process')
       
-      // Start the logout process
+      // Start the logout process - show loading in dialog first
       this.isLoggingOut = true
       
-      // Small delay to show loading state in the dialog
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Small delay to show loading state in the dialog button
+      await new Promise(resolve => setTimeout(resolve, 300))
       
       // Close the confirmation dialog
       this.showLogoutConfirm = false
@@ -236,24 +231,19 @@ export default {
         const authStore = useAuthStore()
         await authStore.logout()
         
-        // Small delay to show the loading screen animation
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // Wait a moment to show the loading screen
+        await new Promise(resolve => setTimeout(resolve, 2500))
         
-        // Redirect to login page
-        this.$router.push('/').catch(() => {
-          window.location.href = '/'
-        })
+        // Navigate to landing page
+        console.log('Navigating to landing page...')
+        this.$router.push('/')
       } catch (error) {
         console.error('Logout error:', error)
-        // Still redirect even on error
-        this.$router.push('/').catch(() => {
-          window.location.href = '/'
-        })
+        // Navigate to landing page anyway
+        this.$router.push('/')
       } finally {
-        // Hide loading screen (in case redirect doesn't happen immediately)
-        setTimeout(() => {
-          this.isLoggingOut = false
-        }, 500)
+        // Reset loading state
+        this.isLoggingOut = false
       }
     },
 

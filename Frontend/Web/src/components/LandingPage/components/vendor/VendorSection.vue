@@ -434,12 +434,12 @@ export default {
 
 @media (max-width: 768px) {
   .vendor-section {
-    padding: 80px 20px;
+    padding: 60px 16px;
   }
   
   .content-wrapper {
     grid-template-columns: 1fr;
-    gap: 50px;
+    gap: 40px;
     text-align: center;
   }
   
@@ -451,6 +451,8 @@ export default {
   .section-badge {
     margin-left: auto;
     margin-right: auto;
+    font-size: 12px;
+    padding: 10px 16px;
   }
   
   .illustration-wrapper {
@@ -458,11 +460,14 @@ export default {
   }
   
   .main-title, .sub-title {
-    font-size: 2.8rem;
+    font-size: 2rem;
+    line-height: 1.2;
   }
   
   .description {
     max-width: 100%;
+    font-size: 0.9rem;
+    padding: 0 10px;
   }
   
   .feature-list {
@@ -470,58 +475,128 @@ export default {
   }
   
   .feature-item {
-    max-width: 400px;
+    max-width: 350px;
     width: 100%;
   }
   
   .apply-btn {
-    padding: 16px 32px;
+    padding: 14px 28px;
   }
   
   .vendor-image {
-    max-width: 380px;
+    max-width: 320px;
   }
 
   .image-container::before {
-    min-width: 400px;
-    min-height: 400px;
+    min-width: 350px;
+    min-height: 350px;
   }
 }
 
 @media (max-width: 480px) {
   .vendor-section {
-    padding: 60px 16px;
+    padding: 50px 14px;
+  }
+  
+  .section-badge {
+    font-size: 11px;
+    padding: 8px 14px;
+    gap: 6px;
+  }
+
+  .section-badge i {
+    font-size: 16px;
   }
   
   .main-title, .sub-title {
-    font-size: 2.2rem;
+    font-size: 1.6rem;
+    line-height: 1.2;
   }
   
   .description {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
   }
   
   .feature-item {
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
   
   .feature-icon {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .feature-icon i {
+    font-size: 18px;
+  }
+
+  .feature-text strong {
+    font-size: 0.9rem;
+  }
+
+  .feature-text span {
+    font-size: 0.75rem;
   }
   
   .apply-btn {
-    padding: 14px 28px;
-    font-size: 14px;
+    padding: 12px 24px;
+    font-size: 13px;
   }
   
   .vendor-image {
-    max-width: 300px;
+    max-width: 260px;
   }
 
   .image-container::before {
-    min-width: 320px;
-    min-height: 320px;
+    min-width: 280px;
+    min-height: 280px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 360px) {
+  .vendor-section {
+    padding: 40px 12px;
+  }
+
+  .main-title, .sub-title {
+    font-size: 1.4rem;
+  }
+
+  .description {
+    font-size: 0.8rem;
+  }
+
+  .feature-item {
+    padding: 10px 12px;
+  }
+
+  .feature-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .feature-text strong {
+    font-size: 0.85rem;
+  }
+
+  .feature-text span {
+    font-size: 0.7rem;
+  }
+
+  .apply-btn {
+    padding: 10px 20px;
+    font-size: 12px;
+  }
+
+  .vendor-image {
+    max-width: 220px;
+  }
+
+  .image-container::before {
+    min-width: 240px;
+    min-height: 240px;
   }
 }
 </style>

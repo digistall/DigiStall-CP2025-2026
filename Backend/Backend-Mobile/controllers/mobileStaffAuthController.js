@@ -414,7 +414,123 @@ export const mobileStaffLogout = async (req, res) => {
     }
 };
 
+// ===== MOBILE STAFF HEARTBEAT =====
+// Updates last_login to keep staff marked as "online"
+export const mobileStaffHeartbeat = async (req, res) => {
+    let connection;
+    
+    try {
+        const staffId = req.user?.staffId || req.user?.userId || req.body?.staffId;
+        const staffType = req.user?.staffType || req.user?.userType || req.body?.staffType;
+        
+        if (!staffId || !staffType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing staffId or staffType'
+            });
+        }
+        
+        connection = await createConnection();
+        const philippineTime = getPhilippineTime();
+        
+        // Set session timezone to Philippine time
+        await connection.execute(`SET time_zone = '+08:00'`);
+        
+        // Update last_login using NOW() with correct timezone
+        if (staffType === 'inspector') {
+            await connection.execute(`UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`, [staffId]);
+        } else if (staffType === 'collector') {
+            await connection.execute(`UPDATE collector SET last_login = NOW() WHERE collector_id = ?`, [staffId]);
+        }
+        
+        // Update staff session last_activity
+        await connection.execute(
+            `UPDATE staff_session SET last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+            [staffId, staffType]
+        );
+        
+        console.log(`💓 Mobile heartbeat received from ${staffType} ${staffId}`);
+        
+        res.json({
+            success: true,
+            message: 'Heartbeat recorded',
+            timestamp: philippineTime
+        });
+        
+    } catch (error) {
+        console.error('❌ Mobile staff heartbeat error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error recording heartbeat',
+            error: error.message
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
+// ===== MOBILE STAFF AUTO-LOGOUT =====
+// Handles automatic logout due to inactivity
+export const mobileStaffAutoLogout = async (req, res) => {
+    let connection;
+    
+    try {
+        const staffId = req.user?.staffId || req.user?.userId || req.body?.staffId;
+        const staffType = req.user?.staffType || req.user?.userType || req.body?.staffType;
+        const ipAddress = req.ip || req.connection?.remoteAddress;
+        const userAgent = req.get('User-Agent');
+        
+        console.log('='.repeat(60));
+        console.log('⏰ MOBILE STAFF AUTO-LOGOUT REQUEST');
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.log('⏰ staffId:', staffId, 'staffType:', staffType);
+        console.log('='.repeat(60));
+        
+        if (!staffId || !staffType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing staffId or staffType'
+            });
+        }
+        
+        connection = await createConnection();
+        const philippineTime = getPhilippineTime();
+        
+        // Set session timezone to Philippine time
+        await connection.execute(`SET time_zone = '+08:00'`);
+        
+        // Use stored procedures for auto-logout
+        if (staffType === 'inspector') {
+            await connection.execute('CALL sp_autoLogoutInspector(?, ?, ?, ?)', 
+                [staffId, philippineTime, ipAddress, userAgent]);
+            console.log(`✅ Auto-logout recorded for inspector ${staffId}`);
+        } else if (staffType === 'collector') {
+            await connection.execute('CALL sp_autoLogoutCollector(?, ?, ?, ?)', 
+                [staffId, philippineTime, ipAddress, userAgent]);
+            console.log(`✅ Auto-logout recorded for collector ${staffId}`);
+        }
+        
+        res.json({
+            success: true,
+            message: 'Auto-logout recorded successfully',
+            timestamp: philippineTime
+        });
+        
+    } catch (error) {
+        console.error('❌ Mobile staff auto-logout error:', error);
+        // Still return success (auto-logout should always "succeed" from user perspective)
+        res.json({
+            success: true,
+            message: 'Auto-logout processed'
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+};
+
 export default {
     mobileStaffLogin,
-    mobileStaffLogout
+    mobileStaffLogout,
+    mobileStaffHeartbeat,
+    mobileStaffAutoLogout
 };
