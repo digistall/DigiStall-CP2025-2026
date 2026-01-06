@@ -18,7 +18,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import API Service
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import DocumentUploadHelper from '../../../../services/DocumentUploadHelper';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 const { width, height } = Dimensions.get("window");
 
@@ -34,6 +36,13 @@ const DocumentsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [token, setToken] = useState(null);
+  
+  // Document preview modal state
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [documentBlobData, setDocumentBlobData] = useState({});
 
   useEffect(() => {
     loadUserData();
@@ -52,7 +61,8 @@ const DocumentsScreen = () => {
 
   const loadUserData = async () => {
     try {
-      const userToken = await AsyncStorage.getItem('userToken');
+      // Get token from UserStorageService using correct key 'auth_token'
+      const userToken = await UserStorageService.getAuthToken();
       const storedUserData = await UserStorageService.getUserData();
       
       console.log('📱 Documents - Loaded user data:', JSON.stringify(storedUserData, null, 2));
@@ -186,7 +196,7 @@ const DocumentsScreen = () => {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -211,7 +221,7 @@ const DocumentsScreen = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -246,17 +256,30 @@ const DocumentsScreen = () => {
     try {
       setUploading(true);
 
-      const documentData = {
-        stallholder_id: stallholderId,
-        document_type_id: documentTypeId,
-        file: {
-          uri: file.uri,
-          type: file.type || file.mimeType || 'image/jpeg',
-          name: file.name || file.fileName || `document_${Date.now()}.jpg`,
-        }
-      };
+      // Note: Token is optional for document uploads (backend endpoint is public)
+      // We'll still try to get the token for future-proofing when auth is added
+      let currentToken = token;
+      if (!currentToken) {
+        currentToken = await UserStorageService.getAuthToken();
+        console.log('📌 Token retrieved from storage:', !!currentToken);
+      }
 
-      const response = await ApiService.uploadStallholderDocument(documentData, token);
+      // Continue without token - backend upload endpoint is currently public
+      if (!currentToken) {
+        console.log('⚠️ No token available, proceeding with upload anyway (endpoint is public)');
+      }
+
+      // Use BLOB upload helper
+      const uploadPayload = await DocumentUploadHelper.prepareDocumentForUpload(
+        file,
+        stallholderId,
+        documentTypeId
+      );
+
+      console.log('📤 Upload payload prepared, stallholder_id:', stallholderId, 'document_type_id:', documentTypeId);
+
+      // Upload to backend BLOB (token is optional for this endpoint)
+      const response = await ApiService.uploadStallholderDocumentBlob(uploadPayload, currentToken);
       
       if (response.success) {
         Alert.alert(
@@ -268,7 +291,7 @@ const DocumentsScreen = () => {
         Alert.alert('Upload Failed', response.message || 'Failed to upload');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to upload document');
+      Alert.alert('Error', error.message || 'Failed to upload document');
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
@@ -292,6 +315,90 @@ const DocumentsScreen = () => {
       case 'rejected': return '✗';
       case 'expired': return '⚠';
       default: return '○';
+    }
+  };
+
+  // Document preview modal handlers
+  const openDocumentPreview = async (document, documentTypeId) => {
+    try {
+      console.log('📄 Opening document preview:', JSON.stringify(document, null, 2));
+      
+      setSelectedDocument(document);
+      setSelectedDocumentId(documentTypeId);
+      setPreviewModalVisible(true);
+      setPreviewLoading(true);
+
+      // Set initial document data from the list (includes metadata)
+      setDocumentBlobData({
+        ...document,
+        file_name: document.file_name || document.original_filename || document.document_name || 'Document',
+        mime_type: document.mime_type || 'image/jpeg',
+      });
+
+      // Fetch document BLOB data if document_id exists
+      const docId = document.document_id || document.id;
+      if (docId) {
+        console.log('📥 Fetching document BLOB:', docId);
+        const response = await ApiService.getStallholderDocumentBlobById(docId);
+        
+        if (response.success) {
+          setDocumentBlobData({
+            ...document,
+            document_data: response.data, // Contains data:image/...;base64,...
+            mime_type: response.mimeType || document.mime_type || 'image/jpeg',
+            file_name: document.file_name || document.original_filename || document.document_name || 'Document',
+          });
+          console.log('✅ Document BLOB loaded successfully');
+        } else {
+          console.log('⚠️ BLOB fetch returned:', response.message);
+        }
+      } else {
+        console.log('⚠️ No document_id found in document object');
+      }
+    } catch (error) {
+      console.error('❌ Error loading document preview:', error);
+      Alert.alert('Error', 'Failed to load document');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closeDocumentPreview = () => {
+    setPreviewModalVisible(false);
+    setSelectedDocument(null);
+    setSelectedDocumentId(null);
+    setDocumentBlobData({});
+  };
+
+  const deleteDocument = async () => {
+    try {
+      if (!selectedDocument?.document_id) {
+        Alert.alert('Error', 'Document ID not found');
+        return;
+      }
+
+      const response = await ApiService.deleteStallholderDocument(
+        selectedDocument.document_id
+      );
+
+      if (response.success) {
+        Alert.alert('Success', 'Document deleted successfully');
+        closeDocumentPreview();
+        await loadStallholderDocuments();
+      } else {
+        Alert.alert('Error', response.message || 'Failed to delete document');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting document:', error);
+      Alert.alert('Error', 'Failed to delete document');
+    }
+  };
+
+  const replaceDocument = () => {
+    if (selectedDocumentId) {
+      closeDocumentPreview();
+      handleUpload(selectedDocumentId, selectedDocument?.document_name || 'Document', 
+                   selectedDocument?.stallholder_id || userData?.user?.id);
     }
   };
 
@@ -330,7 +437,7 @@ const DocumentsScreen = () => {
     );
   };
 
-  // Render document card
+  // Render document card with image preview
   const renderDocumentCard = (doc, index, stallholderId) => (
     <View key={doc.document_type_id} style={[styles.documentCard, { backgroundColor: theme.colors.card }]}>
       <View style={styles.documentHeader}>
@@ -365,6 +472,26 @@ const DocumentsScreen = () => {
 
       {doc.instructions && (
         <Text style={[styles.instructions, { color: theme.colors.textSecondary }]}>{doc.instructions}</Text>
+      )}
+
+      {/* Image Preview */}
+      {doc.status !== 'not_uploaded' && doc.blob_url && (
+        <TouchableOpacity
+          style={[styles.imagePreviewContainer, { backgroundColor: isDark ? theme.colors.surface : '#f1f5f9' }]}
+          onPress={() => openDocumentPreview(doc, doc.document_type_id)}
+        >
+          <Image
+            source={{ uri: doc.blob_url }}
+            style={styles.imagePreview}
+            onError={(error) => {
+              console.error('❌ Error loading image preview:', error);
+            }}
+          />
+          <View style={styles.previewOverlay}>
+            <Text style={styles.previewIcon}>🔍</Text>
+            <Text style={styles.previewText}>View</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       {doc.status !== 'not_uploaded' && (
@@ -405,9 +532,20 @@ const DocumentsScreen = () => {
         disabled={uploading}
       >
         <Text style={styles.uploadButtonText}>
-          {doc.status === 'not_uploaded' ? '📤 Upload' : '🔄 Replace'}
+          {doc.status === 'not_uploaded' ? 'Upload' : 'Replace'}
         </Text>
       </TouchableOpacity>
+
+      {doc.status !== 'not_uploaded' && (
+        <TouchableOpacity
+          style={styles.viewDetailsButton}
+          onPress={() => openDocumentPreview(doc, doc.document_type_id)}
+        >
+          <Text style={[styles.viewDetailsText, { color: theme.colors.primary }]}>
+            View Details
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -504,6 +642,16 @@ const DocumentsScreen = () => {
           <Text style={styles.uploadingText}>Uploading...</Text>
         </View>
       )}
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        visible={previewModalVisible}
+        onClose={closeDocumentPreview}
+        document={documentBlobData}
+        onDelete={deleteDocument}
+        onReplace={replaceDocument}
+        isLoading={previewLoading}
+      />
 
       {branchTabs.length === 0 ? (
         renderEmptyState()
@@ -876,6 +1024,52 @@ const styles = StyleSheet.create({
     fontSize: width * 0.038,
     fontWeight: "600",
     color: "#ffffff",
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: '#f1f5f9',
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewIcon: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  previewText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  viewDetailsButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#305CDE',
+  },
+  viewDetailsText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

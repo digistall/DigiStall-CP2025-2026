@@ -122,15 +122,23 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
             description: req.document_description,
             is_required: req.is_required,
             instructions: req.instructions,
-            // Upload status
+            // Upload status and document details
             status: uploadedDoc ? uploadedDoc.verification_status : 'not_uploaded',
+            document_id: uploadedDoc?.document_id || null,
             upload_date: uploadedDoc?.upload_date || null,
             file_path: uploadedDoc?.file_path || null,
             original_filename: uploadedDoc?.original_filename || null,
+            file_name: uploadedDoc?.original_filename || null,
+            mime_type: uploadedDoc?.mime_type || null,
+            file_size: uploadedDoc?.file_size || null,
             expiry_date: uploadedDoc?.expiry_date || null,
             days_until_expiry: uploadedDoc?.days_until_expiry || null,
             rejection_reason: uploadedDoc?.rejection_reason || null,
-            verified_at: uploadedDoc?.verified_at || null
+            verified_at: uploadedDoc?.verified_at || null,
+            // Add blob_url for image preview
+            blob_url: uploadedDoc?.document_id 
+              ? `http://68.183.154.125:5001/api/mobile/stallholder/documents/blob/id/${uploadedDoc.document_id}`
+              : null
           };
         });
       }

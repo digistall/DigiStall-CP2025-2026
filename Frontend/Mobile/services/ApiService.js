@@ -41,6 +41,10 @@ class ApiService {
 
       console.log('📡 Response status:', response.status);
       const data = await response.json();
+      
+      // DEBUG: Log the FULL response to see if token is there
+      console.log('🔍 FULL API RESPONSE:', JSON.stringify(data, null, 2));
+      console.log('🔐 Token in response:', data.token ? 'YES (' + data.token.substring(0, 20) + '...)' : 'NO TOKEN!');
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
@@ -966,6 +970,232 @@ class ApiService {
       };
     } catch (error) {
       console.error('❌ Upload Stallholder Document API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // ===== STALLHOLDER DOCUMENT BLOB METHODS =====
+
+  /**
+   * Upload stallholder document as BLOB (base64) to database
+   * @param {object} documentData - Document data with base64
+   * @param {number} documentData.stallholder_id
+   * @param {number} documentData.document_type_id
+   * @param {string} documentData.document_data - Base64 data with data:mime/type;base64, prefix
+   * @param {string} documentData.mime_type
+   * @param {string} documentData.file_name
+   * @param {string} documentData.expiry_date - Optional
+   * @param {string} documentData.notes - Optional
+   * @param {string} authToken - Optional token (if not provided, will try to retrieve from storage)
+   */
+  static async uploadStallholderDocumentBlob(documentData, authToken = null) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      // Use provided token or try to get from storage (token is optional for this endpoint)
+      let token = authToken;
+      if (!token) {
+        token = await UserStorageService.getAuthToken();
+      }
+
+      // Token is optional - backend endpoint is public
+      // Just log a warning but continue with the upload
+      if (!token) {
+        console.log('⚠️ No authentication token available - proceeding without auth (endpoint is public)');
+      } else {
+        console.log('🔐 Using token:', token.substring(0, 20) + '...');
+      }
+
+      console.log('📤 Uploading stallholder document BLOB...');
+      console.log('� Payload:', {
+        stallholder_id: documentData.stallholder_id,
+        document_type_id: documentData.document_type_id,
+        file_name: documentData.file_name,
+        mime_type: documentData.mime_type,
+        file_size: documentData.file_size,
+        has_document_data: !!documentData.document_data
+      });
+
+      // Build headers - include auth token only if available
+      const headers = {
+        ...API_CONFIG.HEADERS,
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/upload`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(documentData),
+      });
+
+      const data = await response.json();
+      console.log('📡 Upload response:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload document');
+      }
+
+      console.log('✅ Document BLOB uploaded successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Upload Stallholder Document BLOB API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get stallholder document BLOB by document ID
+   * @param {number} documentId
+   * @returns {Promise} - Base64 image data
+   */
+  static async getStallholderDocumentBlobById(documentId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      console.log(`📥 Fetching document BLOB ${documentId}...`);
+
+      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/id/${documentId}`, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
+
+      // Get the blob data
+      const blob = await response.blob();
+      
+      // Convert blob to base64
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          console.log('✅ Document BLOB retrieved successfully');
+          resolve({
+            success: true,
+            data: reader.result, // This will be the data:image/...;base64,... string
+            mimeType: response.headers.get('content-type'),
+          });
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('❌ Get Stallholder Document BLOB API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get all documents for a stallholder
+   * @param {number} stallholderId
+   * @param {boolean} includeData - Include base64 data
+   */
+  static async getStallholderDocuments(stallholderId, includeData = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const url = `${server}/api/mobile/stallholder/${stallholderId}/documents/blob${
+        includeData ? '?include_data=true' : ''
+      }`;
+      
+      console.log('📥 Fetching all documents for stallholder:', stallholderId);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch documents');
+      }
+
+      console.log('✅ Documents retrieved successfully');
+      return {
+        success: true,
+        data: data.data,
+        total: data.total,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Stallholder Documents API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Delete a stallholder document
+   * @param {number} documentId
+   */
+  static async deleteStallholderDocument(documentId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      console.log(`🗑️ Deleting document ${documentId}...`);
+
+      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete document');
+      }
+
+      console.log('✅ Document deleted successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Delete Stallholder Document API Error:', error);
       return {
         success: false,
         message: error.message || 'Network error occurred'
