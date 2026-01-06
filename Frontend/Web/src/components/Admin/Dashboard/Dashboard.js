@@ -733,6 +733,8 @@ export default {
               )
               // Use session OR last_login/last_logout logic
               const isOnline = hasActiveStaffSession || checkIsOnline(lastLogin, lastLogout)
+              // For lastActivity: show last_logout if offline, last_login if online
+              const lastActivityTime = isOnline ? lastLogin : (lastLogout || lastLogin)
               return {
                 id: col.collector_id,
                 name: `${col.first_name || ''} ${col.last_name || ''}`.trim() || 'Unknown',
@@ -741,7 +743,7 @@ export default {
                 status: 'Active',
                 type: 'collector',
                 isOnline: isOnline,
-                lastActivity: lastLogin ? this.formatRelativeTime(lastLogin) : 'Never'
+                lastActivity: lastActivityTime ? this.formatRelativeTime(lastActivityTime) : 'Never'
               }
             })]
             
@@ -775,6 +777,8 @@ export default {
               )
               // Use session OR last_login/last_logout logic
               const isOnline = hasActiveStaffSession || checkIsOnline(lastLogin, lastLogout)
+              // For lastActivity: show last_logout if offline, last_login if online
+              const lastActivityTime = isOnline ? lastLogin : (lastLogout || lastLogin)
               return {
                 id: ins.inspector_id,
                 name: `${ins.first_name || ''} ${ins.last_name || ''}`.trim() || 'Unknown',
@@ -783,7 +787,7 @@ export default {
                 status: 'Active',
                 type: 'inspector',
                 isOnline: isOnline,
-                lastActivity: lastLogin ? this.formatRelativeTime(lastLogin) : 'Never'
+                lastActivity: lastActivityTime ? this.formatRelativeTime(lastActivityTime) : 'Never'
               }
             })]
           }
