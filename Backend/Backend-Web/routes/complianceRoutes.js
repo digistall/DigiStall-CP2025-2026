@@ -36,6 +36,13 @@ router.get('/statistics', complianceController.getComplianceStatistics);
 router.get('/', complianceController.getAllComplianceRecords);
 
 /**
+ * @route   GET /api/compliances/:id/evidence/image
+ * @desc    Serve evidence image as binary (can be used directly as img src)
+ * @access  Protected - Requires authentication and compliance permission
+ */
+router.get('/:id/evidence/image', complianceController.getComplianceEvidenceImage);
+
+/**
  * @route   GET /api/compliances/:id
  * @desc    Get single compliance record by ID
  * @access  Protected - Requires authentication and compliance permission

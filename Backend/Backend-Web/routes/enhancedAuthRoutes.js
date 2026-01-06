@@ -1,6 +1,6 @@
 // ===== ENHANCED AUTHENTICATION ROUTES =====
 // Complete JWT authentication with refresh tokens
-// Routes: /login, /logout, /refresh, /verify-token, /me
+// Routes: /login, /logout, /refresh, /verify-token, /me, /auto-logout
 
 import express from 'express';
 import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
@@ -9,7 +9,9 @@ import {
   refreshToken,
   logout,
   verifyToken,
-  getCurrentUser
+  getCurrentUser,
+  autoLogout,
+  heartbeat
 } from '../controllers/auth/enhancedAuthController.js';
 
 // Legacy authentication (for backward compatibility)
@@ -39,6 +41,8 @@ router.get('/test-db', testDb);                        // GET /api/auth/test-db 
 router.use(enhancedAuthMiddleware.authenticateToken);   // Apply auth middleware to routes below
 
 router.post('/logout', logout);                         // POST /api/auth/logout - Logout and revoke tokens
+router.post('/auto-logout', autoLogout);                // POST /api/auth/auto-logout - Auto-logout due to inactivity
+router.post('/heartbeat', heartbeat);                   // POST /api/auth/heartbeat - Keep user marked as online
 router.get('/me', getCurrentUser);                      // GET /api/auth/me - Get current user info
 
 // ===== LEGACY ENDPOINTS (Backward Compatibility) =====
