@@ -302,11 +302,13 @@ class ApiService {
   }
 
   // Staff (Inspector/Collector) auto-logout due to inactivity
+  // Uses the same endpoint as manual logout since staff-auto-logout may not be deployed
   static async staffAutoLogout(token, staffId, staffType) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
-      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_AUTO_LOGOUT}`, {
+      // Use the working staff-logout endpoint (same functionality)
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGOUT}`, {
         method: 'POST',
         headers: {
           ...API_CONFIG.HEADERS,
@@ -315,12 +317,17 @@ class ApiService {
         body: JSON.stringify({
           staffId: staffId,
           staffType: staffType,
-          reason: 'inactivity'
+          reason: 'inactivity' // Include reason for logging purposes
         })
       });
 
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.message || 'Auto-logout failed');
+      }
+
+      console.log('✅ Staff auto-logout API called - last_logout updated');
       return {
         success: true,
         data: data,
