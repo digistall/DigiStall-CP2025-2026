@@ -283,10 +283,11 @@ export default {
           
           // Transform stalls for overview table (limit to 6)
           this.stallOverview = stalls.slice(0, 6).map((stall, index) => {
-            // Get last payment date from payments map if available
-            const lastPaymentDate = stall.stallholder_id 
+            // Use last_payment_date from stored procedure (only rental payments)
+            // Fall back to lastPaymentsByStallholder only if not available from stored procedure
+            const lastPaymentDate = stall.last_payment_date || (stall.stallholder_id 
               ? this.lastPaymentsByStallholder[stall.stallholder_id] 
-              : null
+              : null)
             
             return {
               id: stall.stall_id || index + 1,
@@ -307,24 +308,70 @@ export default {
     },
     
     // Get display status for stall
+    // Status logic: 
+    // - 'Active' = Stall is occupied AND stallholder has paid monthly rental within 30 days
+    // - 'Overdue' = Stall is occupied BUT stallholder has NOT paid monthly rental (only penalty or no payment)
+    // - 'Vacant' = No active stallholder
+    // - 'Maintenance' = Stall unavailable
     getStallDisplayStatus(stall) {
       // First check availability_status from stored procedure (most reliable)
       if (stall.availability_status) {
         const avail = stall.availability_status.toLowerCase()
         if (avail === 'occupied') return 'Active'
+        if (avail === 'overdue') return 'Overdue' // Stallholder hasn't paid rental
         if (avail === 'available') return 'Vacant'
         if (avail === 'unavailable') return 'Maintenance'
       }
-      // Fallback to status field
+      
+      // Check rental_paid_current_month flag if available (from updated stored procedure)
+      if (stall.stallholder_id && stall.rental_paid_current_month !== undefined) {
+        return stall.rental_paid_current_month ? 'Active' : 'Overdue'
+      }
+      
+      // If stallholder exists, check if there's a valid last_payment_date
+      if (stall.stallholder_id) {
+        // Check if last_payment_date exists and is within 30 days
+        if (stall.last_payment_date) {
+          const lastPayment = new Date(stall.last_payment_date)
+          const today = new Date()
+          const daysSincePayment = Math.floor((today - lastPayment) / (1000 * 60 * 60 * 24))
+          if (daysSincePayment <= 30) {
+            return 'Active'
+          } else {
+            return 'Overdue'
+          }
+        }
+        
+        // No payment record - check contract start date
+        if (stall.contract_start_date) {
+          const contractStart = new Date(stall.contract_start_date)
+          const today = new Date()
+          const daysSinceContract = Math.floor((today - contractStart) / (1000 * 60 * 60 * 24))
+          // Grace period: If contract started within 30 days and no payment yet, still Active
+          if (daysSinceContract <= 30) {
+            return 'Active'
+          } else {
+            // Contract started more than 30 days ago, no payment = Overdue
+            return 'Overdue'
+          }
+        }
+        
+        // Stallholder exists but no payment and no contract date = Overdue
+        return 'Overdue'
+      }
+      
+      // Fallback to status field for stalls without stallholder
       if (stall.status) {
         const status = stall.status.toLowerCase()
         if (status === 'occupied') return 'Active'
-        if (status === 'active') return stall.stallholder_id ? 'Active' : 'Vacant'
+        if (status === 'overdue') return 'Overdue'
+        if (status === 'active') return 'Vacant' // No stallholder but status says active = Vacant
         if (status === 'vacant' || status === 'available') return 'Vacant'
         if (status === 'maintenance' || status === 'inactive') return 'Maintenance'
-        if (status === 'overdue') return 'Overdue'
       }
-      return stall.stallholder_id ? 'Active' : 'Vacant'
+      
+      // No stallholder = Vacant
+      return 'Vacant'
     },
     
     // Fetch stallholders data - stallholders count is calculated from stalls data
