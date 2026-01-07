@@ -10,7 +10,18 @@ export const getPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    console.log('🔐 User data from token:', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    // If stallholderId is null but we have applicantId, try to look up stallholder_id from database
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.',
+        data: []
+      });
+    }
     
     const { page = 1, limit = 10 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -18,6 +29,18 @@ export const getPaymentRecords = async (req, res) => {
     console.log('📋 Fetching payment records for stallholder:', stallholderId);
     
     connection = await createConnection();
+    
+    // If we only have applicantId, try to get stallholder_id from stallholder table
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderRows] = await connection.execute(
+        'SELECT stallholder_id FROM stallholder WHERE applicant_id = ? LIMIT 1',
+        [userData.applicantId]
+      );
+      if (stallholderRows.length > 0) {
+        stallholderId = stallholderRows[0].stallholder_id;
+        console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
     
     // Get total count of payments
     const [countResult] = await connection.execute(
@@ -113,11 +136,33 @@ export const getAllPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    console.log('🔐 User data from token (getAllPaymentRecords):', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.',
+        data: []
+      });
+    }
     
     console.log('📋 Fetching ALL payment records for stallholder:', stallholderId);
     
     connection = await createConnection();
+    
+    // If we only have applicantId, try to get stallholder_id from stallholder table
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderRows] = await connection.execute(
+        'SELECT stallholder_id FROM stallholder WHERE applicant_id = ? LIMIT 1',
+        [userData.applicantId]
+      );
+      if (stallholderRows.length > 0) {
+        stallholderId = stallholderRows[0].stallholder_id;
+        console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
     
     // Get all payment records
     const [payments] = await connection.execute(
@@ -200,11 +245,32 @@ export const getPaymentSummary = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    console.log('🔐 User data from token (getPaymentSummary):', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.'
+      });
+    }
     
     console.log('📊 Fetching payment summary for stallholder:', stallholderId);
     
     connection = await createConnection();
+    
+    // If we only have applicantId, try to get stallholder_id from stallholder table
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderRows] = await connection.execute(
+        'SELECT stallholder_id FROM stallholder WHERE applicant_id = ? LIMIT 1',
+        [userData.applicantId]
+      );
+      if (stallholderRows.length > 0) {
+        stallholderId = stallholderRows[0].stallholder_id;
+        console.log('📊 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
     
     // Get payment summary statistics
     const [summary] = await connection.execute(
