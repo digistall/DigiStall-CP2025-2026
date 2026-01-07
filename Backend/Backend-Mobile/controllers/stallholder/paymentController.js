@@ -24,9 +24,11 @@ export const getPaymentRecords = async (req, res) => {
     }
     
     const { page = 1, limit = 10 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 10)); // Sanitize limit (1-100)
+    const pageInt = Math.max(1, parseInt(page) || 1); // Sanitize page (min 1)
+    const offsetInt = (pageInt - 1) * limitInt;
     
-    console.log('📋 Fetching payment records for stallholder:', stallholderId);
+    console.log('📋 Fetching payment records for stallholder:', stallholderId, 'page:', pageInt, 'limit:', limitInt);
     
     connection = await createConnection();
     
@@ -71,8 +73,8 @@ export const getPaymentRecords = async (req, res) => {
        LEFT JOIN branch b ON p.branch_id = b.branch_id
        WHERE p.stallholder_id = ?
        ORDER BY p.payment_date DESC, p.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [stallholderId, parseInt(limit), offset]
+       LIMIT ${limitInt} OFFSET ${offsetInt}`,
+      [stallholderId]
     );
     
     await connection.end();
@@ -101,10 +103,10 @@ export const getPaymentRecords = async (req, res) => {
       success: true,
       data: formattedPayments,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalRecords / parseInt(limit)),
+        currentPage: pageInt,
+        totalPages: Math.ceil(totalRecords / limitInt),
         totalRecords,
-        limit: parseInt(limit)
+        limit: limitInt
       }
     });
     
