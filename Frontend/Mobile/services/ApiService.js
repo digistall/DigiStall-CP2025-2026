@@ -1694,6 +1694,156 @@ class ApiService {
       };
     }
   }
+
+  // ===== STALLHOLDER PAYMENT METHODS =====
+
+  /**
+   * Get payment records for stallholder (paginated)
+   * @param {number} page - Page number (default: 1)
+   * @param {number} limit - Records per page (default: 10)
+   */
+  static async getPaymentRecords(page = 1, limit = 10) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      console.log('🔐 Payment API - Token check:', token ? `Found (${token.substring(0, 20)}...)` : 'NOT FOUND');
+      
+      if (!token) {
+        console.log('⚠️ No auth token in storage. User may need to log in again.');
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+       
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_PAYMENT_RECORDS}?page=${page}&limit=${limit}`;
+      console.log('🔄 Fetching payment records from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment records');
+      }
+      
+      console.log('✅ Payment records fetched successfully:', data.data?.length || 0, 'records');
+      return {
+        success: true,
+        data: data.data || [],
+        pagination: data.pagination || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Payment Records Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get all payment records for stallholder (no pagination)
+   */
+  static async getAllPaymentRecords() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_ALL_PAYMENT_RECORDS}`;
+      console.log('🔄 Fetching all payment records from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch all payment records');
+      }
+      
+      console.log('✅ All payment records fetched successfully:', data.totalRecords || 0, 'records');
+      return {
+        success: true,
+        data: data.data || [],
+        totalRecords: data.totalRecords || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get All Payment Records Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get payment summary/statistics for stallholder
+   */
+  static async getPaymentSummary() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_PAYMENT_SUMMARY}`;
+      console.log('🔄 Fetching payment summary from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment summary');
+      }
+      
+      console.log('✅ Payment summary fetched successfully');
+      return {
+        success: true,
+        data: data.data || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Payment Summary Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: {}
+      };
+    }
+  }
 }
 
 export default ApiService;
