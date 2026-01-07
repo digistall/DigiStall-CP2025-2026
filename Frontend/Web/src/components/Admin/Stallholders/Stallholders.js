@@ -4,6 +4,7 @@ import TableStall from './Components/Table/TableStall.vue'
 import DocumentsView from './Components/Documents/DocumentsView.vue'
 import DocumentDetail from './Components/Documents/View/DocumentDetail.vue'
 import AddStallholder from './Components/Add/AddStallholder.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Stallholders',
@@ -13,12 +14,14 @@ export default {
     DocumentsView,
     DocumentDetail,
     AddStallholder,
+    LoadingOverlay,
   },
   data() {
     return {
       pageTitle: 'Stallholders',
       searchQuery: '',
       activeFilter: 'all',
+      loading: true, // Start with loading true until TableStall data is ready
       showDocumentsModal: false,
       showDocumentDetail: false,
       showAddStallholderModal: false,
@@ -28,7 +31,7 @@ export default {
     }
   },
   mounted() {
-    this.initializeStallholders()
+    console.log('Stallholders page initialized - waiting for TableStall data')
     // Opt-in: use table scrolling inside page instead of page scrollbar
     try {
       document.body.classList.add('no-page-scroll')
@@ -161,40 +164,15 @@ export default {
       }
     },
 
-    // Initialize stallholders page
-    initializeStallholders() {
-      console.log('Stallholders page initialized')
-      // Add any initialization logic here
-      // You can load initial stallholders data here
-      this.loadStallholdersData()
+    // Handle loading state from TableStall component
+    handleLoadingChange(isLoading) {
+      this.loading = isLoading
     },
 
-    // Load stallholders data (simulate API call)
-    async loadStallholdersData() {
-      try {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 500))
-
-        // Sample data - replace with actual API call
-        this.stallholdersList = [
-          {
-            id: 1,
-            fullName: 'John Doe',
-            email: 'john.doe@example.com',
-            phoneNumber: '09123456789',
-            address: 'Sample Address 1',
-            status: 'Active',
-            dateAdded: '2024-01-15',
-            stallNumber: 'A-01',
-            businessName: "John's Food Stall",
-          },
-          // Add more sample data as needed
-        ]
-
-        console.log('Stallholders data loaded:', this.stallholdersList)
-      } catch (error) {
-        console.error('Error loading stallholders data:', error)
-      }
+    // Handle when data is ready from TableStall
+    handleDataReady() {
+      this.loading = false
+      console.log('Stallholders data ready')
     },
   },
 }

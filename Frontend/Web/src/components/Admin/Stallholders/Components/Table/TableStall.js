@@ -37,10 +37,14 @@ export default {
       showInfoDialog: false,
       selectedStallholder: null,
       activeTab: 'personal',
-      
+
+      // Violation history state
+      violationHistory: [],
+      loadingViolations: false,
+
       // Choice modal state
       showChoiceModal: false,
-      
+
       // Individual modal states (kept for backward compatibility)
       showAddStallholder: false,
       showExcelImport: false,
@@ -53,7 +57,7 @@ export default {
       if (!this.dataReady) {
         return []
       }
-      
+
       // Ensure stallholders is always an array, with multiple safety checks
       const stallholdersArray = Array.isArray(this.stallholders) ? this.stallholders : []
       let filtered = [...stallholdersArray] // Create a copy to avoid mutations
@@ -61,7 +65,7 @@ export default {
       // Apply search filter
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase()
-        filtered = filtered.filter(stallholder => 
+        filtered = filtered.filter(stallholder =>
           stallholder.fullName?.toLowerCase().includes(query) ||
           stallholder.email?.toLowerCase().includes(query) ||
           stallholder.phoneNumber?.toLowerCase().includes(query) ||
@@ -93,7 +97,7 @@ export default {
 
       return filtered
     },
-    
+
     paginatedStallholders() {
       if (!Array.isArray(this.filteredStallholders)) {
         return []
@@ -102,18 +106,42 @@ export default {
       const end = start + this.itemsPerPage
       return this.filteredStallholders.slice(start, end)
     },
-    
+
     totalPages() {
       if (!Array.isArray(this.filteredStallholders)) {
         return 0
       }
       return Math.ceil(this.filteredStallholders.length / this.itemsPerPage)
+    },
+
+    // Violation Summary Computed Properties
+    totalPenaltyAmount() {
+      if (!Array.isArray(this.violationHistory)) return 0
+      return this.violationHistory.reduce((sum, v) => sum + Number(v.penalty_amount || 0), 0)
+    },
+
+    unpaidPenaltyAmount() {
+      if (!Array.isArray(this.violationHistory)) return 0
+      return this.violationHistory
+        .filter(v => v.status !== 'complete')
+        .reduce((sum, v) => sum + Number(v.penalty_amount || 0), 0)
+    },
+
+    pendingViolationsCount() {
+      if (!Array.isArray(this.violationHistory)) return 0
+      return this.violationHistory.filter(v => v.status === 'pending' || v.status === 'in-progress').length
+    },
+
+    resolvedViolationsCount() {
+      if (!Array.isArray(this.violationHistory)) return 0
+      return this.violationHistory.filter(v => v.status === 'complete' || v.resolved_date).length
     }
   },
   methods: {
     async fetchStallholders() {
       this.loading = true
       this.dataReady = false // Reset data ready state
+      this.$emit('loading-change', true) // Notify parent
       try {
         const params = {}
         if (this.branchId) {
@@ -122,7 +150,7 @@ export default {
 
         const response = await apiClient.get('/stallholders', { params })
         console.log('Stallholders API response:', response)
-        
+
         // Ensure we have valid data
         const data = response.data
         if (Array.isArray(data)) {
@@ -135,15 +163,18 @@ export default {
           console.warn('Unexpected response format:', data)
           this.stallholders = []
         }
-        
+
         this.dataReady = true // Mark data as ready
+        this.$emit('data-ready') // Notify parent that data is ready
       } catch (error) {
         console.error('Error fetching stallholders:', error)
         this.$emit('error', 'Failed to load stallholders')
         this.stallholders = []
         this.dataReady = true // Still mark as ready, even with empty data
+        this.$emit('data-ready') // Notify parent
       } finally {
         this.loading = false
+        this.$emit('loading-change', false) // Notify parent
       }
     },
 
@@ -151,6 +182,31 @@ export default {
       this.selectedStallholder = stallholder
       this.showInfoDialog = true
       this.activeTab = 'personal'
+      this.violationHistory = [] // Reset violations
+      this.fetchViolationHistory(stallholder.stallholder_id)
+    },
+
+    async fetchViolationHistory(stallholderId) {
+      this.loadingViolations = true
+      try {
+        const response = await apiClient.get(`/stallholders/${stallholderId}/violations`)
+        console.log('Violation history response:', response)
+
+        if (response.data && Array.isArray(response.data.data)) {
+          this.violationHistory = response.data.data
+        } else if (Array.isArray(response.data)) {
+          this.violationHistory = response.data
+        } else {
+          this.violationHistory = []
+        }
+
+        console.log(`Found ${this.violationHistory.length} violations for stallholder ${stallholderId}`)
+      } catch (error) {
+        console.error('Error fetching violation history:', error)
+        this.violationHistory = []
+      } finally {
+        this.loadingViolations = false
+      }
     },
 
     closeDialog() {
@@ -196,6 +252,26 @@ export default {
         case 'current': return 'green'
         case 'overdue': return 'red'
         case 'grace_period': return 'yellow'
+        default: return 'grey'
+      }
+    },
+
+    getSeverityColor(severity) {
+      switch ((severity || '').toLowerCase()) {
+        case 'minor': return 'info'
+        case 'moderate': return 'warning'
+        case 'major': return 'orange'
+        case 'critical': return 'error'
+        default: return 'warning'
+      }
+    },
+
+    getViolationStatusColor(status) {
+      switch ((status || '').toLowerCase()) {
+        case 'complete': return 'success'
+        case 'pending': return 'warning'
+        case 'incomplete': return 'error'
+        case 'in-progress': return 'info'
         default: return 'grey'
       }
     },
@@ -312,7 +388,7 @@ export default {
     searchQuery() {
       this.currentPage = 1 // Reset to first page when search changes
     },
-    
+
     activeFilter() {
       this.currentPage = 1 // Reset to first page when filter changes
     },

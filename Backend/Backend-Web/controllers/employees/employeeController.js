@@ -71,13 +71,6 @@ export async function getAllEmployees(req, res) {
         const userBranchId = req.user?.branchId;
         const userId = req.user?.userId;
         const userType = req.user?.userType;
-        
-        console.log('🔍 getAllEmployees - Request from user:', {
-            userId,
-            userType,
-            branchId: userBranchId,
-            username: req.user?.username
-        });
 
         connection = await createConnection();
         
@@ -86,31 +79,23 @@ export async function getAllEmployees(req, res) {
         
         let employees;
         if (branchFilter === null) {
-            // System administrator - see all employees across all branches
-            console.log('🔍 getAllEmployees - System admin viewing all branches');
-            const [result] = await connection.execute(
-                'SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name FROM business_employee be LEFT JOIN branch b ON be.branch_id = b.branch_id LEFT JOIN business_manager bm ON be.created_by_manager = bm.business_manager_id WHERE be.status = ? ORDER BY be.created_at DESC',
-                ['Active']
-            );
-            employees = result;
+            // System administrator - see all employees using stored procedure
+            const [result] = await connection.execute(`CALL sp_getAllEmployeesAll(?)`, ['Active']);
+            employees = result[0] || [];
         } else if (branchFilter.length === 0) {
             // Business owner with no accessible branches
-            console.log('⚠️ getAllEmployees - Business owner has no accessible branches');
             employees = [];
         } else {
-            // Business owner (multiple branches) or business manager (single branch)
-            console.log(`🔍 getAllEmployees - Fetching employees for branches: ${branchFilter.join(', ')}`);
-            const placeholders = branchFilter.map(() => '?').join(',');
-            const query = `SELECT be.*, b.branch_name, bm.first_name as manager_first_name, bm.last_name as manager_last_name FROM business_employee be LEFT JOIN branch b ON be.branch_id = b.branch_id LEFT JOIN business_manager bm ON be.created_by_manager = bm.business_manager_id WHERE be.status = ? AND be.branch_id IN (${placeholders}) ORDER BY be.created_at DESC`;
-            const [result] = await connection.execute(query, ['Active', ...branchFilter]);
-            employees = result;
+            // Business owner (multiple branches) or business manager using stored procedure
+            const branchIdsString = branchFilter.join(',');
+            const [result] = await connection.execute(`CALL sp_getAllEmployeesByBranches(?, ?)`, [branchIdsString, 'Active']);
+            employees = result[0] || [];
         }
         
-        console.log(`✅ getAllEmployees - Found ${employees.length} employees`);
-        
-        // Parse permissions for each employee
+        // Parse permissions for each employee and alias business_employee_id as employee_id
         const employeesWithPermissions = employees.map(emp => ({
             ...emp,
+            employee_id: emp.business_employee_id, // Alias for frontend compatibility
             permissions: emp.permissions ? JSON.parse(emp.permissions) : []
         }));
         
@@ -300,6 +285,7 @@ export async function deleteEmployee(req, res) {
     let connection;
     try {
         const { id } = req.params;
+        const { reason } = req.body;
         const userBranchId = req.user?.branchId;
         
         if (!userBranchId) {
@@ -311,7 +297,7 @@ export async function deleteEmployee(req, res) {
         
         connection = await createConnection();
         
-        // Verify employee belongs to the same branch (correct name: getBusinessEmployeeById)
+        // Verify employee belongs to the same branch
         const [[checkEmployee]] = await connection.execute(
             'CALL getBusinessEmployeeById(?)',
             [id]
@@ -324,10 +310,10 @@ export async function deleteEmployee(req, res) {
             });
         }
         
-        // Call stored procedure (correct name: deleteBusinessEmployee)
+        // Call stored procedure to delete/deactivate employee with reason
         const [[result]] = await connection.execute(
-            'CALL deleteBusinessEmployee(?)',
-            [id]
+            'CALL sp_terminateEmployee(?, ?)',
+            [id, reason || 'Terminated by manager']
         );
 
         if (result.affected_rows === 0) {
@@ -337,7 +323,7 @@ export async function deleteEmployee(req, res) {
             });
         }
         
-        res.json({ success: true, message: 'Employee deactivated successfully' });
+        res.json({ success: true, message: 'Employee terminated successfully' });
     } catch (error) {
         console.error('Error deleting employee:', error);
         res.status(500).json({ success: false, message: 'Failed to delete employee', error: error.message });
@@ -456,18 +442,36 @@ export async function loginEmployee(req, res) {
     }
 }
 
+// Helper function to get Philippine time in MySQL format
+const getPhilippineTimeForLogout = () => {
+  const now = new Date();
+  const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const year = phTime.getFullYear();
+  const month = String(phTime.getMonth() + 1).padStart(2, '0');
+  const day = String(phTime.getDate()).padStart(2, '0');
+  const hours = String(phTime.getHours()).padStart(2, '0');
+  const minutes = String(phTime.getMinutes()).padStart(2, '0');
+  const seconds = String(phTime.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 export async function logoutEmployee(req, res) {
     let connection;
     try {
+        // Get employee ID from the request (either from token or body)
+        const employeeId = req.user?.userId || req.user?.employeeId || req.body?.employeeId;
         const sessionToken = req.headers.authorization?.split(' ')[1];
         
-        if (sessionToken) {
-            connection = await createConnection();
-            // Call stored procedure (correct name: logoutBusinessEmployee)
+        connection = await createConnection();
+        const philippineTime = getPhilippineTimeForLogout();
+        
+        if (employeeId) {
+            // Call stored procedure to update last_logout timestamp and deactivate sessions
             await connection.execute(
-                'CALL logoutBusinessEmployee(?)',
-                [sessionToken]
+                'CALL sp_logoutEmployee(?, ?)',
+                [employeeId, philippineTime]
             );
+            console.log(`✅ Logged out employee ${employeeId} at ${philippineTime}`);
         }
         
         res.json({ success: true, message: 'Logout successful' });
@@ -576,6 +580,95 @@ export async function getEmployeesByBranch(req, res) {
     } catch (error) {
         console.error('Error getting employees by branch:', error);
         res.status(500).json({ success: false, message: 'Failed to get employees', error: error.message });
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+/**
+ * Get active employee sessions for online status tracking
+ * GET /api/employees/sessions/active
+ * Uses DIRECT SQL ONLY - no stored procedures
+ */
+export async function getActiveSessions(req, res) {
+    let connection;
+    try {
+        connection = await createConnection();
+        
+        let employeeSessions = [];
+        let staffSessions = [];
+        
+        // Get employee sessions (web employees)
+        // NOTE: Web employee sessions already store Philippine time via CONVERT_TZ in stored procedures
+        // So we query WITHOUT timezone conversion to avoid double conversion
+        try {
+            const [empRows] = await connection.execute(`
+                SELECT 
+                    es.session_id,
+                    es.business_employee_id,
+                    es.is_active,
+                    es.login_time,
+                    es.last_activity,
+                    es.logout_time,
+                    be.first_name,
+                    be.last_name,
+                    be.branch_id,
+                    be.email,
+                    b.branch_name
+                FROM employee_session es
+                INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
+                LEFT JOIN branch b ON be.branch_id = b.branch_id
+                WHERE es.is_active = 1 
+                   OR es.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+            `);
+            employeeSessions = empRows.map(row => ({
+                ...row,
+                user_id: row.business_employee_id,
+                user_type: 'employee'
+            }));
+        } catch (empError) {
+            console.warn('⚠️ Could not fetch employee sessions:', empError.message);
+        }
+        
+        // Get staff sessions (inspector/collector from mobile)
+        // NOTE: Mobile staff sessions store UTC time, so we need timezone conversion
+        // Set timezone ONLY for staff_session query
+        try {
+            await connection.execute(`SET time_zone = '+08:00'`);
+            const [staffRows] = await connection.execute(`
+                SELECT 
+                    ss.session_id,
+                    ss.staff_id as user_id,
+                    ss.staff_type as user_type,
+                    ss.is_active,
+                    ss.login_time,
+                    ss.last_activity,
+                    ss.logout_time
+                FROM staff_session ss
+                WHERE ss.is_active = 1 
+                   OR ss.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+            `);
+            staffSessions = staffRows;
+            console.log(`📊 Found ${staffSessions.length} staff sessions, active: ${staffSessions.filter(s => s.is_active).length}`);
+            if (staffSessions.length > 0) {
+                console.log('📊 Staff session sample:', JSON.stringify(staffSessions[0]));
+            }
+        } catch (staffError) {
+            console.warn('⚠️ Could not fetch staff sessions:', staffError.message);
+        }
+        
+        const allSessions = [...employeeSessions, ...staffSessions];
+        
+        res.json({ 
+            success: true, 
+            data: allSessions 
+        });
+    } catch (error) {
+        console.error('Error getting active sessions:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to get active sessions', 
+            error: error.message 
+        });
     } finally {
         if (connection) await connection.end();
     }

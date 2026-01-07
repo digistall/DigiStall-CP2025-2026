@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { createConnection, initializeDatabase } from './config/database.js';
 import { corsConfig } from './config/cors.js';
+import { getPerformanceStats } from './config/performanceMonitor.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -23,31 +24,33 @@ import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import stallRoutes from './routes/stallRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
-import vendorRoutes from './routes/vendorRoutes.js';
-import collectorRoutes from './routes/collectorRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import complianceRoutes from './routes/complianceRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
+import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
 
 const app = express();
 const PORT = process.env.WEB_PORT || 3001;
 
 // ===== MIDDLEWARE =====
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Increased limits to handle large base64 images (100MB = ~75MB actual data)
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
 
-// Add request logging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-  }
-  next();
-});
+// Request logging disabled to prevent console flooding
+// Enable for debugging: uncomment below
+// app.use((req, res, next) => {
+//   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+//   if (req.body && Object.keys(req.body).length > 0) {
+//     console.log('Request body:', JSON.stringify(req.body, null, 2));
+//   }
+//   next();
+// });
 
 // ===== ROUTES =====
 
@@ -60,8 +63,6 @@ app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page appl
 app.use('/api/employees', employeeRoutes);      // Employee routes (login is public, others protected internally)
 
 // Management routes (authentication required)
-app.use('/api/vendors', authMiddleware.authenticateToken, vendorRoutes);
-app.use('/api/collectors', authMiddleware.authenticateToken, collectorRoutes);
 // Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility
 app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
@@ -70,13 +71,23 @@ app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, compliance
 app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/subscriptions', subscriptionRoutes); // Has its own auth middleware
+app.use('/api/mobile-staff', enhancedAuthMiddleware.authenticateToken, mobileStaffRoutes); // Mobile staff (inspectors/collectors)
+console.log('📱 Mobile staff routes registered at /api/mobile-staff');
+
+// Activity log routes (for monitoring staff activities)
+app.use('/api/activity-logs', staffActivityLogRoutes);
+console.log('📊 Activity log routes registered at /api/activity-logs');
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {
   try {
+    const startTime = Date.now();
     const connection = await createConnection();
     await connection.execute('SELECT 1');
+    const dbResponseTime = Date.now() - startTime;
     await connection.end();
+    
+    const perfStats = getPerformanceStats();
     
     res.status(200).json({
       success: true,
@@ -84,8 +95,10 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         server: 'running',
-        database: 'connected'
-      }
+        database: 'connected',
+        dbResponseTime: `${dbResponseTime}ms`
+      },
+      performance: perfStats
     });
   } catch (error) {
     console.error('Health check failed:', error);
@@ -93,6 +106,7 @@ app.get('/api/health', async (req, res) => {
       success: false,
       message: 'Health check failed',
       error: error.message,
+      code: error.code,
       timestamp: new Date().toISOString(),
       services: {
         server: 'running',
@@ -120,8 +134,6 @@ app.get('/', (req, res) => {
       applicants: '/api/applicants',
       branches: '/api/branches',
       employees: '/api/employees',
-      vendors: '/api/vendors',
-      collectors: '/api/collectors'
       stallholders: '/api/stallholders',
       compliances: '/api/compliances',
       complaints: '/api/complaints',
@@ -148,8 +160,6 @@ app.use('*', (req, res) => {
       '/api/applicants',
       '/api/branches',
       '/api/employees',
-      '/api/vendors',
-      '/api/collectors'
       '/api/stallholders',
       '/api/compliances',
       '/api/complaints',
@@ -179,15 +189,24 @@ app.listen(PORT, async () => {
 
 //  Test database connection and initialize tables
   try {
+    console.log('🔍 Testing database connection...');
     const connection = await createConnection();
     await connection.execute('SELECT 1');
     await connection.end();
     console.log('✅ Database connection successful');
     
-    // Initialize database tables
-    await initializeDatabase();
-    console.log('✅ Database tables initialized');
+    // Initialize database tables (non-blocking - run in background)
+    initializeDatabase()
+      .then(() => console.log('✅ Database tables initialized'))
+      .catch(error => console.error('⚠️ Database initialization warning:', error.message));
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('⚠️ Server will continue running, but database features may not work.');
+    console.error('💡 Please check:');
+    console.error('   1. DigitalOcean database is running');
+    console.error('   2. Firewall allows connections from your IP');
+    console.error('   3. Database credentials are correct');
+    console.error('   4. Network connectivity to DigitalOcean');
   }
 });

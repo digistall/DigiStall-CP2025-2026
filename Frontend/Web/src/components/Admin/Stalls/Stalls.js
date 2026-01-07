@@ -3,6 +3,7 @@ import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFi
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
 import dataCacheService from '../../../services/dataCacheService.js'
 
@@ -14,6 +15,7 @@ export default {
     AddChoiceModal,
     EditStall,
     ToastNotification,
+    LoadingOverlay,
   },
   data() {
     return {
@@ -115,6 +117,9 @@ export default {
           
           // Add to beginning of array and clear any filters to show all stalls
           this.stallsData.unshift(transformedStall)
+          
+          // Sort stalls by availability status
+          this.stallsData = this.sortStallsByAvailability(this.stallsData)
           
           // Clear filters to show the new stall
           if (this.$refs.searchFilter) {
@@ -286,6 +291,24 @@ export default {
         if (result.success) {
           // Transform backend data to match frontend format
           this.stallsData = result.data.map((stall) => this.transformStallData(stall))
+          
+          // FILTER OUT OCCUPIED STALLS for business_manager and business_employee
+          // These users should only see Available/Unavailable stalls, not Occupied ones
+          const userType = this.currentUser?.userType
+          if (userType === 'business_manager' || userType === 'business_employee') {
+            const originalCount = this.stallsData.length
+            this.stallsData = this.stallsData.filter(stall => {
+              // Keep stalls that are NOT occupied (is_available = true means Available/Unavailable)
+              // Occupied stalls have availabilityStatus = 'Occupied' and isAvailable = false with stallholder assigned
+              const isOccupied = stall.availabilityStatus === 'Occupied' || 
+                                 (stall.isAvailable === false && stall.stallholderId)
+              return !isOccupied
+            })
+            console.log(`🏪 Filtered out occupied stalls for ${userType}: ${originalCount} → ${this.stallsData.length} stalls visible`)
+          }
+          
+          // Sort stalls: Available first, then Unavailable, then Occupied last
+          this.stallsData = this.sortStallsByAvailability(this.stallsData)
           this.displayStalls = [...this.stallsData]
 
           console.log(`Successfully loaded ${this.stallsData.length} stalls for branch manager`)
@@ -432,8 +455,15 @@ export default {
         priceType: stall.price_type || 'Fixed Price',
         price_type: stall.price_type || 'Fixed Price',
 
-        // Image
-        image: stall.stall_image || this.getDefaultImage(stall.section_name),
+        // Image - Convert relative path to full URL
+        // BLOB images use /api/stalls/images/blob/* format
+        image: stall.stall_image 
+          ? (stall.stall_image.startsWith('http') 
+              ? stall.stall_image 
+              : stall.stall_image.startsWith('/api/') 
+                ? `${this.apiBaseUrl.replace(/\/api$/, '')}${stall.stall_image}`
+                : `http://localhost${stall.stall_image}`)
+          : this.getDefaultImage(stall.section_name),
 
         // Manager info
         managerName:
@@ -447,6 +477,11 @@ export default {
         rentalPrice: stall.rental_price,
         rental_price: stall.rental_price,
         originalData: stall,
+        
+        // Availability status for stall cards (Occupied/Available/Unavailable)
+        availabilityStatus: stall.availability_status || (stall.is_available ? 'Available' : 'Unavailable'),
+        stallholderId: stall.stallholder_id,
+        stallholderName: stall.stallholder_name,
       }
 
       console.log('🔄 Transformed stall ID:', transformed.id, 'type:', typeof transformed.id)
@@ -481,6 +516,21 @@ export default {
 
       console.log(`Getting image for section: "${section}"`)
       return defaultImages[section] || defaultImages['default']
+    },
+
+    // Sort stalls by availability status: Available first, then Unavailable, then Occupied
+    sortStallsByAvailability(stalls) {
+      const statusOrder = {
+        'Available': 0,
+        'Unavailable': 1,
+        'Occupied': 2
+      }
+      
+      return [...stalls].sort((a, b) => {
+        const orderA = statusOrder[a.availabilityStatus] ?? 1
+        const orderB = statusOrder[b.availabilityStatus] ?? 1
+        return orderA - orderB
+      })
     },
 
     // Check if user has permission to access stalls
@@ -662,7 +712,8 @@ export default {
         return
       }
       
-      this.displayStalls = filtered
+      // Maintain availability sorting after filtering
+      this.displayStalls = this.sortStallsByAvailability(filtered)
     },
 
     // Handle Floating Action Button click

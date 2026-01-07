@@ -11,6 +11,7 @@
           <div class="header-cell phone-col">Phone Number</div>
           <div class="header-cell stall-col">Stall</div>
           <div class="header-cell status-col">Status</div>
+          <div class="header-cell compliance-col">Compliance</div>
         </div>
       </div>
 
@@ -77,10 +78,20 @@
               </div>
             </div>
           </div>
+          <div class="table-cell compliance-col" @click.stop>
+            <v-chip
+              :color="stallholder.compliance_status === 'Compliant' ? 'green' : 'red'"
+              size="small"
+              variant="flat"
+              :prepend-icon="stallholder.compliance_status === 'Compliant' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+            >
+              {{ stallholder.compliance_status || 'Compliant' }}
+            </v-chip>
+          </div>
         </div>
       </div>
-      
-      
+
+
       <!-- Empty State -->
       <div v-if="stallholders.length === 0" class="empty-state">
         <v-icon size="48" color="grey-lighten-1" class="mb-3">
@@ -115,6 +126,16 @@
             <v-tab value="business">Business Information</v-tab>
             <v-tab value="contract">Contract Details</v-tab>
             <v-tab value="payment">Payment History</v-tab>
+            <v-tab value="violations">
+              Violations
+              <v-badge
+                v-if="violationHistory.length > 0"
+                :content="violationHistory.length"
+                color="red"
+                inline
+                class="ml-1"
+              ></v-badge>
+            </v-tab>
             <v-tab value="documents">Documents</v-tab>
           </v-tabs>
 
@@ -296,6 +317,148 @@
                     mdi-file-document-outline
                   </v-icon>
                   <p class="text-grey-lighten-1">Document management coming soon</p>
+                </div>
+              </div>
+            </v-tabs-window-item>
+
+            <!-- Violations Tab -->
+            <v-tabs-window-item value="violations">
+              <div class="info-section">
+                <h3 class="section-title">
+                  <v-icon class="mr-2" color="error">mdi-alert-circle</v-icon>
+                  Violation History
+                </h3>
+
+                <!-- Violations Summary Card -->
+                <v-card
+                  v-if="!loadingViolations && violationHistory.length > 0"
+                  class="mb-4 violation-summary-card"
+                  color="grey-lighten-4"
+                  variant="flat"
+                >
+                  <v-card-text class="pa-4">
+                    <v-row align="center">
+                      <v-col cols="12" sm="4" class="text-center">
+                        <div class="summary-stat">
+                          <v-icon size="28" color="error" class="mb-1">mdi-alert-octagon</v-icon>
+                          <div class="stat-value text-h5 font-weight-bold">{{ violationHistory.length }}</div>
+                          <div class="stat-label text-caption text-grey">Total Violations</div>
+                        </div>
+                      </v-col>
+                      <v-col cols="12" sm="4" class="text-center">
+                        <div class="summary-stat">
+                          <v-icon size="28" color="warning" class="mb-1">mdi-clock-outline</v-icon>
+                          <div class="stat-value text-h5 font-weight-bold">{{ pendingViolationsCount }}</div>
+                          <div class="stat-label text-caption text-grey">Pending</div>
+                        </div>
+                      </v-col>
+                      <v-col cols="12" sm="4" class="text-center">
+                        <div class="summary-stat total-penalty">
+                          <v-icon size="28" color="error" class="mb-1">mdi-cash-multiple</v-icon>
+                          <div class="stat-value text-h5 font-weight-bold text-error">
+                            ₱{{ unpaidPenaltyAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                          </div>
+                          <div class="stat-label text-caption text-grey">Unpaid Penalties</div>
+                        </div>
+                      </v-col>
+                    </v-row>
+                    <v-divider class="my-3"></v-divider>
+                    <v-row>
+                      <v-col cols="6" class="text-center">
+                        <span class="text-caption text-grey">Total Penalties (All Time):</span>
+                        <strong class="ml-1">₱{{ totalPenaltyAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</strong>
+                      </v-col>
+                      <v-col cols="6" class="text-center">
+                        <span class="text-caption text-grey">Resolved:</span>
+                        <strong class="ml-1 text-success">{{ resolvedViolationsCount }} of {{ violationHistory.length }}</strong>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+
+                <!-- Loading State -->
+                <div v-if="loadingViolations" class="text-center py-4">
+                  <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+                  <p class="text-grey mt-2">Loading violation history...</p>
+                </div>
+
+                <!-- No Violations -->
+                <div v-else-if="violationHistory.length === 0" class="text-center py-6">
+                  <v-icon size="64" color="success" class="mb-3">mdi-check-circle-outline</v-icon>
+                  <h4 class="text-success">No Violations Found</h4>
+                  <p class="text-grey">This stallholder has a clean record with no violations.</p>
+                </div>
+
+                <!-- Violations List -->
+                <div v-else class="violations-list">
+                  <v-card
+                    v-for="violation in violationHistory"
+                    :key="violation.violation_id"
+                    class="violation-card mb-3"
+                    variant="outlined"
+                  >
+                    <v-card-text class="pa-3">
+                      <div class="d-flex justify-space-between align-start mb-2">
+                        <div>
+                          <v-chip
+                            :color="getSeverityColor(violation.severity)"
+                            size="small"
+                            class="mr-2"
+                          >
+                            {{ violation.severity?.toUpperCase() || 'MODERATE' }}
+                          </v-chip>
+                          <v-chip
+                            :color="getViolationStatusColor(violation.status)"
+                            size="small"
+                            variant="outlined"
+                          >
+                            {{ violation.status?.toUpperCase() || 'PENDING' }}
+                          </v-chip>
+                        </div>
+                        <span class="text-caption text-grey">
+                          Offense #{{ violation.offense_no || 1 }}
+                        </span>
+                      </div>
+
+                      <h4 class="violation-type mb-1">{{ violation.violation_type }}</h4>
+                      <p class="text-caption text-grey mb-2" v-if="violation.ordinance_no">
+                        {{ violation.ordinance_no }}
+                      </p>
+
+                      <v-row dense class="text-body-2">
+                        <v-col cols="6">
+                          <span class="text-grey">Date:</span>
+                          <strong class="ml-1">{{ formatDate(violation.date_reported) }}</strong>
+                        </v-col>
+                        <v-col cols="6">
+                          <span class="text-grey">Penalty:</span>
+                          <strong class="ml-1 text-error">₱{{ Number(violation.penalty_amount || 0).toLocaleString() }}</strong>
+                        </v-col>
+                        <v-col cols="6" v-if="violation.receipt_number">
+                          <span class="text-grey">Receipt #:</span>
+                          <strong class="ml-1">{{ violation.receipt_number }}</strong>
+                        </v-col>
+                        <v-col cols="6" v-if="violation.branch_name">
+                          <span class="text-grey">Branch:</span>
+                          <strong class="ml-1">{{ violation.branch_name }}</strong>
+                        </v-col>
+                        <v-col cols="12" v-if="violation.inspector_name">
+                          <span class="text-grey">Inspector:</span>
+                          <strong class="ml-1">{{ violation.inspector_name }}</strong>
+                        </v-col>
+                        <v-col cols="12" v-if="violation.remarks">
+                          <span class="text-grey">Remarks:</span>
+                          <p class="text-body-2 mt-1 mb-0">{{ violation.remarks }}</p>
+                        </v-col>
+                        <v-col cols="12" v-if="violation.resolved_date">
+                          <v-divider class="my-2"></v-divider>
+                          <v-chip color="success" size="small" prepend-icon="mdi-check">
+                            Resolved: {{ formatDate(violation.resolved_date) }}
+                          </v-chip>
+                        </v-col>
+                      </v-row>
+                    </v-card-text>
+                  </v-card>
                 </div>
               </div>
             </v-tabs-window-item>

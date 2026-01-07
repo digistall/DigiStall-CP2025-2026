@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js'
+import { createConnection } from '../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
@@ -20,12 +20,34 @@ export const mobileLogin = async (req, res) => {
       });
     }
     
-    // Query mobile users from credential table using stored procedure
-    console.log('🔍 Calling stored procedure getMobileUserByUsername with:', username);
-    const [users] = await connection.execute(
-      'CALL getMobileUserByUsername(?)',
-      [username]
-    );
+    // ===== DIRECT SQL - Get mobile user from credential table =====
+    console.log('🔍 Querying mobile user with username:', username);
+    let users = [];
+    
+    try {
+      // Try stored procedure first
+      const [spResult] = await connection.execute('CALL getMobileUserByUsername(?)', [username]);
+      users = spResult[0] || [];
+    } catch (spError) {
+      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
+      // Fallback to direct SQL with COLLATE to fix collation mismatch
+      const [rows] = await connection.execute(`
+        SELECT 
+          c.registrationid,
+          c.user_name,
+          c.password_hash,
+          a.applicant_id,
+          CONCAT(a.applicant_first_name, ' ', IFNULL(a.applicant_middle_name, ''), ' ', a.applicant_last_name) AS applicant_full_name,
+          a.applicant_contact_number,
+          o.email_address AS applicant_email
+        FROM credential c
+        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+        LEFT JOIN other_info o ON a.applicant_id = o.applicant_id
+        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
+        LIMIT 1
+      `, [username]);
+      users = rows;
+    }
     
     console.log('📋 Stored procedure returned:', users.length, 'users');
     if (users.length > 0) {
@@ -78,6 +100,81 @@ export const mobileLogin = async (req, res) => {
     }
     
     console.log('✅ Password verified for:', username);
+
+    // ===== FETCH COMPLETE USER DATA - WITH DIRECT SQL FALLBACKS =====
+    const applicantId = user.applicant_id;
+
+    // Helper function to run SP or direct SQL
+    const executeQuery = async (spCall, directSql, params) => {
+      try {
+        const [result] = await connection.execute(spCall, params);
+        return result[0] || [];
+      } catch (err) {
+        console.warn(`⚠️ SP failed, using direct SQL`);
+        try {
+          const [rows] = await connection.execute(directSql, params);
+          return rows;
+        } catch (directErr) {
+          console.warn(`⚠️ Direct SQL also failed:`, directErr.message);
+          return [];
+        }
+      }
+    };
+
+    // Get spouse information
+    const spouseData = await executeQuery(
+      'CALL sp_getSpouseByApplicantId(?)',
+      'SELECT * FROM spouse WHERE applicant_id = ?',
+      [applicantId]
+    );
+    console.log('👫 Spouse data:', spouseData.length > 0 ? 'Found' : 'Not found');
+
+    // Get business information
+    const businessData = await executeQuery(
+      'CALL sp_getBusinessInfoByApplicantId(?)',
+      'SELECT * FROM business_info WHERE applicant_id = ?',
+      [applicantId]
+    );
+    console.log('💼 Business data:', businessData.length > 0 ? 'Found' : 'Not found');
+
+    // Get other information
+    const otherData = await executeQuery(
+      'CALL sp_getOtherInfoByApplicantId(?)',
+      'SELECT * FROM other_info WHERE applicant_id = ?',
+      [applicantId]
+    );
+    console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
+
+    // Get application status with fallback
+    const applicationData = await executeQuery(
+      'CALL sp_getLatestApplicationByApplicantId(?)',
+      `SELECT a.*, s.stall_number, s.stall_name, b.branch_name 
+       FROM application a 
+       LEFT JOIN stall s ON a.stall_id = s.stall_id 
+       LEFT JOIN branch b ON s.branch_id = b.branch_id 
+       WHERE a.applicant_id = ? 
+       ORDER BY a.created_at DESC LIMIT 1`,
+      [applicantId]
+    );
+    console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
+
+    // Get stallholder information (if approved) with fallback
+    const stallholderData = await executeQuery(
+      'CALL sp_getStallholderByApplicantId(?)',
+      'SELECT * FROM stallholder WHERE applicant_id = ?',
+      [applicantId]
+    );
+    console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
+
+    // Get applicant full details with fallback
+    const applicantData = await executeQuery(
+      'CALL sp_getApplicantById(?)',
+      `SELECT a.*, c.user_name, c.applicant_email 
+       FROM applicant a 
+       LEFT JOIN credential c ON a.applicant_id = c.applicant_id 
+       WHERE a.applicant_id = ?`,
+      [applicantId]
+    );
     
     // Generate JWT token
     const token = jwt.sign(
@@ -86,7 +183,8 @@ export const mobileLogin = async (req, res) => {
         username: user.user_name,
         email: user.applicant_email,
         userType: 'mobile_user',
-        registrationId: user.registrationid
+        registrationId: user.registrationid,
+        stallholderId: stallholderData.length > 0 ? stallholderData[0].stallholder_id : null
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
@@ -94,19 +192,91 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Login successful for:', username);
     
+    // Build comprehensive response
+    const responseData = {
+      user: {
+        id: user.applicant_id,
+        applicant_id: user.applicant_id,
+        username: user.user_name,
+        email: user.applicant_email || (otherData.length > 0 ? otherData[0].email_address : null),
+        full_name: user.applicant_full_name,
+        fullName: user.applicant_full_name,
+        contactNumber: user.applicant_contact_number,
+        address: applicantData.length > 0 ? applicantData[0].applicant_address : null,
+        birthdate: applicantData.length > 0 ? applicantData[0].applicant_birthdate : null,
+        civil_status: applicantData.length > 0 ? applicantData[0].applicant_civil_status : null,
+        educational_attainment: applicantData.length > 0 ? applicantData[0].applicant_educational_attainment : null,
+        registrationId: user.registrationid,
+        userType: 'mobile_user'
+      },
+      spouse: spouseData.length > 0 ? {
+        spouse_id: spouseData[0].spouse_id,
+        full_name: spouseData[0].spouse_full_name,
+        birthdate: spouseData[0].spouse_birthdate,
+        educational_attainment: spouseData[0].spouse_educational_attainment,
+        contact_number: spouseData[0].spouse_contact_number,
+        occupation: spouseData[0].spouse_occupation
+      } : null,
+      business: businessData.length > 0 ? {
+        business_id: businessData[0].business_id,
+        nature_of_business: businessData[0].nature_of_business,
+        capitalization: businessData[0].capitalization,
+        source_of_capital: businessData[0].source_of_capital,
+        previous_business_experience: businessData[0].previous_business_experience,
+        relative_stall_owner: businessData[0].relative_stall_owner
+      } : null,
+      other_info: otherData.length > 0 ? {
+        other_info_id: otherData[0].other_info_id,
+        email_address: otherData[0].email_address,
+        signature_of_applicant: otherData[0].signature_of_applicant,
+        house_sketch_location: otherData[0].house_sketch_location,
+        valid_id: otherData[0].valid_id
+      } : null,
+      application: applicationData.length > 0 ? {
+        application_id: applicationData[0].application_id,
+        stall_id: applicationData[0].stall_id,
+        status: applicationData[0].application_status,
+        application_date: applicationData[0].application_date,
+        stall_no: applicationData[0].stall_no,
+        rental_price: applicationData[0].rental_price,
+        stall_location: applicationData[0].stall_location,
+        size: applicationData[0].size,
+        branch_id: applicationData[0].branch_id,
+        branch_name: applicationData[0].branch_name
+      } : null,
+      stallholder: stallholderData.length > 0 ? {
+        stallholder_id: stallholderData[0].stallholder_id,
+        stallholder_name: stallholderData[0].stallholder_name,
+        contact_number: stallholderData[0].contact_number,
+        email: stallholderData[0].email,
+        address: stallholderData[0].address,
+        business_name: stallholderData[0].business_name,
+        business_type: stallholderData[0].business_type,
+        branch_id: stallholderData[0].branch_id,
+        branch_name: stallholderData[0].branch_name,
+        stall_id: stallholderData[0].stall_id,
+        stall_no: stallholderData[0].stall_no,
+        stall_location: stallholderData[0].stall_location,
+        size: stallholderData[0].size,
+        contract_start_date: stallholderData[0].contract_start_date,
+        contract_end_date: stallholderData[0].contract_end_date,
+        contract_status: stallholderData[0].contract_status,
+        lease_amount: stallholderData[0].lease_amount,
+        monthly_rent: stallholderData[0].monthly_rent,
+        payment_status: stallholderData[0].payment_status,
+        compliance_status: stallholderData[0].compliance_status
+      } : null,
+      // Computed fields for easy access
+      isStallholder: stallholderData.length > 0,
+      isApproved: applicationData.length > 0 && applicationData[0].application_status === 'Approved',
+      applicationStatus: applicationData.length > 0 ? applicationData[0].application_status : 'No Application'
+    };
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user.applicant_id,
-        username: user.user_name,
-        email: user.applicant_email,
-        fullName: user.applicant_full_name,
-        contactNumber: user.applicant_contact_number,
-        registrationId: user.registrationid,
-        userType: 'mobile_user'
-      }
+      data: responseData
     });
     
   } catch (error) {
@@ -228,9 +398,68 @@ export const mobileVerifyToken = async (req, res) => {
 
 // ===== MOBILE LOGOUT =====
 export const mobileLogout = async (req, res) => {
-  // Since we're using stateless JWT, logout is handled client-side
-  res.status(200).json({
-    success: true,
-    message: 'Logout successful. Please remove the token from client storage.'
-  });
+  let connection;
+  
+  try {
+    connection = await createConnection();
+    
+    // Debug: Log the entire request to see what we're receiving
+    console.log('📱 Mobile logout request received');
+    console.log('📱 req.user:', JSON.stringify(req.user, null, 2));
+    console.log('📱 req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📱 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    
+    // Get user info from JWT token (set by auth middleware) or from body
+    const applicantId = req.user?.userId || req.user?.applicantId || req.body?.applicantId || req.body?.userId;
+    
+    console.log('📱 Extracted applicant ID:', applicantId);
+    
+    if (applicantId) {
+      // Get Philippine time
+      const now = new Date();
+      const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const year = phTime.getFullYear();
+      const month = String(phTime.getMonth() + 1).padStart(2, '0');
+      const day = String(phTime.getDate()).padStart(2, '0');
+      const hours = String(phTime.getHours()).padStart(2, '0');
+      const minutes = String(phTime.getMinutes()).padStart(2, '0');
+      const seconds = String(phTime.getSeconds()).padStart(2, '0');
+      const philippineTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      
+      console.log('📱 Updating credential table with time:', philippineTime);
+      
+      // Update last_logout in credential table using stored procedure
+      const [result] = await connection.execute(
+        'CALL sp_updateCredentialLastLogout(?, ?)',
+        [applicantId, philippineTime]
+      );
+      const affectedRows = result[0]?.[0]?.affected_rows || 0;
+      
+      console.log(`✅ Updated last_logout for applicant ${applicantId} at ${philippineTime}, affected rows: ${affectedRows}`);
+      
+      if (affectedRows === 0) {
+        console.warn(`⚠️ No rows updated - applicant_id ${applicantId} may not exist in credential table`);
+      }
+    } else {
+      console.warn('⚠️ No applicant ID found in request - cannot update last_logout');
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.'
+    });
+    
+  } catch (error) {
+    console.error('❌ Mobile logout error:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Still return success even if database update fails (client-side logout should work)
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful. Please remove the token from client storage.'
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
 };

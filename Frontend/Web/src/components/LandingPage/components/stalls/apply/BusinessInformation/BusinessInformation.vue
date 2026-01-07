@@ -1,6 +1,14 @@
 <template>
     <div class="overlay">
         <div class="form-container">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div v-for="step in totalSteps" :key="step" class="step-dot" 
+                    :class="{ 'active': step === currentStep, 'completed': step < currentStep }">
+                    {{ step }}
+                </div>
+            </div>
+            
             <h3>Business Information</h3>
 
             <!-- Error Message Display -->
@@ -74,6 +82,18 @@ export default {
         spouseInfo: {
             type: Object,
             default: null
+        },
+        savedData: {
+            type: Object,
+            default: null
+        },
+        currentStep: {
+            type: Number,
+            default: 3
+        },
+        totalSteps: {
+            type: Number,
+            default: 4
         }
     },
     data() {
@@ -119,6 +139,25 @@ export default {
                 'Other Sources'
             ]
         };
+    },
+    mounted() {
+        // Initialize form with saved data if available
+        if (this.savedData) {
+            // Check if natureOfBusiness is in the predefined list or is "Other"
+            const predefinedTypes = this.businessTypes.filter(t => t !== 'Other');
+            if (predefinedTypes.includes(this.savedData.natureOfBusiness)) {
+                this.natureOfBusiness = this.savedData.natureOfBusiness;
+            } else if (this.savedData.natureOfBusiness) {
+                // It's a custom type, set to "Other" and fill the text field
+                this.natureOfBusiness = 'Other';
+                this.otherBusinessType = this.savedData.natureOfBusiness;
+            }
+            
+            this.businessCapitalization = this.savedData.businessCapitalization || null;
+            this.sourceOfCapital = this.savedData.sourceOfCapital || '';
+            this.previousBusiness = this.savedData.previousBusiness || '';
+            this.applicantRelative = this.savedData.applicantRelative || '';
+        }
     },
     methods: {
         clearErrors() {

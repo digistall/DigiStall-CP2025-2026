@@ -92,4 +92,36 @@ router.post('/onsite',
   PaymentController.addOnsitePayment
 );
 
+// ============================================================================
+// VIOLATION PAYMENT ROUTES
+// ============================================================================
+
+/**
+ * @route GET /api/payments/violations/unpaid/:stallholderId
+ * @description Get unpaid violations for a stallholder
+ */
+router.get('/violations/unpaid/:stallholderId', 
+  authMiddleware.authenticateToken,
+  PaymentController.getUnpaidViolations
+);
+
+/**
+ * @route POST /api/payments/violations/pay
+ * @description Process payment for a violation
+ */
+router.post('/violations/pay', 
+  authMiddleware.authenticateToken,
+  viewOnlyForOwners,
+  PaymentController.processViolationPayment
+);
+
+/**
+ * @route GET /api/payments/penalty
+ * @description Get penalty payments (from penalty_payments table)
+ */
+router.get('/penalty', 
+  authMiddleware.authenticateToken,
+  PaymentController.getPenaltyPayments
+);
+
 export default router;

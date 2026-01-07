@@ -1,3 +1,8 @@
+/* Stallholders main content - position relative for contained loading overlay */
+.stallholders-main-content {
+  position: relative;
+}
+
 /* Main container */
 .search-filter-section {
   background: white;

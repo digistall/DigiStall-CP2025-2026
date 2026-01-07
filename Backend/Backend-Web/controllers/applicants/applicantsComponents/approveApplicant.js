@@ -1,6 +1,7 @@
 import { createConnection } from '../../../config/database.js';
 
 // Approve applicant and store credentials for mobile app access
+// Also creates stallholder record and assigns stall ownership
 export const approveApplicant = async (req, res) => {
   let connection;
   try {
@@ -24,17 +25,19 @@ export const approveApplicant = async (req, res) => {
 
     console.log(`🔍 Checking if applicant ID ${id} exists...`);
 
-    console.log(`🔍 Checking if applicant ID ${id} exists...`);
-
-    // Check if applicant exists
+    // Check if applicant exists with full details for stallholder creation
     const [applicantRows] = await connection.execute(
       `SELECT 
         a.applicant_id,
         a.applicant_full_name,
         a.applicant_contact_number,
-        oi.email_address
+        a.applicant_address,
+        COALESCE(oi.email_address, a.applicant_email) as email_address,
+        bi.nature_of_business as business_name,
+        bi.nature_of_business as business_type
       FROM applicant a
       LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
+      LEFT JOIN business_information bi ON a.applicant_id = bi.applicant_id
       WHERE a.applicant_id = ?`,
       [id]
     );
@@ -44,7 +47,6 @@ export const approveApplicant = async (req, res) => {
     if (applicantRows.length === 0) {
       console.log(`❌ Applicant ID ${id} not found in database`);
       
-      // Let's also check what applicants DO exist
       const [allApplicants] = await connection.execute(
         'SELECT applicant_id, applicant_full_name FROM applicant ORDER BY applicant_id'
       );
@@ -72,38 +74,139 @@ export const approveApplicant = async (req, res) => {
       });
     }
 
+    // Get the pending application with stall details
+    const [applicationRows] = await connection.execute(
+      `SELECT 
+        app.application_id,
+        app.stall_id,
+        st.rental_price,
+        st.price_type,
+        sec.section_id,
+        f.floor_id,
+        f.branch_id
+      FROM application app
+      JOIN stall st ON app.stall_id = st.stall_id
+      JOIN section sec ON st.section_id = sec.section_id
+      JOIN floor f ON sec.floor_id = f.floor_id
+      WHERE app.applicant_id = ? AND app.application_status = 'Pending'
+      ORDER BY app.application_date DESC
+      LIMIT 1`,
+      [id]
+    );
+
+    if (applicationRows.length === 0) {
+      console.log(`❌ No pending application found for applicant ID ${id}`);
+      return res.status(400).json({
+        success: false,
+        message: 'No pending application found for this applicant'
+      });
+    }
+
+    const application = applicationRows[0];
+    console.log(`📋 Found pending application:`, application);
+
     // Hash the password
     const bcrypt = await import('bcrypt');
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Store credentials in credential table for mobile app access
+    // 1. Store credentials in credential table for mobile app access
     await connection.execute(
       `INSERT INTO credential (
         applicant_id, user_name, password_hash, created_date, is_active
       ) VALUES (?, ?, ?, NOW(), 1)`,
       [applicant.applicant_id, username, passwordHash]
     );
+    console.log(`✅ Credentials stored for applicant ${applicant.applicant_id}`);
 
-    // Update application status to approved (if there are applications)
+    // 2. Update application status to approved
     await connection.execute(
       `UPDATE application 
        SET application_status = 'Approved', updated_at = NOW()
-       WHERE applicant_id = ? AND application_status = 'Pending'`,
-      [applicant.applicant_id]
+       WHERE application_id = ?`,
+      [application.application_id]
     );
+    console.log(`✅ Application ${application.application_id} status updated to Approved`);
+
+    // 3. Create stallholder record
+    const contractStartDate = new Date();
+    const contractEndDate = new Date();
+    contractEndDate.setFullYear(contractEndDate.getFullYear() + 1); // 1 year contract
+
+    const [stallholderResult] = await connection.execute(
+      `INSERT INTO stallholder (
+        applicant_id,
+        stallholder_name,
+        contact_number,
+        email,
+        address,
+        business_name,
+        business_type,
+        branch_id,
+        stall_id,
+        contract_start_date,
+        contract_end_date,
+        contract_status,
+        lease_amount,
+        monthly_rent,
+        payment_status,
+        compliance_status,
+        date_created
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
+      [
+        applicant.applicant_id,
+        applicant.applicant_full_name,
+        applicant.applicant_contact_number,
+        applicant.email_address,
+        applicant.applicant_address,
+        applicant.business_name || 'Not specified',
+        applicant.business_type || 'Not specified',
+        application.branch_id,
+        application.stall_id,
+        contractStartDate.toISOString().split('T')[0],
+        contractEndDate.toISOString().split('T')[0],
+        application.rental_price || 0,
+        application.rental_price || 0
+      ]
+    );
+
+    const stallholderId = stallholderResult.insertId;
+    console.log(`✅ Stallholder record created with ID: ${stallholderId}`);
+
+    // 4. Update the stall to mark as occupied (stallholder_id is in stallholder table, not stall table)
+    await connection.execute(
+      `UPDATE stall 
+       SET is_available = 0, status = 'Occupied', updated_at = NOW()
+       WHERE stall_id = ?`,
+      [application.stall_id]
+    );
+    console.log(`✅ Stall ${application.stall_id} marked as occupied`);
+
+    // 5. Decline any other pending applications for the same stall
+    await connection.execute(
+      `UPDATE application 
+       SET application_status = 'Declined', updated_at = NOW()
+       WHERE stall_id = ? AND application_id != ? AND application_status = 'Pending'`,
+      [application.stall_id, application.application_id]
+    );
+    console.log(`✅ Other pending applications for stall ${application.stall_id} declined`);
 
     await connection.commit();
 
-    console.log(`✅ Applicant ${applicant.applicant_full_name} approved successfully with credentials`);
+    console.log(`✅ Applicant ${applicant.applicant_full_name} approved successfully with credentials and stall ownership`);
 
     res.json({
       success: true,
-      message: 'Applicant approved successfully',
+      message: 'Applicant approved successfully. Stallholder record created and stall assigned.',
       data: {
         applicant_id: applicant.applicant_id,
+        stallholder_id: stallholderId,
         full_name: applicant.applicant_full_name,
         email: applicant.email_address,
         username: username,
+        stall_id: application.stall_id,
+        branch_id: application.branch_id,
+        contract_start: contractStartDate.toISOString().split('T')[0],
+        contract_end: contractEndDate.toISOString().split('T')[0],
         approved_at: new Date().toISOString()
       }
     });

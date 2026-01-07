@@ -1,4 +1,5 @@
 import { createConnection } from "../../config/database.js";
+import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../config/multerApplicantDocuments.js";
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -15,7 +16,9 @@ export const applicantController = {
     let connection;
 
     try {
+      console.log("🔍 Creating database connection...");
       connection = await createConnection();
+      console.log("✅ Database connection established");
 
       console.log("🔍 DEBUG: Full request body received:");
       console.log(JSON.stringify(req.body, null, 2));
@@ -48,6 +51,12 @@ export const applicantController = {
         house_sketch_location,
         valid_id,
         email_address,
+
+        // Document base64 data (for saving to htdocs)
+        signature_data,
+        house_location_data,
+        valid_id_data,
+        branch_id,
 
         // Application Information
         stall_id,
@@ -210,6 +219,119 @@ export const applicantController = {
         console.log("👤 General application (no specific stall)");
       }
 
+      // Step 3: Save document files if base64 data provided
+      const savedDocuments = [];
+      const effectiveBranchId = branch_id || '1'; // Default to branch 1 if not specified
+      
+      // Get business_owner_id from stall if available
+      let businessOwnerId = 1; // Default
+      if (stall_id) {
+        const [stallOwner] = await connection.execute(
+          `SELECT b.business_owner_id FROM stall s 
+           JOIN section sec ON s.section_id = sec.section_id
+           JOIN floor f ON sec.floor_id = f.floor_id
+           JOIN branch b ON f.branch_id = b.branch_id
+           WHERE s.stall_id = ?`,
+          [stall_id]
+        );
+        if (stallOwner.length > 0) {
+          businessOwnerId = stallOwner[0].business_owner_id;
+        }
+      }
+
+      console.log(`📄 Using BLOB storage: ${USE_BLOB_STORAGE}`);
+
+      if (signature_data) {
+        try {
+          let saved;
+          if (USE_BLOB_STORAGE) {
+            // Save to database as BLOB
+            saved = await saveApplicantDocumentToBlob(
+              connection,
+              applicantId,
+              businessOwnerId,
+              effectiveBranchId,
+              'signature',
+              signature_data,
+              signature_of_applicant
+            );
+          } else {
+            // Save to file system (legacy)
+            saved = saveApplicantDocumentFromBase64(
+              effectiveBranchId, 
+              applicantId, 
+              'signature', 
+              signature_data, 
+              signature_of_applicant
+            );
+          }
+          savedDocuments.push({ type: 'signature', ...saved });
+          console.log("✅ Saved signature document:", saved.url);
+        } catch (docError) {
+          console.error("⚠️ Failed to save signature:", docError.message);
+        }
+      }
+
+      if (house_location_data) {
+        try {
+          let saved;
+          if (USE_BLOB_STORAGE) {
+            saved = await saveApplicantDocumentToBlob(
+              connection,
+              applicantId,
+              businessOwnerId,
+              effectiveBranchId,
+              'house_location',
+              house_location_data,
+              house_sketch_location
+            );
+          } else {
+            saved = saveApplicantDocumentFromBase64(
+              effectiveBranchId, 
+              applicantId, 
+              'house_location', 
+              house_location_data, 
+              house_sketch_location
+            );
+          }
+          savedDocuments.push({ type: 'house_location', ...saved });
+          console.log("✅ Saved house location document:", saved.url);
+        } catch (docError) {
+          console.error("⚠️ Failed to save house location:", docError.message);
+        }
+      }
+
+      if (valid_id_data) {
+        try {
+          let saved;
+          if (USE_BLOB_STORAGE) {
+            saved = await saveApplicantDocumentToBlob(
+              connection,
+              applicantId,
+              businessOwnerId,
+              effectiveBranchId,
+              'valid_id',
+              valid_id_data,
+              valid_id
+            );
+          } else {
+            saved = saveApplicantDocumentFromBase64(
+              effectiveBranchId, 
+              applicantId, 
+              'valid_id', 
+              valid_id_data, 
+              valid_id
+            );
+          }
+          savedDocuments.push({ type: 'valid_id', ...saved });
+          console.log("✅ Saved valid ID document:", saved.url);
+        } catch (docError) {
+          console.error("⚠️ Failed to save valid ID:", docError.message);
+        }
+      }
+
+      console.log(`📄 Saved ${savedDocuments.length} document(s) for applicant ${applicantId} (storage: ${USE_BLOB_STORAGE ? 'BLOB' : 'file'})`);
+
       // Generate response
       if (stall_id) {
         res.status(201).json({
@@ -221,6 +343,7 @@ export const applicantController = {
             applicant_full_name,
             applicant_contact_number,
             stall_id: stall_id,
+            documents: savedDocuments,
             application_status: "Pending",
           },
         });
@@ -234,6 +357,7 @@ export const applicantController = {
             applicant_full_name,
             applicant_contact_number,
             stall_id: null,
+            documents: savedDocuments,
             application_status: "Pending",
           },
         });
@@ -249,6 +373,31 @@ export const applicantController = {
         code: error.code,
       });
 
+      // Handle specific database errors
+      if (error.code === 'ECONNREFUSED') {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection refused. Please check database server.",
+          error: "Database unavailable"
+        });
+      }
+
+      if (error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+        return res.status(503).json({
+          success: false,
+          message: "Database connection timeout. Please try again.",
+          error: "Connection timeout"
+        });
+      }
+
+      if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+        return res.status(503).json({
+          success: false,
+          message: "Database authentication failed.",
+          error: "Access denied"
+        });
+      }
+
       if (error.sqlState === "45000") {
         return res.status(400).json({
           success: false,
@@ -263,7 +412,12 @@ export const applicantController = {
       });
     } finally {
       if (connection) {
-        await connection.end();
+        try {
+          await connection.end();
+          console.log("🔒 Database connection closed");
+        } catch (closeError) {
+          console.error("⚠️ Error closing connection:", closeError.message);
+        }
       }
     }
   },

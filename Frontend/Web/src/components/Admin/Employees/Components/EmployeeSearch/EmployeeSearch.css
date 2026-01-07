@@ -27,6 +27,27 @@
   --v-field-border-width: 2px;
 }
 
+/* Gap utility */
+.gap-2 {
+  gap: 12px;
+}
+
+/* Activity Log Button */
+.activity-log-btn {
+  min-width: 140px;
+  height: 40px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.25px;
+  border-color: rgb(0, 33, 129) !important;
+  color: rgb(0, 33, 129) !important;
+}
+
+.activity-log-btn:hover {
+  background-color: rgba(0, 33, 129, 0.08) !important;
+}
+
 /* Filter container */
 .filter-container {
   position: relative;

@@ -184,7 +184,7 @@
         <div class="stats-modal-header">
           <div class="stats-modal-title">
             <i class="mdi mdi-store-check"></i>
-            <h2>All Stalls</h2>
+            <h2>Stalls Overview</h2>
             <span class="stats-modal-count">{{ totalStalls }} Total</span>
           </div>
           <button class="stats-modal-close" @click="closeStallsModal">
@@ -192,7 +192,14 @@
           </button>
         </div>
         
-        <div class="stats-modal-filters">
+        <!-- Stall Statistics Summary -->
+        <div class="stalls-summary-text">
+          <span class="summary-item"><strong>{{ computedAvailableCount }}</strong> Available</span>
+          <span class="summary-divider">|</span>
+          <span class="summary-item"><strong>{{ computedOccupiedCount }}</strong> Occupied</span>
+        </div>
+        
+        <div class="stats-modal-filters" style="border-top: none;">
           <div class="stats-search-box">
             <i class="mdi mdi-magnify"></i>
             <input 
@@ -229,12 +236,12 @@
             <i class="mdi mdi-loading mdi-spin"></i>
             <span>Loading stalls...</span>
           </div>
-          <div v-else-if="stallsList.length === 0" class="stats-empty">
+          <div v-else-if="availableStallsList.length === 0" class="stats-empty">
             <i class="mdi mdi-store-search"></i>
-            <span>No stalls found</span>
+            <span>No available stalls found</span>
           </div>
           <div v-else class="stats-list stalls-grid">
-            <div v-for="stall in stallsList" :key="stall.stall_id" class="stats-list-item stall-card">
+            <div v-for="stall in availableStallsList" :key="stall.stall_id" class="stats-list-item stall-card">
               <div class="stall-card-image" :class="{ 'no-image': !stall.stall_image }">
                 <img v-if="stall.stall_image" :src="stall.stall_image" :alt="stall.stall_no" @error="handleImageError($event, stall)" />
                 <div v-else class="stall-card-placeholder">
@@ -244,9 +251,9 @@
                 <span class="stall-price-badge" :class="stall.price_type?.toLowerCase().replace(' ', '-')">
                   {{ stall.price_type }}
                 </span>
-                <span class="stall-occupancy-badge" :class="stall.occupancy_status?.toLowerCase()">
-                  <i :class="stall.occupancy_status === 'Occupied' ? 'mdi mdi-account-check' : 'mdi mdi-check-circle'"></i>
-                  {{ stall.occupancy_status }}
+                <span class="stall-occupancy-badge available">
+                  <i class="mdi mdi-check-circle"></i>
+                  Available
                 </span>
               </div>
               <div class="stall-card-content">
@@ -275,7 +282,7 @@
         </div>
 
         <div class="stats-modal-footer">
-          <button class="stats-load-more" v-if="stallsList.length >= 20" @click="loadMoreStalls">
+          <button class="stats-load-more" v-if="availableStallsList.length >= 20" @click="loadMoreStalls">
             <i class="mdi mdi-refresh"></i>
             Load More
           </button>

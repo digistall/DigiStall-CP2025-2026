@@ -70,8 +70,10 @@ const ComplaintsTable = {
     getStatusClass(status) {
       const statusClasses = {
         'complete': 'complaints-status-complete',
+        'resolved': 'complaints-status-complete',
         'pending': 'complaints-status-pending',
         'incomplete': 'complaints-status-incomplete',
+        'rejected': 'complaints-status-incomplete',
         'in-progress': 'complaints-status-active'
       }
       return statusClasses[status] || 'complaints-status-default'

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/authStore'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -477,57 +478,15 @@ export default {
       this.$emit('settings-click')
     },
 
-    async handleLogoutClick() {
-      console.log('Logout clicked')
+    handleLogoutClick() {
+      console.log('Logout clicked - emitting to MainLayout')
       this.closeProfilePopup()
 
-      // Clear any stored user data
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('branchManagerData')
-      sessionStorage.removeItem('adminData')
-      sessionStorage.removeItem('employeeData')
-      sessionStorage.removeItem('branchManagerId')
-      sessionStorage.removeItem('employeeId')
-      sessionStorage.removeItem('adminId')
-      sessionStorage.removeItem('branchId')
-      sessionStorage.removeItem('userRole')
-      sessionStorage.removeItem('fullName')
-      sessionStorage.removeItem('permissions')
-      sessionStorage.removeItem('employeePermissions')
-      
-      localStorage.removeItem('currentUser')
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('userType')
-      localStorage.removeItem('permissions')
-      localStorage.removeItem('employeePermissions')
-      
-      // Clear all session storage completely
-      sessionStorage.clear()
-      
-      // Clear data cache if available
-      if (window.dataCacheService) {
-        window.dataCacheService.clearAll()
-      }
-
-      // Clear axios header
-      delete axios.defaults.headers.common['Authorization']
-
-      // Clear component data
-      this.branchManagerData = null
-      this.adminData = null
-      this.employeeData = null
-
-      // Clear Vuex store if you're using it
-      if (this.$store && this.$store.dispatch) {
-        this.$store.dispatch('auth/logout')
-      }
-
-      // Navigate to login page
-      this.$router.push('/')
-
-      // Emit logout event
+      // Emit logout event to MainLayout which handles the full logout flow:
+      // 1. Shows confirmation dialog
+      // 2. On confirm, calls authStore.logout() for API/storage cleanup
+      // 3. Navigates to /logout page for animated logout screen
+      // 4. Logout page redirects to / after animation
       this.$emit('logout-click')
     },
 

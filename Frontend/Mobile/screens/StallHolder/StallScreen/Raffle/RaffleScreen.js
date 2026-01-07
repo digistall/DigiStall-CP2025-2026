@@ -12,10 +12,12 @@ import RaffleCard from './Components/RaffleCard';
 import SearchFilterBar from './Components/SearchFilter/SearchFilterBar';
 import UserStorageService from '../../../../services/UserStorageService';
 import ApiService from '../../../../services/ApiService';
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const RaffleScreen = () => {
+  const { theme, isDark } = useTheme();
   const [raffles, setRaffles] = useState([]);
   const [filteredRaffles, setFilteredRaffles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -162,10 +164,10 @@ const RaffleScreen = () => {
     
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyStateTitle}>
+        <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
           {hasFilters ? 'No raffles found' : 'No raffle stalls available'}
         </Text>
-        <Text style={styles.emptyStateText}>
+        <Text style={[styles.emptyStateText, { color: theme.colors.textSecondary }]}>
           {hasFilters 
             ? 'Try adjusting your search or filters to find more results'
             : 'Raffle stalls are only visible in areas where you have submitted applications. Submit your first application to see raffle stalls in that area.'
@@ -189,14 +191,14 @@ const RaffleScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading raffles...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading raffles...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={filteredRaffles}
         renderItem={renderRaffleCard}
@@ -207,8 +209,8 @@ const RaffleScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#3b82f6']}
-            tintColor="#3b82f6"
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
         ListEmptyComponent={renderEmptyState}

@@ -2,6 +2,13 @@
 <template>
   <v-app>
     <div class="employee-container">
+      <!-- Standardized Loading Overlay - contained within employee container -->
+      <LoadingOverlay 
+        :loading="loading" 
+        text="Loading employees..."
+        :full-page="false"
+      />
+      
       <!-- Header Section - Simple white header like Applicants -->
       <v-container fluid class="main-content">
         <v-row>
@@ -36,13 +43,15 @@
 
             <!-- Content Section -->
             <div class="employee-content">
-              <!-- Search and Filters -->
+              <!-- Search, Filters, and Activity Log Button -->
               <EmployeeSearch
                 v-model:search="searchQuery"
                 v-model:statusFilter="statusFilter"
                 v-model:permissionFilter="permissionFilter"
                 :permission-options="permissionOptions"
+                :show-activity-log="!isBusinessOwner"
                 @reset="resetFilters"
+                @open-activity-log="openActivityLogDialog"
               />
 
               <!-- Employee Table -->
@@ -52,6 +61,7 @@
                 @manage-permissions="managePermissions"
                 @toggle-status="toggleEmployeeStatus"
                 @reset-password="resetEmployeePassword"
+                @fire-employee="fireEmployee"
               />
             </div>
 
@@ -70,6 +80,12 @@
               <div class="pulse-ring pulse-ring-3"></div>
               <div class="pulse-ring pulse-ring-4"></div>
             </div>
+
+            <!-- Activity Log Dialog -->
+            <ActivityLogDialog
+              v-model="activityLogDialog"
+              @close="closeActivityLogDialog"
+            />
 
             <!-- Add/Edit Employee Dialog -->
             <AddEmployee

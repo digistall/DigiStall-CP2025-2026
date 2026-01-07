@@ -98,9 +98,12 @@ export const createSection = async (req, res) => {
       });
     }
     
+    // Get branch_id from the floor
+    const branch_id = floor[0].branch_id;
+    
     const [[result]] = await connection.execute(
       "CALL createSection(?, ?, ?)",
-      [floor_id, section_name, status || 'Active']
+      [floor_id, section_name, branch_id]
     );
     
     const section_id = result.section_id;
