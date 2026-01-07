@@ -1,5 +1,5 @@
 <template>
-  <div class="search-filter-section">
+  <div class="search-filter-section mb-6">
     <div class="search-wrapper">
       <!-- Search Bar -->
       <v-col cols="12" md="6" lg="4">

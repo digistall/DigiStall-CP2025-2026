@@ -1,4 +1,5 @@
-.add-stallholder-modal {
+/* Modal Container */
+.v-dialog .v-card {
   border-radius: 12px !important;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
@@ -44,60 +45,109 @@
   font-size: 18px !important;
 }
 
-/* Modal Content */
-.modal-content {
+/* Content Area */
+.v-card-text {
   padding: 24px !important;
   background-color: #fafafa !important;
 }
 
-/* Modal Footer */
-.modal-footer {
-  padding: 0 24px 24px 24px !important;
-  background-color: #fafafa !important;
-  justify-content: center !important;
+/* Tab Styling */
+.v-tabs {
+  background-color: transparent !important;
 }
 
-/* Submit Button */
-.submit-btn {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
-  color: white !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-  letter-spacing: 1px !important;
-  padding: 0 48px !important;
-  height: 48px !important;
+.v-tab {
+  text-transform: none;
+  font-weight: 500;
+}
+
+.v-tab--active {
+  background-color: rgba(25, 118, 210, 0.1);
+  color: rgb(0, 33, 129) !important;
+}
+
+/* Form Fields */
+.v-text-field,
+.v-select,
+.v-textarea {
+  margin-bottom: 8px;
+}
+
+.v-text-field .v-field,
+.v-select .v-field,
+.v-textarea .v-field {
+  background-color: #ffffff !important;
   border-radius: 6px !important;
-  text-transform: uppercase !important;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
-  transition: all 0.3s ease !important;
-  min-width: 150px !important;
 }
 
-.submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4) !important;
+.v-text-field .v-field--focused,
+.v-select .v-field--focused,
+.v-textarea .v-field--focused {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
 }
 
-.submit-btn:disabled {
-  background: #9ca3af !important;
-  color: #ffffff !important;
-  opacity: 0.6 !important;
-  cursor: not-allowed !important;
-  transform: none !important;
-  box-shadow: none !important;
+.v-text-field .v-input__prepend-inner,
+.v-select .v-input__prepend-inner,
+.v-textarea .v-input__prepend-inner {
+  margin-right: 8px;
+  color: rgba(0, 33, 129, 0.7);
 }
 
-.submit-btn .v-btn__loader {
-  color: white !important;
-}
-.v-card-title {
-  background: #f5f5f7;
+/* Form Labels */
+.v-label {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
 }
 
+/* Dialog Actions */
+.v-card-actions {
+  background-color: #fafafa !important;
+  padding: 16px 24px !important;
+  gap: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.v-card-actions .v-btn {
+  min-width: 100px;
+}
+
+/* Validation Error Messages */
+.v-messages__message {
+  color: #ef4444 !important;
+  font-size: 12px !important;
+  margin-top: 4px;
+}
+
+/* Success/Error Snackbar */
+.v-snackbar {
+  padding: 16px;
+}
+
+.v-snackbar__content {
+  font-weight: 500;
+}
+
+/* Form Styling */
+.v-form {
+  width: 100%;
+}
+
+.v-tabs-items {
+  background-color: transparent;
+}
+
+.v-tab-item {
+  padding: 0;
+}
+
+/* Section Title */
 .section-title {
   font-size: 1.1rem;
   font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 16px;
+}
   margin-bottom: 0.5rem;
 }
 
