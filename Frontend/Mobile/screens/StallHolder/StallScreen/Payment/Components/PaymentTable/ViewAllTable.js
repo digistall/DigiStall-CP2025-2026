@@ -90,9 +90,7 @@ const ViewAllTable = ({
           {/* Modal Header */}
           <View style={[styles.modalHeader, theme && { borderBottomColor: theme.colors.border }]}>
             <Text style={[styles.modalTitle, theme && { color: theme.colors.text }]}>
-              {selectedPaymentMethod
-                ? `All ${selectedPaymentMethod.name} Transactions`
-                : "All Payment Records"}
+              All Payment Records
             </Text>
             <TouchableOpacity style={[styles.closeButton, theme && { backgroundColor: theme.colors.background }]} onPress={onClose}>
               <Text style={[styles.closeButtonText, theme && { color: theme.colors.textSecondary }]}>✕</Text>
