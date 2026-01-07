@@ -70,6 +70,11 @@ export const API_CONFIG = {
     SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
     GET_MY_COMPLAINTS: '/api/mobile/stallholder/complaints',
     
+    // Stallholder payment endpoints
+    GET_PAYMENT_RECORDS: '/api/mobile/stallholder/payments',
+    GET_ALL_PAYMENT_RECORDS: '/api/mobile/stallholder/payments/all',
+    GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
+    
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint
   },
