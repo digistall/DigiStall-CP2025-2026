@@ -58,6 +58,16 @@ export default {
     isBusinessOwner() {
       return this.authStore.isStallBusinessOwner
     },
+    isBusinessManager() {
+      return this.authStore.isBusinessManager
+    },
+    isBusinessEmployee() {
+      return this.authStore.isBusinessEmployee
+    },
+    // Check if user can customize documents (any of the three roles)
+    canCustomizeDocuments() {
+      return this.isBusinessOwner || this.isBusinessManager || this.isBusinessEmployee
+    },
     currentUser() {
       return this.authStore.user.value || {}
     },

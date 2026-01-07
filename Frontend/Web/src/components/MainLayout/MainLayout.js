@@ -1,12 +1,18 @@
 import AppHeader from '../Admin/AppHeader/AppHeader.vue'
 import AppSidebar from '../Admin/AppSidebar/AppSidebar.vue'
+import LogoutLoadingScreen from '../Common/LogoutLoadingScreen/LogoutLoadingScreen.vue'
+import LogoutConfirmationDialog from '../Common/LogoutConfirmationDialog/LogoutConfirmationDialog.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 export default {
   name: 'MainLayout',
-  components: { AppSidebar, AppHeader },
+  components: { AppSidebar, AppHeader, LogoutLoadingScreen, LogoutConfirmationDialog },
   data() {
     return {
       pageTitle: 'Dashboard',
+      isLoggingOut: false,
+      showLogoutConfirm: false,
+      currentUserName: '',
       // Base menu items - will be updated based on user type
       menuItems: [],
       // Define menu items for different user types
@@ -50,7 +56,6 @@ export default {
           name: 'Stallholders',
           route: '/app/stallholders',
         },
-        collectors: { id: 8, icon: 'mdi-account-cash', name: 'Collectors', route: '/app/collectors' },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
       },
       // Define all possible menu routes including "more items" (6-10) and submenu items (91-92)
@@ -64,8 +69,6 @@ export default {
         7: '/app/vendors', // Vendors
         8: '/app/stallholders', // Stallholders
         9: '/app/stalls', // Stalls
-        10: '/app/collectors', // Collectors
-        11: '/app/inspectors', // Inspectors
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
         // Submenu items for Stalls
@@ -76,6 +79,7 @@ export default {
   },
   mounted() {
     this.setMenuItemsBasedOnUserType()
+    this.loadCurrentUserName()
   },
   watch: {
     // update header title on route change
@@ -145,12 +149,10 @@ export default {
         if (hasPermission('stallholders')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.stallholders, id: menuId++ })
         }
-        if (hasPermission('collectors')) {
-          this.menuItems.push({ ...this.businessEmployeeMenuItems.collectors, id: menuId++ })
-        }
         // NOTE: Stalls menu is handled separately in AppSidebar.vue for business employees
         // because it needs special submenu handling (Raffles/Auctions)
         // Do NOT add stalls to menuItems here for business employees
+        // NOTE: Collectors and Inspectors are now managed through Employee Management page
 
         // If no permissions, show only dashboard
         if (this.menuItems.length === 0) {
@@ -198,19 +200,51 @@ export default {
     handleSettingsClick() {
       console.log('Settings clicked')
     },
+    loadCurrentUserName() {
+      try {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+        this.currentUserName = currentUser.name || currentUser.username || currentUser.firstName || ''
+      } catch (error) {
+        console.error('Error loading user name:', error)
+        this.currentUserName = ''
+      }
+    },
     handleLogoutClick() {
-      console.log('Logout clicked')
-      // Clear authentication data
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
-      sessionStorage.removeItem('userType')
-      sessionStorage.removeItem('branchManagerId')
-      sessionStorage.removeItem('adminId')
-
-      // Redirect to login page
-      this.$router.push('/').catch(() => {
-        window.location.href = '/'
-      })
+      console.log('Logout clicked - showing confirmation dialog')
+      this.loadCurrentUserName()
+      this.showLogoutConfirm = true
+    },
+    async handleLogoutConfirm() {
+      console.log('Logout confirmed - starting logout process')
+      
+      // Start the logout process - show loading in dialog first
+      this.isLoggingOut = true
+      
+      // Small delay to show loading state in the dialog button
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Close the confirmation dialog
+      this.showLogoutConfirm = false
+      
+      try {
+        // Call authStore.logout() which handles API call to update last_logout
+        const authStore = useAuthStore()
+        await authStore.logout()
+        
+        // Wait a moment to show the loading screen
+        await new Promise(resolve => setTimeout(resolve, 2500))
+        
+        // Navigate to landing page
+        console.log('Navigating to landing page...')
+        this.$router.push('/')
+      } catch (error) {
+        console.error('Logout error:', error)
+        // Navigate to landing page anyway
+        this.$router.push('/')
+      } finally {
+        // Reset loading state
+        this.isLoggingOut = false
+      }
     },
 
     // NEW: Method to refresh sidebar stall types (can be called when stalls are modified)

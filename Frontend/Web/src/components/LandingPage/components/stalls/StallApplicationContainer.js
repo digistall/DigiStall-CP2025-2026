@@ -103,11 +103,17 @@ export default {
           stall_id: this.stall.stall_id || this.stall.id || this.stall.ID,
           stall_code: this.stall.stall_code,
           price_type: this.stall.price_type,
+          branch_id: this.stall.branch_id,
         })
 
         await new Promise((resolve) => setTimeout(resolve, 1500))
 
-        const applicationData = await this.prepareApplicationData()
+        // Convert files to base64 before preparing data
+        console.log('📄 Converting documents to base64...')
+        const documentData = await this.convertDocumentsToBase64()
+        console.log('📄 Document data prepared:', Object.keys(documentData))
+
+        const applicationData = await this.prepareApplicationData(documentData)
         console.log('📋 Prepared application data:', applicationData)
 
         this.loadingState = 'submitting'
@@ -161,7 +167,51 @@ export default {
       }
     },
 
-    async prepareApplicationData() {
+    // Convert file to base64 string
+    fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        if (!file || !(file instanceof File)) {
+          resolve(null)
+          return
+        }
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = (error) => reject(error)
+        reader.readAsDataURL(file)
+      })
+    },
+
+    // Convert all document files to base64
+    async convertDocumentsToBase64() {
+      const other = this.otherInfo || {}
+      const documentData = {}
+
+      try {
+        // Convert signature
+        if (other.applicantSignature) {
+          documentData.signature_data = await this.fileToBase64(other.applicantSignature)
+          console.log('✅ Signature converted to base64')
+        }
+
+        // Convert house location sketch
+        if (other.applicantLocation) {
+          documentData.house_location_data = await this.fileToBase64(other.applicantLocation)
+          console.log('✅ House location converted to base64')
+        }
+
+        // Convert valid ID
+        if (other.applicantValidID) {
+          documentData.valid_id_data = await this.fileToBase64(other.applicantValidID)
+          console.log('✅ Valid ID converted to base64')
+        }
+      } catch (error) {
+        console.error('❌ Error converting files to base64:', error)
+      }
+
+      return documentData
+    },
+
+    async prepareApplicationData(documentData = {}) {
       const personal = this.personalInfo || {}
       const spouse = this.spouseInfo || {}
       const business = this.businessInfo || {}
@@ -217,13 +267,24 @@ export default {
         capitalization: toNull(business.businessCapitalization),
         source_of_capital: toNull(business.sourceOfCapital),
         previous_business_experience: toNull(business.previousBusiness),
-        relative_stall_owner: toNull(business.applicantRelative) || 'No',
+        // Convert relative name to 'Yes'/'No' - database expects ENUM('Yes','No')
+        relative_stall_owner: business.applicantRelative && business.applicantRelative.trim() !== '' ? 'Yes' : 'No',
+        // Store the actual relative's name in a separate field if provided
+        relative_name: toNull(business.applicantRelative),
 
         // Other Information
         signature_of_applicant: safeGet(other, 'applicantSignature.name'),
         house_sketch_location: safeGet(other, 'applicantLocation.name'),
         valid_id: safeGet(other, 'applicantValidID.name'),
         email_address: toNull(other.emailAddress) || '',
+
+        // Document base64 data for saving to htdocs
+        signature_data: documentData.signature_data || null,
+        house_location_data: documentData.house_location_data || null,
+        valid_id_data: documentData.valid_id_data || null,
+
+        // Branch ID from stall
+        branch_id: this.stall?.branch_id || '1',
       }
 
       // CRITICAL: Final safety check - convert ANY remaining undefined to null
@@ -337,7 +398,12 @@ export default {
 
     goToPreviousStep() {
       if (this.currentStep > 1) {
-        this.currentStep--
+        // If going back from step 3 and user is single, skip step 2
+        if (this.currentStep === 3 && this.personalInfo?.civilStatus === 'Single') {
+          this.currentStep = 1
+        } else {
+          this.currentStep--
+        }
       }
     },
 

@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 import { createConnection } from '../../config/database.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
@@ -17,34 +18,42 @@ export const mobileLogin = async (req, res) => {
       })
     }
 
-    // Step 1: Get applicant credentials and basic info
+    // Step 1: Get applicant credentials and basic info - DIRECT SQL with COLLATE fix
     console.log('🔍 Looking up user:', username)
     
-    // TEMPORARY FIX: Use direct SQL query instead of stored procedure
-    console.log('🛠️ Using direct SQL query as workaround...')
-    const [credentialRows] = await connection.execute(`
-      SELECT 
-        c.registrationid,
-        c.applicant_id,
-        c.user_name,
-        c.password_hash,
-        c.created_date,
-        c.last_login,
-        c.is_active,
-        a.applicant_full_name,
-        a.applicant_contact_number,
-        a.applicant_address,
-        a.applicant_birthdate,
-        a.applicant_civil_status,
-        a.applicant_educational_attainment,
-        COALESCE(a.applicant_email, oi.email_address) as applicant_email
-      FROM credential c
-      INNER JOIN applicant a ON c.applicant_id = a.applicant_id
-      LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
-      WHERE c.user_name = ? 
-        AND c.is_active = 1
-      LIMIT 1
-    `, [username])
+    let credentialRows = [];
+    try {
+      const [credentialResultRows] = await connection.execute(
+        'CALL sp_getCredentialWithApplicant(?)',
+        [username]
+      );
+      credentialRows = credentialResultRows[0] || [];
+    } catch (spError) {
+      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
+      // Fallback to direct SQL with COLLATE to fix collation mismatch
+      // NOTE: The applicant table uses applicant_full_name (not separate first/middle/last name columns)
+      const [directRows] = await connection.execute(`
+        SELECT 
+          c.registrationid,
+          c.applicant_id,
+          c.user_name,
+          c.password_hash,
+          c.is_active,
+          a.applicant_full_name,
+          a.applicant_contact_number,
+          a.applicant_address,
+          a.applicant_birthdate,
+          a.applicant_civil_status,
+          a.applicant_educational_attainment,
+          a.applicant_email
+        FROM credential c
+        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
+          AND c.is_active = 1
+        LIMIT 1
+      `, [username]);
+      credentialRows = directRows;
+    }
 
     console.log('📋 Credential rows found:', credentialRows.length)
     console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
@@ -66,7 +75,6 @@ export const mobileLogin = async (req, res) => {
       has_password_hash: !!userCredentials.password_hash,
       password_hash_preview: userCredentials.password_hash?.substring(0, 15) + '...',
       applicant_full_name: userCredentials.applicant_full_name,
-      applicant_email: userCredentials.applicant_email,
       is_active: userCredentials.is_active
     })
 
@@ -151,13 +159,37 @@ export const mobileLogin = async (req, res) => {
       max_applications_reached: (branchApplicationCounts[stall.branch_id] || 0) >= 2
     }))
 
-    // Step 7: Get additional applicant information
-    const [otherInfo] = await connection.execute(
+    // Step 7: Get additional applicant information (spouse, business, other info)
+    const otherInfoResultRaw = await connection.execute(
       'CALL getApplicantAdditionalInfo(?)',
       [userCredentials.applicant_id]
     )
+    // Stored procedure returns [[rows], metadata] structure
+    // connection.execute returns [[[actual_data], procedure_metadata], query_metadata]
+    // We need to extract: [0] = [[actual_data], proc_metadata], [0][0] = [actual_data], [0][0][0] = actual_data object
+    const additionalInfoRows = otherInfoResultRaw[0] // This gives [[actual_data], proc_metadata]
+    const additionalInfo = additionalInfoRows && additionalInfoRows.length > 0 && additionalInfoRows[0] && additionalInfoRows[0].length > 0 
+      ? additionalInfoRows[0][0] 
+      : {}
+    console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
-    const additionalInfo = otherInfo.length > 0 ? otherInfo[0] : {}
+    // Step 7b: Get stallholder information if user is a stallholder using stored procedure
+    const [stallholderRows] = await connection.execute(
+      'CALL sp_getFullStallholderInfo(?)',
+      [userCredentials.applicant_id]
+    )
+    
+    const stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
+    console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
+
+    // Step 7c: Get application status using stored procedure
+    const [applicationRows] = await connection.execute(
+      'CALL sp_getLatestApplicationInfo(?)',
+      [userCredentials.applicant_id]
+    )
+    
+    const applicationInfo = applicationRows[0]?.length > 0 ? applicationRows[0][0] : null
+    console.log('📄 Application info:', applicationInfo ? applicationInfo.status : 'No application')
 
     // Step 8: Update last login using stored procedure
     await connection.execute(
@@ -165,7 +197,7 @@ export const mobileLogin = async (req, res) => {
       [userCredentials.applicant_id]
     )
 
-    // Step 9: Prepare React.js-friendly response
+    // Step 9: Prepare React.js-friendly response with complete user data
     const responseData = {
       // User profile for React state
       user: {
@@ -178,12 +210,79 @@ export const mobileLogin = async (req, res) => {
         birthdate: userCredentials.applicant_birthdate,
         civil_status: userCredentials.applicant_civil_status,
         educational_attainment: userCredentials.applicant_educational_attainment,
-        email: additionalInfo.email_address || null, // Get email from other_information table
+        email: additionalInfo.email_address || null,
         created_date: userCredentials.created_date,
         last_login: new Date().toISOString()
       },
 
-      // Additional profile information
+      // Spouse information (separate object for frontend)
+      spouse: additionalInfo.spouse_full_name ? {
+        spouse_id: null, // Not available in current query
+        full_name: additionalInfo.spouse_full_name,
+        birthdate: additionalInfo.spouse_birthdate,
+        educational_attainment: additionalInfo.spouse_educational_attainment,
+        contact_number: additionalInfo.spouse_contact_number,
+        occupation: additionalInfo.spouse_occupation
+      } : null,
+
+      // Business information (separate object for frontend)
+      business: additionalInfo.nature_of_business ? {
+        business_id: null,
+        nature_of_business: additionalInfo.nature_of_business,
+        capitalization: additionalInfo.capitalization,
+        source_of_capital: additionalInfo.source_of_capital,
+        previous_business_experience: additionalInfo.previous_business_experience,
+        relative_stall_owner: additionalInfo.relative_stall_owner
+      } : null,
+
+      // Other information (separate object for frontend)
+      other_info: additionalInfo.email_address ? {
+        other_info_id: null,
+        email_address: additionalInfo.email_address,
+        signature_of_applicant: additionalInfo.signature_of_applicant,
+        house_sketch_location: additionalInfo.house_sketch_location,
+        valid_id: additionalInfo.valid_id
+      } : null,
+
+      // Application information
+      application: applicationInfo ? {
+        application_id: applicationInfo.application_id,
+        stall_id: applicationInfo.stall_id,
+        status: applicationInfo.status,
+        stall_no: applicationInfo.stall_no,
+        rental_price: applicationInfo.rental_price,
+        branch_name: applicationInfo.branch_name
+      } : null,
+
+      // Stallholder information (if user is a stallholder)
+      stallholder: stallholderInfo ? {
+        stallholder_id: stallholderInfo.stallholder_id,
+        stallholder_name: stallholderInfo.stallholder_name,
+        contact_number: stallholderInfo.stallholder_contact,
+        email: stallholderInfo.stallholder_email,
+        address: stallholderInfo.stallholder_address,
+        business_name: stallholderInfo.business_name,
+        business_type: stallholderInfo.business_type,
+        branch_id: stallholderInfo.branch_id,
+        branch_name: stallholderInfo.branch_name,
+        stall_id: stallholderInfo.stall_id,
+        stall_no: stallholderInfo.stall_no,
+        stall_location: stallholderInfo.stall_location,
+        size: stallholderInfo.size,
+        contract_start_date: stallholderInfo.contract_start_date,
+        contract_end_date: stallholderInfo.contract_end_date,
+        contract_status: stallholderInfo.contract_status,
+        monthly_rent: stallholderInfo.monthly_rent,
+        payment_status: stallholderInfo.payment_status,
+        compliance_status: stallholderInfo.compliance_status
+      } : null,
+
+      // Computed fields for easy access
+      isStallholder: !!stallholderInfo,
+      isApproved: applicationInfo?.status === 'Approved',
+      applicationStatus: applicationInfo?.status || 'No Application',
+
+      // Legacy profile structure (for backward compatibility)
       profile: {
         other_info: {
           email_address: additionalInfo.email_address,
@@ -232,9 +331,27 @@ export const mobileLogin = async (req, res) => {
       }
     }
 
+    // Generate JWT token for authentication
+    const token = jwt.sign(
+      {
+        userId: userCredentials.applicant_id,
+        applicantId: userCredentials.applicant_id,
+        username: userCredentials.user_name,
+        userType: 'stallholder',
+        registrationId: userCredentials.registrationid,
+        stallholderId: stallholderInfo?.stallholder_id || null,
+        isStallholder: !!stallholderInfo
+      },
+      process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024',
+      { expiresIn: '7d' } // Token valid for 7 days
+    );
+    
+    console.log('🔐 JWT token generated for user:', userCredentials.user_name);
+
     res.json({
       success: true,
       message: 'Mobile login successful',
+      token: token,  // ← TOKEN NOW INCLUDED!
       data: responseData
     })
 
@@ -250,7 +367,7 @@ export const mobileLogin = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message // Always show error message for debugging
     })
   } finally {
     await connection.end()
@@ -306,17 +423,12 @@ export const submitApplication = async (req, res) => {
       })
     }
 
-    // Check 2-application limit per branch
-    // TEMPORARY FIX: Use direct SQL query instead of stored procedure
-    const [branchApplications] = await connection.execute(`
-      SELECT COUNT(*) as count 
-      FROM application app
-      JOIN stall s ON app.stall_id = s.stall_id
-      JOIN section sec ON s.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ? AND b.branch_id = ?
-    `, [applicant_id, stall.branch_id])
+    // Check 2-application limit per branch using stored procedure
+    const [branchAppRows] = await connection.execute(
+      'CALL sp_countBranchApplicationsForApplicant(?, ?)',
+      [applicant_id, stall.branch_id]
+    )
+    const branchApplications = branchAppRows[0]
 
     if (branchApplications[0].count >= 2) {
       return res.status(400).json({

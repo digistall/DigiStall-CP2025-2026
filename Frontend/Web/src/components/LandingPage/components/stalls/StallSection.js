@@ -13,6 +13,8 @@ export default {
       // Landing page statistics from database
       totalStallholders: 0,
       totalStalls: 0,
+      availableStallsCount: 0,
+      occupiedStallsCount: 0,
       statsLoading: true,
       
       // Stallholders Modal
@@ -67,6 +69,33 @@ export default {
     },
     formattedStalls() {
       return this.totalStalls.toLocaleString()
+    },
+    // Filter out occupied stalls - only show available ones
+    availableStallsList() {
+      return this.stallsList.filter(stall => 
+        stall.occupancy_status !== 'Occupied' && 
+        stall.occupancy_status?.toLowerCase() !== 'occupied'
+      )
+    },
+    // Compute available count from stalls list
+    computedAvailableCount() {
+      if (this.stallsList.length > 0) {
+        return this.stallsList.filter(stall => 
+          stall.occupancy_status !== 'Occupied' && 
+          stall.occupancy_status?.toLowerCase() !== 'occupied'
+        ).length
+      }
+      return this.availableStallsCount
+    },
+    // Compute occupied count from stalls list
+    computedOccupiedCount() {
+      if (this.stallsList.length > 0) {
+        return this.stallsList.filter(stall => 
+          stall.occupancy_status === 'Occupied' || 
+          stall.occupancy_status?.toLowerCase() === 'occupied'
+        ).length
+      }
+      return this.occupiedStallsCount
     }
   },
   mounted() {
@@ -87,9 +116,13 @@ export default {
         if (data.success) {
           this.totalStallholders = data.data.totalStallholders || 0
           this.totalStalls = data.data.totalStalls || 0
+          this.availableStallsCount = data.data.availableStalls || 0
+          this.occupiedStallsCount = data.data.occupiedStalls || (this.totalStalls - this.availableStallsCount)
           console.log('📊 Landing page stats loaded:', {
             stallholders: this.totalStallholders,
-            stalls: this.totalStalls
+            stalls: this.totalStalls,
+            available: this.availableStallsCount,
+            occupied: this.occupiedStallsCount
           })
         }
       } catch (error) {
@@ -203,7 +236,10 @@ export default {
     async fetchStalls() {
       try {
         this.stallsLoading = true
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        // Ensure apiUrl ends with /api
+        const apiUrl = apiBaseUrl.endsWith('/api') ? apiBaseUrl : `${apiBaseUrl}/api`
+        
         const params = new URLSearchParams({
           search: this.stallsSearch,
           branch: this.stallsBranchFilter,
@@ -213,19 +249,30 @@ export default {
           limit: 20
         })
         
+        console.log('📊 Fetching stalls from:', `${apiUrl}/stalls/public/list?${params}`)
+        
         const response = await fetch(`${apiUrl}/stalls/public/list?${params}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         })
         
         const data = await response.json()
+        console.log('📊 Stalls API response:', data)
         
         if (data.success) {
-          // Process stall images - use default images based on section
-          const processedStalls = data.data.map(stall => ({
-            ...stall,
-            stall_image: this.getDefaultImage(stall.section_name)
-          }))
+          // Process stall images - use backend image if available, otherwise default
+          const processedStalls = data.data.map(stall => {
+            const imageUrl = stall.stall_image 
+              ? this.buildImageUrl(stall.stall_image) 
+              : this.getDefaultImage(stall.section_name)
+            console.log(`🖼️ Stall ${stall.stall_no} image:`, stall.stall_image, '→', imageUrl)
+            return {
+              ...stall,
+              stall_image: imageUrl
+            }
+          })
+          
+          console.log('📊 Processed stalls:', processedStalls.length)
           
           if (this.stallsPage === 1) {
             this.stallsList = processedStalls
@@ -257,6 +304,28 @@ export default {
       // Hide broken image and show placeholder instead
       event.target.style.display = 'none'
       stall.stall_image = null
+    },
+    
+    buildImageUrl(imagePath) {
+      // Build full URL for images
+      if (!imagePath) return null
+      
+      // If it's already a full URL (http:// or https://), return as-is
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath
+      }
+      
+      // Check if it's a BLOB API URL path (e.g., /api/stalls/images/blob/21/1)
+      if (imagePath.includes('/api/stalls/images/blob/')) {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        // Remove trailing /api from base URL if present, then append the full path
+        const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+        return `${baseUrl}${imagePath}`
+      }
+      
+      // Legacy: Build URL for file-based images
+      const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost'
+      return `${imageBaseUrl}${imagePath}`
     },
     
     getDefaultImage(section) {

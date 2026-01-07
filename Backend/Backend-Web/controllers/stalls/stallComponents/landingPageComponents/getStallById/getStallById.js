@@ -12,6 +12,7 @@ export const getStallById = async (req, res) => {
       SELECT 
         s.*,
         s.stall_id as id,
+        si.image_url as stall_image,
         sec.section_name as section,
         f.floor_name as floor,
         f.floor_number,
@@ -24,6 +25,7 @@ export const getStallById = async (req, res) => {
       INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
       LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.stall_id = ? AND s.status = 'Active' AND s.is_available = 1
     `,
       [id]

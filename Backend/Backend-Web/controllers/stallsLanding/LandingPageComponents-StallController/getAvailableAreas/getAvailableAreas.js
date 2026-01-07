@@ -1,14 +1,14 @@
 import { createConnection } from "../../../config/database.js";
 
-// Get available areas
+// Get available areas - Uses stored procedure
 export const getAvailableAreas = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
 
-    const [areas] = await connection.execute(
-      'SELECT DISTINCT area FROM branch WHERE status = "Active" ORDER BY area'
-    );
+    // Use stored procedure instead of direct SQL
+    const [rows] = await connection.execute('CALL sp_getAvailableAreas()');
+    const areas = rows[0]; // First result set from stored procedure
 
     // Format the data to match frontend expectations
     // Frontend expects array of objects with 'area' property

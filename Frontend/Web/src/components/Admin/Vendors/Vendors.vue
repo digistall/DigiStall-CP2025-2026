@@ -5,7 +5,14 @@
   <v-app>
     <div>
       <!-- Main Content -->
-      <v-main>
+      <v-main class="vendors-main-content">
+        <!-- Standardized Loading Overlay - contained within main content -->
+        <LoadingOverlay 
+          :loading="loading" 
+          text="Loading vendors..."
+          :full-page="false"
+        />
+
         <v-container fluid class="main-content">
           <v-row>
             <v-col cols="12">
@@ -24,7 +31,6 @@
               <!-- Add Vendor Dialog -->
               <AddVendorDialog
                 :isVisible="addDialog"
-                :collectors="collectors"
                 @close="addDialog = false"
                 @save="handleSave"
               />
@@ -40,7 +46,6 @@
               <!-- Edit Vendor Dialog -->
               <EditVendorDialog
                 :isVisible="editDialog"
-                :collectors="collectors"
                 @close="editDialog = false"
                 :data="editData"
                 @update="handleEditUpdate"

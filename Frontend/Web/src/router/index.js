@@ -7,11 +7,9 @@ import Payment from '../components/Admin/Payment/Payment.vue'
 import Applicants from '../components/Admin/Applicants/Applicants.vue'
 import Complaints from '../components/Admin/Complaints/Complaints.vue'
 import Compliances from '../components/Admin/Compliances/Compliance.vue'
-import Inspectors from '../components/Admin/Inspectors/Inspector.vue'
 import Vendors from '../components/Admin/Vendors/Vendors.vue'
 import Stallholders from '../components/Admin/Stallholders/Stallholders.vue'
 import MainLayout from '../components/MainLayout/MainLayout.vue'
-import Collectors from '../components/Admin/Collectors/Collectors.vue'
 import Stalls from '../components/Admin/Stalls/Stalls.vue'
 import BranchManagement from '../components/Admin/Branch/Branch.vue'
 import Employees from '../components/Admin/Employees/Employees.vue'
@@ -113,6 +111,7 @@ const hasPermission = (...permissions) => {
 
 /**
  * Get the appropriate dashboard path for the current user
+ * If user doesn't have dashboard permission, redirect to first available page
  */
 const getDashboardPath = () => {
   const userData = sessionStorage.getItem('currentUser');
@@ -120,9 +119,57 @@ const getDashboardPath = () => {
 
   try {
     const user = JSON.parse(userData);
+    
+    // System administrator always goes to system admin dashboard
     if (user.userType === 'system_administrator') {
       return '/system-admin/dashboard';
     }
+    
+    // Business owner and manager always have dashboard
+    if (user.userType === 'stall_business_owner' || user.userType === 'business_manager') {
+      return '/app/dashboard';
+    }
+    
+    // For business employees, check their permissions
+    if (user.userType === 'business_employee' && user.permissions) {
+      const permissions = user.permissions;
+      
+      // Helper to check permission
+      const hasPermission = (perm) => {
+        if (Array.isArray(permissions)) {
+          return permissions.includes(perm);
+        }
+        return permissions[perm] === true;
+      };
+      
+      // If has dashboard permission, go to dashboard
+      if (hasPermission('dashboard')) {
+        return '/app/dashboard';
+      }
+      
+      // Otherwise, find the first available page based on permissions
+      const permissionRoutes = [
+        { perm: 'payments', route: '/app/payment' },
+        { perm: 'applicants', route: '/app/applicants' },
+        { perm: 'complaints', route: '/app/complaints' },
+        { perm: 'compliances', route: '/app/compliance' },
+        { perm: 'vendors', route: '/app/vendor' },
+        { perm: 'stallholders', route: '/app/stallholder' },
+        { perm: 'stalls', route: '/app/stalls' }
+      ];
+      
+      for (const { perm, route } of permissionRoutes) {
+        if (hasPermission(perm)) {
+          console.log(`🔄 User doesn't have dashboard permission, redirecting to ${route}`);
+          return route;
+        }
+      }
+      
+      // If no permissions at all, still try dashboard (they might see a restricted view)
+      console.log('⚠️ User has no recognized permissions, defaulting to dashboard');
+      return '/app/dashboard';
+    }
+    
     return '/app/dashboard';
   } catch {
     return '/app/dashboard';
@@ -242,6 +289,81 @@ const requiresPermission = (permission) => {
   return requirePermission(permission)
 }
 
+/**
+ * Dashboard guard - redirects business employees without dashboard permission
+ * to their first available page
+ */
+const requireDashboardAccess = (to, from, next) => {
+  if (!isAuthenticated()) {
+    next('/login')
+    return
+  }
+
+  const userData = sessionStorage.getItem('currentUser')
+  if (!userData) {
+    next('/login')
+    return
+  }
+
+  try {
+    const user = JSON.parse(userData)
+    
+    // System administrators, owners, and managers always have dashboard access
+    if (user.userType === 'system_administrator' ||
+        user.userType === 'stall_business_owner' ||
+        user.userType === 'business_manager') {
+      next()
+      return
+    }
+    
+    // For business employees, check if they have dashboard permission
+    if (user.userType === 'business_employee' && user.permissions) {
+      const permissions = user.permissions
+      
+      const hasPerm = (perm) => {
+        if (Array.isArray(permissions)) {
+          return permissions.includes(perm)
+        }
+        return permissions[perm] === true || permissions[perm] === 1
+      }
+      
+      // If user has dashboard permission, allow access
+      if (hasPerm('dashboard')) {
+        next()
+        return
+      }
+      
+      // Find first available page based on permissions
+      const permissionRoutes = [
+        { perm: 'payments', route: '/app/payment' },
+        { perm: 'applicants', route: '/app/applicants' },
+        { perm: 'complaints', route: '/app/complaints' },
+        { perm: 'compliances', route: '/app/compliances' },
+        { perm: 'vendors', route: '/app/vendors' },
+        { perm: 'stallholders', route: '/app/stallholders' },
+        { perm: 'stalls', route: '/app/stalls' }
+      ]
+      
+      for (const { perm, route } of permissionRoutes) {
+        if (hasPerm(perm)) {
+          console.log(`🔄 Employee doesn't have dashboard permission, redirecting to ${route}`)
+          next(route)
+          return
+        }
+      }
+      
+      // No permissions at all - show unauthorized or stay (component will handle)
+      console.log('⚠️ Employee has no recognized permissions')
+    }
+    
+    // Default: allow but component will show appropriate message
+    next()
+  } catch (error) {
+    console.error('❌ Error in dashboard guard:', error)
+    next()
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -261,6 +383,7 @@ const router = createRouter({
           name: 'Dashboard',
           component: Dashboard,
           meta: { title: 'Dashboard' },
+          beforeEnter: requireDashboardAccess,
         },
         {
           path: 'complaints',
@@ -324,13 +447,6 @@ const router = createRouter({
           beforeEnter: requiresPermission('compliances'),
         },
         {
-          path: 'inspectors',
-          name: 'Inspectors',
-          component: Inspectors,
-          meta: { title: 'Inspectors' },
-          beforeEnter: requiresPermission('compliances'),
-        },
-        {
           path: 'vendors',
           name: 'Vendors',
           component: Vendors,
@@ -343,13 +459,6 @@ const router = createRouter({
           component: Stallholders,
           meta: { title: 'Stallholders' },
           beforeEnter: requiresPermission('stallholders'),
-        },
-        {
-          path: 'collectors',
-          name: 'Collectors',
-          component: Collectors,
-          meta: { title: 'Collectors' },
-          beforeEnter: requiresPermission('collectors'),
         },
         {
           path: 'stalls',

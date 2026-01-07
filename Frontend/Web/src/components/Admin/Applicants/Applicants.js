@@ -4,6 +4,7 @@ import VendorApplicantsTable from './Components/Table/ApplicantsTable.vue'
 import ApproveApplicants from './Components/ApproveApplicants/ApproveApplicants.vue'
 import DeclineApplicants from './Components/DeclineApplicants/DeclineApplicants.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -16,6 +17,7 @@ export default {
     ApproveApplicants,
     DeclineApplicants,
     ToastNotification,
+    LoadingOverlay,
   },
   data() {
     return {
@@ -273,8 +275,10 @@ export default {
         document.body.dataset._prevOverflow = prevBodyOverflow || ''
         document.documentElement.style.overflow = 'hidden'
         document.body.style.overflow = 'hidden'
-      } catch (e) {}
-    } catch (e) {
+      } catch {
+        /* ignore */
+      }
+    } catch {
       /* ignore */
     }
 
@@ -297,8 +301,10 @@ export default {
         document.body.style.overflow = prevBody
         delete document.documentElement.dataset._prevOverflow
         delete document.body.dataset._prevOverflow
-      } catch (e) {}
-    } catch (e) {
+      } catch {
+        /* ignore */
+      }
+    } catch {
       /* ignore */
     }
   },
@@ -398,6 +404,14 @@ export default {
     async handleRecheck(applicant) {
       console.log('🔄 Re-checking rejected applicant:', applicant)
 
+      // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+      const applicantId = applicant.applicant_id || 
+        (applicant.id && typeof applicant.id === 'string' 
+          ? parseInt(applicant.id.replace('#', ''), 10) 
+          : applicant.id)
+
+      console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
       try {
         // Make API call to update status to "Under Review" in the backend database
         const token =
@@ -410,7 +424,7 @@ export default {
         }
 
         const response = await fetch(
-          `${API_BASE_URL}/applicants/${applicant.applicant_id || applicant.id}/status`,
+          `${API_BASE_URL}/applicants/${applicantId}/status`,
           {
             method: 'PUT',
             headers: {
@@ -442,7 +456,7 @@ export default {
 
         if (result.success) {
           // Update local data only after successful backend update
-          this.updateApplicantStatus(applicant.applicant_id || applicant.id, 'Under Review')
+          this.updateApplicantStatus(applicantId, 'Under Review')
 
           // Show success message
           if (this.$toast) {

@@ -18,10 +18,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import API Service
 import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
+import DocumentUploadHelper from '../../../../services/DocumentUploadHelper';
+import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 const { width, height } = Dimensions.get("window");
 
 const DocumentsScreen = () => {
+  const { theme, isDark } = useTheme();
+  
   // State for tabs and data
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [branchTabs, setBranchTabs] = useState([]);
@@ -31,28 +36,51 @@ const DocumentsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [token, setToken] = useState(null);
+  
+  // Document preview modal state
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [documentBlobData, setDocumentBlobData] = useState({});
 
   useEffect(() => {
     loadUserData();
   }, []);
 
   useEffect(() => {
-    if (userData?.user?.applicant_id) {
+    const applicantId = userData?.user?.applicant_id || userData?.user?.id;
+    console.log('📋 Documents useEffect triggered - applicantId:', applicantId);
+    if (applicantId) {
+      console.log('📋 Calling loadStallholderDocuments for applicantId:', applicantId);
       loadStallholderDocuments();
+    } else {
+      console.log('📋 No applicantId found, skipping loadStallholderDocuments');
     }
   }, [userData]);
 
   const loadUserData = async () => {
     try {
-      const userToken = await AsyncStorage.getItem('userToken');
+      // Get token from UserStorageService using correct key 'auth_token'
+      const userToken = await UserStorageService.getAuthToken();
       const storedUserData = await UserStorageService.getUserData();
       
-      if (userToken && storedUserData) {
+      console.log('📱 Documents - Loaded user data:', JSON.stringify(storedUserData, null, 2));
+      console.log('📱 Documents - Token available:', !!userToken);
+      console.log('📱 Documents - Is Stallholder:', storedUserData?.isStallholder);
+      console.log('📱 Documents - Applicant ID:', storedUserData?.user?.applicant_id || storedUserData?.user?.id);
+      
+      if (storedUserData) {
         setToken(userToken);
         setUserData(storedUserData);
+      } else {
+        // No user data found, stop loading
+        console.log('❌ No user data found in storage');
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      setLoading(false);
     }
   };
 
@@ -60,9 +88,9 @@ const DocumentsScreen = () => {
     try {
       setLoading(true);
       
-      const applicantId = userData?.user?.applicant_id;
+      const applicantId = userData?.user?.applicant_id || userData?.user?.id;
       if (!applicantId) {
-        console.log('No applicant ID found');
+        console.log('❌ No applicant ID found in userData:', userData);
         setLoading(false);
         return;
       }
@@ -70,6 +98,8 @@ const DocumentsScreen = () => {
       console.log('📄 Loading stallholder documents for applicant:', applicantId);
       
       const response = await ApiService.getStallholderStallsWithDocuments(applicantId);
+      
+      console.log('📄 API Response:', JSON.stringify(response, null, 2));
       
       if (response.success && response.data) {
         const { grouped_by_branch } = response.data;
@@ -166,7 +196,7 @@ const DocumentsScreen = () => {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -191,7 +221,7 @@ const DocumentsScreen = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -226,17 +256,30 @@ const DocumentsScreen = () => {
     try {
       setUploading(true);
 
-      const documentData = {
-        stallholder_id: stallholderId,
-        document_type_id: documentTypeId,
-        file: {
-          uri: file.uri,
-          type: file.type || file.mimeType || 'image/jpeg',
-          name: file.name || file.fileName || `document_${Date.now()}.jpg`,
-        }
-      };
+      // Note: Token is optional for document uploads (backend endpoint is public)
+      // We'll still try to get the token for future-proofing when auth is added
+      let currentToken = token;
+      if (!currentToken) {
+        currentToken = await UserStorageService.getAuthToken();
+        console.log('📌 Token retrieved from storage:', !!currentToken);
+      }
 
-      const response = await ApiService.uploadStallholderDocument(documentData, token);
+      // Continue without token - backend upload endpoint is currently public
+      if (!currentToken) {
+        console.log('⚠️ No token available, proceeding with upload anyway (endpoint is public)');
+      }
+
+      // Use BLOB upload helper
+      const uploadPayload = await DocumentUploadHelper.prepareDocumentForUpload(
+        file,
+        stallholderId,
+        documentTypeId
+      );
+
+      console.log('📤 Upload payload prepared, stallholder_id:', stallholderId, 'document_type_id:', documentTypeId);
+
+      // Upload to backend BLOB (token is optional for this endpoint)
+      const response = await ApiService.uploadStallholderDocumentBlob(uploadPayload, currentToken);
       
       if (response.success) {
         Alert.alert(
@@ -248,7 +291,7 @@ const DocumentsScreen = () => {
         Alert.alert('Upload Failed', response.message || 'Failed to upload');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to upload document');
+      Alert.alert('Error', error.message || 'Failed to upload document');
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
@@ -275,37 +318,140 @@ const DocumentsScreen = () => {
     }
   };
 
-  // Render empty state when no stalls owned
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Image 
-        source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
-        style={styles.emptyIcon}
-        resizeMode="contain"
-      />
-      <Text style={styles.emptyTitle}>No Stalls Owned</Text>
-      <Text style={styles.emptyText}>
-        You don't own any stalls yet. Once you're approved as a stallholder, 
-        you'll see the required documents for your stalls here.
-      </Text>
-    </View>
-  );
+  // Document preview modal handlers
+  const openDocumentPreview = async (document, documentTypeId) => {
+    try {
+      console.log('📄 Opening document preview:', JSON.stringify(document, null, 2));
+      
+      setSelectedDocument(document);
+      setSelectedDocumentId(documentTypeId);
+      setPreviewModalVisible(true);
+      setPreviewLoading(true);
 
-  // Render document card
+      // Set initial document data from the list (includes metadata)
+      setDocumentBlobData({
+        ...document,
+        file_name: document.file_name || document.original_filename || document.document_name || 'Document',
+        mime_type: document.mime_type || 'image/jpeg',
+      });
+
+      // Fetch document BLOB data if document_id exists
+      const docId = document.document_id || document.id;
+      if (docId) {
+        console.log('📥 Fetching document BLOB:', docId);
+        const response = await ApiService.getStallholderDocumentBlobById(docId);
+        
+        if (response.success) {
+          setDocumentBlobData({
+            ...document,
+            document_data: response.data, // Contains data:image/...;base64,...
+            mime_type: response.mimeType || document.mime_type || 'image/jpeg',
+            file_name: document.file_name || document.original_filename || document.document_name || 'Document',
+          });
+          console.log('✅ Document BLOB loaded successfully');
+        } else {
+          console.log('⚠️ BLOB fetch returned:', response.message);
+        }
+      } else {
+        console.log('⚠️ No document_id found in document object');
+      }
+    } catch (error) {
+      console.error('❌ Error loading document preview:', error);
+      Alert.alert('Error', 'Failed to load document');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closeDocumentPreview = () => {
+    setPreviewModalVisible(false);
+    setSelectedDocument(null);
+    setSelectedDocumentId(null);
+    setDocumentBlobData({});
+  };
+
+  const deleteDocument = async () => {
+    try {
+      if (!selectedDocument?.document_id) {
+        Alert.alert('Error', 'Document ID not found');
+        return;
+      }
+
+      const response = await ApiService.deleteStallholderDocument(
+        selectedDocument.document_id
+      );
+
+      if (response.success) {
+        Alert.alert('Success', 'Document deleted successfully');
+        closeDocumentPreview();
+        await loadStallholderDocuments();
+      } else {
+        Alert.alert('Error', response.message || 'Failed to delete document');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting document:', error);
+      Alert.alert('Error', 'Failed to delete document');
+    }
+  };
+
+  const replaceDocument = () => {
+    if (selectedDocumentId) {
+      closeDocumentPreview();
+      handleUpload(selectedDocumentId, selectedDocument?.document_name || 'Document', 
+                   selectedDocument?.stallholder_id || userData?.user?.id);
+    }
+  };
+
+  // Render empty state when no stalls owned
+  const renderEmptyState = () => {
+    const isUserStallholder = userData?.isStallholder || userData?.stallholder != null;
+    
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
+        <Image 
+          source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
+          style={styles.emptyIcon}
+          resizeMode="contain"
+        />
+        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+          {isUserStallholder ? 'No Document Requirements' : 'No Active Stalls'}
+        </Text>
+        <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          {isUserStallholder 
+            ? 'The business owner has not set up document requirements for your stall yet. Please check back later or contact your branch administrator.'
+            : 'You don\'t have any active stalls yet. Once your application is approved and your contract is active, you\'ll see the required documents for your stalls here.'
+          }
+        </Text>
+        {!isUserStallholder && userData?.applicationStatus && (
+          <View style={[styles.statusBadgeContainer, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.statusLabel, { color: theme.colors.textSecondary }]}>Application Status: </Text>
+            <Text style={[
+              styles.statusValue,
+              { color: userData.applicationStatus === 'Approved' ? '#10b981' : '#f59e0b' }
+            ]}>
+              {userData.applicationStatus}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Render document card with image preview
   const renderDocumentCard = (doc, index, stallholderId) => (
-    <View key={doc.document_type_id} style={styles.documentCard}>
+    <View key={doc.document_type_id} style={[styles.documentCard, { backgroundColor: theme.colors.card }]}>
       <View style={styles.documentHeader}>
         <View style={styles.documentTitleRow}>
           <Text style={styles.documentIcon}>
             {getStatusIcon(doc.status)}
           </Text>
           <View style={styles.documentInfo}>
-            <Text style={styles.documentName}>
+            <Text style={[styles.documentName, { color: theme.colors.text }]}>
               {index + 1}. {doc.document_name}
               {doc.is_required && <Text style={styles.required}> *</Text>}
             </Text>
             {doc.description && (
-              <Text style={styles.documentDescription}>
+              <Text style={[styles.documentDescription, { color: theme.colors.textSecondary }]}>
                 {doc.description}
               </Text>
             )}
@@ -325,12 +471,32 @@ const DocumentsScreen = () => {
       </View>
 
       {doc.instructions && (
-        <Text style={styles.instructions}>{doc.instructions}</Text>
+        <Text style={[styles.instructions, { color: theme.colors.textSecondary }]}>{doc.instructions}</Text>
+      )}
+
+      {/* Image Preview */}
+      {doc.status !== 'not_uploaded' && doc.blob_url && (
+        <TouchableOpacity
+          style={[styles.imagePreviewContainer, { backgroundColor: isDark ? theme.colors.surface : '#f1f5f9' }]}
+          onPress={() => openDocumentPreview(doc, doc.document_type_id)}
+        >
+          <Image
+            source={{ uri: doc.blob_url }}
+            style={styles.imagePreview}
+            onError={(error) => {
+              console.error('❌ Error loading image preview:', error);
+            }}
+          />
+          <View style={styles.previewOverlay}>
+            <Text style={styles.previewIcon}>🔍</Text>
+            <Text style={styles.previewText}>View</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       {doc.status !== 'not_uploaded' && (
         <View style={styles.documentDetails}>
-          <Text style={styles.detailText}>
+          <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
             Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
           </Text>
           {doc.expiry_date && (
@@ -366,9 +532,20 @@ const DocumentsScreen = () => {
         disabled={uploading}
       >
         <Text style={styles.uploadButtonText}>
-          {doc.status === 'not_uploaded' ? '📤 Upload' : '🔄 Replace'}
+          {doc.status === 'not_uploaded' ? 'Upload' : 'Replace'}
         </Text>
       </TouchableOpacity>
+
+      {doc.status !== 'not_uploaded' && (
+        <TouchableOpacity
+          style={styles.viewDetailsButton}
+          onPress={() => openDocumentPreview(doc, doc.document_type_id)}
+        >
+          <Text style={[styles.viewDetailsText, { color: theme.colors.primary }]}>
+            View Details
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -387,11 +564,11 @@ const DocumentsScreen = () => {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
         }
       >
         {/* Branch Info Header */}
-        <View style={styles.branchInfoCard}>
+        <View style={[styles.branchInfoCard, { backgroundColor: theme.colors.primary }]}>
           <Text style={styles.branchName}>{branch_name}</Text>
           <Text style={styles.ownerName}>Business Owner: {business_owner_name || 'Not assigned'}</Text>
           <View style={styles.stallsInfo}>
@@ -404,22 +581,25 @@ const DocumentsScreen = () => {
           </View>
         </View>
 
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           Upload the required documents for this branch. Documents are customized
           based on the business owner's requirements.
         </Text>
 
         {/* Progress Card */}
-        <View style={styles.progressCard}>
-          <Text style={styles.progressTitle}>Document Status</Text>
-          <Text style={styles.progressText}>
+        <View style={[styles.progressCard, { backgroundColor: theme.colors.card }]}>
+          <Text style={[styles.progressTitle, { color: theme.colors.text }]}>Document Status</Text>
+          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
             {getUploadedCount(document_requirements)} of {getRequiredCount(document_requirements)} required documents uploaded
           </Text>
-          <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBarContainer, { backgroundColor: isDark ? theme.colors.border : '#e2e8f0' }]}>
             <View 
               style={[
                 styles.progressBar,
-                { width: `${(getUploadedCount(document_requirements) / Math.max(getRequiredCount(document_requirements), 1)) * 100}%` }
+                { 
+                  width: `${(getUploadedCount(document_requirements) / Math.max(getRequiredCount(document_requirements), 1)) * 100}%`,
+                  backgroundColor: theme.colors.primary
+                }
               ]} 
             />
           </View>
@@ -427,11 +607,11 @@ const DocumentsScreen = () => {
 
         {/* Document List */}
         <View style={styles.documentsContainer}>
-          <Text style={styles.sectionTitle}>Required Documents</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Required Documents</Text>
           
           {!document_requirements || document_requirements.length === 0 ? (
-            <View style={styles.emptyDocState}>
-              <Text style={styles.emptyDocText}>
+            <View style={[styles.emptyDocState, { backgroundColor: isDark ? theme.colors.surface : '#f8fafc', borderColor: theme.colors.border }]}>
+              <Text style={[styles.emptyDocText, { color: theme.colors.textSecondary }]}>
                 No document requirements set by the business owner for this branch yet.
               </Text>
             </View>
@@ -448,14 +628,14 @@ const DocumentsScreen = () => {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#305CDE" />
-        <Text style={styles.loadingText}>Loading documents...</Text>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading documents...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {uploading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="large" color="#ffffff" />
@@ -463,12 +643,22 @@ const DocumentsScreen = () => {
         </View>
       )}
 
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        visible={previewModalVisible}
+        onClose={closeDocumentPreview}
+        document={documentBlobData}
+        onDelete={deleteDocument}
+        onReplace={replaceDocument}
+        isLoading={previewLoading}
+      />
+
       {branchTabs.length === 0 ? (
         renderEmptyState()
       ) : (
         <>
           {/* Tab Navigation - Similar to TabbedStallScreen */}
-          <View style={styles.tabContainer}>
+          <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -479,18 +669,21 @@ const DocumentsScreen = () => {
                   key={tab.id}
                   style={[
                     styles.tab,
-                    activeTabIndex === index && styles.activeTab
+                    { backgroundColor: isDark ? theme.colors.card : '#f1f5f9' },
+                    activeTabIndex === index && [styles.activeTab, { backgroundColor: theme.colors.primary }]
                   ]}
                   onPress={() => handleTabPress(index)}
                 >
                   <Text style={[
                     styles.tabText,
+                    { color: theme.colors.textSecondary },
                     activeTabIndex === index && styles.activeTabText
                   ]}>
                     {tab.label}
                   </Text>
                   <Text style={[
                     styles.tabSubtext,
+                    { color: theme.colors.textTertiary },
                     activeTabIndex === index && styles.activeTabSubtext
                   ]}>
                     {tab.stallCount} stall{tab.stallCount !== 1 ? 's' : ''}
@@ -700,6 +893,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  statusBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+  },
+  statusLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  statusValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   emptyDocState: {
     padding: 32,
     alignItems: 'center',
@@ -813,6 +1024,52 @@ const styles = StyleSheet.create({
     fontSize: width * 0.038,
     fontWeight: "600",
     color: "#ffffff",
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: '#f1f5f9',
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewIcon: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  previewText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  viewDetailsButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#305CDE',
+  },
+  viewDetailsText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

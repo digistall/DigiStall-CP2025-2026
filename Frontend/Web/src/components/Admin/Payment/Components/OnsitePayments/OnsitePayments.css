@@ -204,17 +204,17 @@
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .detail-value {
     text-align: left;
   }
@@ -303,33 +303,33 @@
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .detail-value {
     text-align: left;
   }
-  
+
   .fab-container {
     bottom: 20px;
     right: 20px;
   }
-  
+
   .fab-button {
     width: 56px;
     height: 56px;
   }
-  
+
   .fab-ripple,
   .fab-ripple-2 {
     width: 56px;
     height: 56px;
   }
-  
+
   @keyframes ripple {
     0% {
       width: 56px;
@@ -343,3 +343,23 @@
     }
   }
 }
+
+/* Violation Payment Styles */
+.violation-details-card {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3cd 100%);
+  border-left: 4px solid #ff9800;
+}
+
+.violation-details-card .violation-info {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.violation-details-card .text-caption {
+  color: #666;
+}
+
+.violation-details-card .text-error {
+  color: #d32f2f;
+}
+

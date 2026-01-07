@@ -1,58 +1,38 @@
-import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Alert,
   ScrollView,
 } from "react-native";
-import PaymentCard from "./Components/PaymentCard/PaymentCard";
 import PaymentTable from "./Components/PaymentTable/PaymentTable";
+import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
 
 const PaymentScreen = ({ navigation, onBack }) => {
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-
-  const handlePaymentMethodSelect = (method) => {
-    setSelectedPaymentMethod(method);
-  };
-
-  const handleProceedPayment = () => {
-    if (!selectedPaymentMethod) {
-      Alert.alert("Error", "Please select a payment method first");
-      return;
-    }
-
-    Alert.alert(
-      "Payment Confirmation",
-      `You selected ${selectedPaymentMethod.name} as your payment method.`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Proceed",
-          onPress: () => {
-            // Navigate to payment details or process payment
-            console.log("Processing payment with:", selectedPaymentMethod);
-          },
-        },
-      ]
-    );
-  };
+  const { theme, isDark } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Payment Method Selection with Proceed Button */}
-        <PaymentCard
-          onPaymentMethodSelect={handlePaymentMethodSelect}
-          onProceedPayment={handleProceedPayment}
-        />
+        {/* Header Section */}
+        <View style={[styles.headerSection, { backgroundColor: theme.colors.card }]}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="receipt-outline" size={32} color={theme.colors.primary || "#007AFF"} />
+          </View>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Payment Records
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
+            View your stall payment history and transaction records
+          </Text>
+        </View>
 
         {/* Payment Records Table */}
-        <PaymentTable selectedPaymentMethod={selectedPaymentMethod} />
+        <PaymentTable 
+          selectedPaymentMethod={null}
+          theme={theme}
+          isDark={isDark}
+        />
       </ScrollView>
     </View>
   );
@@ -61,11 +41,42 @@ const PaymentScreen = ({ navigation, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
   },
 
   content: {
     flex: 1,
+  },
+
+  headerSection: {
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  headerIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+
+  headerSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
 

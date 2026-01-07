@@ -1,5 +1,7 @@
+/* Active Auctions container - position relative for contained loading overlay */
 .active-auctions {
   padding: 0;
+  position: relative;
 }
 
 /* Search and Filter Card Styling */

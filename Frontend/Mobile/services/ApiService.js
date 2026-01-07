@@ -41,6 +41,10 @@ class ApiService {
 
       console.log('📡 Response status:', response.status);
       const data = await response.json();
+      
+      // DEBUG: Log the FULL response to see if token is there
+      console.log('🔍 FULL API RESPONSE:', JSON.stringify(data, null, 2));
+      console.log('🔐 Token in response:', data.token ? 'YES (' + data.token.substring(0, 20) + '...)' : 'NO TOKEN!');
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
@@ -50,12 +54,51 @@ class ApiService {
       return {
         success: true,
         data: data.data,  // Extract the data from the response
-        user: data.data?.user,
+        user: data.data?.user || data.user,
         token: data.token,
         message: data.message
       };
     } catch (error) {
       console.error('❌ Login API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Mobile staff login function (for Inspector/Collector)
+  static async mobileStaffLogin(username, password) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      console.log('🔄 Attempting staff login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`);
+      console.log('📱 Request data:', { username, password: '***' });
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ username, password }),
+      });
+
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff login failed');
+      }
+
+      console.log('✅ Staff login successful:', data.message);
+      return {
+        success: true,
+        user: data.user,
+        token: data.token,
+        staffType: data.user?.staffType,
+        message: data.message
+      };
+    } catch (error) {
+      // Don't log as error - this is expected for non-staff users (stallholders)
+      console.log('ℹ️ Staff login check:', error.message || 'Not a staff user');
       return {
         success: false,
         message: error.message || 'Network error occurred'
@@ -148,7 +191,7 @@ class ApiService {
   }
 
   // Mobile logout
-  static async mobileLogout(token) {
+  static async mobileLogout(token, userId = null) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
@@ -158,6 +201,10 @@ class ApiService {
           ...API_CONFIG.HEADERS,
           'Authorization': `Bearer ${token}`
         },
+        body: JSON.stringify({
+          userId: userId,
+          applicantId: userId
+        })
       });
 
       const data = await response.json();
@@ -176,6 +223,121 @@ class ApiService {
       return {
         success: false,
         message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Staff (Inspector/Collector) logout
+  static async staffLogout(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGOUT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff logout failed');
+      }
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Staff Logout API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Staff (Inspector/Collector) heartbeat - keep marked as online
+  static async staffHeartbeat(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_HEARTBEAT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Staff heartbeat failed');
+      }
+
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      // Silent fail for heartbeat - don't spam console
+      return {
+        success: false,
+        message: error.message || 'Heartbeat error'
+      };
+    }
+  }
+
+  // Staff (Inspector/Collector) auto-logout due to inactivity
+  // Uses the same endpoint as manual logout since staff-auto-logout may not be deployed
+  static async staffAutoLogout(token, staffId, staffType) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      // Use the working staff-logout endpoint (same functionality)
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGOUT}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          staffId: staffId,
+          staffType: staffType,
+          reason: 'inactivity' // Include reason for logging purposes
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Auto-logout failed');
+      }
+
+      console.log('✅ Staff auto-logout API called - last_logout updated');
+      return {
+        success: true,
+        data: data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Staff Auto-Logout API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Auto-logout error'
       };
     }
   }
@@ -289,6 +451,41 @@ class ApiService {
         success: false,
         message: error.message || 'Network error occurred',
         data: []
+      };
+    }
+  }
+
+  // Get all images for a stall
+  static async getStallImages(stallId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALL_IMAGES}/${stallId}`;
+      
+      console.log('🖼️ Fetching images for stall ID:', stallId, 'from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: API_CONFIG.HEADERS,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stall images');
+      }
+
+      console.log(`✅ Stall images fetched: ${data.data?.images?.length || 0} images`);
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Stall Images API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: { images: [] }
       };
     }
   }
@@ -656,10 +853,17 @@ class ApiService {
       
       console.log('🔄 Fetching stallholder stalls with documents from:', url);
 
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       const response = await fetch(url, {
         method: 'GET',
         headers: API_CONFIG.HEADERS,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -675,9 +879,12 @@ class ApiService {
       };
     } catch (error) {
       console.error('❌ Get Stallholder Stalls Documents API Error:', error);
+      const errorMessage = error.name === 'AbortError' 
+        ? 'Request timed out. Please check your connection.'
+        : (error.message || 'Network error occurred');
       return {
         success: false,
-        message: error.message || 'Network error occurred',
+        message: errorMessage,
         data: { stalls: [], grouped_by_branch: [] }
       };
     }
@@ -778,7 +985,318 @@ class ApiService {
     }
   }
 
+  // ===== STALLHOLDER DOCUMENT BLOB METHODS =====
+
+  /**
+   * Upload stallholder document as BLOB (base64) to database
+   * @param {object} documentData - Document data with base64
+   * @param {number} documentData.stallholder_id
+   * @param {number} documentData.document_type_id
+   * @param {string} documentData.document_data - Base64 data with data:mime/type;base64, prefix
+   * @param {string} documentData.mime_type
+   * @param {string} documentData.file_name
+   * @param {string} documentData.expiry_date - Optional
+   * @param {string} documentData.notes - Optional
+   * @param {string} authToken - Optional token (if not provided, will try to retrieve from storage)
+   */
+  static async uploadStallholderDocumentBlob(documentData, authToken = null) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      // Use provided token or try to get from storage (token is optional for this endpoint)
+      let token = authToken;
+      if (!token) {
+        token = await UserStorageService.getAuthToken();
+      }
+
+      // Token is optional - backend endpoint is public
+      // Just log a warning but continue with the upload
+      if (!token) {
+        console.log('⚠️ No authentication token available - proceeding without auth (endpoint is public)');
+      } else {
+        console.log('🔐 Using token:', token.substring(0, 20) + '...');
+      }
+
+      console.log('📤 Uploading stallholder document BLOB...');
+      console.log('� Payload:', {
+        stallholder_id: documentData.stallholder_id,
+        document_type_id: documentData.document_type_id,
+        file_name: documentData.file_name,
+        mime_type: documentData.mime_type,
+        file_size: documentData.file_size,
+        has_document_data: !!documentData.document_data
+      });
+
+      // Build headers - include auth token only if available
+      const headers = {
+        ...API_CONFIG.HEADERS,
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/upload`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(documentData),
+      });
+
+      const data = await response.json();
+      console.log('📡 Upload response:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload document');
+      }
+
+      console.log('✅ Document BLOB uploaded successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Upload Stallholder Document BLOB API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get stallholder document BLOB by document ID
+   * @param {number} documentId
+   * @returns {Promise} - Base64 image data
+   */
+  static async getStallholderDocumentBlobById(documentId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      console.log(`📥 Fetching document BLOB ${documentId}...`);
+
+      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/id/${documentId}`, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
+
+      // Get the blob data
+      const blob = await response.blob();
+      
+      // Convert blob to base64
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          console.log('✅ Document BLOB retrieved successfully');
+          resolve({
+            success: true,
+            data: reader.result, // This will be the data:image/...;base64,... string
+            mimeType: response.headers.get('content-type'),
+          });
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('❌ Get Stallholder Document BLOB API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get all documents for a stallholder
+   * @param {number} stallholderId
+   * @param {boolean} includeData - Include base64 data
+   */
+  static async getStallholderDocuments(stallholderId, includeData = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const url = `${server}/api/mobile/stallholder/${stallholderId}/documents/blob${
+        includeData ? '?include_data=true' : ''
+      }`;
+      
+      console.log('📥 Fetching all documents for stallholder:', stallholderId);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch documents');
+      }
+
+      console.log('✅ Documents retrieved successfully');
+      return {
+        success: true,
+        data: data.data,
+        total: data.total,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Stallholder Documents API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Delete a stallholder document
+   * @param {number} documentId
+   */
+  static async deleteStallholderDocument(documentId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      console.log(`🗑️ Deleting document ${documentId}...`);
+
+      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete document');
+      }
+
+      console.log('✅ Document deleted successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Delete Stallholder Document API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // ===== UTILITY METHODS =====
+
+  // Generic GET method
+  static async get(endpoint, includeAuth = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = { ...API_CONFIG.HEADERS };
+      
+      if (includeAuth) {
+        const token = await UserStorageService.getAuthToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      
+      const url = `${server}/api/mobile${endpoint}`;
+      console.log('🔄 GET Request:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+      
+      return {
+        success: true,
+        data: data.data || data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error(`❌ GET ${endpoint} Error:`, error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Generic POST method
+  static async post(endpoint, body, includeAuth = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = { ...API_CONFIG.HEADERS };
+      
+      if (includeAuth) {
+        const token = await UserStorageService.getAuthToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      
+      const url = `${server}/api/mobile${endpoint}`;
+      console.log('🔄 POST Request:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+      
+      return {
+        success: true,
+        data: data.data || data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error(`❌ POST ${endpoint} Error:`, error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
 
   // Reset network configuration (force server rediscovery)
   static resetNetwork() {
@@ -805,6 +1323,526 @@ class ApiService {
       success: false,
       message: error.message || 'Network error occurred'
     };
+  }
+
+  // ===== INSPECTOR METHODS =====
+  
+  /**
+   * Get all stallholders in inspector's branch
+   */
+  static async getInspectorStallholders() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_INSPECTOR_STALLHOLDERS}`;
+      console.log('🔄 Fetching stallholders from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholders');
+      }
+      
+      console.log('✅ Stallholders fetched:', data.count || 0);
+      return {
+        success: true,
+        data: data.data,
+        count: data.count,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Inspector Stallholders Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+  
+  /**
+   * Get stallholder details by ID
+   * @param {number} stallholderId - The stallholder ID
+   */
+  static async getStallholderDetails(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALLHOLDER_DETAILS}/${stallholderId}`;
+      console.log('🔄 Fetching stallholder details from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholder details');
+      }
+      
+      console.log('✅ Stallholder details fetched');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Stallholder Details Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: null
+      };
+    }
+  }
+  
+  /**
+   * Get all violation types
+   */
+  static async getViolationTypes() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_VIOLATION_TYPES}`;
+      console.log('🔄 Fetching violation types from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch violation types');
+      }
+      
+      console.log('✅ Violation types fetched:', data.count || 0);
+      return {
+        success: true,
+        data: data.data,
+        count: data.count,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Violation Types Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+  
+  /**
+   * Submit a violation report
+   * @param {object} reportData - The report data
+   */
+  static async submitViolationReport(reportData) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_VIOLATION_REPORT}`;
+      console.log('🔄 Submitting violation report to:', url);
+      console.log('📝 Report data:', reportData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(reportData)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit violation report');
+      }
+      
+      console.log('✅ Violation report submitted successfully');
+      return {
+        success: true,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Violation Report Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Submit a violation report with photo evidence
+   * @param {object} reportData - The report data
+   * @param {array} photos - Array of photo objects with uri, type, name
+   */
+  static async submitViolationReportWithPhotos(reportData, photos = []) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_VIOLATION_REPORT_WITH_PHOTOS}`;
+      console.log('🔄 Submitting violation report with photos to:', url);
+      console.log('📝 Report data:', reportData);
+      console.log('📷 Photos count:', photos.length);
+      
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      
+      // Add report data fields
+      formData.append('stallholder_id', reportData.stallholder_id.toString());
+      formData.append('violation_id', reportData.violation_id.toString());
+      formData.append('branch_id', reportData.branch_id.toString());
+      if (reportData.stall_id) {
+        formData.append('stall_id', reportData.stall_id.toString());
+      }
+      formData.append('receipt_number', reportData.receipt_number.toString());
+      formData.append('evidence', reportData.evidence);
+      if (reportData.remarks) {
+        formData.append('remarks', reportData.remarks);
+      }
+      
+      // Add photos
+      photos.forEach((photo, index) => {
+        formData.append('evidence_photos', {
+          uri: photo.uri,
+          type: photo.type || 'image/jpeg',
+          name: photo.name || `evidence_${index + 1}.jpg`
+        });
+      });
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit violation report');
+      }
+      
+      console.log('✅ Violation report with photos submitted successfully');
+      return {
+        success: true,
+        message: data.message,
+        photos_uploaded: data.photos_uploaded,
+        photo_paths: data.photo_paths
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Violation Report With Photos Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // ===== COMPLAINT METHODS =====
+
+  /**
+   * Submit a complaint from stallholder
+   * @param {object} complaintData - The complaint data
+   */
+  static async submitComplaint(complaintData) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_COMPLAINT}`;
+      console.log('🔄 Submitting complaint to:', url);
+      console.log('📝 Complaint data:', complaintData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(complaintData)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit complaint');
+      }
+      
+      console.log('✅ Complaint submitted successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message || 'Complaint submitted successfully'
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Complaint Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get stallholder's complaints
+   */
+  static async getMyComplaints() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_MY_COMPLAINTS}`;
+      console.log('🔄 Fetching complaints from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch complaints');
+      }
+      
+      console.log('✅ Complaints fetched successfully:', data.count);
+      return {
+        success: true,
+        data: data.data || [],
+        count: data.count || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Complaints Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  // ===== STALLHOLDER PAYMENT METHODS =====
+
+  /**
+   * Get payment records for stallholder (paginated)
+   * @param {number} page - Page number (default: 1)
+   * @param {number} limit - Records per page (default: 10)
+   */
+  static async getPaymentRecords(page = 1, limit = 10) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      console.log('🔐 Payment API - Token check:', token ? `Found (${token.substring(0, 20)}...)` : 'NOT FOUND');
+      
+      if (!token) {
+        console.log('⚠️ No auth token in storage. User may need to log in again.');
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+       
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_PAYMENT_RECORDS}?page=${page}&limit=${limit}`;
+      console.log('🔄 Fetching payment records from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment records');
+      }
+      
+      console.log('✅ Payment records fetched successfully:', data.data?.length || 0, 'records');
+      return {
+        success: true,
+        data: data.data || [],
+        pagination: data.pagination || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Payment Records Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get all payment records for stallholder (no pagination)
+   */
+  static async getAllPaymentRecords() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_ALL_PAYMENT_RECORDS}`;
+      console.log('🔄 Fetching all payment records from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch all payment records');
+      }
+      
+      console.log('✅ All payment records fetched successfully:', data.totalRecords || 0, 'records');
+      return {
+        success: true,
+        data: data.data || [],
+        totalRecords: data.totalRecords || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get All Payment Records Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get payment summary/statistics for stallholder
+   */
+  static async getPaymentSummary() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_PAYMENT_SUMMARY}`;
+      console.log('🔄 Fetching payment summary from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment summary');
+      }
+      
+      console.log('✅ Payment summary fetched successfully');
+      return {
+        success: true,
+        data: data.data || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Payment Summary Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: {}
+      };
+    }
   }
 }
 

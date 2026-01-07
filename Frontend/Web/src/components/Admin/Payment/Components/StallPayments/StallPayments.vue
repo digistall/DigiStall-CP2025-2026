@@ -1,6 +1,7 @@
 <template>
   <div class="stall-payments">
-    <div class="tabs-container">
+    <!-- Hide online payment tab per boss requirement - only onsite allowed -->
+    <div class="tabs-container" style="display: none;">
       <div
         class="tab-button"
         :class="{ active: activeTab === 'online' }"
@@ -26,20 +27,13 @@
     </div>
 
     <div class="tab-content">
-      <transition name="fade" mode="out-in">
-        <OnlinePayments
-          v-if="activeTab === 'online'"
-          @accept-payment="handleAcceptPayment"
-          @decline-payment="handleDeclinePayment"
-          @count-updated="handleOnlineCountUpdate"
-        />
-        <OnsitePayments
-          v-else
-          @payment-added="handlePaymentAdded"
-          @delete-payment="handleDeletePayment"
-          @count-updated="handleOnsiteCountUpdate"
-        />
-      </transition>
+      <!-- Always show onsite payments only -->
+      <OnsitePayments
+        @payment-added="handlePaymentAdded"
+        @delete-payment="handleDeletePayment"
+        @count-updated="handleOnsiteCountUpdate"
+        @loading="$emit('loading', $event)"
+      />
     </div>
 
     <!-- Toast Notification -->

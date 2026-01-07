@@ -3,7 +3,7 @@ import { createConnection } from '../../../../../config/database.js';
 /**
  * Get landing page stallholders list
  * Returns paginated list of active stallholders with search and filter
- * Uses stored procedure sp_getLandingPageStallholders
+ * Uses stored procedure with dynamic SQL for collation handling on DigitalOcean
  * 
  * @route GET /api/stalls/public/stallholders
  * @access Public
@@ -21,19 +21,21 @@ export const getLandingPageStallholders = async (req, res) => {
 
     connection = await createConnection();
     
-    // Call the stored procedure
-    const [results] = await connection.execute(
-      'CALL sp_getLandingPageStallholders(?, ?, ?, ?, ?)',
-      [
-        search || null,
-        branch ? parseInt(branch) : null,
-        businessType || null,
-        parseInt(page),
-        parseInt(limit)
-      ]
-    );
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const offset = (pageNum - 1) * limitNum;
+    const searchTerm = search || null;
+    const branchFilter = branch ? parseInt(branch) : null;
+    const businessTypeFilter = businessType || null;
     
-    const stallholders = results[0] || [];
+    console.log('📊 Executing stallholders SP with params:', { searchTerm, branchFilter, businessTypeFilter, limitNum, offset });
+    
+    // Use stored procedure for landing page stallholders
+    const [rows] = await connection.execute(
+      'CALL sp_getLandingPageStallholdersList(?, ?, ?, ?, ?)',
+      [searchTerm, branchFilter, businessTypeFilter, limitNum, offset]
+    );
+    const stallholders = rows[0];
     
     console.log(`📊 Landing page stallholders fetched: ${stallholders.length} records`);
     
@@ -41,8 +43,8 @@ export const getLandingPageStallholders = async (req, res) => {
       success: true,
       data: stallholders,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total: stallholders.length
       }
     });

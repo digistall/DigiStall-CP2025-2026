@@ -27,27 +27,27 @@ export const getFloors = async (req, res) => {
     let floors = [];
 
     if (branchFilter === null) {
-      // System administrator: Get all floors
-      const [result] = await connection.execute(`SELECT f.* FROM floor f`);
-      floors = result;
+      // System administrator: Get all floors using stored procedure
+      const [rows] = await connection.execute('CALL sp_getAllFloors()');
+      floors = rows[0];
     } else if (branchFilter.length === 0) {
       // No branches accessible
       floors = [];
     } else if (branchFilter.length === 1) {
-      // Single branch (business manager or employee)
-      const [result] = await connection.execute(
-        `SELECT f.* FROM floor f WHERE f.branch_id = ?`,
+      // Single branch (business manager or employee) using stored procedure
+      const [rows] = await connection.execute(
+        'CALL sp_getFloorsByBranch(?)',
         [branchFilter[0]]
       );
-      floors = result;
+      floors = rows[0];
     } else {
-      // Multiple branches (business owner)
-      const placeholders = branchFilter.map(() => '?').join(',');
-      const [result] = await connection.execute(
-        `SELECT f.* FROM floor f WHERE f.branch_id IN (${placeholders})`,
-        branchFilter
+      // Multiple branches (business owner) using stored procedure with dynamic SQL
+      const branchIds = branchFilter.join(',');
+      const [rows] = await connection.execute(
+        'CALL sp_getFloorsByBranches(?)',
+        [branchIds]
       );
-      floors = result;
+      floors = rows[0];
     }
 
     console.log(`✅ Found ${floors.length} floors for ${userType} (ID: ${userId})`);

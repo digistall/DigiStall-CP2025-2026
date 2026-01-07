@@ -1,9 +1,8 @@
 import ComplaintsTable from './ComplaintsComponents/ComplaintsTable/ComplaintsTable.vue'
 import ComplaintsSearch from './ComplaintsComponents/ComplaintsSearch/ComplaintsSearch.vue'
 import ViewComplaints from './ComplaintsComponents/ViewComplaints/ViewComplaints.vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:3001/api'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
+import apiClient from '../../../services/apiClient'
 
 export default {
   name: 'Complaints',
@@ -11,6 +10,7 @@ export default {
     ComplaintsTable,
     ComplaintsSearch,
     ViewComplaints,
+    LoadingOverlay,
   },
   data() {
     return {
@@ -74,6 +74,34 @@ export default {
       this.selectedComplaints = {}
     },
 
+    // Handle resolve complaint
+    async handleResolveComplaint(resolveData) {
+      console.log('Resolving complaint:', resolveData)
+
+      try {
+        const response = await apiClient.put(`/complaints/${resolveData.complaint_id}/resolve`, {
+          resolution_notes: resolveData.resolution_notes,
+          status: resolveData.status
+        })
+
+        if (response.data.success) {
+          console.log('✅ Complaint resolved successfully!')
+
+          // Show success message
+          alert(`Complaint has been ${resolveData.status === 'resolved' ? 'resolved' : 'rejected'} successfully!`)
+
+          // Close the modal and reload data
+          this.closeViewComplaintsModal()
+          await this.loadComplaintsData()
+        } else {
+          throw new Error(response.data.message || 'Failed to resolve complaint')
+        }
+      } catch (error) {
+        console.error('❌ Error resolving complaint:', error)
+        alert('Failed to resolve complaint: ' + (error.response?.data?.message || error.message))
+      }
+    },
+
     // Init
     initializeComplaints() {
       console.log('Complaints page initialized')
@@ -103,14 +131,10 @@ export default {
           params.search = this.searchQuery
         }
 
-        console.log('🔄 Fetching complaints data from:', `${API_BASE_URL}/complaints`)
+        console.log('🔄 Fetching complaints data')
         console.log('📋 Query params:', params)
-        console.log('🔑 Token present:', !!token)
 
-        const response = await axios.get(`${API_BASE_URL}/complaints`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await apiClient.get('/complaints', {
           params,
         })
 

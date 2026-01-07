@@ -3,7 +3,7 @@
     <!-- Choice Modal -->
     <v-dialog 
       v-model="showModal" 
-      :max-width="isStallBusinessOwner ? '1200px' : '800px'" 
+      :max-width="canCustomizeDocuments ? '1200px' : '800px'" 
       width="95vw" 
       persistent
     >
@@ -18,7 +18,7 @@
         <v-card-text class="pa-8">
           <v-row dense justify="center">
             <!-- Add Individual Stallholder Card -->
-            <v-col cols="12" sm="6" :md="isStallBusinessOwner ? 4 : 6">
+            <v-col cols="12" sm="6" :md="canCustomizeDocuments ? 4 : 6">
               <v-card
                 class="choice-card stallholder-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -33,7 +33,7 @@
               >
                 <div class="choice-card-content">
                   <div class="choice-icon-container stallholder-icon">
-                    <v-icon size="40" color="white">mdi-account-plus</v-icon>
+                    <v-icon size="36" color="white">mdi-account-plus-outline</v-icon>
                   </div>
                   <h3 class="choice-title">Add Stallholder</h3>
                   <p class="choice-description">
@@ -42,27 +42,27 @@
                   </p>
                   <div class="choice-features">
                     <div class="feature-item">
-                      <v-icon size="16" color="#4caf50">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Personal Information</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#4caf50">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Business Details</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#4caf50">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Contract & Payment</span>
                     </div>
                   </div>
                 </div>
                 <div class="choice-card-overlay">
                   <v-btn
-                    color="success"
+                    color="primary"
                     class="choice-btn"
                     :loading="loading"
                     :disabled="loading"
                   >
-                    <v-icon left>mdi-account-plus</v-icon>
+                    <v-icon left>mdi-account-plus-outline</v-icon>
                     Add Stallholder
                   </v-btn>
                 </div>
@@ -70,7 +70,7 @@
             </v-col>
 
             <!-- Import Excel Card -->
-            <v-col cols="12" sm="6" :md="isStallBusinessOwner ? 4 : 6">
+            <v-col cols="12" sm="6" :md="canCustomizeDocuments ? 4 : 6">
               <v-card
                 class="choice-card excel-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -85,7 +85,7 @@
               >
                 <div class="choice-card-content">
                   <div class="choice-icon-container excel-icon">
-                    <v-icon size="40" color="white">mdi-file-excel</v-icon>
+                    <v-icon size="36" color="white">mdi-microsoft-excel</v-icon>
                   </div>
                   <h3 class="choice-title">Import from Excel</h3>
                   <p class="choice-description">
@@ -94,35 +94,35 @@
                   </p>
                   <div class="choice-features">
                     <div class="feature-item">
-                      <v-icon size="16" color="#2196f3">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(16, 124, 65)">mdi-check-circle</v-icon>
                       <span>Bulk Import</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#2196f3">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(16, 124, 65)">mdi-check-circle</v-icon>
                       <span>Excel Template</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#2196f3">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(16, 124, 65)">mdi-check-circle</v-icon>
                       <span>Data Validation</span>
                     </div>
                   </div>
                 </div>
                 <div class="choice-card-overlay">
                   <v-btn
-                    color="info"
+                    color="success"
                     class="choice-btn"
                     :loading="loading"
                     :disabled="loading"
                   >
-                    <v-icon left>mdi-file-excel</v-icon>
+                    <v-icon left>mdi-microsoft-excel</v-icon>
                     Import Excel
                   </v-btn>
                 </div>
               </v-card>
             </v-col>
 
-            <!-- Document Settings Card - Only visible to stall_business_owner -->
-            <v-col cols="12" sm="6" md="4" v-if="isStallBusinessOwner">
+            <!-- Document Settings Card - Visible to stall_business_owner, business_manager, and business_employee -->
+            <v-col cols="12" sm="6" md="4" v-if="canCustomizeDocuments">
               <v-card
                 class="choice-card document-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -137,7 +137,7 @@
               >
                 <div class="choice-card-content">
                   <div class="choice-icon-container document-icon">
-                    <v-icon size="40" color="white">mdi-cog</v-icon>
+                    <v-icon size="36" color="white">mdi-file-cog-outline</v-icon>
                   </div>
                   <h3 class="choice-title">Document Settings</h3>
                   <p class="choice-description">
@@ -146,27 +146,27 @@
                   </p>
                   <div class="choice-features">
                     <div class="feature-item">
-                      <v-icon size="16" color="#ff9800">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Document Types</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#ff9800">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Requirements Setup</span>
                     </div>
                     <div class="feature-item">
-                      <v-icon size="16" color="#ff9800">mdi-check-circle</v-icon>
+                      <v-icon size="16" color="rgb(0, 33, 129)">mdi-check-circle</v-icon>
                       <span>Validation Rules</span>
                     </div>
                   </div>
                 </div>
                 <div class="choice-card-overlay">
                   <v-btn
-                    color="warning"
+                    color="primary"
                     class="choice-btn"
                     :loading="loading"
                     :disabled="loading"
                   >
-                    <v-icon left>mdi-cog</v-icon>
+                    <v-icon left>mdi-file-cog-outline</v-icon>
                     Document Settings
                   </v-btn>
                 </div>

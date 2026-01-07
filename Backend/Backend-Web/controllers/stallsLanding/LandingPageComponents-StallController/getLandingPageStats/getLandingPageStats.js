@@ -1,9 +1,8 @@
 import { createConnection } from '../../../../config/database.js';
 
 /**
- * Get landing page statistics
- * Returns total active stallholders and total stalls count
- * Uses stored procedure sp_getLandingPageStats
+ * Get landing page statistics - Uses stored procedure
+ * Returns total active stallholders, total stalls count, available and occupied counts
  * 
  * @route GET /api/stalls/stats
  * @access Public
@@ -13,13 +12,15 @@ export const getLandingPageStats = async (req, res) => {
   try {
     connection = await createConnection();
     
-    // Call the stored procedure
-    const [results] = await connection.execute('CALL sp_getLandingPageStats()');
+    // Use stored procedure instead of multiple direct SQL queries
+    const [rows] = await connection.execute('CALL sp_getLandingPageStats()');
+    const statsResult = rows[0][0]; // First row of first result set
     
-    // The stored procedure returns results in the first element of the array
-    const stats = results[0] && results[0][0] ? results[0][0] : {
-      total_stallholders: 0,
-      total_stalls: 0
+    const stats = {
+      total_stallholders: statsResult?.total_stallholders || 0,
+      total_stalls: statsResult?.total_stalls || 0,
+      available_stalls: statsResult?.available_stalls || 0,
+      occupied_stalls: statsResult?.occupied_stalls || 0
     };
     
     console.log('📊 Landing page stats fetched:', stats);
@@ -28,7 +29,9 @@ export const getLandingPageStats = async (req, res) => {
       success: true,
       data: {
         totalStallholders: stats.total_stallholders,
-        totalStalls: stats.total_stalls
+        totalStalls: stats.total_stalls,
+        availableStalls: stats.available_stalls,
+        occupiedStalls: stats.occupied_stalls
       }
     });
     

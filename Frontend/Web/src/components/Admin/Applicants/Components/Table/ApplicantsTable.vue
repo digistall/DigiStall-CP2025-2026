@@ -462,42 +462,115 @@
 
             <!-- Documents/Other Information Tab -->
             <v-tabs-window-item value="documents">
-              <div class="info-section" v-if="selectedApplicant?.other_information">
+              <div class="info-section">
                 <h3 class="section-title">Documents & Other Information</h3>
                 <v-row>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Email Address:</span>
                       <span class="info-value">{{
-                        selectedApplicant.other_information.email_address
+                        selectedApplicant?.other_information?.email_address || selectedApplicant?.email || 'N/A'
                       }}</span>
                     </div>
                   </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Signature:</span>
-                      <span class="info-value document-file">
-                        <v-icon size="16" class="mr-1">mdi-file-document</v-icon>
-                        {{ selectedApplicant.other_information.signature_of_applicant }}
-                      </span>
+                </v-row>
+                
+                <!-- Document Images -->
+                <h4 class="subsection-title mt-4 mb-2">Uploaded Documents</h4>
+                <v-row>
+                  <!-- Signature -->
+                  <v-col cols="12" md="4">
+                    <div class="document-card">
+                      <span class="document-label">Signature</span>
+                      <div class="document-image-container">
+                        <!-- Loading State -->
+                        <div v-if="loadingDocuments" class="document-loading">
+                          <v-progress-circular
+                            indeterminate
+                            color="primary"
+                            size="32"
+                          ></v-progress-circular>
+                          <span class="loading-text">Loading...</span>
+                        </div>
+                        <!-- Image Loaded -->
+                        <img 
+                          v-else-if="applicantDocuments.signature" 
+                          :src="applicantDocuments.signature" 
+                          alt="Signature"
+                          class="document-image"
+                          @error="handleDocumentError('signature')"
+                          @click="openDocumentPreview(applicantDocuments.signature, 'Signature')"
+                        />
+                        <!-- No Document -->
+                        <div v-else class="no-document">
+                          <v-icon size="48" color="grey">mdi-file-document-outline</v-icon>
+                          <span>No signature uploaded</span>
+                        </div>
+                      </div>
                     </div>
                   </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">House Sketch:</span>
-                      <span class="info-value document-file">
-                        <v-icon size="16" class="mr-1">mdi-file-image</v-icon>
-                        {{ selectedApplicant.other_information.house_sketch_location }}
-                      </span>
+                  
+                  <!-- House Location Sketch -->
+                  <v-col cols="12" md="4">
+                    <div class="document-card">
+                      <span class="document-label">House Location Sketch</span>
+                      <div class="document-image-container">
+                        <!-- Loading State -->
+                        <div v-if="loadingDocuments" class="document-loading">
+                          <v-progress-circular
+                            indeterminate
+                            color="primary"
+                            size="32"
+                          ></v-progress-circular>
+                          <span class="loading-text">Loading...</span>
+                        </div>
+                        <!-- Image Loaded -->
+                        <img 
+                          v-else-if="applicantDocuments.house_location" 
+                          :src="applicantDocuments.house_location" 
+                          alt="House Location"
+                          class="document-image"
+                          @error="handleDocumentError('house_location')"
+                          @click="openDocumentPreview(applicantDocuments.house_location, 'House Location Sketch')"
+                        />
+                        <!-- No Document -->
+                        <div v-else class="no-document">
+                          <v-icon size="48" color="grey">mdi-map-outline</v-icon>
+                          <span>No house sketch uploaded</span>
+                        </div>
+                      </div>
                     </div>
                   </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Valid ID:</span>
-                      <span class="info-value document-file">
-                        <v-icon size="16" class="mr-1">mdi-file-image</v-icon>
-                        {{ selectedApplicant.other_information.valid_id }}
-                      </span>
+                  
+                  <!-- Valid ID -->
+                  <v-col cols="12" md="4">
+                    <div class="document-card">
+                      <span class="document-label">Valid ID</span>
+                      <div class="document-image-container">
+                        <!-- Loading State -->
+                        <div v-if="loadingDocuments" class="document-loading">
+                          <v-progress-circular
+                            indeterminate
+                            color="primary"
+                            size="32"
+                          ></v-progress-circular>
+                          <span class="loading-text">Loading...</span>
+                        </div>
+                        <!-- Image Loaded -->
+                        <img 
+                          v-else-if="applicantDocuments.valid_id" 
+                          :src="applicantDocuments.valid_id" 
+                          alt="Valid ID"
+                          class="document-image"
+                          @error="handleDocumentError('valid_id')"
+                          @click="openDocumentPreview(applicantDocuments.valid_id, 'Valid ID')"
+                        />
+                        <!-- No Document -->
+                        <div v-else class="no-document">
+                          <v-icon size="48" color="grey">mdi-card-account-details-outline</v-icon>
+                          <span>No valid ID uploaded</span>
+                        </div>
+                      </div>
                     </div>
                   </v-col>
                 </v-row>
@@ -513,34 +586,45 @@
       </v-card>
     </v-dialog>
 
-    <!-- Confirmation Dialog -->
-    <v-dialog v-model="showConfirmDialog" max-width="400">
-      <v-card>
-        <v-card-title class="text-h6">
-          {{ confirmAction === "accept" ? "Accept" : "Decline" }} Applicant
-        </v-card-title>
-        <v-card-text>
-          Are you sure you want to {{ confirmAction }}
-          <strong>{{ selectedApplicant?.fullName }}</strong
-          >?
+    <!-- Confirmation Dialog - Enhanced Design -->
+    <v-dialog v-model="showConfirmDialog" max-width="420" persistent>
+      <v-card class="confirm-dialog-card" rounded="lg">
+        <!-- Header with Icon -->
+        <div class="confirm-dialog-header" :class="confirmAction === 'accept' ? 'accept-header' : 'decline-header'">
+          <button class="close-dialog-btn" @click="showConfirmDialog = false" :aria-label="'Close dialog'">
+            <v-icon color="white" size="20">mdi-close</v-icon>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <v-card-text class="confirm-dialog-content text-center pt-8 pb-4">
+          <h3 class="confirm-dialog-title mb-3">
+            {{ confirmAction === "accept" ? "Accept Applicant" : "Decline Applicant" }}
+          </h3>
+          <p class="confirm-dialog-message">
+            Are you sure you want to {{ confirmAction }}
+            <strong class="applicant-name">{{ selectedApplicant?.fullName }}</strong>?
+          </p>
+          <p v-if="confirmAction === 'accept'" class="confirm-dialog-note mt-3">
+            <v-icon size="16" color="success" class="mr-1">mdi-information</v-icon>
+            Login credentials will be generated and sent to the applicant's email.
+          </p>
+          <p v-else class="confirm-dialog-note mt-3">
+            <v-icon size="16" color="warning" class="mr-1">mdi-alert</v-icon>
+            You will need to provide a reason for declining this application.
+          </p>
         </v-card-text>
-        <v-card-actions>
+
+        <!-- Actions -->
+        <v-card-actions class="confirm-dialog-actions pa-4">
           <v-spacer></v-spacer>
-          <v-btn 
-            variant="outlined" 
-            color="black"
-            style="background-color: white; color: black; border-color: black;"
-            @click="showConfirmDialog = false"
-          >
-            Cancel
-          </v-btn>
           <v-btn
-            :color="confirmAction === 'accept' ? 'primary' : 'black'"
-            :variant="confirmAction === 'accept' ? 'flat' : 'outlined'"
-            :style="confirmAction === 'decline' ? 'background-color: white; color: black; border-color: black;' : ''"
+            :color="confirmAction === 'accept' ? 'primary' : 'error'"
+            variant="flat"
+            class="confirm-btn action-btn"
             @click="confirmActionHandler"
           >
-            {{ confirmAction === "accept" ? "Accept" : "Decline" }}
+            {{ confirmAction === "accept" ? "ACCEPT" : "DECLINE" }}
           </v-btn>
         </v-card-actions>
       </v-card>

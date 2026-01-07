@@ -23,39 +23,15 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
 
     console.log('📄 Fetching stallholder stalls with documents for applicant:', applicantId);
 
-    // Get stallholder info and their stalls from the stallholder table
-    const [stallholderStalls] = await connection.execute(`
-      SELECT 
-        sh.stallholder_id,
-        sh.stallholder_name,
-        sh.business_name as stallholder_business_name,
-        sh.business_type as stallholder_business_type,
-        sh.branch_id,
-        sh.stall_id,
-        sh.contract_status,
-        sh.compliance_status,
-        s.stall_name,
-        s.stall_number,
-        s.size,
-        s.price,
-        s.price_type,
-        b.branch_name,
-        b.area as branch_area,
-        b.location as branch_location,
-        bo.business_owner_id,
-        COALESCE(u.first_name, '') as owner_first_name,
-        COALESCE(u.last_name, '') as owner_last_name,
-        CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as business_owner_name
-      FROM stallholder sh
-      INNER JOIN stall s ON sh.stall_id = s.stall_id
-      INNER JOIN branch b ON sh.branch_id = b.branch_id
-      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id AND bm.status = 'Active'
-      LEFT JOIN business_owner_managers bom ON bm.business_manager_id = bom.business_manager_id AND bom.status = 'Active'
-      LEFT JOIN business_owner bo ON bom.business_owner_id = bo.business_owner_id
-      LEFT JOIN user u ON bo.user_id = u.user_id
-      WHERE sh.applicant_id = ? AND sh.contract_status = 'Active'
-      ORDER BY b.branch_name, s.stall_name
-    `, [applicantId]);
+    // Get stallholder info and their stalls using stored procedure
+    const [stallsRows] = await connection.execute(
+      'CALL sp_getStallholderStallsForDocuments(?)',
+      [applicantId]
+    );
+    const stallholderStalls = stallsRows[0];
+
+    console.log('📊 Query result - stallholderStalls:', stallholderStalls.length, 'found');
+    console.log('📊 Stalls data:', JSON.stringify(stallholderStalls, null, 2));
 
     if (stallholderStalls.length === 0) {
       return res.status(200).json({
@@ -71,46 +47,23 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
     // Get unique branch IDs from the stallholder's stalls
     const branchIds = [...new Set(stallholderStalls.map(s => s.branch_id))];
     
-    // Get document requirements for each branch
+    // Get document requirements for each branch using stored procedure
     const branchDocRequirements = {};
     for (const branchId of branchIds) {
-      const [requirements] = await connection.execute(`
-        SELECT 
-          bdr.requirement_id,
-          bdr.branch_id,
-          bdr.document_type_id,
-          bdr.is_required,
-          bdr.instructions,
-          dt.document_name,
-          dt.description as document_description
-        FROM branch_document_requirements bdr
-        INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-        WHERE bdr.branch_id = ?
-        ORDER BY bdr.is_required DESC, dt.document_name ASC
-      `, [branchId]);
-      
-      branchDocRequirements[branchId] = requirements;
+      const [reqRows] = await connection.execute(
+        'CALL sp_getBranchDocRequirementsFull(?)',
+        [branchId]
+      );
+      branchDocRequirements[branchId] = reqRows[0];
     }
 
-    // Get stallholder's uploaded documents
+    // Get stallholder's uploaded documents using stored procedure
     const stallholderIds = stallholderStalls.map(s => s.stallholder_id);
-    const [uploadedDocs] = await connection.execute(`
-      SELECT 
-        sd.document_id,
-        sd.stallholder_id,
-        sd.document_type_id,
-        sd.file_path,
-        sd.original_filename,
-        sd.upload_date,
-        sd.verification_status,
-        sd.verified_at,
-        sd.expiry_date,
-        sd.rejection_reason,
-        DATEDIFF(sd.expiry_date, CURDATE()) as days_until_expiry
-      FROM stallholder_documents sd
-      WHERE sd.stallholder_id IN (${stallholderIds.map(() => '?').join(',')})
-      ORDER BY sd.upload_date DESC
-    `, stallholderIds);
+    const [uploadedRows] = await connection.execute(
+      'CALL sp_getStallholderUploadedDocuments(?)',
+      [stallholderIds.join(',')]
+    );
+    const uploadedDocs = uploadedRows[0];
 
     // Create a map of uploaded documents by stallholder_id and document_type_id
     const uploadedDocsMap = {};
@@ -169,15 +122,23 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
             description: req.document_description,
             is_required: req.is_required,
             instructions: req.instructions,
-            // Upload status
+            // Upload status and document details
             status: uploadedDoc ? uploadedDoc.verification_status : 'not_uploaded',
+            document_id: uploadedDoc?.document_id || null,
             upload_date: uploadedDoc?.upload_date || null,
             file_path: uploadedDoc?.file_path || null,
             original_filename: uploadedDoc?.original_filename || null,
+            file_name: uploadedDoc?.original_filename || null,
+            mime_type: uploadedDoc?.mime_type || null,
+            file_size: uploadedDoc?.file_size || null,
             expiry_date: uploadedDoc?.expiry_date || null,
             days_until_expiry: uploadedDoc?.days_until_expiry || null,
             rejection_reason: uploadedDoc?.rejection_reason || null,
-            verified_at: uploadedDoc?.verified_at || null
+            verified_at: uploadedDoc?.verified_at || null,
+            // Add blob_url for image preview
+            blob_url: uploadedDoc?.document_id 
+              ? `http://68.183.154.125:5001/api/mobile/stallholder/documents/blob/id/${uploadedDoc.document_id}`
+              : null
           };
         });
       }
@@ -235,42 +196,22 @@ export const getBranchDocumentRequirements = async (req, res) => {
 
     console.log('📄 Fetching document requirements for branch:', branchId);
 
-    // Get document requirements for the branch
-    const [requirements] = await connection.execute(`
-      SELECT 
-        bdr.requirement_id,
-        bdr.branch_id,
-        bdr.document_type_id,
-        bdr.is_required,
-        bdr.instructions,
-        dt.document_name,
-        dt.description as document_description,
-        b.branch_name
-      FROM branch_document_requirements bdr
-      INNER JOIN document_types dt ON bdr.document_type_id = dt.document_type_id
-      INNER JOIN branch b ON bdr.branch_id = b.branch_id
-      WHERE bdr.branch_id = ?
-      ORDER BY bdr.is_required DESC, dt.document_name ASC
-    `, [branchId]);
+    // Get document requirements for the branch using stored procedure
+    const [reqRows] = await connection.execute(
+      'CALL sp_getBranchDocRequirementsFull(?)',
+      [branchId]
+    );
+    const requirements = reqRows[0];
 
     // If stallholder_id is provided, get their upload status for each document
     let documentsWithStatus = requirements;
     
     if (stallholderId) {
-      const [uploadedDocs] = await connection.execute(`
-        SELECT 
-          sd.document_type_id,
-          sd.file_path,
-          sd.original_filename,
-          sd.upload_date,
-          sd.verification_status,
-          sd.expiry_date,
-          sd.rejection_reason,
-          DATEDIFF(sd.expiry_date, CURDATE()) as days_until_expiry
-        FROM stallholder_documents sd
-        WHERE sd.stallholder_id = ?
-        ORDER BY sd.upload_date DESC
-      `, [stallholderId]);
+      const [uploadedRows] = await connection.execute(
+        'CALL sp_getStallholderUploadedDocuments(?)',
+        [stallholderId]
+      );
+      const uploadedDocs = uploadedRows[0];
 
       // Create upload map
       const uploadMap = {};
@@ -341,43 +282,28 @@ export const uploadStallholderDocument = async (req, res) => {
 
     console.log('📤 Uploading document for stallholder:', stallholder_id, 'type:', document_type_id);
 
-    // Check if document already exists, update if so
-    const [existing] = await connection.execute(`
-      SELECT document_id FROM stallholder_documents 
-      WHERE stallholder_id = ? AND document_type_id = ?
-    `, [stallholder_id, document_type_id]);
+    // Upload/update document using stored procedure
+    const [uploadRows] = await connection.execute(
+      'CALL sp_uploadStallholderDocument(?, ?, ?, ?, ?)',
+      [stallholder_id, document_type_id, file.path, file.originalname, file.size]
+    );
+    const uploadResult = uploadRows[0][0];
 
-    if (existing.length > 0) {
-      // Update existing document
-      await connection.execute(`
-        UPDATE stallholder_documents 
-        SET file_path = ?, original_filename = ?, file_size = ?,
-            upload_date = NOW(), verification_status = 'pending',
-            verified_by = NULL, verified_at = NULL, rejection_reason = NULL
-        WHERE stallholder_id = ? AND document_type_id = ?
-      `, [file.path, file.originalname, file.size, stallholder_id, document_type_id]);
-
+    if (uploadResult.action === 'updated') {
       res.status(200).json({
         success: true,
         message: 'Document updated successfully',
         data: {
-          document_id: existing[0].document_id,
+          document_id: uploadResult.document_id,
           status: 'pending'
         }
       });
     } else {
-      // Insert new document
-      const [result] = await connection.execute(`
-        INSERT INTO stallholder_documents 
-        (stallholder_id, document_type_id, file_path, original_filename, file_size, verification_status)
-        VALUES (?, ?, ?, ?, ?, 'pending')
-      `, [stallholder_id, document_type_id, file.path, file.originalname, file.size]);
-
       res.status(201).json({
         success: true,
         message: 'Document uploaded successfully',
         data: {
-          document_id: result.insertId,
+          document_id: uploadResult.document_id,
           status: 'pending'
         }
       });

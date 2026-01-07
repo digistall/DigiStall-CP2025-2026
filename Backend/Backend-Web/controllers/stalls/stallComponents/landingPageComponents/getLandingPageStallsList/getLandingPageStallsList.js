@@ -3,7 +3,7 @@ import { createConnection } from '../../../../../config/database.js';
 /**
  * Get landing page stalls list
  * Returns paginated list of all stalls with search and filter
- * Uses stored procedure sp_getLandingPageStalls
+ * Uses stored procedure with dynamic SQL for collation handling on DigitalOcean
  * 
  * @route GET /api/stalls/public/list
  * @access Public
@@ -22,20 +22,22 @@ export const getLandingPageStallsList = async (req, res) => {
 
     connection = await createConnection();
     
-    // Call the stored procedure
-    const [results] = await connection.execute(
-      'CALL sp_getLandingPageStalls(?, ?, ?, ?, ?, ?)',
-      [
-        search || null,
-        branch ? parseInt(branch) : null,
-        status || null,
-        priceType || null,
-        parseInt(page),
-        parseInt(limit)
-      ]
-    );
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const offset = (pageNum - 1) * limitNum;
+    const searchTerm = search || null;
+    const branchFilter = branch ? parseInt(branch) : null;
+    const statusFilter = status || null;
+    const priceTypeFilter = priceType || null;
     
-    const stalls = results[0] || [];
+    console.log('📊 Executing stalls SP with params:', { searchTerm, branchFilter, statusFilter, priceTypeFilter, limitNum, offset });
+    
+    // Use stored procedure for landing page stalls
+    const [rows] = await connection.execute(
+      'CALL sp_getLandingPageStallsList(?, ?, ?, ?, ?, ?)',
+      [searchTerm, branchFilter, statusFilter, priceTypeFilter, limitNum, offset]
+    );
+    const stalls = rows[0];
     
     console.log(`📊 Landing page stalls fetched: ${stalls.length} records`);
     
