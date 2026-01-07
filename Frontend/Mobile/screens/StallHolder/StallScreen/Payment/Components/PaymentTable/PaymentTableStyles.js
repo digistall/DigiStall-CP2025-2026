@@ -139,4 +139,82 @@ export const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontStyle: "italic",
   },
+
+  // Loading state styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  // Error state styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+
+  errorText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+    textAlign: "center",
+  },
+
+  errorSubtext: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#6B7280",
+    textAlign: "center",
+    paddingHorizontal: 20,
+    lineHeight: 18,
+  },
+
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+  },
+
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  // Empty state styles
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+    textAlign: "center",
+  },
+
+  emptySubtext: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#6B7280",
+    textAlign: "center",
+  },
 });
