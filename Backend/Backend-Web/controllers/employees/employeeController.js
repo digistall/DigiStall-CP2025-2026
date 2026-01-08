@@ -79,16 +79,16 @@ export async function getAllEmployees(req, res) {
         
         let employees;
         if (branchFilter === null) {
-            // System administrator - see all employees using stored procedure
-            const [result] = await connection.execute(`CALL sp_getAllEmployeesAll(?)`, ['Active']);
+            // System administrator - see all employees using decrypted stored procedure
+            const [result] = await connection.execute(`CALL sp_getBusinessEmployeesAllDecrypted(?)`, ['Active']);
             employees = result[0] || [];
         } else if (branchFilter.length === 0) {
             // Business owner with no accessible branches
             employees = [];
         } else {
-            // Business owner (multiple branches) or business manager using stored procedure
+            // Business owner (multiple branches) or business manager using decrypted stored procedure
             const branchIdsString = branchFilter.join(',');
-            const [result] = await connection.execute(`CALL sp_getAllEmployeesByBranches(?, ?)`, [branchIdsString, 'Active']);
+            const [result] = await connection.execute(`CALL sp_getBusinessEmployeesByBranchDecrypted(?, ?)`, [branchIdsString, 'Active']);
             employees = result[0] || [];
         }
         

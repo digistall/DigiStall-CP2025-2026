@@ -133,9 +133,9 @@ export const getMyComplaints = async (req, res) => {
     
     connection = await createConnection();
     
-    // Get complaints using stored procedure
+    // Get complaints using decrypted stored procedure for proper display
     const [complaintsResult] = await connection.execute(
-      'CALL sp_getComplaintsByStallholder(?)',
+      'CALL sp_getComplaintsByStallholderDecrypted(?)',
       [stallholderId]
     );
     const complaints = complaintsResult[0] || [];
