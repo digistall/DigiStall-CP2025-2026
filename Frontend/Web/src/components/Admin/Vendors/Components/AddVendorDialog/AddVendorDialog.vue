@@ -1,13 +1,17 @@
 <template>
   <v-dialog v-model="visibleModel" max-width="900px" persistent>
     <v-card>
-      <!-- Header (matching Stallholders) -->
-      <v-card-title class="modal-header">
-        <h2 class="modal-title">Add New Vendor</h2>
-        <v-btn icon class="close-btn" @click="closeDialog">
-          <v-icon color="white">mdi-close</v-icon>
+      <!-- Toolbar Header (matching Stallholders) -->
+      <v-toolbar color="primary" dark dense>
+        <v-toolbar-title class="toolbar-title">
+          <v-icon left>mdi-store-plus</v-icon>
+          Add New Vendor
+        </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="closeDialog">
+          <v-icon>mdi-close</v-icon>
         </v-btn>
-      </v-card-title>
+      </v-toolbar>
 
       <!-- Tabbed Content (matching Stallholders structure) -->
       <v-card-text class="pa-0">
@@ -21,10 +25,6 @@
               <v-tab>
                 <v-icon left>mdi-briefcase</v-icon>
                 Business Info
-              </v-tab>
-              <v-tab>
-                <v-icon left>mdi-file-document</v-icon>
-                Documents
               </v-tab>
             </v-tabs>
 
@@ -180,110 +180,6 @@
                         outlined
                         prepend-inner-icon="mdi-account-tie"
                       ></v-select>
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </v-window-item>
-
-              <!-- Documents Tab -->
-              <v-window-item>
-                <v-container>
-                  <v-row>
-                    <v-col cols="12">
-                      <div class="text-subtitle-1 mb-4">Upload Vendor Documents</div>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="documents.clearance"
-                        label="Barangay Business Clearance"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="documents.cedula"
-                        label="Cedula"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="documents.association"
-                        label="Association Clearance"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="documents.votersId"
-                        label="Voter's ID"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="documents.picture"
-                        label="2x2 Picture (White Background)"
-                        outlined
-                        prepend-icon="mdi-image"
-                        accept=".jpg,.jpeg,.png"
-                        hint="JPG or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="documents.healthCard"
-                        label="Health Card/Yellow Card"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="12">
-                      <v-alert type="info" variant="tonal" density="compact" class="mb-0">
-                        <div class="text-caption">
-                          <v-icon size="small" class="mr-1">mdi-information</v-icon>
-                          Documents can be uploaded during vendor creation or added later through
-                          the vendor details page.
-                        </div>
-                      </v-alert>
                     </v-col>
                   </v-row>
                 </v-container>
