@@ -207,17 +207,27 @@
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
-  /* Hide scrollbar for Firefox */
-  scrollbar-width: none;
-  /* Hide scrollbar for IE, Edge */
-  -ms-overflow-style: none;
+  /* Thin scrollbar for Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
 }
 
-/* Hide scrollbar for Chrome, Safari, Opera */
+/* Styled scrollbar for Chrome, Safari, Opera */
 .table-scroll-container::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 6px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
 }
 
 /* Remove v-table's default overflow to prevent double scrollbar */
