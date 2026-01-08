@@ -18,42 +18,14 @@ export const mobileLogin = async (req, res) => {
       })
     }
 
-    // Step 1: Get applicant credentials and basic info - DIRECT SQL with COLLATE fix
+    // Step 1: Get applicant credentials and basic info using stored procedure
     console.log('🔍 Looking up user:', username)
     
-    let credentialRows = [];
-    try {
-      const [credentialResultRows] = await connection.execute(
-        'CALL sp_getCredentialWithApplicant(?)',
-        [username]
-      );
-      credentialRows = credentialResultRows[0] || [];
-    } catch (spError) {
-      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
-      // Fallback to direct SQL with COLLATE to fix collation mismatch
-      // NOTE: The applicant table uses applicant_full_name (not separate first/middle/last name columns)
-      const [directRows] = await connection.execute(`
-        SELECT 
-          c.registrationid,
-          c.applicant_id,
-          c.user_name,
-          c.password_hash,
-          c.is_active,
-          a.applicant_full_name,
-          a.applicant_contact_number,
-          a.applicant_address,
-          a.applicant_birthdate,
-          a.applicant_civil_status,
-          a.applicant_educational_attainment,
-          a.applicant_email
-        FROM credential c
-        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
-        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
-          AND c.is_active = 1
-        LIMIT 1
-      `, [username]);
-      credentialRows = directRows;
-    }
+    const [credentialResultRows] = await connection.execute(
+      'CALL sp_getCredentialWithApplicant(?)',
+      [username]
+    );
+    const credentialRows = credentialResultRows[0] || [];
 
     console.log('📋 Credential rows found:', credentialRows.length)
     console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
