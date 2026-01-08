@@ -1,13 +1,14 @@
-import express from 'express';
+import express from "express";
 import {
-    createInspector,
-    createCollector,
-    getInspectorsByBranch,
-    getCollectorsByBranch,
-    terminateInspector,
-    terminateCollector,
-    resetStaffPassword
-} from '../controllers/mobileStaff/mobileStaffController.js';
+  createInspector,
+  createCollector,
+  getInspectorsByBranch,
+  getCollectorsByBranch,
+  terminateInspector,
+  terminateCollector,
+  updateCollector,
+  resetStaffPassword,
+} from "../controllers/mobileStaff/mobileStaffController.js";
 
 const router = express.Router();
 
@@ -27,14 +28,14 @@ const router = express.Router();
  * @access  Business Manager
  * @body    { firstName, lastName, email, phoneNumber, branchId, branchManagerId }
  */
-router.post('/inspectors', createInspector);
+router.post("/inspectors", createInspector);
 
 /**
  * @route   GET /api/mobile-staff/inspectors
  * @desc    Get all inspectors for the current branch
  * @access  Business Manager
  */
-router.get('/inspectors', getInspectorsByBranch);
+router.get("/inspectors", getInspectorsByBranch);
 
 /**
  * @route   DELETE /api/mobile-staff/inspectors/:id
@@ -43,7 +44,7 @@ router.get('/inspectors', getInspectorsByBranch);
  * @params  id - Inspector ID
  * @body    { reason }
  */
-router.delete('/inspectors/:id', terminateInspector);
+router.delete("/inspectors/:id", terminateInspector);
 
 // ========================================
 // COLLECTOR ROUTES
@@ -55,14 +56,23 @@ router.delete('/inspectors/:id', terminateInspector);
  * @access  Business Manager
  * @body    { firstName, lastName, email, phoneNumber, branchId, branchManagerId }
  */
-router.post('/collectors', createCollector);
+router.post("/collectors", createCollector);
 
 /**
  * @route   GET /api/mobile-staff/collectors
  * @desc    Get all collectors for the current branch
  * @access  Business Manager
  */
-router.get('/collectors', getCollectorsByBranch);
+router.get("/collectors", getCollectorsByBranch);
+
+/**
+ * @route   PUT /api/mobile-staff/collectors/:id
+ * @desc    Update collector information
+ * @access  Business Manager
+ * @params  id - Collector ID
+ * @body    { firstName, lastName, email, phoneNumber }
+ */
+router.put("/collectors/:id", updateCollector);
 
 /**
  * @route   DELETE /api/mobile-staff/collectors/:id
@@ -71,7 +81,7 @@ router.get('/collectors', getCollectorsByBranch);
  * @params  id - Collector ID
  * @body    { reason }
  */
-router.delete('/collectors/:id', terminateCollector);
+router.delete("/collectors/:id", terminateCollector);
 
 // ========================================
 // PASSWORD MANAGEMENT
@@ -83,6 +93,6 @@ router.delete('/collectors/:id', terminateCollector);
  * @access  Business Manager / Admin
  * @body    { staffType: 'inspector' | 'collector', staffId: number, newPassword?: string }
  */
-router.post('/reset-password', resetStaffPassword);
+router.post("/reset-password", resetStaffPassword);
 
 export default router;

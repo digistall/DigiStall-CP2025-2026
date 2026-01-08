@@ -3,7 +3,7 @@ import ToastNotification from '../../../../Common/ToastNotification/ToastNotific
 export default {
   name: 'AddVendorDialog',
   components: {
-    ToastNotification
+    ToastNotification,
   },
   data() {
     return {
@@ -13,9 +13,9 @@ export default {
       toast: {
         show: false,
         message: '',
-        type: 'success'
+        type: 'success',
       },
-      
+
       // Form fields
       form: {
         lastName: '',
@@ -32,19 +32,29 @@ export default {
         vendorId: '',
         assignedCollector: '',
       },
-      
+
+      // Document files
+      documents: {
+        clearance: null,
+        cedula: null,
+        association: null,
+        votersId: null,
+        picture: null,
+        healthCard: null,
+      },
+
       // Options
       genderOptions: ['Male', 'Female', 'Other'],
       collectors: ['John Smith', 'Jane Garcia', 'Marco Reyes', 'Ava Santos'],
-      
+
       // Validation rules
       emailRules: [
-        v => !!v || 'Email is required',
-        v => /.+@.+\..+/.test(v) || 'Email must be valid',
+        (v) => !!v || 'Email is required',
+        (v) => /.+@.+\..+/.test(v) || 'Email must be valid',
       ],
     }
   },
-  
+
   computed: {
     visibleModel() {
       return this.isVisible !== undefined ? this.isVisible : this.modelValue
@@ -71,6 +81,15 @@ export default {
       this.$refs.vendorForm?.reset()
       this.activeTab = 0
       this.formValid = false
+      // Reset documents
+      this.documents = {
+        clearance: null,
+        cedula: null,
+        association: null,
+        votersId: null,
+        picture: null,
+        healthCard: null,
+      }
     },
 
     save() {
@@ -107,9 +126,9 @@ export default {
       this.toast = {
         show: true,
         message: message,
-        type: type
+        type: type,
       }
-    }
+    },
   },
 
   props: {
