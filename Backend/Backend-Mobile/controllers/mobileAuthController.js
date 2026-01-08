@@ -1,6 +1,7 @@
 import { createConnection } from '../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { decryptApplicantData, decryptStallholderData, decryptSpouseData } from '../services/mysqlDecryptionService.js'
 
 // ===== MOBILE LOGIN =====
 export const mobileLogin = async (req, res) => {
@@ -82,9 +83,17 @@ export const mobileLogin = async (req, res) => {
     // ===== FETCH COMPLETE USER DATA USING STORED PROCEDURES =====
     const applicantId = user.applicant_id;
 
+    // Decrypt user/applicant data if encrypted
+    let decryptedUser = await decryptApplicantData(user);
+    console.log('🔓 User decrypted:', decryptedUser.applicant_full_name);
+
     // Get spouse information
     const [spouseResult] = await connection.execute('CALL sp_getSpouseByApplicantId(?)', [applicantId]);
-    const spouseData = spouseResult[0] || [];
+    let spouseData = spouseResult[0] || [];
+    // Decrypt spouse data if found
+    if (spouseData.length > 0) {
+      spouseData[0] = await decryptSpouseData(spouseData[0]);
+    }
     console.log('👫 Spouse data:', spouseData.length > 0 ? 'Found' : 'Not found');
 
     // Get business information
@@ -104,21 +113,29 @@ export const mobileLogin = async (req, res) => {
 
     // Get stallholder information (if approved)
     const [stallholderResult] = await connection.execute('CALL sp_getStallholderByApplicantId(?)', [applicantId]);
-    const stallholderData = stallholderResult[0] || [];
+    let stallholderData = stallholderResult[0] || [];
+    // Decrypt stallholder data if found
+    if (stallholderData.length > 0) {
+      stallholderData[0] = await decryptStallholderData(stallholderData[0]);
+    }
     console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
 
     // Get applicant full details
     const [applicantResult] = await connection.execute('CALL sp_getApplicantById(?)', [applicantId]);
-    const applicantData = applicantResult[0] || [];
+    let applicantData = applicantResult[0] || [];
+    // Decrypt applicant data if found
+    if (applicantData.length > 0) {
+      applicantData[0] = await decryptApplicantData(applicantData[0]);
+    }
     
     // Generate JWT token
     const token = jwt.sign(
       {
-        userId: user.applicant_id,
-        username: user.user_name,
-        email: user.applicant_email,
+        userId: decryptedUser.applicant_id,
+        username: decryptedUser.user_name,
+        email: decryptedUser.applicant_email,
         userType: 'mobile_user',
-        registrationId: user.registrationid,
+        registrationId: decryptedUser.registrationid,
         stallholderId: stallholderData.length > 0 ? stallholderData[0].stallholder_id : null
       },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -127,21 +144,21 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Login successful for:', username);
     
-    // Build comprehensive response
+    // Build comprehensive response with decrypted data
     const responseData = {
       user: {
-        id: user.applicant_id,
-        applicant_id: user.applicant_id,
-        username: user.user_name,
-        email: user.applicant_email || (otherData.length > 0 ? otherData[0].email_address : null),
-        full_name: user.applicant_full_name,
-        fullName: user.applicant_full_name,
-        contactNumber: user.applicant_contact_number,
+        id: decryptedUser.applicant_id,
+        applicant_id: decryptedUser.applicant_id,
+        username: decryptedUser.user_name,
+        email: decryptedUser.applicant_email || (otherData.length > 0 ? otherData[0].email_address : null),
+        full_name: decryptedUser.applicant_full_name,
+        fullName: decryptedUser.applicant_full_name,
+        contactNumber: decryptedUser.applicant_contact_number,
         address: applicantData.length > 0 ? applicantData[0].applicant_address : null,
         birthdate: applicantData.length > 0 ? applicantData[0].applicant_birthdate : null,
         civil_status: applicantData.length > 0 ? applicantData[0].applicant_civil_status : null,
         educational_attainment: applicantData.length > 0 ? applicantData[0].applicant_educational_attainment : null,
-        registrationId: user.registrationid,
+        registrationId: decryptedUser.registrationid,
         userType: 'mobile_user'
       },
       spouse: spouseData.length > 0 ? {

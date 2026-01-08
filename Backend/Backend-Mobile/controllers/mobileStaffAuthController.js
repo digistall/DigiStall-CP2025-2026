@@ -1,6 +1,7 @@
 import { createConnection } from '../config/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { decryptStaffData } from '../services/mysqlDecryptionService.js';
 
 /**
  * Mobile Staff Login Controller
@@ -98,6 +99,8 @@ export const mobileStaffLogin = async (req, res) => {
             
             if (inspectors && inspectors.length > 0) {
                 staffData = inspectors[0];
+                // Decrypt staff data if encrypted
+                staffData = await decryptStaffData(staffData);
                 staffType = 'inspector';
                 console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
             }
@@ -116,6 +119,8 @@ export const mobileStaffLogin = async (req, res) => {
                 
                 if (collectors && collectors.length > 0) {
                     staffData = collectors[0];
+                    // Decrypt staff data if encrypted
+                    staffData = await decryptStaffData(staffData);
                     staffType = 'collector';
                     console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
                 }
