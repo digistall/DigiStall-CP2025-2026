@@ -38,7 +38,7 @@ export async function createEmployee(req, res) {
         // Convert permissions array to JSON string
         const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
 
-        // Call stored procedure (correct procedure name: createBusinessEmployee)
+        // Call stored procedure - now with built-in encryption
         const [[result]] = await connection.execute(
             'CALL createBusinessEmployee(?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [username, hashedPassword, firstName, lastName, email, phoneNumber, finalBranchId, finalCreatedBy, permissionsJson]

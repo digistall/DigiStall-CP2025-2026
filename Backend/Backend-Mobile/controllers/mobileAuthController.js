@@ -20,34 +20,12 @@ export const mobileLogin = async (req, res) => {
       });
     }
     
-    // ===== DIRECT SQL - Get mobile user from credential table =====
+    // ===== Get mobile user from credential table using stored procedure =====
     console.log('🔍 Querying mobile user with username:', username);
     let users = [];
     
-    try {
-      // Try stored procedure first
-      const [spResult] = await connection.execute('CALL getMobileUserByUsername(?)', [username]);
-      users = spResult[0] || [];
-    } catch (spError) {
-      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
-      // Fallback to direct SQL with COLLATE to fix collation mismatch
-      const [rows] = await connection.execute(`
-        SELECT 
-          c.registrationid,
-          c.user_name,
-          c.password_hash,
-          a.applicant_id,
-          CONCAT(a.applicant_first_name, ' ', IFNULL(a.applicant_middle_name, ''), ' ', a.applicant_last_name) AS applicant_full_name,
-          a.applicant_contact_number,
-          o.email_address AS applicant_email
-        FROM credential c
-        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
-        LEFT JOIN other_info o ON a.applicant_id = o.applicant_id
-        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
-        LIMIT 1
-      `, [username]);
-      users = rows;
-    }
+    const [spResult] = await connection.execute('CALL sp_getMobileUserByUsername(?)', [username]);
+    users = spResult[0] || [];
     
     console.log('📋 Stored procedure returned:', users.length, 'users');
     if (users.length > 0) {
@@ -101,80 +79,37 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Password verified for:', username);
 
-    // ===== FETCH COMPLETE USER DATA - WITH DIRECT SQL FALLBACKS =====
+    // ===== FETCH COMPLETE USER DATA USING STORED PROCEDURES =====
     const applicantId = user.applicant_id;
 
-    // Helper function to run SP or direct SQL
-    const executeQuery = async (spCall, directSql, params) => {
-      try {
-        const [result] = await connection.execute(spCall, params);
-        return result[0] || [];
-      } catch (err) {
-        console.warn(`⚠️ SP failed, using direct SQL`);
-        try {
-          const [rows] = await connection.execute(directSql, params);
-          return rows;
-        } catch (directErr) {
-          console.warn(`⚠️ Direct SQL also failed:`, directErr.message);
-          return [];
-        }
-      }
-    };
-
     // Get spouse information
-    const spouseData = await executeQuery(
-      'CALL sp_getSpouseByApplicantId(?)',
-      'SELECT * FROM spouse WHERE applicant_id = ?',
-      [applicantId]
-    );
+    const [spouseResult] = await connection.execute('CALL sp_getSpouseByApplicantId(?)', [applicantId]);
+    const spouseData = spouseResult[0] || [];
     console.log('👫 Spouse data:', spouseData.length > 0 ? 'Found' : 'Not found');
 
     // Get business information
-    const businessData = await executeQuery(
-      'CALL sp_getBusinessInfoByApplicantId(?)',
-      'SELECT * FROM business_info WHERE applicant_id = ?',
-      [applicantId]
-    );
+    const [businessResult] = await connection.execute('CALL sp_getBusinessInfoByApplicantId(?)', [applicantId]);
+    const businessData = businessResult[0] || [];
     console.log('💼 Business data:', businessData.length > 0 ? 'Found' : 'Not found');
 
     // Get other information
-    const otherData = await executeQuery(
-      'CALL sp_getOtherInfoByApplicantId(?)',
-      'SELECT * FROM other_info WHERE applicant_id = ?',
-      [applicantId]
-    );
+    const [otherResult] = await connection.execute('CALL sp_getOtherInfoByApplicantId(?)', [applicantId]);
+    const otherData = otherResult[0] || [];
     console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
 
-    // Get application status with fallback
-    const applicationData = await executeQuery(
-      'CALL sp_getLatestApplicationByApplicantId(?)',
-      `SELECT a.*, s.stall_number, s.stall_name, b.branch_name 
-       FROM application a 
-       LEFT JOIN stall s ON a.stall_id = s.stall_id 
-       LEFT JOIN branch b ON s.branch_id = b.branch_id 
-       WHERE a.applicant_id = ? 
-       ORDER BY a.created_at DESC LIMIT 1`,
-      [applicantId]
-    );
+    // Get application status
+    const [applicationResult] = await connection.execute('CALL sp_getLatestApplicationByApplicantId(?)', [applicantId]);
+    const applicationData = applicationResult[0] || [];
     console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
 
-    // Get stallholder information (if approved) with fallback
-    const stallholderData = await executeQuery(
-      'CALL sp_getStallholderByApplicantId(?)',
-      'SELECT * FROM stallholder WHERE applicant_id = ?',
-      [applicantId]
-    );
+    // Get stallholder information (if approved)
+    const [stallholderResult] = await connection.execute('CALL sp_getStallholderByApplicantId(?)', [applicantId]);
+    const stallholderData = stallholderResult[0] || [];
     console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
 
-    // Get applicant full details with fallback
-    const applicantData = await executeQuery(
-      'CALL sp_getApplicantById(?)',
-      `SELECT a.*, c.user_name, c.applicant_email 
-       FROM applicant a 
-       LEFT JOIN credential c ON a.applicant_id = c.applicant_id 
-       WHERE a.applicant_id = ?`,
-      [applicantId]
-    );
+    // Get applicant full details
+    const [applicantResult] = await connection.execute('CALL sp_getApplicantById(?)', [applicantId]);
+    const applicantData = applicantResult[0] || [];
     
     // Generate JWT token
     const token = jwt.sign(
