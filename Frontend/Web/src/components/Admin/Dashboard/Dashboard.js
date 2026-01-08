@@ -797,11 +797,41 @@ export default {
         this.totalCollectors = allActiveEmployees.length
         
         // Set activeCollectors for the "Active Employees" table (limit to 7, show all types)
-        // Sort by online status first, then by name
+        // Sort by most recent activity first ("just now" at top, "Never" at bottom)
+        const currentTime = new Date()
         allActiveEmployees.sort((a, b) => {
-          if (a.isOnline && !b.isOnline) return -1
-          if (!a.isOnline && b.isOnline) return 1
-          return a.name.localeCompare(b.name)
+          // Helper to convert lastActivity to seconds ago (lower = more recent)
+          const getSecondsAgo = (activity) => {
+            if (!activity || activity === 'Never') return 999999999 // Never goes to bottom
+            if (activity === 'just now' || activity === 'Just now') return 0
+            
+            // Parse relative time strings like "5 minutes ago", "2d ago", "1 day ago"
+            const relativeMatch = activity.match(/(\d+)\s*(s|m|h|d|second|minute|hour|day|week|month|year)/i)
+            if (relativeMatch) {
+              const num = parseInt(relativeMatch[1])
+              const unit = relativeMatch[2].toLowerCase()
+              const multipliers = { 
+                s: 1, second: 1, seconds: 1,
+                m: 60, minute: 60, minutes: 60,
+                h: 3600, hour: 3600, hours: 3600,
+                d: 86400, day: 86400, days: 86400,
+                week: 604800, weeks: 604800,
+                month: 2592000, months: 2592000,
+                year: 31536000, years: 31536000
+              }
+              return num * (multipliers[unit] || 1)
+            }
+            
+            // Try parsing as absolute date (e.g., "Dec 29, 2025", "Jan 8, 2026")
+            const parsedDate = new Date(activity)
+            if (!isNaN(parsedDate.getTime())) {
+              const diffMs = currentTime.getTime() - parsedDate.getTime()
+              return Math.max(0, Math.floor(diffMs / 1000)) // Convert to seconds ago
+            }
+            
+            return 999999998 // Unknown format, put near bottom but above "Never"
+          }
+          return getSecondsAgo(a.lastActivity) - getSecondsAgo(b.lastActivity)
         })
         
         this.activeCollectors = allActiveEmployees.slice(0, 7).map((emp, index) => ({
