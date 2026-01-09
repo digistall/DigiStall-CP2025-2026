@@ -632,6 +632,7 @@ export async function getActiveSessions(req, res) {
         // Get staff sessions (inspector/collector from mobile)
         // IMPORTANT: Return sessions from last 24 hours to ensure we have logout status
         // The Dashboard uses is_active flag as PRIMARY source of truth for online status
+        // CRITICAL: Convert timestamps to Philippine time for correct display
         try {
             await connection.execute(`SET time_zone = '+08:00'`);
             const [staffRows] = await connection.execute(`
@@ -640,12 +641,13 @@ export async function getActiveSessions(req, res) {
                     ss.staff_id as user_id,
                     ss.staff_type as user_type,
                     ss.is_active,
-                    ss.login_time,
-                    ss.last_activity,
-                    ss.logout_time
+                    CONVERT_TZ(ss.login_time, '+00:00', '+08:00') as login_time,
+                    CONVERT_TZ(ss.last_activity, '+00:00', '+08:00') as last_activity,
+                    CONVERT_TZ(ss.logout_time, '+00:00', '+08:00') as logout_time
                 FROM staff_session ss
                 WHERE ss.is_active = 1 
                    OR ss.login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                ORDER BY ss.last_activity DESC
             `);
             staffSessions = staffRows;
             console.log(`📊 Found ${staffSessions.length} staff sessions, active: ${staffSessions.filter(s => s.is_active).length}`);
