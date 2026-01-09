@@ -618,13 +618,24 @@ export default {
         
         // Helper function to check if employee is online based on last_login and last_logout
         // Logic: Online if:
-        //   1. last_login exists AND
-        //   2. (last_logout is NULL OR last_login > last_logout) AND
-        //   3. last_login is within the last 10 minutes (inactivity timeout)
+        //   1. Has an ACTIVE staff_session (is_active = 1) - PRIMARY SOURCE OF TRUTH
+        //   OR
+        //   2. last_login exists AND last_login > last_logout AND within 10 min timeout
+        // PRIORITY: staff_session.is_active takes precedence over last_login/last_logout
         const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes in milliseconds
         const now = Date.now()
         
-        const checkIsOnline = (lastLogin, lastLogout) => {
+        // Check if has active session in staff_session table
+        const hasActiveStaffSessionForUser = (userId, userType) => {
+          return activeSessions.some(s => 
+            s.user_id == userId && 
+            s.user_type === userType && 
+            (s.is_active === 1 || s.is_active === true || s.is_active === '1')
+          )
+        }
+        
+        // Fallback check using last_login/last_logout (only used when no session data)
+        const checkIsOnlineByTimestamp = (lastLogin, lastLogout) => {
           if (!lastLogin) return false // Never logged in
           
           const loginTime = new Date(lastLogin).getTime()
@@ -634,13 +645,6 @@ export default {
           
           // If logged in more than 10 minutes ago, consider offline due to inactivity
           if (!isWithinTimeout) {
-            // Unless they have a more recent logout time that's also within timeout
-            if (lastLogout) {
-              const logoutTime = new Date(lastLogout).getTime()
-              // If logout is recent and after login, definitely offline
-              if (logoutTime >= loginTime) return false
-            }
-            // Inactive for more than 10 minutes = offline
             return false
           }
           
@@ -649,34 +653,88 @@ export default {
           
           const logoutTime = new Date(lastLogout).getTime()
           
+          // CRITICAL: If logout time exists and is recent, employee is OFFLINE
+          // Even if last_login was updated after by a delayed heartbeat
+          const logoutIsRecent = (now - logoutTime) < INACTIVITY_TIMEOUT_MS
+          if (logoutIsRecent && logoutTime > 0) {
+            // If there's a recent logout, prioritize it - user intentionally logged out
+            return loginTime > logoutTime
+          }
+          
           // If login is more recent than logout, employee is online
           return loginTime > logoutTime
         }
         
         // Helper function to get last activity time
-        const getLastActivity = (emp, employeeType) => {
-          // For web employees, try session first, then fall back to last_login
+        // Shows logout_time when offline, last_activity/last_login when online
+        const getLastActivity = (emp, employeeType, isOnline, userId, userType) => {
+          // For web employees, try session first
           if (employeeType === 'web') {
             const empId = emp.employee_id || emp.business_employee_id || emp.id
-            const session = activeSessions.find(s => s.business_employee_id === empId && s.last_activity)
-            if (session && session.last_activity) {
-              const result = this.formatRelativeTime(session.last_activity)
-              if (result !== 'N/A' && result !== 'Never') {
-                return result
+            const session = activeSessions.find(s => s.business_employee_id === empId)
+            
+            if (session) {
+              // If offline and has logout_time, show that
+              if (!isOnline && session.logout_time) {
+                const result = this.formatRelativeTime(session.logout_time)
+                if (result !== 'N/A' && result !== 'Never') {
+                  return result
+                }
+              }
+              // If has last_activity, use that
+              if (session.last_activity) {
+                const result = this.formatRelativeTime(session.last_activity)
+                if (result !== 'N/A' && result !== 'Never') {
+                  return result
+                }
               }
             }
-            // Fall back to last_login for web employees too
+            // Fall back to last_login/last_logout
+            const lastLogout = emp.last_logout || emp.lastLogout
             const lastLogin = emp.last_login || emp.lastLogin
+            if (!isOnline && lastLogout) {
+              const result = this.formatRelativeTime(lastLogout)
+              if (result !== 'N/A') return result
+            }
             if (lastLogin) {
               const result = this.formatRelativeTime(lastLogin)
-              if (result !== 'N/A') {
-                return result
-              }
+              if (result !== 'N/A') return result
             }
             return 'Never'
           }
+          
           // For mobile staff (collectors/inspectors)
+          // Check staff_session first for accurate time
+          const session = activeSessions.find(s => 
+            s.user_id == userId && s.user_type === userType
+          )
+          
+          if (session) {
+            // If offline, prefer showing logout_time or last_activity
+            if (!isOnline) {
+              if (session.logout_time) {
+                const result = this.formatRelativeTime(session.logout_time)
+                if (result !== 'N/A' && result !== 'Never') return result
+              }
+              if (session.last_activity) {
+                const result = this.formatRelativeTime(session.last_activity)
+                if (result !== 'N/A' && result !== 'Never') return result
+              }
+            } else {
+              // Online - show last_activity
+              if (session.last_activity) {
+                const result = this.formatRelativeTime(session.last_activity)
+                if (result !== 'N/A' && result !== 'Never') return result
+              }
+            }
+          }
+          
+          // Fall back to inspector/collector table timestamps
+          const lastLogout = emp.last_logout || emp.lastLogout
           const lastLogin = emp.last_login || emp.lastLogin
+          if (!isOnline && lastLogout) {
+            return this.formatRelativeTime(lastLogout)
+          }
           if (lastLogin) {
             return this.formatRelativeTime(lastLogin)
           }
@@ -692,11 +750,13 @@ export default {
             )
             allActiveEmployees = [...allActiveEmployees, ...activeWebEmployees.map(emp => {
               const empId = emp.employee_id || emp.business_employee_id || emp.id
-              // For web employees: check session OR use last_login/last_logout logic
+              // For web employees: check session is_active as PRIMARY source
               const hasActiveSession = activeSessions.some(s => s.business_employee_id === empId && s.is_active)
+              const hasSessionData = activeSessions.some(s => s.business_employee_id === empId)
               const lastLogin = emp.last_login || emp.lastLogin
               const lastLogout = emp.last_logout || emp.lastLogout
-              const isOnline = hasActiveSession || checkIsOnline(lastLogin, lastLogout)
+              // If session exists, use is_active; otherwise fall back to timestamps
+              const isOnline = hasSessionData ? hasActiveSession : checkIsOnlineByTimestamp(lastLogin, lastLogout)
               return {
                 id: empId,
                 name: `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.username || 'Unknown',
@@ -705,7 +765,7 @@ export default {
                 status: 'Active',
                 type: 'web',
                 isOnline: isOnline,
-                lastActivity: getLastActivity(emp, 'web')
+                lastActivity: getLastActivity(emp, 'web', isOnline, empId, 'employee')
               }
             })]
           }
@@ -724,17 +784,18 @@ export default {
             allActiveEmployees = [...allActiveEmployees, ...activeCollectors.map(col => {
               const lastLogin = col.last_login || col.lastLogin
               const lastLogout = col.last_logout || col.lastLogout
-              // Check staff_session for active session (same as web employees)
-              // Handle is_active as 1, true, or '1'
-              const hasActiveStaffSession = activeSessions.some(s => 
-                s.user_id == col.collector_id && 
-                s.user_type === 'collector' && 
-                (s.is_active === 1 || s.is_active === true || s.is_active === '1')
+              // PRIORITY: Check staff_session for active session FIRST
+              // This is the SOURCE OF TRUTH - if is_active = 0, user is OFFLINE
+              const hasActiveStaffSession = hasActiveStaffSessionForUser(col.collector_id, 'collector')
+              
+              // ONLY use timestamp fallback if no session data exists for this user
+              const hasSessionData = activeSessions.some(s => 
+                s.user_id == col.collector_id && s.user_type === 'collector'
               )
-              // Use session OR last_login/last_logout logic
-              const isOnline = hasActiveStaffSession || checkIsOnline(lastLogin, lastLogout)
-              // For lastActivity: show last_logout if offline, last_login if online
-              const lastActivityTime = isOnline ? lastLogin : (lastLogout || lastLogin)
+              
+              // If session exists, use is_active; otherwise fall back to timestamps
+              const isOnline = hasSessionData ? hasActiveStaffSession : checkIsOnlineByTimestamp(lastLogin, lastLogout)
+              
               return {
                 id: col.collector_id,
                 name: `${col.first_name || ''} ${col.last_name || ''}`.trim() || 'Unknown',
@@ -743,7 +804,7 @@ export default {
                 status: 'Active',
                 type: 'collector',
                 isOnline: isOnline,
-                lastActivity: lastActivityTime ? this.formatRelativeTime(lastActivityTime) : 'Never'
+                lastActivity: getLastActivity(col, 'mobile', isOnline, col.collector_id, 'collector')
               }
             })]
             
@@ -768,17 +829,18 @@ export default {
             allActiveEmployees = [...allActiveEmployees, ...activeInspectors.map(ins => {
               const lastLogin = ins.last_login || ins.lastLogin
               const lastLogout = ins.last_logout || ins.lastLogout
-              // Check staff_session for active session (same as web employees)
-              // Handle is_active as 1, true, or '1'
-              const hasActiveStaffSession = activeSessions.some(s => 
-                s.user_id == ins.inspector_id && 
-                s.user_type === 'inspector' && 
-                (s.is_active === 1 || s.is_active === true || s.is_active === '1')
+              // PRIORITY: Check staff_session for active session FIRST
+              // This is the SOURCE OF TRUTH - if is_active = 0, user is OFFLINE
+              const hasActiveStaffSession = hasActiveStaffSessionForUser(ins.inspector_id, 'inspector')
+              
+              // ONLY use timestamp fallback if no session data exists for this user
+              const hasSessionData = activeSessions.some(s => 
+                s.user_id == ins.inspector_id && s.user_type === 'inspector'
               )
-              // Use session OR last_login/last_logout logic
-              const isOnline = hasActiveStaffSession || checkIsOnline(lastLogin, lastLogout)
-              // For lastActivity: show last_logout if offline, last_login if online
-              const lastActivityTime = isOnline ? lastLogin : (lastLogout || lastLogin)
+              
+              // If session exists, use is_active; otherwise fall back to timestamps
+              const isOnline = hasSessionData ? hasActiveStaffSession : checkIsOnlineByTimestamp(lastLogin, lastLogout)
+              
               return {
                 id: ins.inspector_id,
                 name: `${ins.first_name || ''} ${ins.last_name || ''}`.trim() || 'Unknown',
@@ -787,7 +849,7 @@ export default {
                 status: 'Active',
                 type: 'inspector',
                 isOnline: isOnline,
-                lastActivity: lastActivityTime ? this.formatRelativeTime(lastActivityTime) : 'Never'
+                lastActivity: getLastActivity(ins, 'mobile', isOnline, ins.inspector_id, 'inspector')
               }
             })]
           }

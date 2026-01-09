@@ -379,6 +379,7 @@ export const mobileStaffLogout = async (req, res) => {
 
 // ===== MOBILE STAFF HEARTBEAT =====
 // Updates last_login to keep staff marked as "online"
+// ONLY updates if staff has an active session (prevents updates after logout)
 export const mobileStaffHeartbeat = async (req, res) => {
     let connection;
     
@@ -399,7 +400,26 @@ export const mobileStaffHeartbeat = async (req, res) => {
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
         
-        // Update last_login using stored procedures
+        // CRITICAL: Check if staff has an active session before updating last_login
+        // This prevents heartbeats that arrive after logout from updating last_login
+        const [sessionCheck] = await connection.execute(
+            `SELECT session_id FROM staff_session 
+             WHERE staff_id = ? AND staff_type = ? AND is_active = 1 
+             LIMIT 1`,
+            [staffId, staffType]
+        );
+        
+        if (sessionCheck.length === 0) {
+            // No active session - staff has logged out, don't update last_login
+            console.log(`⚠️ Heartbeat rejected - no active session for ${staffType} ${staffId}`);
+            return res.json({
+                success: false,
+                message: 'No active session found',
+                timestamp: philippineTime
+            });
+        }
+        
+        // Staff has active session, safe to update last_login
         if (staffType === 'inspector') {
             await connection.execute('CALL sp_updateInspectorLastLogin(?)', [staffId]);
         } else if (staffType === 'collector') {
