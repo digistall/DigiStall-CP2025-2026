@@ -217,27 +217,37 @@ export const mobileStaffLogin = async (req, res) => {
             console.log(`✅ Updated last_login for collector ${staffId}`);
         }
         
-        // Create/update staff session for online status tracking using stored procedures
+        // Create/update staff session for online status tracking
+        // Using DIRECT SQL with explicit Philippine time to ensure correct timestamps
         console.log(`📊 Creating/updating staff session for ${staffType} ${staffId}...`);
         try {
-            // Set session timezone to Philippine time to ensure correct timestamp storage
+            // Set session timezone to Philippine time
             await connection.execute(`SET time_zone = '+08:00'`);
             
             // First, deactivate any old sessions for this staff
-            await connection.execute('CALL sp_deactivateStaffSessions(?, ?)', [staffId, staffType]);
-            
-            // Insert new active session using stored procedure
             await connection.execute(
-                'CALL sp_createStaffSession(?, ?, ?, ?, ?)',
+                `UPDATE staff_session SET is_active = 0 WHERE staff_id = ? AND staff_type = ?`,
+                [staffId, staffType]
+            );
+            
+            // Insert new active session with CONVERT_TZ to ensure Philippine time
+            // Using NOW() after SET time_zone should give Philippine time
+            await connection.execute(
+                `INSERT INTO staff_session (staff_id, staff_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
+                 VALUES (?, ?, ?, ?, ?, NOW(), NOW(), 1)`,
                 [staffId, staffType, token, req.ip || req.connection?.remoteAddress || 'unknown', req.get('User-Agent') || 'Mobile App']
             );
             console.log(`✅ Staff session created for ${staffType}: ${staffData.first_name} at ${philippineTime}`);
         } catch (sessionError) {
             console.error('❌ Failed to create staff session:', sessionError.message);
-            // Try with minimal columns in case table schema is different
+            // Try with minimal columns
             try {
                 await connection.execute(`SET time_zone = '+08:00'`);
-                await connection.execute('CALL sp_createStaffSessionMinimal(?, ?)', [staffId, staffType]);
+                await connection.execute(
+                    `INSERT INTO staff_session (staff_id, staff_type, is_active, login_time, last_activity) 
+                     VALUES (?, ?, 1, NOW(), NOW())`,
+                    [staffId, staffType]
+                );
                 console.log(`✅ Staff session created (minimal) for ${staffType}: ${staffData.first_name}`);
             } catch (fallbackError) {
                 console.error('❌ Fallback session creation also failed:', fallbackError.message);
@@ -316,32 +326,47 @@ export const mobileStaffLogout = async (req, res) => {
             // Set session timezone to Philippine time
             await connection.execute(`SET time_zone = '+08:00'`);
             
-            // Update last_logout using stored procedures
+            // Update last_logout in inspector/collector table using direct SQL
             if (staffType === 'inspector') {
-                await connection.execute('CALL sp_updateInspectorLastLogout(?)', [staffId]);
+                await connection.execute(
+                    `UPDATE inspector SET last_logout = NOW() WHERE inspector_id = ?`,
+                    [staffId]
+                );
                 console.log(`✅ Updated last_logout for inspector ${staffId}`);
             } else if (staffType === 'collector') {
-                await connection.execute('CALL sp_updateCollectorLastLogout(?)', [staffId]);
+                await connection.execute(
+                    `UPDATE collector SET last_logout = NOW() WHERE collector_id = ?`,
+                    [staffId]
+                );
                 console.log(`✅ Updated last_logout for collector ${staffId}`);
             }
             
-            // End staff session using stored procedure
-            await connection.execute('CALL sp_endStaffSession(?, ?)', [staffId, staffType]);
+            // End staff session using direct SQL - set is_active = 0 and update logout_time
+            await connection.execute(
+                `UPDATE staff_session 
+                 SET is_active = 0, logout_time = NOW(), last_activity = NOW() 
+                 WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+                [staffId, staffType]
+            );
             console.log(`✅ Staff session ended for ${staffType} ${staffId}`);
             
-            // Get staff name for activity log using stored procedure
+            // Get staff name for activity log
             let staffName = 'Unknown';
             if (staffType === 'inspector') {
-                const [nameResult] = await connection.execute('CALL sp_getInspectorName(?)', [staffId]);
-                const rows = nameResult[0] || [];
-                if (rows.length > 0) {
-                    staffName = `${rows[0].first_name} ${rows[0].last_name}`;
+                const [nameResult] = await connection.execute(
+                    `SELECT first_name, last_name FROM inspector WHERE inspector_id = ?`,
+                    [staffId]
+                );
+                if (nameResult.length > 0) {
+                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
                 }
             } else if (staffType === 'collector') {
-                const [nameResult] = await connection.execute('CALL sp_getCollectorName(?)', [staffId]);
-                const rows = nameResult[0] || [];
-                if (rows.length > 0) {
-                    staffName = `${rows[0].first_name} ${rows[0].last_name}`;
+                const [nameResult] = await connection.execute(
+                    `SELECT first_name, last_name FROM collector WHERE collector_id = ?`,
+                    [staffId]
+                );
+                if (nameResult.length > 0) {
+                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
                 }
             }
             
@@ -419,15 +444,24 @@ export const mobileStaffHeartbeat = async (req, res) => {
             });
         }
         
-        // Staff has active session, safe to update last_login
+        // Staff has active session, safe to update last_login using direct SQL
         if (staffType === 'inspector') {
-            await connection.execute('CALL sp_updateInspectorLastLogin(?)', [staffId]);
+            await connection.execute(
+                `UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`,
+                [staffId]
+            );
         } else if (staffType === 'collector') {
-            await connection.execute('CALL sp_updateCollectorLastLogin(?)', [staffId]);
+            await connection.execute(
+                `UPDATE collector SET last_login = NOW() WHERE collector_id = ?`,
+                [staffId]
+            );
         }
         
-        // Update staff session last_activity using stored procedure
-        await connection.execute('CALL sp_updateStaffSessionActivity(?, ?)', [staffId, staffType]);
+        // Update staff session last_activity using direct SQL
+        await connection.execute(
+            `UPDATE staff_session SET last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+            [staffId, staffType]
+        );
         
         console.log(`💓 Mobile heartbeat received from ${staffType} ${staffId}`);
         
