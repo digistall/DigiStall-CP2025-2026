@@ -610,9 +610,12 @@ export default {
           if (sessionsResult.success && sessionsResult.data) {
             activeSessions = sessionsResult.data
             console.log('📊 Active sessions received:', activeSessions.length)
-            // Log staff sessions specifically
+            // Log staff sessions specifically with their is_active status
             const staffSessions = activeSessions.filter(s => s.user_type === 'inspector' || s.user_type === 'collector')
-            console.log('📊 Staff sessions (inspector/collector):', staffSessions.length, staffSessions)
+            console.log('📊 Staff sessions (inspector/collector):', staffSessions.length)
+            staffSessions.forEach(s => {
+              console.log(`📊 Session: user_id=${s.user_id}, type=${s.user_type}, is_active=${s.is_active}, last_activity=${s.last_activity}, logout_time=${s.logout_time}`)
+            })
           }
         }
         
@@ -796,6 +799,9 @@ export default {
               // If session exists, use is_active; otherwise fall back to timestamps
               const isOnline = hasSessionData ? hasActiveStaffSession : checkIsOnlineByTimestamp(lastLogin, lastLogout)
               
+              // Debug logging for collector online status
+              console.log(`🔍 Collector ${col.collector_id} (${col.first_name}): hasSession=${hasSessionData}, hasActiveSession=${hasActiveStaffSession}, isOnline=${isOnline}`)
+              
               return {
                 id: col.collector_id,
                 name: `${col.first_name || ''} ${col.last_name || ''}`.trim() || 'Unknown',
@@ -840,6 +846,9 @@ export default {
               
               // If session exists, use is_active; otherwise fall back to timestamps
               const isOnline = hasSessionData ? hasActiveStaffSession : checkIsOnlineByTimestamp(lastLogin, lastLogout)
+              
+              // Debug logging for inspector online status
+              console.log(`🔍 Inspector ${ins.inspector_id} (${ins.first_name}): hasSession=${hasSessionData}, hasActiveSession=${hasActiveStaffSession}, isOnline=${isOnline}`)
               
               return {
                 id: ins.inspector_id,
