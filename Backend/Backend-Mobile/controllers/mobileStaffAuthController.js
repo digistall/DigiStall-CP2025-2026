@@ -97,10 +97,14 @@ export const mobileStaffLogin = async (req, res) => {
             );
             const inspectors = inspectorResult[0] || [];
             
+            console.log('🔍 RAW inspector result from stored procedure:', JSON.stringify(inspectors[0], null, 2));
+            
             if (inspectors && inspectors.length > 0) {
                 staffData = inspectors[0];
+                console.log('🔍 BEFORE decryptStaffData - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 // Decrypt staff data if encrypted
                 staffData = await decryptStaffData(staffData);
+                console.log('🔍 AFTER decryptStaffData - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 staffType = 'inspector';
                 console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
             }

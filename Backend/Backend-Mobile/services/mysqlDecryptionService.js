@@ -186,6 +186,8 @@ export const decryptUserData = (data, key, isEncryptedFlag = false) => {
     { encrypted: 'encrypted_last_name', plain: 'last_name' },
     { encrypted: 'encrypted_contact', plain: 'contact_no' },
     { encrypted: 'encrypted_contact', plain: 'contact_number' },
+    { encrypted: 'encrypted_phone', plain: 'contact_no' },
+    { encrypted: 'encrypted_phone', plain: 'phone_number' },
     // Applicant fields
     { encrypted: 'encrypted_full_name', plain: 'applicant_full_name' },
     { encrypted: 'encrypted_full_name', plain: 'full_name' },
@@ -239,7 +241,9 @@ export const decryptStaffData = async (staffData) => {
   const isEncrypted = staffData.is_encrypted === 1 || staffData.is_encrypted === true;
   const hasEncryptedFields = Buffer.isBuffer(staffData.encrypted_first_name) ||
                               Buffer.isBuffer(staffData.encrypted_last_name) ||
-                              Buffer.isBuffer(staffData.encrypted_contact);
+                              Buffer.isBuffer(staffData.encrypted_contact) ||
+                              Buffer.isBuffer(staffData.encrypted_email) ||
+                              Buffer.isBuffer(staffData.encrypted_phone);
   
   console.log('🔐 decryptStaffData check:', {
     is_encrypted_flag: staffData.is_encrypted,
