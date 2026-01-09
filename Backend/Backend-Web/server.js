@@ -11,7 +11,8 @@ import { getPerformanceStats } from './config/performanceMonitor.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { decryptResponseMiddleware } from './middleware/dataProtection.js';
+// REMOVED: decryptResponseMiddleware - stored procedures handle decryption
+// import { decryptResponseMiddleware } from './middleware/dataProtection.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,8 +44,8 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
 
-// Auto-decrypt encrypted data in responses (PII protection)
-app.use(decryptResponseMiddleware);
+// REMOVED: Auto-decrypt middleware - stored procedures already decrypt data
+// app.use(decryptResponseMiddleware);
 
 // Request logging disabled to prevent console flooding
 // Enable for debugging: uncomment below
