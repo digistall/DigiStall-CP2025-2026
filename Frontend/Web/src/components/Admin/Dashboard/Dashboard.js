@@ -681,18 +681,30 @@ export default {
             const session = activeSessions.find(s => s.business_employee_id === empId)
             
             if (session) {
-              // If offline and has logout_time, show that
-              if (!isOnline && session.logout_time) {
-                const result = this.formatRelativeTime(session.logout_time)
-                if (result !== 'N/A' && result !== 'Never') {
-                  return result
+              // If ONLINE: show login_time (stable, doesn't change with heartbeat)
+              // If OFFLINE: show logout_time or last_activity
+              if (isOnline) {
+                // Online - show when they logged in (won't keep saying "just now")
+                if (session.login_time) {
+                  const result = this.formatRelativeTime(session.login_time)
+                  if (result !== 'N/A' && result !== 'Never') {
+                    return result
+                  }
                 }
-              }
-              // If has last_activity, use that
-              if (session.last_activity) {
-                const result = this.formatRelativeTime(session.last_activity)
-                if (result !== 'N/A' && result !== 'Never') {
-                  return result
+              } else {
+                // Offline - show when they logged out
+                if (session.logout_time) {
+                  const result = this.formatRelativeTime(session.logout_time)
+                  if (result !== 'N/A' && result !== 'Never') {
+                    return result
+                  }
+                }
+                // Or last activity before logout
+                if (session.last_activity) {
+                  const result = this.formatRelativeTime(session.last_activity)
+                  if (result !== 'N/A' && result !== 'Never') {
+                    return result
+                  }
                 }
               }
             }
@@ -724,27 +736,26 @@ export default {
           } : 'No session found')
           
           if (session) {
-            // If offline, prefer showing logout_time or last_activity
-            if (!isOnline) {
-              if (session.logout_time) {
-                const result = this.formatRelativeTime(session.logout_time)
-                if (result !== 'N/A' && result !== 'Never') return result
-              }
-              if (session.last_activity) {
-                const result = this.formatRelativeTime(session.last_activity)
-                if (result !== 'N/A' && result !== 'Never') return result
-              }
-              // Fallback to login_time if no logout or activity recorded
+            // If ONLINE: show login_time (stable, doesn't change)
+            // If OFFLINE: show logout_time or last_activity
+            if (isOnline) {
+              // Online - show when they logged in (won't keep saying "just now")
               if (session.login_time) {
                 const result = this.formatRelativeTime(session.login_time)
                 if (result !== 'N/A' && result !== 'Never') return result
               }
             } else {
-              // Online - show last_activity or login_time
+              // Offline - show when they logged out
+              if (session.logout_time) {
+                const result = this.formatRelativeTime(session.logout_time)
+                if (result !== 'N/A' && result !== 'Never') return result
+              }
+              // Or last activity before logout
               if (session.last_activity) {
                 const result = this.formatRelativeTime(session.last_activity)
                 if (result !== 'N/A' && result !== 'Never') return result
               }
+              // Fallback to login_time if no logout or activity recorded
               if (session.login_time) {
                 const result = this.formatRelativeTime(session.login_time)
                 if (result !== 'N/A' && result !== 'Never') return result
