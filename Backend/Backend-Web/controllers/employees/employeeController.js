@@ -598,8 +598,8 @@ export async function getActiveSessions(req, res) {
         let staffSessions = [];
         
         // Get employee sessions (web employees)
-        // NOTE: Web employee sessions already store Philippine time via CONVERT_TZ in stored procedures
-        // So we query WITHOUT timezone conversion to avoid double conversion
+        // IMPORTANT: Return sessions from last 24 hours to ensure we have logout status
+        // The Dashboard uses is_active flag as PRIMARY source of truth for online status
         try {
             const [empRows] = await connection.execute(`
                 SELECT 
@@ -618,7 +618,7 @@ export async function getActiveSessions(req, res) {
                 INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
                 LEFT JOIN branch b ON be.branch_id = b.branch_id
                 WHERE es.is_active = 1 
-                   OR es.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                   OR es.login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
             `);
             employeeSessions = empRows.map(row => ({
                 ...row,
@@ -630,8 +630,8 @@ export async function getActiveSessions(req, res) {
         }
         
         // Get staff sessions (inspector/collector from mobile)
-        // NOTE: Mobile staff sessions store UTC time, so we need timezone conversion
-        // Set timezone ONLY for staff_session query
+        // IMPORTANT: Return sessions from last 24 hours to ensure we have logout status
+        // The Dashboard uses is_active flag as PRIMARY source of truth for online status
         try {
             await connection.execute(`SET time_zone = '+08:00'`);
             const [staffRows] = await connection.execute(`
@@ -645,7 +645,7 @@ export async function getActiveSessions(req, res) {
                     ss.logout_time
                 FROM staff_session ss
                 WHERE ss.is_active = 1 
-                   OR ss.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                   OR ss.login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
             `);
             staffSessions = staffRows;
             console.log(`📊 Found ${staffSessions.length} staff sessions, active: ${staffSessions.filter(s => s.is_active).length}`);
