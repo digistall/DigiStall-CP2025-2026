@@ -503,9 +503,13 @@ export default {
               result.data.forEach(payment => {
                 const paymentDate = payment.paymentDate || payment.payment_date || payment.createdAt || payment.created_at
                 if (paymentDate) {
-                  const dateKey = new Date(paymentDate).toISOString().split('T')[0]
-                  if (dailyTotals.hasOwnProperty(dateKey)) {
-                    dailyTotals[dateKey] += parseFloat(payment.amountPaid) || parseFloat(payment.amount) || 0
+                  try {
+                    const dateKey = new Date(paymentDate).toISOString().split('T')[0]
+                    if (dailyTotals.hasOwnProperty(dateKey)) {
+                      dailyTotals[dateKey] += parseFloat(payment.amountPaid) || parseFloat(payment.amount) || 0
+                    }
+                  } catch (dateError) {
+                    console.warn('⚠️ Invalid payment date:', paymentDate)
                   }
                 }
               })
@@ -723,10 +727,19 @@ export default {
                 const result = this.formatRelativeTime(session.last_activity)
                 if (result !== 'N/A' && result !== 'Never') return result
               }
+              // Fallback to login_time if no logout or activity recorded
+              if (session.login_time) {
+                const result = this.formatRelativeTime(session.login_time)
+                if (result !== 'N/A' && result !== 'Never') return result
+              }
             } else {
-              // Online - show last_activity
+              // Online - show last_activity or login_time
               if (session.last_activity) {
                 const result = this.formatRelativeTime(session.last_activity)
+                if (result !== 'N/A' && result !== 'Never') return result
+              }
+              if (session.login_time) {
+                const result = this.formatRelativeTime(session.login_time)
                 if (result !== 'N/A' && result !== 'Never') return result
               }
             }
@@ -736,10 +749,12 @@ export default {
           const lastLogout = emp.last_logout || emp.lastLogout
           const lastLogin = emp.last_login || emp.lastLogin
           if (!isOnline && lastLogout) {
-            return this.formatRelativeTime(lastLogout)
+            const result = this.formatRelativeTime(lastLogout)
+            if (result !== 'N/A') return result
           }
           if (lastLogin) {
-            return this.formatRelativeTime(lastLogin)
+            const result = this.formatRelativeTime(lastLogin)
+            if (result !== 'N/A') return result
           }
           return 'Never'
         }
