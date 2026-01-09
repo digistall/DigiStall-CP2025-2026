@@ -288,15 +288,15 @@ export async function getInspectorsByBranch(req, res) {
         let inspectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided using stored procedure
+            // Filter by branch if branchId is provided using decrypted stored procedure
             const [result] = await connection.execute(
-                'CALL sp_getInspectorsByBranch(?)',
+                'CALL sp_getInspectorsByBranchDecrypted(?)',
                 [branchId]
             );
             inspectors = result[0] || [];
         } else {
-            // Return all inspectors if no branchId (for admin view) using stored procedure
-            const [result] = await connection.execute('CALL sp_getInspectorsAll()');
+            // Return all inspectors if no branchId (for admin view) using decrypted stored procedure
+            const [result] = await connection.execute('CALL sp_getInspectorsAllDecrypted()');
             inspectors = result[0] || [];
         }
 
@@ -347,15 +347,15 @@ export async function getCollectorsByBranch(req, res) {
         let collectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided using stored procedure
+            // Filter by branch if branchId is provided using decrypted stored procedure
             const [result] = await connection.execute(
-                'CALL sp_getCollectorsByBranch(?)',
+                'CALL sp_getCollectorsByBranchDecrypted(?)',
                 [branchId]
             );
             collectors = result[0] || [];
         } else {
-            // Return all collectors if no branchId (for admin view) using stored procedure
-            const [result] = await connection.execute('CALL sp_getCollectorsAll()');
+            // Return all collectors if no branchId (for admin view) using decrypted stored procedure
+            const [result] = await connection.execute('CALL sp_getCollectorsAllDecrypted()');
             collectors = result[0] || [];
         }
 
