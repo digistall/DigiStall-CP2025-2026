@@ -13,34 +13,6 @@
       <v-container fluid class="main-content">
         <v-row>
           <v-col cols="12">
-            <!-- Stats Cards -->
-            <v-row class="mb-6">
-              <v-col cols="12" md="4">
-                <v-card class="stat-card primary text-center">
-                  <v-card-text>
-                    <div class="stat-number">{{ totalEmployees }}</div>
-                    <div class="stat-label">Total Employees</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-card class="stat-card success text-center">
-                  <v-card-text>
-                    <div class="stat-number">{{ activeEmployees }}</div>
-                    <div class="stat-label">Active</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-card class="stat-card warning text-center">
-                  <v-card-text>
-                    <div class="stat-number">{{ inactiveEmployees }}</div>
-                    <div class="stat-label">Inactive</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-
             <!-- Content Section -->
             <div class="employee-content">
               <!-- Search, Filters, and Activity Log Button -->

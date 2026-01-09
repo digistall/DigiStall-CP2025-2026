@@ -32,50 +32,31 @@ export const getPaymentRecords = async (req, res) => {
     
     connection = await createConnection();
     
-    // If we only have applicantId, try to get stallholder_id from stallholder table
+    // If we only have applicantId, try to get stallholder_id using stored procedure
     if (userData.applicantId && !userData.stallholderId) {
-      const [stallholderRows] = await connection.execute(
-        'SELECT stallholder_id FROM stallholder WHERE applicant_id = ? LIMIT 1',
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
         [userData.applicantId]
       );
-      if (stallholderRows.length > 0) {
-        stallholderId = stallholderRows[0].stallholder_id;
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
         console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
       }
     }
     
-    // Get total count of payments
+    // Get total count of payments using stored procedure
     const [countResult] = await connection.execute(
-      `SELECT COUNT(*) as total FROM payments WHERE stallholder_id = ?`,
+      'CALL sp_getPaymentCountByStallholder(?)',
       [stallholderId]
     );
-    const totalRecords = countResult[0].total;
+    const totalRecords = countResult[0]?.[0]?.total || 0;
     
-    // Get payment records with pagination
-    const [payments] = await connection.execute(
-      `SELECT 
-        p.payment_id,
-        p.stallholder_id,
-        p.payment_method,
-        p.amount,
-        p.payment_date,
-        p.payment_time,
-        p.payment_for_month,
-        p.payment_type,
-        p.reference_number,
-        p.collected_by,
-        p.payment_status,
-        p.notes,
-        p.branch_id,
-        p.created_at,
-        b.branch_name
-       FROM payments p
-       LEFT JOIN branch b ON p.branch_id = b.branch_id
-       WHERE p.stallholder_id = ?
-       ORDER BY p.payment_date DESC, p.created_at DESC
-       LIMIT ${limitInt} OFFSET ${offsetInt}`,
-      [stallholderId]
+    // Get payment records with pagination using stored procedure
+    const [paymentResult] = await connection.execute(
+      'CALL sp_getPaymentsByStallholderPaginated(?, ?, ?)',
+      [stallholderId, limitInt, offsetInt]
     );
+    const payments = paymentResult[0] || [];
     
     await connection.end();
     
@@ -154,42 +135,24 @@ export const getAllPaymentRecords = async (req, res) => {
     
     connection = await createConnection();
     
-    // If we only have applicantId, try to get stallholder_id from stallholder table
+    // If we only have applicantId, try to get stallholder_id using stored procedure
     if (userData.applicantId && !userData.stallholderId) {
-      const [stallholderRows] = await connection.execute(
-        'SELECT stallholder_id FROM stallholder WHERE applicant_id = ? LIMIT 1',
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
         [userData.applicantId]
       );
-      if (stallholderRows.length > 0) {
-        stallholderId = stallholderRows[0].stallholder_id;
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
         console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
       }
     }
     
-    // Get all payment records
-    const [payments] = await connection.execute(
-      `SELECT 
-        p.payment_id,
-        p.stallholder_id,
-        p.payment_method,
-        p.amount,
-        p.payment_date,
-        p.payment_time,
-        p.payment_for_month,
-        p.payment_type,
-        p.reference_number,
-        p.collected_by,
-        p.payment_status,
-        p.notes,
-        p.branch_id,
-        p.created_at,
-        b.branch_name
-       FROM payments p
-       LEFT JOIN branch b ON p.branch_id = b.branch_id
-       WHERE p.stallholder_id = ?
-       ORDER BY p.payment_date DESC, p.created_at DESC`,
+    // Get all payment records using stored procedure
+    const [paymentResult] = await connection.execute(
+      'CALL sp_getAllPaymentsByStallholder(?)',
       [stallholderId]
     );
+    const payments = paymentResult[0] || [];
     
     await connection.end();
     
@@ -262,44 +225,31 @@ export const getPaymentSummary = async (req, res) => {
     
     connection = await createConnection();
     
-    // If we only have applicantId, try to get stallholder_id from stallholder table
+    // If we only have applicantId, try to get stallholder_id using stored procedure
     if (userData.applicantId && !userData.stallholderId) {
-      const [stallholderRows] = await connection.execute(
-        'SELECT stallholder_id FROM stallholder WHERE applicant_id = ? LIMIT 1',
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
         [userData.applicantId]
       );
-      if (stallholderRows.length > 0) {
-        stallholderId = stallholderRows[0].stallholder_id;
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
         console.log('📊 Found stallholder_id from applicant_id:', stallholderId);
       }
     }
     
-    // Get payment summary statistics
-    const [summary] = await connection.execute(
-      `SELECT 
-        COUNT(*) as total_payments,
-        SUM(CASE WHEN payment_status = 'completed' THEN amount ELSE 0 END) as total_paid,
-        SUM(CASE WHEN payment_status = 'pending' THEN amount ELSE 0 END) as total_pending,
-        SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) as completed_count,
-        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-        MAX(payment_date) as last_payment_date
-       FROM payments 
-       WHERE stallholder_id = ?`,
+    // Get payment summary statistics using stored procedure
+    const [summaryResult] = await connection.execute(
+      'CALL sp_getPaymentSummaryByStallholder(?)',
       [stallholderId]
     );
+    const summary = summaryResult[0] || [];
     
-    // Get stallholder's monthly rent and payment status
-    const [stallholderInfo] = await connection.execute(
-      `SELECT 
-        monthly_rent,
-        payment_status,
-        last_payment_date,
-        contract_start_date,
-        contract_end_date
-       FROM stallholder 
-       WHERE stallholder_id = ? OR applicant_id = ?`,
-      [stallholderId, stallholderId]
+    // Get stallholder's monthly rent and payment status using stored procedure
+    const [stallholderResult] = await connection.execute(
+      'CALL sp_getStallholderByApplicantId(?)',
+      [stallholderId]
     );
+    const stallholderInfo = stallholderResult[0] || [];
     
     await connection.end();
     
