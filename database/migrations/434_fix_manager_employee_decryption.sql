@@ -18,41 +18,51 @@ BEGIN
     WHERE key_name = 'user_data_key' AND is_active = 1 
     LIMIT 1;
     
+    -- Debug: Log encryption key status
+    SELECT CONCAT('🔐 Encryption key: ', COALESCE(v_key, 'NULL')) AS debug_info;
+    
     SELECT 
         bm.business_manager_id,
         bm.branch_id,
         bm.manager_username,
         bm.manager_password_hash,
-        -- Decrypt first_name
+        -- Decrypt first_name: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(bm.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND bm.encrypted_first_name IS NOT NULL THEN 
-                CAST(AES_DECRYPT(bm.encrypted_first_name, v_key) AS CHAR(100))
-            ELSE COALESCE(bm.first_name, '') 
+            WHEN COALESCE(bm.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(bm.encrypted_first_name, v_key) AS CHAR(100)), bm.first_name, '')
+            ELSE 
+                COALESCE(bm.first_name, '') 
         END as first_name,
-        -- Decrypt last_name
+        -- Decrypt last_name: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(bm.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND bm.encrypted_last_name IS NOT NULL THEN 
-                CAST(AES_DECRYPT(bm.encrypted_last_name, v_key) AS CHAR(100))
-            ELSE COALESCE(bm.last_name, '') 
+            WHEN COALESCE(bm.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(bm.encrypted_last_name, v_key) AS CHAR(100)), bm.last_name, '')
+            ELSE 
+                COALESCE(bm.last_name, '') 
         END as last_name,
-        -- Decrypt email
+        -- Decrypt email: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(bm.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND bm.encrypted_email IS NOT NULL THEN 
-                CAST(AES_DECRYPT(bm.encrypted_email, v_key) AS CHAR(255))
-            ELSE COALESCE(bm.email, '') 
+            WHEN COALESCE(bm.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(bm.encrypted_email, v_key) AS CHAR(255)), bm.email, '')
+            ELSE 
+                COALESCE(bm.email, '') 
         END as email,
-        -- Decrypt contact_number
+        -- Decrypt contact_number: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(bm.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND bm.encrypted_contact IS NOT NULL THEN 
-                CAST(AES_DECRYPT(bm.encrypted_contact, v_key) AS CHAR(50))
-            ELSE COALESCE(bm.contact_number, '') 
+            WHEN COALESCE(bm.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(bm.encrypted_contact, v_key) AS CHAR(50)), bm.contact_number, '')
+            ELSE 
+                COALESCE(bm.contact_number, '') 
         END as contact_number,
         bm.status,
         bm.last_login,
         bm.last_logout,
         b.branch_name,
         b.area,
-        b.location
+        b.location,
+        -- Debug fields
+        bm.is_encrypted as debug_is_encrypted,
+        CASE WHEN bm.encrypted_first_name IS NOT NULL THEN 'HAS_DATA' ELSE 'NULL' END as debug_encrypted_fn
     FROM business_manager bm
     LEFT JOIN branch b ON bm.branch_id = b.branch_id
     WHERE bm.manager_username = p_username COLLATE utf8mb4_general_ci
@@ -76,35 +86,44 @@ BEGIN
     WHERE key_name = 'user_data_key' AND is_active = 1 
     LIMIT 1;
     
+    -- Debug: Log encryption key status
+    SELECT CONCAT('🔐 Encryption key: ', COALESCE(v_key, 'NULL')) AS debug_info;
+    
     SELECT 
         be.business_employee_id,
         be.branch_id,
         be.employee_username,
         be.employee_password_hash,
-        -- Decrypt first_name
+        -- Decrypt first_name: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(be.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND be.encrypted_first_name IS NOT NULL THEN 
-                CAST(AES_DECRYPT(be.encrypted_first_name, v_key) AS CHAR(100))
-            ELSE COALESCE(be.first_name, '') 
+            WHEN COALESCE(be.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(be.encrypted_first_name, v_key) AS CHAR(100)), be.first_name, '')
+            ELSE 
+                COALESCE(be.first_name, '') 
         END as first_name,
-        -- Decrypt last_name
+        -- Decrypt last_name: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(be.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND be.encrypted_last_name IS NOT NULL THEN 
-                CAST(AES_DECRYPT(be.encrypted_last_name, v_key) AS CHAR(100))
-            ELSE COALESCE(be.last_name, '') 
+            WHEN COALESCE(be.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(be.encrypted_last_name, v_key) AS CHAR(100)), be.last_name, '')
+            ELSE 
+                COALESCE(be.last_name, '') 
         END as last_name,
-        -- Decrypt email
+        -- Decrypt email: ALWAYS use encrypted column if is_encrypted=1
         CASE 
-            WHEN COALESCE(be.is_encrypted, 0) = 1 AND v_key IS NOT NULL AND be.encrypted_email IS NOT NULL THEN 
-                CAST(AES_DECRYPT(be.encrypted_email, v_key) AS CHAR(255))
-            ELSE COALESCE(be.email, '') 
+            WHEN COALESCE(be.is_encrypted, 0) = 1 THEN 
+                COALESCE(CAST(AES_DECRYPT(be.encrypted_email, v_key) AS CHAR(255)), be.email, '')
+            ELSE 
+                COALESCE(be.email, '') 
         END as email,
         be.phone_number,
         be.status,
         be.permissions,
         be.last_login,
         be.last_logout,
-        b.branch_name
+        b.branch_name,
+        -- Debug fields
+        be.is_encrypted as debug_is_encrypted,
+        CASE WHEN be.encrypted_first_name IS NOT NULL THEN 'HAS_DATA' ELSE 'NULL' END as debug_encrypted_fn
     FROM business_employee be
     LEFT JOIN branch b ON be.branch_id = b.branch_id
     WHERE be.employee_username = p_username COLLATE utf8mb4_general_ci;
