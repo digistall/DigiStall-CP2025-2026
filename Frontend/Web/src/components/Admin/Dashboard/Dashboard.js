@@ -716,6 +716,13 @@ export default {
             s.user_id == userId && s.user_type === userType
           )
           
+          console.log(`🔍 [LAST_ACTIVITY DEBUG] ${userType} ID:${userId}, hasSession:${!!session}`, session ? {
+            login_time: session.login_time,
+            last_activity: session.last_activity,
+            logout_time: session.logout_time,
+            is_active: session.is_active
+          } : 'No session found')
+          
           if (session) {
             // If offline, prefer showing logout_time or last_activity
             if (!isOnline) {
