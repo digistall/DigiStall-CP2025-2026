@@ -4,6 +4,20 @@
 
 import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { decryptData } from '../../services/encryptionService.js';
+
+// Helper function to decrypt data safely (handles both encrypted and plain text)
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 /**
  * Get all complaints with optional filters
