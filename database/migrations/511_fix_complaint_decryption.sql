@@ -47,10 +47,13 @@ BEGIN
     -- Get branch_id and stall_id from assigned_location via application
     COALESCE(al.branch_id, sh.branch_id) as branch_id,
     al.stall_id as stall_id,
+    -- Get stall number
+    s.stall_number,
     'stallholder' as source
   FROM stallholder sh
   LEFT JOIN application app ON sh.applicant_id = app.applicant_id AND app.status = 'Approved'
   LEFT JOIN assigned_location al ON app.application_id = al.application_id
+  LEFT JOIN stall s ON al.stall_id = s.stall_id
   WHERE sh.stallholder_id = p_stallholder_id OR sh.applicant_id = p_stallholder_id
   ORDER BY app.application_id DESC
   LIMIT 1;
@@ -98,10 +101,13 @@ BEGIN
     -- Get branch_id and stall_id from assigned_location
     al.branch_id,
     al.stall_id,
+    -- Get stall number
+    s.stall_number,
     'applicant' as source
   FROM applicant a
   LEFT JOIN application app ON a.applicant_id = app.applicant_id AND app.status = 'Approved'
   LEFT JOIN assigned_location al ON app.application_id = al.application_id
+  LEFT JOIN stall s ON al.stall_id = s.stall_id
   WHERE a.applicant_id = p_applicant_id
   ORDER BY app.application_id DESC
   LIMIT 1;

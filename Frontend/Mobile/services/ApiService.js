@@ -1376,6 +1376,54 @@ class ApiService {
   }
   
   /**
+   * Get stallholder profile with stall information
+   * @param {number} stallholderId - The stallholder ID
+   */
+  static async getStallholderProfile(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}/api/mobile/stallholder/profile/${stallholderId}`;
+      console.log('🔄 Fetching stallholder profile from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholder profile');
+      }
+      
+      console.log('✅ Stallholder profile fetched:', data.data?.stall_number || 'No stall');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Stallholder Profile Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: null
+      };
+    }
+  }
+  
+  /**
    * Get stallholder details by ID
    * @param {number} stallholderId - The stallholder ID
    */

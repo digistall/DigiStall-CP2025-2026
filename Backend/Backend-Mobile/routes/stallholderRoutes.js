@@ -25,6 +25,11 @@ import {
   getMyComplaints
 } from '../controllers/stallholder/complaintController.js';
 
+// Import profile controller
+import {
+  getStallholderProfile
+} from '../controllers/stallholder/profileController.js';
+
 // Import payment controller
 import {
   getPaymentRecords,
@@ -152,6 +157,13 @@ router.put('/documents/blob/:document_id/verify', updateStallholderDocumentVerif
 // =============================================
 // STALLHOLDER COMPLAINT ROUTES
 // =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/profile/:stallholder_id
+ * @desc Get stallholder profile with stall information
+ * @access Protected (Stallholder only)
+ */
+router.get('/profile/:stallholder_id', verifyToken, getStallholderProfile);
 
 /**
  * @route POST /api/mobile/stallholder/complaint
