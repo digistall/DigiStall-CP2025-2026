@@ -838,8 +838,10 @@ class ApiService {
     }
   }
 
-  // Join raffle (if raffle joining is implemented)
-  static async joinRaffle(raffleId, applicantId, token) {
+  // ===== LEGACY RAFFLE METHOD (DEPRECATED) =====
+  // Note: Use joinRaffle(applicantId, stallId) instead - defined earlier in this file
+  // This method is kept for backward compatibility but should not be used
+  static async joinRaffleLegacy(raffleId, applicantId, token) {
     try {
       const server = await NetworkUtils.getActiveServer();
 

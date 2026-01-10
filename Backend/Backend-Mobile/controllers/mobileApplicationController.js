@@ -440,6 +440,8 @@ export const joinRaffle = async (req, res) => {
     }
 
     // Insert into raffle_participants table
+    // Note: application_id is NULL for pre-registration (joining raffle only, no full application yet)
+    // The application will be created when the winner is selected by the branch manager
     const [participantResult] = await connection.execute(
       `INSERT INTO raffle_participants 
        (raffle_id, applicant_id, application_id, participation_time, is_winner, created_at)
