@@ -172,15 +172,6 @@
                         prepend-inner-icon="mdi-identifier"
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="12" md="6">
-                      <v-select
-                        v-model="form.assignedCollector"
-                        :items="collectors"
-                        label="Assigned Collector"
-                        outlined
-                        prepend-inner-icon="mdi-account-tie"
-                      ></v-select>
-                    </v-col>
                   </v-row>
                 </v-container>
               </v-window-item>

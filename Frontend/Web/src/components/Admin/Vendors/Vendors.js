@@ -35,7 +35,6 @@ export default {
         { title: 'Vendor ID', value: 'id', width: 120 },
         { title: "Vendor's Name", value: 'name' },
         { title: 'Business Name', value: 'business' },
-        { title: 'Assigned Collector', value: 'collector' },
         { title: 'Status', value: 'status', width: 120 },
         { title: 'Action', value: 'actions', sortable: false, align: 'end', width: 140 },
       ],
