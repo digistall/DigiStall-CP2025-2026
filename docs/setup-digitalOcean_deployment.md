@@ -10,4 +10,4 @@ docker-compose up -d --build
 
 docker logs digistall-backend-web --tail 50
 
-docker logs digistall-backend-mobile --tail 20
+docker logs digistall-backend-mobile --tail 50

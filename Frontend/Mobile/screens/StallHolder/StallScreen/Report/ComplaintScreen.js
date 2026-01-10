@@ -92,8 +92,8 @@ const ComplaintScreen = () => {
       const data = await UserStorageService.getUserData();
       if (data) {
         setFullUserData(data); // Store full data including token
-        // User data can be in different places depending on login type
-        const user = data.user || data.stallholder || data;
+        // For stallholders, prefer stallholder object which has stall info
+        const user = data.stallholder || data.user || data;
         setUserData(user);
         console.log('📱 User data loaded:', user.stallholder_name || user.full_name || user.username);
       }
