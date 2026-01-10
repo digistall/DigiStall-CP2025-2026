@@ -158,6 +158,13 @@ const CollectorHome = () => {
       return;
     }
     
+    // CRITICAL: Clear heartbeat interval FIRST to prevent last_login updates after logout
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+      console.log('✅ Heartbeat interval cleared before logout');
+    }
+    
     // Close sidebar first
     setSidebarVisible(false);
     

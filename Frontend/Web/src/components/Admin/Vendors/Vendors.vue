@@ -7,7 +7,11 @@
       <!-- Main Content -->
       <v-main class="vendors-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
-        <LoadingOverlay :loading="loading" text="Loading vendors..." :full-page="false" />
+        <LoadingOverlay 
+          :loading="loading" 
+          text="Loading vendors..."
+          :full-page="false"
+        />
 
         <v-container fluid class="main-content">
           <v-row>
@@ -22,7 +26,6 @@
                 :activeFilter="statusFilter"
                 @view="view"
                 @edit="edit"
-                @open-add-dialog="openAddDialog"
               />
 
               <!-- Add Vendor Dialog -->
@@ -36,7 +39,6 @@
               <VendorDetailsDialog
                 :isVisible="detailsDialog"
                 @close="detailsDialog = false"
-                @edit="handleEditFromDetails"
                 :data="detailsData"
                 photo="https://i.pravatar.cc/200?img=12"
               />
@@ -51,20 +53,18 @@
             </v-col>
           </v-row>
         </v-container>
-
-        <!-- Snackbar for notifications -->
-        <v-snackbar
-          v-model="snackbar.show"
-          :color="snackbar.color"
-          :timeout="snackbar.timeout"
-          location="top"
-        >
-          {{ snackbar.message }}
-          <template v-slot:actions>
-            <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
-          </template>
-        </v-snackbar>
       </v-main>
+
+      <!-- Floating Action Button for Add Vendor -->
+      <v-btn
+        icon="mdi-plus"
+        fab
+        color="primary"
+        size="large"
+        class="floating-add-btn"
+        @click="openAddDialog"
+        aria-label="Add vendor"
+      ></v-btn>
     </div>
   </v-app>
 </template>

@@ -2,6 +2,7 @@
 // Simple user management for mobile applications
 
 import { createConnection } from '../../config/database.js';
+import { decryptApplicantData } from '../../services/mysqlDecryptionService.js';
 
 // Get user profile
 export const getUserProfile = async (req, res) => {
@@ -23,9 +24,12 @@ export const getUserProfile = async (req, res) => {
       });
     }
     
+    // Decrypt user data if encrypted
+    const decryptedUser = await decryptApplicantData(user);
+    
     res.status(200).json({
       success: true,
-      data: user
+      data: decryptedUser
     });
     
   } catch (error) {

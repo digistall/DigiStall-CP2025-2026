@@ -1,6 +1,7 @@
 import { createConnection } from '../config/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { decryptStaffData } from '../services/mysqlDecryptionService.js';
 
 /**
  * Mobile Staff Login Controller
@@ -88,31 +89,22 @@ export const mobileStaffLogin = async (req, res) => {
         let staffData = null;
         let staffType = null;
         
-        // Check inspector table first (with COLLATE to fix collation mismatch)
-        // NOTE: Inspector table only has 'password' column (not password_hash)
+        // Check inspector table first using stored procedure
         try {
-            const [inspectors] = await connection.execute(`
-                SELECT 
-                    i.inspector_id,
-                    i.username,
-                    i.first_name,
-                    i.last_name,
-                    i.email,
-                    i.password as password_hash,
-                    i.contact_no,
-                    i.status,
-                    ia.branch_id,
-                    b.branch_name
-                FROM inspector i
-                LEFT JOIN inspector_assignment ia ON i.inspector_id = ia.inspector_id AND ia.status COLLATE utf8mb4_general_ci = 'Active'
-                LEFT JOIN branch b ON ia.branch_id = b.branch_id
-                WHERE i.username COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci 
-                  AND i.status COLLATE utf8mb4_general_ci = 'active'
-                LIMIT 1
-            `, [username]);
+            const [inspectorResult] = await connection.execute(
+                'CALL sp_getInspectorByUsername(?)',
+                [username]
+            );
+            const inspectors = inspectorResult[0] || [];
+            
+            console.log('🔍 RAW inspector result from stored procedure:', JSON.stringify(inspectors[0], null, 2));
             
             if (inspectors && inspectors.length > 0) {
                 staffData = inspectors[0];
+                console.log('🔍 BEFORE decryptStaffData - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
+                // Decrypt staff data if encrypted
+                staffData = await decryptStaffData(staffData);
+                console.log('🔍 AFTER decryptStaffData - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 staffType = 'inspector';
                 console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
             }
@@ -120,31 +112,19 @@ export const mobileStaffLogin = async (req, res) => {
             console.warn('⚠️ Error checking inspector:', err.message);
         }
         
-        // If not inspector, check collector table (with COLLATE to fix collation mismatch)
+        // If not inspector, check collector table using stored procedure
         if (!staffData) {
             try {
-                const [collectors] = await connection.execute(`
-                    SELECT 
-                        c.collector_id,
-                        c.username,
-                        c.first_name,
-                        c.last_name,
-                        c.email,
-                        c.password_hash,
-                        c.contact_no,
-                        c.status,
-                        ca.branch_id,
-                        b.branch_name
-                    FROM collector c
-                    LEFT JOIN collector_assignment ca ON c.collector_id = ca.collector_id AND ca.status COLLATE utf8mb4_general_ci = 'Active'
-                    LEFT JOIN branch b ON ca.branch_id = b.branch_id
-                    WHERE c.username COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci 
-                      AND c.status COLLATE utf8mb4_general_ci = 'active'
-                    LIMIT 1
-                `, [username]);
+                const [collectorResult] = await connection.execute(
+                    'CALL sp_getCollectorByUsername(?)',
+                    [username]
+                );
+                const collectors = collectorResult[0] || [];
                 
                 if (collectors && collectors.length > 0) {
                     staffData = collectors[0];
+                    // Decrypt staff data if encrypted
+                    staffData = await decryptStaffData(staffData);
                     staffType = 'collector';
                     console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
                 }
@@ -228,26 +208,20 @@ export const mobileStaffLogin = async (req, res) => {
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
         
-        // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
-        // Update last_login in inspector/collector table using NOW() with correct timezone
+        // Update last_login using stored procedures
         if (staffType === 'inspector') {
-            await connection.execute(
-                `UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`,
-                [staffId]
-            );
+            await connection.execute('CALL sp_updateInspectorLastLogin(?)', [staffId]);
             console.log(`✅ Updated last_login for inspector ${staffId}`);
         } else {
-            await connection.execute(
-                `UPDATE collector SET last_login = NOW() WHERE collector_id = ?`,
-                [staffId]
-            );
+            await connection.execute('CALL sp_updateCollectorLastLogin(?)', [staffId]);
             console.log(`✅ Updated last_login for collector ${staffId}`);
         }
         
-        // Create/update staff session for online status tracking (DIRECT SQL)
+        // Create/update staff session for online status tracking
+        // Using DIRECT SQL with explicit Philippine time to ensure correct timestamps
         console.log(`📊 Creating/updating staff session for ${staffType} ${staffId}...`);
         try {
-            // Set session timezone to Philippine time to ensure correct timestamp storage
+            // Set session timezone to Philippine time
             await connection.execute(`SET time_zone = '+08:00'`);
             
             // First, deactivate any old sessions for this staff
@@ -256,7 +230,8 @@ export const mobileStaffLogin = async (req, res) => {
                 [staffId, staffType]
             );
             
-            // Insert new active session with Philippine time (NOW() will use the session timezone)
+            // Insert new active session with CONVERT_TZ to ensure Philippine time
+            // Using NOW() after SET time_zone should give Philippine time
             await connection.execute(
                 `INSERT INTO staff_session (staff_id, staff_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
                  VALUES (?, ?, ?, ?, ?, NOW(), NOW(), 1)`,
@@ -265,7 +240,7 @@ export const mobileStaffLogin = async (req, res) => {
             console.log(`✅ Staff session created for ${staffType}: ${staffData.first_name} at ${philippineTime}`);
         } catch (sessionError) {
             console.error('❌ Failed to create staff session:', sessionError.message);
-            // Try with minimal columns in case table schema is different
+            // Try with minimal columns
             try {
                 await connection.execute(`SET time_zone = '+08:00'`);
                 await connection.execute(
@@ -351,19 +326,26 @@ export const mobileStaffLogout = async (req, res) => {
             // Set session timezone to Philippine time
             await connection.execute(`SET time_zone = '+08:00'`);
             
-            // ===== DIRECT SQL ONLY - NO STORED PROCEDURES =====
-            // Update last_logout using NOW() with correct timezone
+            // Update last_logout in inspector/collector table using direct SQL
             if (staffType === 'inspector') {
-                await connection.execute(`UPDATE inspector SET last_logout = NOW() WHERE inspector_id = ?`, [staffId]);
+                await connection.execute(
+                    `UPDATE inspector SET last_logout = NOW() WHERE inspector_id = ?`,
+                    [staffId]
+                );
                 console.log(`✅ Updated last_logout for inspector ${staffId}`);
             } else if (staffType === 'collector') {
-                await connection.execute(`UPDATE collector SET last_logout = NOW() WHERE collector_id = ?`, [staffId]);
+                await connection.execute(
+                    `UPDATE collector SET last_logout = NOW() WHERE collector_id = ?`,
+                    [staffId]
+                );
                 console.log(`✅ Updated last_logout for collector ${staffId}`);
             }
             
-            // End staff session (set is_active = 0) using NOW() for logout_time and last_activity
+            // End staff session using direct SQL - set is_active = 0 and update logout_time
             await connection.execute(
-                `UPDATE staff_session SET is_active = 0, logout_time = NOW(), last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+                `UPDATE staff_session 
+                 SET is_active = 0, logout_time = NOW(), last_activity = NOW() 
+                 WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
                 [staffId, staffType]
             );
             console.log(`✅ Staff session ended for ${staffType} ${staffId}`);
@@ -371,14 +353,20 @@ export const mobileStaffLogout = async (req, res) => {
             // Get staff name for activity log
             let staffName = 'Unknown';
             if (staffType === 'inspector') {
-                const [rows] = await connection.execute(`SELECT first_name, last_name FROM inspector WHERE inspector_id = ?`, [staffId]);
-                if (rows.length > 0) {
-                    staffName = `${rows[0].first_name} ${rows[0].last_name}`;
+                const [nameResult] = await connection.execute(
+                    `SELECT first_name, last_name FROM inspector WHERE inspector_id = ?`,
+                    [staffId]
+                );
+                if (nameResult.length > 0) {
+                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
                 }
             } else if (staffType === 'collector') {
-                const [rows] = await connection.execute(`SELECT first_name, last_name FROM collector WHERE collector_id = ?`, [staffId]);
-                if (rows.length > 0) {
-                    staffName = `${rows[0].first_name} ${rows[0].last_name}`;
+                const [nameResult] = await connection.execute(
+                    `SELECT first_name, last_name FROM collector WHERE collector_id = ?`,
+                    [staffId]
+                );
+                if (nameResult.length > 0) {
+                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
                 }
             }
             
@@ -416,6 +404,7 @@ export const mobileStaffLogout = async (req, res) => {
 
 // ===== MOBILE STAFF HEARTBEAT =====
 // Updates last_login to keep staff marked as "online"
+// ONLY updates if staff has an active session (prevents updates after logout)
 export const mobileStaffHeartbeat = async (req, res) => {
     let connection;
     
@@ -436,14 +425,39 @@ export const mobileStaffHeartbeat = async (req, res) => {
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
         
-        // Update last_login using NOW() with correct timezone
-        if (staffType === 'inspector') {
-            await connection.execute(`UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`, [staffId]);
-        } else if (staffType === 'collector') {
-            await connection.execute(`UPDATE collector SET last_login = NOW() WHERE collector_id = ?`, [staffId]);
+        // CRITICAL: Check if staff has an active session before updating last_login
+        // This prevents heartbeats that arrive after logout from updating last_login
+        const [sessionCheck] = await connection.execute(
+            `SELECT session_id FROM staff_session 
+             WHERE staff_id = ? AND staff_type = ? AND is_active = 1 
+             LIMIT 1`,
+            [staffId, staffType]
+        );
+        
+        if (sessionCheck.length === 0) {
+            // No active session - staff has logged out, don't update last_login
+            console.log(`⚠️ Heartbeat rejected - no active session for ${staffType} ${staffId}`);
+            return res.json({
+                success: false,
+                message: 'No active session found',
+                timestamp: philippineTime
+            });
         }
         
-        // Update staff session last_activity
+        // Staff has active session, safe to update last_login using direct SQL
+        if (staffType === 'inspector') {
+            await connection.execute(
+                `UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`,
+                [staffId]
+            );
+        } else if (staffType === 'collector') {
+            await connection.execute(
+                `UPDATE collector SET last_login = NOW() WHERE collector_id = ?`,
+                [staffId]
+            );
+        }
+        
+        // Update staff session last_activity using direct SQL
         await connection.execute(
             `UPDATE staff_session SET last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
             [staffId, staffType]

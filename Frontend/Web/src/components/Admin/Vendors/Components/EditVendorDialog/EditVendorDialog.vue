@@ -1,12 +1,12 @@
 <template>
   <v-dialog v-model="model" max-width="900px" persistent>
     <v-card>
-      <!-- Header (matching VendorDetailsDialog) -->
-      <v-card-title class="details-header">
-        <div class="header-content">
-          <v-icon>mdi-pencil</v-icon>
-          <h2 class="header-title">Edit Vendor</h2>
-        </div>
+      <!-- Header (matching AddVendorDialog) -->
+      <v-card-title class="modal-header">
+        <h2 class="modal-title">Edit Vendor</h2>
+        <v-btn icon class="close-btn" @click="cancel">
+          <v-icon color="white">mdi-close</v-icon>
+        </v-btn>
       </v-card-title>
 
       <!-- Tabbed Content (matching AddVendorDialog) -->
@@ -21,10 +21,6 @@
               <v-tab>
                 <v-icon left>mdi-briefcase</v-icon>
                 Business Info
-              </v-tab>
-              <v-tab>
-                <v-icon left>mdi-file-document</v-icon>
-                Documents
               </v-tab>
             </v-tabs>
 
@@ -251,17 +247,9 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
 
-              <!-- Documents Tab -->
-              <v-window-item>
-                <v-container>
-                  <v-row>
-                    <v-col cols="12">
-                      <div class="text-subtitle-1 mb-4">Upload Vendor Documents</div>
-                    </v-col>
-                  </v-row>
+                  <v-divider class="my-4"></v-divider>
+                  <v-subheader class="text-h6 font-weight-bold px-0">Documents</v-subheader>
 
                   <v-row>
                     <v-col cols="12" md="6">
@@ -269,22 +257,37 @@
                         v-model="form.files.clearance"
                         label="Barangay Business Clearance"
                         outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
+                        prepend-icon="mdi-paperclip"
                         show-size
                       ></v-file-input>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-file-input
+                        v-model="form.files.votersId"
+                        label="Voter's ID"
+                        outlined
+                        prepend-icon="mdi-paperclip"
+                        show-size
+                      ></v-file-input>
+                    </v-col>
+                  </v-row>
+
+                  <v-row>
+                    <v-col cols="12" md="6">
+                      <v-file-input
                         v-model="form.files.cedula"
                         label="Cedula"
                         outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
+                        prepend-icon="mdi-paperclip"
+                        show-size
+                      ></v-file-input>
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <v-file-input
+                        v-model="form.files.picture"
+                        label="2x2 Picture (White background)"
+                        outlined
+                        prepend-icon="mdi-paperclip"
                         show-size
                       ></v-file-input>
                     </v-col>
@@ -296,37 +299,7 @@
                         v-model="form.files.association"
                         label="Association Clearance"
                         outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="form.files.votersId"
-                        label="Voter's ID"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
-                        show-size
-                      ></v-file-input>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-file-input
-                        v-model="form.files.picture"
-                        label="2x2 Picture (White background)"
-                        outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
+                        prepend-icon="mdi-paperclip"
                         show-size
                       ></v-file-input>
                     </v-col>
@@ -335,10 +308,7 @@
                         v-model="form.files.healthcard"
                         label="Health Card/Yellow Card"
                         outlined
-                        prepend-icon="mdi-file-document"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        hint="PDF, JPG, or PNG (Max 5MB)"
-                        persistent-hint
+                        prepend-icon="mdi-paperclip"
                         show-size
                       ></v-file-input>
                     </v-col>
@@ -350,11 +320,10 @@
         </v-container>
       </v-card-text>
 
-      <!-- Footer Actions (matching AddVendorDialog) -->
-      <v-card-actions class="pa-4">
-        <v-spacer></v-spacer>
-        <v-btn color="grey" @click="cancel">Cancel</v-btn>
-        <v-btn color="primary" :disabled="!formValid" @click="submit"> Save Changes </v-btn>
+      <v-card-actions class="modal-footer">
+        <v-spacer />
+        <v-btn class="submit-btn" v-if="step === 1" color="primary" @click="goNext">NEXT</v-btn>
+        <v-btn class="submit-btn" v-else color="primary" @click="submit">SUBMIT</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -363,28 +332,10 @@
 <script src="./EditVendorDialog.js"></script>
 
 <style scoped>
-/* Details Header with Gradient (matching VendorDetailsDialog) */
-.details-header {
-  background: linear-gradient(135deg, #002181 0%, #0047ab 100%) !important;
-  color: white !important;
-  padding: 20px 24px !important;
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-}
-
-.header-content {
+/* Toolbar title styling */
+.toolbar-title {
   display: flex;
   align-items: center;
-  color: white;
-  gap: 12px;
-}
-
-.header-title {
-  color: white !important;
-  font-size: 20px !important;
-  font-weight: 600 !important;
-  margin: 0 !important;
-  letter-spacing: 0.5px;
+  gap: 8px;
 }
 </style>

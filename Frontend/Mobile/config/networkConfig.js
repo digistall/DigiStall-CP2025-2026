@@ -8,14 +8,14 @@ export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
   // Mobile API runs on Backend-Mobile server (port 3002)
   SERVERS: [
-    // Local Development - Port 3002 (Backend-Mobile Server)
-    'http://192.168.1.101:3002',   // User's current IP
-    'http://192.168.100.241:3002',
-    'http://localhost:3002',
-    'http://192.168.1.101:5001',   // Fallback to old port
+    // Local Development - Port 5001 (Backend-Mobile Server) - MOVED TO TOP FOR LOCAL TESTING
     'http://localhost:5001',
+    'http://192.168.1.101:5001',   
+    'http://localhost:3002',
+    'http://192.168.1.101:3002',   
+    'http://192.168.100.241:3002',
     
-    // DigitalOcean Production Server
+    // DigitalOcean Production Server (will be used if local not available)
     'http://68.183.154.125:3002',
     'http://68.183.154.125:5001',
   ],

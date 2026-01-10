@@ -311,12 +311,184 @@
             <!-- Documents Tab -->
             <v-tabs-window-item value="documents">
               <div class="info-section">
-                <h3 class="section-title">Documents & Attachments</h3>
-                <div class="documents-placeholder">
-                  <v-icon size="48" color="grey-lighten-1" class="mb-3">
+                <div class="d-flex justify-space-between align-center mb-4">
+                  <h3 class="section-title mb-0">
+                    <v-icon class="mr-2" color="primary">mdi-file-document-multiple</v-icon>
+                    Documents & Attachments
+                  </h3>
+                  <v-btn
+                    variant="text"
+                    color="primary"
+                    size="small"
+                    @click="refreshStallholderDocuments"
+                    :loading="loadingDocuments"
+                  >
+                    <v-icon start>mdi-refresh</v-icon>
+                    Refresh
+                  </v-btn>
+                </div>
+
+                <!-- Document Statistics -->
+                <v-row v-if="stallholderDocuments.length > 0" class="mb-4">
+                  <v-col cols="4">
+                    <v-card color="warning" variant="tonal" class="pa-3 text-center">
+                      <div class="text-h5 font-weight-bold">{{ documentStats.pending }}</div>
+                      <div class="text-caption">Pending Review</div>
+                    </v-card>
+                  </v-col>
+                  <v-col cols="4">
+                    <v-card color="success" variant="tonal" class="pa-3 text-center">
+                      <div class="text-h5 font-weight-bold">{{ documentStats.approved }}</div>
+                      <div class="text-caption">Approved</div>
+                    </v-card>
+                  </v-col>
+                  <v-col cols="4">
+                    <v-card color="error" variant="tonal" class="pa-3 text-center">
+                      <div class="text-h5 font-weight-bold">{{ documentStats.rejected }}</div>
+                      <div class="text-caption">Rejected</div>
+                    </v-card>
+                  </v-col>
+                </v-row>
+
+                <!-- Loading State -->
+                <div v-if="loadingDocuments" class="text-center py-6">
+                  <v-progress-circular indeterminate color="primary" size="40"></v-progress-circular>
+                  <p class="text-grey mt-2">Loading documents...</p>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else-if="stallholderDocuments.length === 0" class="documents-placeholder">
+                  <v-icon size="64" color="grey-lighten-1" class="mb-3">
                     mdi-file-document-outline
                   </v-icon>
-                  <p class="text-grey-lighten-1">Document management coming soon</p>
+                  <p class="text-grey-lighten-1 text-h6">No Documents Uploaded</p>
+                  <p class="text-grey text-body-2">This stallholder has not uploaded any documents yet.</p>
+                </div>
+
+                <!-- Documents List -->
+                <div v-else class="documents-list">
+                  <v-card
+                    v-for="doc in stallholderDocuments"
+                    :key="doc.submission_id"
+                    class="document-item mb-3"
+                    :class="{ 'pending-doc': doc.status === 'pending' }"
+                    variant="outlined"
+                  >
+                    <v-card-text class="pa-3">
+                      <div class="d-flex align-start">
+                        <!-- Document Icon -->
+                        <div class="document-icon-wrapper mr-3">
+                          <v-icon 
+                            :color="getDocFileTypeColor(doc.file_type)" 
+                            size="36"
+                          >
+                            {{ getDocFileTypeIcon(doc.file_type) }}
+                          </v-icon>
+                        </div>
+
+                        <!-- Document Info -->
+                        <div class="flex-grow-1">
+                          <div class="d-flex justify-space-between align-start mb-1">
+                            <div>
+                              <h4 class="document-name text-body-1 font-weight-medium">
+                                {{ doc.document_name }}
+                              </h4>
+                              <p class="text-caption text-grey mb-0">{{ doc.file_name }}</p>
+                            </div>
+                            <v-chip
+                              :color="getDocStatusColor(doc.status)"
+                              size="small"
+                              variant="flat"
+                            >
+                              {{ doc.status?.toUpperCase() }}
+                            </v-chip>
+                          </div>
+
+                          <div class="d-flex align-center mt-2 text-caption text-grey">
+                            <v-icon size="14" class="mr-1">mdi-calendar</v-icon>
+                            Uploaded: {{ formatDate(doc.uploaded_at) }}
+                            <span class="mx-2">•</span>
+                            <v-icon size="14" class="mr-1">mdi-file</v-icon>
+                            {{ formatFileSize(doc.file_size) }}
+                          </div>
+
+                          <!-- Rejection Reason -->
+                          <v-alert
+                            v-if="doc.status === 'rejected' && doc.rejection_reason"
+                            type="error"
+                            variant="tonal"
+                            density="compact"
+                            class="mt-2"
+                          >
+                            <strong>Rejection Reason:</strong> {{ doc.rejection_reason }}
+                          </v-alert>
+
+                          <!-- Review Info -->
+                          <div v-if="doc.reviewed_by_name && doc.status !== 'pending'" class="mt-2 text-caption">
+                            <v-icon size="14" class="mr-1">mdi-account-check</v-icon>
+                            Reviewed by {{ doc.reviewed_by_name }} on {{ formatDate(doc.reviewed_at) }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Actions for Pending Documents -->
+                      <div v-if="doc.status === 'pending'" class="document-actions mt-3 pt-3 border-t">
+                        <v-btn
+                          color="primary"
+                          variant="text"
+                          size="small"
+                          @click="previewDocument(doc)"
+                        >
+                          <v-icon start>mdi-eye</v-icon>
+                          Preview
+                        </v-btn>
+                        <v-btn
+                          color="success"
+                          variant="flat"
+                          size="small"
+                          @click="approveStallholderDocument(doc)"
+                          :loading="processingDocId === doc.submission_id"
+                          class="ml-2"
+                        >
+                          <v-icon start>mdi-check</v-icon>
+                          Approve
+                        </v-btn>
+                        <v-btn
+                          color="error"
+                          variant="outlined"
+                          size="small"
+                          @click="openDocRejectDialog(doc)"
+                          class="ml-2"
+                        >
+                          <v-icon start>mdi-close</v-icon>
+                          Reject
+                        </v-btn>
+                      </div>
+
+                      <!-- Actions for Reviewed Documents -->
+                      <div v-else class="document-actions mt-3 pt-3 border-t">
+                        <v-btn
+                          color="primary"
+                          variant="text"
+                          size="small"
+                          @click="previewDocument(doc)"
+                        >
+                          <v-icon start>mdi-eye</v-icon>
+                          View Document
+                        </v-btn>
+                        <v-btn
+                          color="primary"
+                          variant="text"
+                          size="small"
+                          @click="downloadDocument(doc)"
+                          class="ml-2"
+                        >
+                          <v-icon start>mdi-download</v-icon>
+                          Download
+                        </v-btn>
+                      </div>
+                    </v-card-text>
+                  </v-card>
                 </div>
               </div>
             </v-tabs-window-item>
@@ -530,6 +702,185 @@
       :isVisible="showDocumentCustomization"
       @close="closeDocumentCustomization"
     />
+
+    <!-- Document Preview Dialog -->
+    <v-dialog v-model="showDocPreviewDialog" max-width="900" scrollable class="document-preview-dialog">
+      <v-card v-if="previewingDocument" class="document-preview-card">
+        <v-card-title class="d-flex justify-space-between align-center bg-primary text-white pa-4">
+          <div class="d-flex align-center">
+            <v-icon class="mr-2">mdi-file-document</v-icon>
+            <div>
+              <div class="text-subtitle-1 font-weight-medium">{{ previewingDocument.document_name }}</div>
+              <div class="text-caption opacity-80">{{ previewingDocument.file_name }}</div>
+            </div>
+          </div>
+          <div class="d-flex align-center ga-2">
+            <!-- Zoom controls for images -->
+            <template v-if="isImageDocument(previewingDocument)">
+              <v-btn icon size="small" variant="text" color="white" @click="zoomOut" :disabled="imageZoom <= 0.5">
+                <v-icon>mdi-magnify-minus</v-icon>
+              </v-btn>
+              <span class="text-caption">{{ Math.round(imageZoom * 100) }}%</span>
+              <v-btn icon size="small" variant="text" color="white" @click="zoomIn" :disabled="imageZoom >= 3">
+                <v-icon>mdi-magnify-plus</v-icon>
+              </v-btn>
+              <v-btn icon size="small" variant="text" color="white" @click="resetZoom" class="mr-2">
+                <v-icon>mdi-fit-to-screen</v-icon>
+              </v-btn>
+            </template>
+            <v-btn icon variant="text" color="white" @click="showDocPreviewDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </v-card-title>
+
+        <v-card-text class="pa-0 preview-content">
+          <!-- Image Preview -->
+          <div v-if="isImageDocument(previewingDocument)" class="preview-image-container" ref="imageContainer">
+            <div class="image-wrapper" :style="{ transform: `scale(${imageZoom})` }">
+              <img 
+                :src="documentPreviewUrl" 
+                :alt="previewingDocument.file_name"
+                class="preview-image"
+                @error="documentPreviewError = true"
+                @load="documentPreviewError = false"
+              />
+            </div>
+            <div v-if="documentPreviewError" class="preview-error pa-8 text-center">
+              <v-icon size="64" color="grey">mdi-image-off</v-icon>
+              <p class="mt-2 text-grey">Unable to load image preview</p>
+              <v-btn color="primary" variant="outlined" class="mt-4" @click="downloadDocument(previewingDocument)">
+                <v-icon start>mdi-download</v-icon>
+                Download Instead
+              </v-btn>
+            </div>
+          </div>
+
+          <!-- PDF Preview -->
+          <div v-else-if="isPdfDocument(previewingDocument)" class="preview-pdf-container">
+            <iframe 
+              :src="documentPreviewUrl" 
+              width="100%" 
+              height="600"
+              frameborder="0"
+            ></iframe>
+          </div>
+
+          <!-- Generic File -->
+          <div v-else class="preview-generic pa-8 text-center">
+            <v-icon size="80" color="grey">mdi-file-document-outline</v-icon>
+            <p class="mt-4 text-grey">Preview not available for this file type</p>
+            <v-btn color="primary" class="mt-4" @click="downloadDocument(previewingDocument)">
+              <v-icon start>mdi-download</v-icon>
+              Download File
+            </v-btn>
+          </div>
+
+          <!-- Document Details -->
+          <div class="document-details pa-4">
+            <v-row dense>
+              <v-col cols="12" sm="6" md="3">
+                <div class="detail-item">
+                  <v-icon size="small" color="grey" class="mr-1">mdi-file</v-icon>
+                  <span class="text-caption text-grey">File Size</span>
+                </div>
+                <div class="text-body-2 font-weight-medium">{{ formatFileSize(previewingDocument.file_size) }}</div>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <div class="detail-item">
+                  <v-icon size="small" color="grey" class="mr-1">mdi-calendar</v-icon>
+                  <span class="text-caption text-grey">Uploaded</span>
+                </div>
+                <div class="text-body-2 font-weight-medium">{{ formatDate(previewingDocument.uploaded_at) }}</div>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <div class="detail-item">
+                  <v-icon size="small" color="grey" class="mr-1">mdi-tag</v-icon>
+                  <span class="text-caption text-grey">Document Type</span>
+                </div>
+                <div class="text-body-2 font-weight-medium">{{ previewingDocument.document_name }}</div>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <div class="detail-item">
+                  <v-icon size="small" color="grey" class="mr-1">mdi-check-circle</v-icon>
+                  <span class="text-caption text-grey">Status</span>
+                </div>
+                <v-chip :color="getDocStatusColor(previewingDocument.status)" size="small" class="mt-1">
+                  {{ previewingDocument.status?.toUpperCase() }}
+                </v-chip>
+              </v-col>
+            </v-row>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="pa-4" v-if="previewingDocument.status === 'pending'">
+          <v-spacer></v-spacer>
+          <v-btn 
+            color="error" 
+            variant="outlined"
+            @click="openDocRejectDialog(previewingDocument); showDocPreviewDialog = false"
+          >
+            <v-icon start>mdi-close</v-icon>
+            Reject
+          </v-btn>
+          <v-btn 
+            color="success" 
+            variant="flat"
+            @click="approveStallholderDocument(previewingDocument)"
+            :loading="processingDocId === previewingDocument.submission_id"
+          >
+            <v-icon start>mdi-check</v-icon>
+            Approve
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Document Rejection Dialog -->
+    <v-dialog v-model="showDocRejectDialog" max-width="500">
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <v-icon class="mr-2">mdi-file-document-remove</v-icon>
+          Reject Document
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <p class="mb-4">
+            Please provide a reason for rejecting this document. The stallholder will be notified.
+          </p>
+          <v-textarea
+            v-model="docRejectionReason"
+            label="Rejection Reason"
+            placeholder="Enter the reason why this document is being rejected..."
+            variant="outlined"
+            rows="3"
+            counter
+            maxlength="500"
+            :rules="[v => !!v || 'Rejection reason is required']"
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showDocRejectDialog = false">Cancel</v-btn>
+          <v-btn 
+            color="error" 
+            variant="flat"
+            @click="rejectStallholderDocument"
+            :disabled="!docRejectionReason"
+            :loading="processingDocId === documentToReject?.submission_id"
+          >
+            Confirm Rejection
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Document Action Snackbar -->
+    <v-snackbar v-model="docSnackbar.show" :color="docSnackbar.color" :timeout="3000">
+      {{ docSnackbar.message }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="docSnackbar.show = false">Close</v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template><script src="./TableStall.js"></script>
 <style scoped src="./TableStall.css"></style>
