@@ -1,5 +1,23 @@
 import { createConnection } from '../../../config/database.js'
 import { getBranchFilter } from '../../../middleware/rolePermissions.js'
+import { decryptData } from '../../../services/encryptionService.js'
+
+// Helper function to decrypt data safely (handles both encrypted and plain text)
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return value;
+  }
+  try {
+    // Check if it looks like encrypted data (contains colons for iv:authTag:data format)
+    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
+      return decryptData(value);
+    }
+    return value; // Return as-is if not encrypted
+  } catch (error) {
+    console.log('⚠️ Decryption skipped (not encrypted or different format):', value.substring(0, 20) + '...');
+    return value;
+  }
+};
 
 // Helper function to get decryption key
 const getDecryptionKey = async (connection) => {
@@ -263,15 +281,23 @@ export const getApplicantsByBranchManager = async (req, res) => {
     const applicantsMap = new Map();
 
     rows.forEach(row => {
+      // Decrypt sensitive fields using our encryption service
+      const decryptedFullName = decryptSafe(row.applicant_full_name);
+      const decryptedContactNumber = decryptSafe(row.applicant_contact_number);
+      const decryptedAddress = decryptSafe(row.applicant_address);
+      const decryptedEmail = decryptSafe(row.email_address);
+      const decryptedSpouseName = decryptSafe(row.spouse_full_name);
+      const decryptedSpouseContact = decryptSafe(row.spouse_contact_number);
+
       if (!applicantsMap.has(row.applicant_id)) {
         applicantsMap.set(row.applicant_id, {
           applicant_id: row.applicant_id,
-          first_name: row.applicant_full_name ? row.applicant_full_name.split(' ')[0] : 'N/A',
-          last_name: row.applicant_full_name ? row.applicant_full_name.split(' ').slice(1).join(' ') : 'N/A',
-          full_name: row.applicant_full_name || 'N/A',
-          email: row.email_address || 'N/A',
-          contact_number: row.applicant_contact_number || 'N/A',
-          address: row.applicant_address || 'N/A',
+          first_name: decryptedFullName ? decryptedFullName.split(' ')[0] : 'N/A',
+          last_name: decryptedFullName ? decryptedFullName.split(' ').slice(1).join(' ') : 'N/A',
+          full_name: decryptedFullName || 'N/A',
+          email: decryptedEmail || 'N/A',
+          contact_number: decryptedContactNumber || 'N/A',
+          address: decryptedAddress || 'N/A',
           business_type: row.nature_of_business || 'N/A',
           business_name: row.nature_of_business || 'N/A',
           business_description: row.nature_of_business || 'N/A',
@@ -284,12 +310,12 @@ export const getApplicantsByBranchManager = async (req, res) => {
           applied_date: row.application_date,
           created_at: row.created_at,
           updated_at: row.updated_at,
-          // Add spouse information
-          spouse: row.spouse_full_name ? {
-            spouse_full_name: row.spouse_full_name,
+          // Add spouse information (with decrypted values)
+          spouse: decryptedSpouseName ? {
+            spouse_full_name: decryptedSpouseName,
             spouse_birthdate: row.spouse_birthdate,
             spouse_educational_attainment: row.spouse_educational_attainment,
-            spouse_contact_number: row.spouse_contact_number,
+            spouse_contact_number: decryptedSpouseContact,
             spouse_occupation: row.spouse_occupation
           } : null,
           // Add business information
@@ -300,9 +326,9 @@ export const getApplicantsByBranchManager = async (req, res) => {
             previous_business_experience: row.previous_business_experience,
             relative_stall_owner: row.relative_stall_owner
           } : null,
-          // Add other information
-          other_information: row.email_address ? {
-            email_address: row.email_address
+          // Add other information (with decrypted email)
+          other_information: decryptedEmail ? {
+            email_address: decryptedEmail
           } : null,
           applications: []
         });
