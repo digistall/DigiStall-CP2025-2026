@@ -179,6 +179,26 @@ export const login = async (req, res) => {
       
       // Get employee permissions if user is business employee
       if (userType.toLowerCase() === 'business_employee') {
+        // Re-fetch employee data with decryption using stored procedure
+        const [empResult] = await connection.execute(
+          'CALL getBusinessEmployeeById(?)',
+          [user.business_employee_id]
+        );
+        const employeeDecrypted = empResult[0]?.[0];
+        
+        if (employeeDecrypted) {
+          // Override encrypted data with decrypted data
+          user.first_name = employeeDecrypted.first_name;
+          user.last_name = employeeDecrypted.last_name;
+          user.email = employeeDecrypted.email;
+          user.phone_number = employeeDecrypted.phone_number;
+          console.log('✅ Employee data decrypted:', { 
+            first_name: user.first_name, 
+            last_name: user.last_name,
+            email: user.email?.substring(0, 5) + '***'
+          });
+        }
+        
         // Parse permissions from JSON if stored as JSON string
         let permissions = {};
         if (user.permissions) {
@@ -225,10 +245,17 @@ export const login = async (req, res) => {
     // Get the username from the correct field
     const userUsername = user[usernameField];
     
-    // Decrypt user data before creating token
-    const decryptedFirstName = decryptSafe(user.first_name);
-    const decryptedLastName = decryptSafe(user.last_name);
-    const decryptedEmail = decryptSafe(user.email);
+    // For business_employee, data is already decrypted from getBusinessEmployeeById stored procedure
+    // For other user types, decrypt if needed
+    let decryptedFirstName = user.first_name;
+    let decryptedLastName = user.last_name;
+    let decryptedEmail = user.email;
+    
+    if (userType.toLowerCase() !== 'business_employee') {
+      decryptedFirstName = decryptSafe(user.first_name);
+      decryptedLastName = decryptSafe(user.last_name);
+      decryptedEmail = decryptSafe(user.email);
+    }
     
     // Create JWT token
     const tokenPayload = {
