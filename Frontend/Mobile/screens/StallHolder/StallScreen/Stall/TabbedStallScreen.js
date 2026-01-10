@@ -21,6 +21,7 @@ import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
 import FavoritesService from '../../../../services/FavoritesService';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import { getSafeUserName } from '../../../../services/DataDisplayUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -150,7 +151,7 @@ const TabbedStallScreen = () => {
       
       setUserData(userData);
       console.log('👤 User data loaded:', {
-        fullName: userData.user.full_name,
+        fullName: getSafeUserName(userData.user, 'User'),
         applicantId: userData.user.applicant_id,
         username: userData.user.username
       });
@@ -291,11 +292,11 @@ const TabbedStallScreen = () => {
     try {
       setApplying(stallId);
 
-      // Simple application data
+      // Simple application data - using safe display utilities
       const applicationData = {
         applicantId: applicantId,
         stallId: stallId,
-        businessName: userData.user.full_name + "'s Business",
+        businessName: getSafeUserName(userData.user, 'User') + "'s Business",
         businessType: 'General Trade'
       };
 
