@@ -2,6 +2,7 @@ import EmployeeSearch from "./Components/EmployeeSearch/EmployeeSearch.vue";
 import EmployeeTable from "./Components/EmployeeTable/EmployeeTable.vue";
 import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
+import FireEmployeeDialog from "./Components/FireEmployeeDialog/FireEmployeeDialog.vue";
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue';
@@ -19,6 +20,7 @@ export default {
     EmployeeTable,
     AddEmployee,
     ManagePermissions,
+    FireEmployeeDialog,
     ToastNotification,
     ActivityLogDialog,
     LoadingOverlay,
@@ -45,6 +47,7 @@ export default {
       employeeDialog: false,
       permissionsDialog: false,
       activityLogDialog: false,
+      fireEmployeeDialog: false,
       isEditMode: false,
 
       // Selected employee and permissions
@@ -900,14 +903,13 @@ export default {
     },
 
     async fireEmployee(employee) {
-      const reason = prompt(
-        `Are you sure you want to FIRE ${employee.first_name} ${employee.last_name}?\n\nThis action will permanently remove the employee account.\n\nPlease enter the reason for termination:`
-      );
+      this.selectedEmployee = employee;
+      this.fireEmployeeDialog = true;
+    },
 
-      if (!reason) {
-        return; // User cancelled
-      }
-
+    async confirmFireEmployee({ employee, reason }) {
+      this.saving = true;
+      
       try {
         const token = sessionStorage.getItem("authToken");
         if (!token) {
@@ -952,7 +954,10 @@ export default {
             `✅ ${employee.first_name} ${employee.last_name} has been terminated successfully.`,
             "success"
           );
-          // Refresh employee list
+          this.closeFireEmployeeDialog();
+          
+          // Clear cache and refresh employee list
+          dataCacheService.clear();
           await this.fetchEmployees();
         } else {
           throw new Error(data.message || "Failed to terminate employee");
@@ -963,7 +968,14 @@ export default {
           `❌ Failed to terminate employee: ${error.message}`,
           "error"
         );
+      } finally {
+        this.saving = false;
       }
+    },
+
+    closeFireEmployeeDialog() {
+      this.fireEmployeeDialog = false;
+      this.selectedEmployee = null;
     },
 
     // Toast notification helper
