@@ -3,6 +3,23 @@
   position: relative;
 }
 
+/* Tabs styling */
+.stallholders-tabs {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stallholders-tabs .v-tab {
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* Tab content container */
+.tab-content {
+  min-height: calc(100vh - 180px);
+}
+
 /* Main container */
 .search-filter-section {
   background: white;

@@ -38,36 +38,29 @@ export const submitComplaint = async (req, res) => {
     
     connection = await createConnection();
     
-    // Get stallholder details for sender info - first try stallholder table, then applicant
+    // Ensure complaint table exists using stored procedure
+    await connection.execute('CALL sp_ensureComplaintTableExists()');
+    
+    // Get stallholder details for sender info using stored procedure
     let stallholder = null;
     
     // Try to get from stallholder table first
-    const [stallholderRows] = await connection.execute(
-      `SELECT 
-        stallholder_name as sender_name,
-        contact_number as sender_contact,
-        email as sender_email,
-        branch_id,
-        stall_id
-       FROM stallholder 
-       WHERE stallholder_id = ? OR applicant_id = ?`,
-      [stallholderId, stallholderId]
+    const [stallholderResult] = await connection.execute(
+      'CALL sp_getStallholderDetailsForComplaint(?)',
+      [stallholderId]
     );
     
-    if (stallholderRows.length > 0) {
-      stallholder = stallholderRows[0];
+    if (stallholderResult[0] && stallholderResult[0].length > 0) {
+      stallholder = stallholderResult[0][0];
     } else {
-      // Fallback to applicant table
-      const [applicantRows] = await connection.execute(
-        `SELECT 
-          applicant_full_name as sender_name,
-          applicant_contact_number as sender_contact,
-          applicant_email as sender_email
-         FROM applicant 
-         WHERE applicant_id = ?`,
+      // Fallback to applicant table using stored procedure
+      const [applicantResult] = await connection.execute(
+        'CALL sp_getApplicantDetailsForComplaint(?)',
         [stallholderId]
       );
-      stallholder = applicantRows[0];
+      if (applicantResult[0] && applicantResult[0].length > 0) {
+        stallholder = applicantResult[0][0];
+      }
     }
     
     if (!stallholder) {
@@ -81,48 +74,9 @@ export const submitComplaint = async (req, res) => {
     const finalBranchId = branch_id || stallholder.branch_id || null;
     const finalStallId = stall_id || stallholder.stall_id || null;
     
-    // Check if complaint table exists, if not create it
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS complaint (
-        complaint_id INT AUTO_INCREMENT PRIMARY KEY,
-        complaint_type VARCHAR(100) NOT NULL,
-        sender_name VARCHAR(255),
-        sender_contact VARCHAR(50),
-        sender_email VARCHAR(255),
-        stallholder_id INT,
-        stall_id INT,
-        branch_id INT,
-        subject VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        evidence LONGBLOB,
-        status ENUM('pending', 'in_progress', 'resolved', 'closed') DEFAULT 'pending',
-        resolution_notes TEXT,
-        resolved_by INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        resolved_at TIMESTAMP NULL,
-        INDEX idx_stallholder (stallholder_id),
-        INDEX idx_status (status),
-        INDEX idx_branch (branch_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
-    
-    // Insert complaint
-    const [result] = await connection.execute(
-      `INSERT INTO complaint (
-        complaint_type,
-        sender_name,
-        sender_contact,
-        sender_email,
-        stallholder_id,
-        stall_id,
-        branch_id,
-        subject,
-        description,
-        evidence,
-        status,
-        created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+    // Insert complaint using stored procedure
+    const [insertResult] = await connection.execute(
+      'CALL sp_insertComplaint(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         complaint_type,
         stallholder.sender_name,
@@ -133,17 +87,19 @@ export const submitComplaint = async (req, res) => {
         finalBranchId,
         subject,
         description,
-        evidence|| null
+        evidence || null
       ]
     );
     
-    console.log('✅ Complaint submitted successfully, ID:', result.insertId);
+    const result = insertResult[0]?.[0] || {};
+    
+    console.log('✅ Complaint submitted successfully, ID:', result.complaint_id);
     
     return res.status(201).json({
       success: true,
       message: 'Complaint submitted successfully',
       data: {
-        complaint_id: result.insertId
+        complaint_id: result.complaint_id
       }
     });
     
@@ -177,22 +133,12 @@ export const getMyComplaints = async (req, res) => {
     
     connection = await createConnection();
     
-    const [complaints] = await connection.execute(
-      `SELECT 
-        complaint_id,
-        complaint_type,
-        subject,
-        description,
-        status,
-        resolution_notes,
-        created_at,
-        updated_at,
-        resolved_at
-       FROM complaint 
-       WHERE stallholder_id = ?
-       ORDER BY created_at DESC`,
+    // Get complaints using decrypted stored procedure for proper display
+    const [complaintsResult] = await connection.execute(
+      'CALL sp_getComplaintsByStallholderDecrypted(?)',
       [stallholderId]
     );
+    const complaints = complaintsResult[0] || [];
     
     console.log(`✅ Found ${complaints.length} complaints`);
     

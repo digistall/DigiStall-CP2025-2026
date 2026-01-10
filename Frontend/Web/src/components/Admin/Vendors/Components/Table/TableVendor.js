@@ -1,10 +1,5 @@
-import AddVendorChoiceModal from '../ChoicesModal/AddVendorChoiceModal.vue'
-
 export default {
   name: 'TableVendor',
-  components: {
-    AddVendorChoiceModal,
-  },
   props: {
     vendors: { type: Array, default: () => [] },
     searchQuery: { type: String, default: '' },
@@ -14,7 +9,6 @@ export default {
     return {
       currentPage: 1,
       itemsPerPage: 12,
-      showChoiceModal: false,
     }
   },
   computed: {
@@ -49,26 +43,6 @@ export default {
     },
     activeFilter() {
       this.currentPage = 1
-    },
-  },
-  methods: {
-    openAddVendor() {
-      this.showChoiceModal = true
-    },
-    closeChoiceModal() {
-      this.showChoiceModal = false
-    },
-    handleVendorAdded(vendorData) {
-      this.$emit('vendor-added', vendorData)
-    },
-    handleImportCompleted(importData) {
-      this.$emit('import-completed', importData)
-    },
-    handleShowMessage(messageData) {
-      this.$emit('show-message', messageData)
-    },
-    handleRefreshVendors() {
-      this.$emit('refresh-vendors')
     },
   },
 }

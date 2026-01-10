@@ -1,6 +1,8 @@
 import { createConnection } from '../../../config/database.js';
+import encryptionService from '../../../services/encryptionService.js';
 
 // Decline applicant and delete all related data
+// Uses stored procedure: sp_deleteApplicantCascade
 export const declineApplicant = async (req, res) => {
   let connection;
   try {
@@ -18,73 +20,32 @@ export const declineApplicant = async (req, res) => {
     connection = await createConnection();
     await connection.beginTransaction();
 
-    // Check if applicant exists and get their information
+    // Check if applicant exists using stored procedure
     const [applicantRows] = await connection.execute(
-      `SELECT 
-        a.applicant_id,
-        a.applicant_full_name,
-        a.applicant_contact_number,
-        oi.email_address
-      FROM applicant a
-      LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
-      WHERE a.applicant_id = ?`,
+      'CALL sp_getApplicantById(?)',
       [id]
     );
 
-    if (applicantRows.length === 0) {
+    const applicantData = applicantRows[0];
+    if (!applicantData || applicantData.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
       });
     }
 
-    const applicant = applicantRows[0];
+    // Decrypt applicant data for logging
+    const applicant = encryptionService.decryptObjectFields(applicantData[0], 'applicant');
 
     // Log the decline action before deletion
     console.log(`🗑️ Declining and deleting applicant: ${applicant.applicant_full_name} (ID: ${id})`);
     console.log(`📝 Decline reason: ${reason}`);
 
-    // Delete all related data in the correct order (foreign key constraints)
-    
-    // 1. Delete from application table first (references applicant)
-    await connection.execute(
-      'DELETE FROM application WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 2. Delete from other_information table
-    await connection.execute(
-      'DELETE FROM other_information WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 3. Delete from business_information table
-    await connection.execute(
-      'DELETE FROM business_information WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 4. Delete from spouse table
-    await connection.execute(
-      'DELETE FROM spouse WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 5. Delete from credential table (if any exists)
-    await connection.execute(
-      'DELETE FROM credential WHERE applicant_id = ?',
-      [id]
-    );
-
-    // 6. Finally delete from applicant table
+    // Delete all related data using stored procedure cascade delete
     const [deleteResult] = await connection.execute(
-      'DELETE FROM applicant WHERE applicant_id = ?',
+      'CALL sp_deleteApplicantCascade(?)',
       [id]
     );
-
-    if (deleteResult.affectedRows === 0) {
-      throw new Error('No applicant records were deleted');
-    }
 
     await connection.commit();
 

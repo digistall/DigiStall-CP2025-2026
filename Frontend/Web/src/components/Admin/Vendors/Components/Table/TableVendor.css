@@ -7,32 +7,6 @@
   position: relative;
 }
 
-/* Scrollable table wrapper for fixed header */
-.scrollable-table-wrapper {
-  max-height: calc(100vh - 350px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar {
-  width: 8px;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
 .table-card {
   border-radius: 8px;
   overflow: hidden;
@@ -40,9 +14,8 @@
 }
 
 .table-header {
-  background: linear-gradient(135deg, #002181 0%, #0047ab 100%);
+  background: rgb(0, 33, 129);
   color: white;
-  box-shadow: 0 2px 8px rgba(0, 33, 129, 0.15);
 }
 
 .header-row,
@@ -55,9 +28,9 @@
   width: 100%;
 }
 
-/* Vendor Layout - 7 columns */
+/* Vendor Layout - 6 columns */
 .simplified-layout {
-  grid-template-columns: 100px 1.1fr 1.3fr 1.5fr 140px 110px 130px;
+  grid-template-columns: 140px 1.2fr 1.5fr 1.2fr 120px 140px;
   width: 100%;
 }
 
@@ -102,6 +75,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: center;
 }
 
@@ -147,20 +122,6 @@
 
 .status-col {
   justify-content: center;
-}
-
-.actions-col {
-  justify-content: center;
-  gap: 8px;
-}
-
-.actions-col .v-btn {
-  transition: all 0.2s ease;
-}
-
-.actions-col .v-btn:hover {
-  background-color: rgba(0, 33, 129, 0.1);
-  transform: scale(1.1);
 }
 
 /* Business info styling */
@@ -434,12 +395,4 @@
     bottom: 16px;
     right: 16px;
   }
-}
-
-/* Floating Action Buttons */
-.floating-actions {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 100;
 }

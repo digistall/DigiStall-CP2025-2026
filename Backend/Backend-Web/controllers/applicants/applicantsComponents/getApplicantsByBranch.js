@@ -64,7 +64,7 @@ export const getApplicantsByBranch = async (req, res) => {
 
     // Filter by application status if provided
     if (application_status) {
-      query += " AND app.application_status = ?";
+      query += " AND LOWER(app.application_status) = LOWER(?)";
       params.push(application_status);
     }
 
@@ -94,7 +94,7 @@ export const getApplicantsByBranch = async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
-    query += " ORDER BY app.application_date DESC";
+    query += " ORDER BY FIELD(app.application_status, 'pending', 'Pending', 'approved', 'Approved', 'rejected', 'Rejected'), app.application_date DESC";
 
     const [applicants] = await connection.execute(query, params);
 

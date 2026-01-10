@@ -63,10 +63,10 @@ const PaymentController = {
       
       console.log('🔍 getStallholdersByBranch called for branch:', branchId);
       
-      // Use stored procedure for consistency with working getStallholderDetails
+      // Use decrypted stored procedure for frontend display
       console.log('🔍 Executing stored procedure with branchId:', branchId);
       const [result] = await connection.execute(
-        'CALL sp_get_all_stallholders(?)',
+        'CALL sp_get_all_stallholders_decrypted(?)',
         [branchId]
       );
       
@@ -121,7 +121,7 @@ const PaymentController = {
       console.log('🔍 getStallholderDetails called for stallholderId:', stallholderId);
       
       const [result] = await connection.execute(
-        'CALL sp_get_stallholder_details(?)',
+        'CALL sp_get_stallholder_details_decrypted(?)',
         [parseInt(stallholderId)]
       );
       
@@ -296,7 +296,7 @@ const PaymentController = {
       
       if (branchFilter === null) {
         // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAll(?, ?, ?)`, [search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -314,7 +314,7 @@ const PaymentController = {
       } else {
         // Filter by accessible branches using stored procedure
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranches(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -353,7 +353,7 @@ const PaymentController = {
       
       if (branchFilter === null) {
         // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAll(?, ?, ?)`, [search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -371,7 +371,7 @@ const PaymentController = {
       } else {
         // Filter by accessible branches using stored procedure
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranches(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({

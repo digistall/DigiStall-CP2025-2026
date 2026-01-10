@@ -215,16 +215,14 @@ export const addStall = async (req, res) => {
     let actualManagerId = null; // Will be set based on user type
 
     if (userType === "business_manager") {
-      // For business managers, get their branch directly
+      // For business managers, get their branch directly using stored procedure
       const businessManagerId = req.user?.businessManagerId || userId;
       
-      const [businessManagerInfo] = await connection.execute(
-        `SELECT bm.branch_id, b.branch_name, b.area, bm.business_manager_id
-         FROM business_manager bm
-         INNER JOIN branch b ON bm.branch_id = b.branch_id
-         WHERE bm.business_manager_id = ?`,
+      const [businessManagerResult] = await connection.execute(
+        'CALL sp_getBusinessManagerWithBranch(?)',
         [businessManagerId]
       );
+      const businessManagerInfo = businessManagerResult[0] || [];
 
       if (!businessManagerInfo || businessManagerInfo.length === 0) {
         return res.status(400).json({
@@ -245,16 +243,15 @@ export const addStall = async (req, res) => {
       // Try to get branch ID from token first
       let employeeBranchId = req.user?.branchId || req.user?.branch_id;
       
-      // If not in token, get from employee table
+      // If not in token, get from employee table using stored procedure
       if (!employeeBranchId) {
         console.log("🔍 Branch ID not in token, querying employee table...");
         
-        const [employeeRecord] = await connection.execute(
-          `SELECT e.branch_id, e.employee_id, e.first_name, e.last_name
-           FROM employee e 
-           WHERE e.employee_id = ?`,
+        const [employeeResult] = await connection.execute(
+          'CALL sp_getEmployeeWithBranchInfo(?)',
           [userId]
         );
+        const employeeRecord = employeeResult[0] || [];
 
         if (!employeeRecord || employeeRecord.length === 0) {
           return res.status(400).json({
@@ -281,14 +278,12 @@ export const addStall = async (req, res) => {
         });
       }
 
-      // Get branch information (business manager is optional for employees)
-      const [employeeBranchInfo] = await connection.execute(
-        `SELECT b.branch_id, b.branch_name, b.area, bm.business_manager_id
-         FROM branch b
-         LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
-         WHERE b.branch_id = ?`,
+      // Get branch information using stored procedure
+      const [branchResult] = await connection.execute(
+        'CALL sp_getBranchInfoWithManager(?)',
         [employeeBranchId]
       );
+      const employeeBranchInfo = branchResult[0] || [];
 
       if (!employeeBranchInfo || employeeBranchInfo.length === 0) {
         return res.status(400).json({
@@ -306,14 +301,12 @@ export const addStall = async (req, res) => {
       console.log(`✅ Employee ${userId} authorized to create stalls in branch ${branchName} (ID: ${managerBranchId})`);
     }
 
-    // Validate that the provided floor and section belong to this branch
-    const [floorSectionCheck] = await connection.execute(
-      `SELECT s.section_id, s.section_name, f.floor_id, f.floor_name 
-       FROM section s
-       INNER JOIN floor f ON s.floor_id = f.floor_id
-       WHERE f.branch_id = ? AND f.floor_id = ? AND s.section_id = ?`,
+    // Validate that the provided floor and section belong to this branch using stored procedure
+    const [floorSectionResult] = await connection.execute(
+      'CALL sp_validateFloorSectionBranch(?, ?, ?)',
       [managerBranchId, floor_id_final, section_id_final]
     );
+    const floorSectionCheck = floorSectionResult[0] || [];
 
     if (!floorSectionCheck || floorSectionCheck.length === 0) {
       return res.status(400).json({
@@ -329,15 +322,12 @@ export const addStall = async (req, res) => {
     
     console.log(`Using floor_id ${targetFloorId} (${floorName}) and section_id ${targetSectionId} (${sectionName}) in branch ${branchName}`);
 
-    // Check if stall number already exists in the same section
-    const [existingStall] = await connection.execute(
-      `SELECT s.stall_id, f.floor_name, sec.section_name
-       FROM stall s
-       INNER JOIN section sec ON s.section_id = sec.section_id
-       INNER JOIN floor f ON sec.floor_id = f.floor_id
-       WHERE s.stall_no = ? AND s.section_id = ?`,
+    // Check if stall number already exists in the same section using stored procedure
+    const [existingStallResult] = await connection.execute(
+      'CALL sp_checkStallExistsInSection(?, ?)',
       [stallNo_final, targetSectionId]
     );
+    const existingStall = existingStallResult[0] || [];
 
     if (existingStall.length > 0) {
       return res.status(400).json({
@@ -371,14 +361,9 @@ export const addStall = async (req, res) => {
 
     console.log("Final stall data for insertion:", stallData);
 
-    // Insert new stall (with base_rate, area_sqm, rate_per_sqm for rental calculation)
-    const [result] = await connection.execute(
-      `INSERT INTO stall (
-        stall_no, stall_location, size, area_sqm, floor_id, section_id, 
-        base_rate, rental_price, rate_per_sqm, price_type, status, stamp, 
-        description, stall_image, is_available, raffle_auction_deadline, 
-        deadline_active, raffle_auction_status, created_by_business_manager, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    // Insert new stall using stored procedure
+    const [insertResult] = await connection.execute(
+      'CALL sp_insertStallFull(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         stallData.stall_no,
         stallData.stall_location,
@@ -402,7 +387,7 @@ export const addStall = async (req, res) => {
       ]
     );
 
-    const stallId = result.insertId;
+    const stallId = insertResult[0]?.[0]?.stall_id || insertResult[0]?.insertId;
     console.log("✅ Stall created with ID:", stallId);
 
     // Handle BLOB image uploads if base64Images provided
@@ -423,8 +408,7 @@ export const addStall = async (req, res) => {
           console.log(`  📸 Uploading image ${i + 1}: ${fileName} (${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
           
           await connection.execute(
-            `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+            'CALL sp_insertStallImageBlob(?, ?, ?, ?, ?, ?, ?)',
             [stallId, imageUrl, imageBuffer, mimeType, fileName, i + 1, isPrimary]
           )
         }
@@ -441,25 +425,21 @@ export const addStall = async (req, res) => {
     
     if (priceType_final === "Raffle") {
       const [raffleResult] = await connection.execute(
-        `INSERT INTO raffle (
-          stall_id, raffle_status, created_by_manager, created_at
-        ) VALUES (?, 'Waiting for Participants', ?, NOW())`,
+        'CALL sp_insertRaffleRecord(?, ?)',
         [stallId, actualManagerId]
       );
       
-      additionalInfo.raffleId = raffleResult.insertId;
-      console.log("✅ Raffle created with ID:", raffleResult.insertId);
+      additionalInfo.raffleId = raffleResult[0]?.[0]?.raffle_id;
+      console.log("✅ Raffle created with ID:", additionalInfo.raffleId);
       
     } else if (priceType_final === "Auction") {
       const [auctionResult] = await connection.execute(
-        `INSERT INTO auction (
-          stall_id, starting_price, auction_status, created_by_manager, created_at
-        ) VALUES (?, ?, 'Waiting for Bidders', ?, NOW())`,
+        'CALL sp_insertAuctionRecord(?, ?, ?)',
         [stallId, finalPrice, actualManagerId]
       );
       
-      additionalInfo.auctionId = auctionResult.insertId;
-      console.log("✅ Auction created with ID:", auctionResult.insertId);
+      additionalInfo.auctionId = auctionResult[0]?.[0]?.auction_id;
+      console.log("✅ Auction created with ID:", additionalInfo.auctionId);
     }
 
     let successMessage = `Stall ${stallNo_final} added successfully to ${floorName}, ${sectionName}`;
