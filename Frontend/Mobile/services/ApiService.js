@@ -642,6 +642,42 @@ class ApiService {
     }
   }
 
+  // Join Raffle - Pre-register for a raffle stall
+  static async joinRaffle(applicantId, stallId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.JOIN_RAFFLE}`;
+      console.log('🎰 Joining raffle at:', url);
+      console.log('📱 Raffle data:', { applicantId, stallId });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ applicantId, stallId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to join raffle');
+      }
+
+      console.log('✅ Successfully joined raffle:', data.message);
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Join Raffle API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // Get user's applications (requires authentication)
   static async getMyApplications(token) {
     try {
