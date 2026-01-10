@@ -70,7 +70,29 @@ export default {
       }
       // merge incoming data if present
       if (src && typeof src === 'object') {
-        Object.assign(f, src)
+        // Map database fields to form fields
+        f.firstName = src.first_name || src.firstName || ''
+        f.lastName = src.last_name || src.lastName || ''
+        f.middleName = src.middle_name || src.middleName || ''
+        f.suffix = src.suffix || ''
+        f.birthdate = src.birthdate || ''
+        f.gender = src.gender || 'Male'
+        f.phone = src.phone || ''
+        f.email = src.email || ''
+        f.vendorId = src.vendor_identifier || src.vendorId || src.vendor_id || ''
+        f.address = src.address || ''
+        f.spouseLast = src.spouse_last || src.spouseLast || ''
+        f.spouseFirst = src.spouse_first || src.spouseFirst || ''
+        f.spouseMiddle = src.spouse_middle || src.spouseMiddle || ''
+        f.childLast = src.child_last || src.childLast || ''
+        f.childFirst = src.child_first || src.childFirst || ''
+        f.childMiddle = src.child_middle || src.childMiddle || ''
+        f.businessName = src.business_name || src.businessName || ''
+        f.businessType = src.business_type || src.businessType || ''
+        f.productsSold = src.business_description || src.productsSold || ''
+        f.vendStart = src.vend_start || src.vendStart || ''
+        f.vendEnd = src.vend_end || src.vendEnd || ''
+        f.businessAddress = src.business_address || src.businessAddress || ''
         f.files = { ...f.files, ...(src.files || {}) }
       }
       return f

@@ -89,9 +89,6 @@
 
                 <div class="info-label mt-4">VENDING TIME:</div>
                 <div class="info-value">{{ d.vend_start }} – {{ d.vend_end }}</div>
-
-                <div class="info-label mt-4">ASSIGNED COLLECTOR:</div>
-                <div class="info-value">{{ d.collector_name || 'N/A' }}</div>
               </v-col>
             </v-row>
           </v-tabs-window-item>
