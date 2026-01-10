@@ -44,16 +44,16 @@ BEGIN
       THEN CAST(AES_DECRYPT(sh.encrypted_email, v_key) AS CHAR(255))
       ELSE sh.email 
     END as sender_email,
-    -- Get branch_id and stall_id from assigned_location via application
-    COALESCE(al.branch_id, sh.branch_id) as branch_id,
-    al.stall_id as stall_id,
+    -- Get branch_id from floor table, stall_id from application
+    COALESCE(f.branch_id, sh.branch_id) as branch_id,
+    app.stall_id as stall_id,
     -- Get stall number
-    s.stall_number,
+    s.stall_no as stall_number,
     'stallholder' as source
   FROM stallholder sh
-  LEFT JOIN application app ON sh.applicant_id = app.applicant_id AND app.status = 'Approved'
-  LEFT JOIN assigned_location al ON app.application_id = al.application_id
-  LEFT JOIN stall s ON al.stall_id = s.stall_id
+  LEFT JOIN application app ON sh.applicant_id = app.applicant_id AND app.application_status = 'Approved'
+  LEFT JOIN stall s ON app.stall_id = s.stall_id
+  LEFT JOIN floor f ON s.floor_id = f.floor_id
   WHERE sh.stallholder_id = p_stallholder_id OR sh.applicant_id = p_stallholder_id
   ORDER BY app.application_id DESC
   LIMIT 1;
@@ -98,16 +98,16 @@ BEGIN
       THEN CAST(AES_DECRYPT(a.encrypted_email, v_key) AS CHAR(255))
       ELSE a.applicant_email 
     END as sender_email,
-    -- Get branch_id and stall_id from assigned_location
-    al.branch_id,
-    al.stall_id,
+    -- Get branch_id from floor table, stall_id from application
+    f.branch_id,
+    app.stall_id,
     -- Get stall number
-    s.stall_number,
+    s.stall_no as stall_number,
     'applicant' as source
   FROM applicant a
-  LEFT JOIN application app ON a.applicant_id = app.applicant_id AND app.status = 'Approved'
-  LEFT JOIN assigned_location al ON app.application_id = al.application_id
-  LEFT JOIN stall s ON al.stall_id = s.stall_id
+  LEFT JOIN application app ON a.applicant_id = app.applicant_id AND app.application_status = 'Approved'
+  LEFT JOIN stall s ON app.stall_id = s.stall_id
+  LEFT JOIN floor f ON s.floor_id = f.floor_id
   WHERE a.applicant_id = p_applicant_id
   ORDER BY app.application_id DESC
   LIMIT 1;
@@ -171,9 +171,7 @@ BEGIN
       ELSE c.sender_email 
     END as sender_email,
     -- Get stall info
-    s.stall_number,
-    s.floor_number,
-    s.section,
+    s.stall_no as stall_number,
     -- Get branch info  
     b.branch_name,
     b.location as branch_location
