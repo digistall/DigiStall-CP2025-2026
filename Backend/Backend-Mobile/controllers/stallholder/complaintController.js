@@ -55,7 +55,8 @@ export const submitComplaint = async (req, res) => {
       console.log('✅ Found stallholder details:', {
         name: stallholder.sender_name,
         branch_id: stallholder.branch_id,
-        stall_id: stallholder.stall_id
+        stall_id: stallholder.stall_id,
+        stall_number: stallholder.stall_number
       });
     } else {
       // Fallback to applicant table using stored procedure (DECRYPTED VERSION)
@@ -132,7 +133,8 @@ export const submitComplaint = async (req, res) => {
       success: true,
       message: 'Complaint submitted successfully',
       data: {
-        complaint_id: result.complaint_id
+        complaint_id: result.complaint_id,
+        stall_number: stallholder.stall_number || null
       }
     });
     

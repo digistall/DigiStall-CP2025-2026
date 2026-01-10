@@ -337,7 +337,7 @@ const ComplaintScreen = () => {
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Stall:</Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
-                {userData?.stall_number || userData?.stall_no || 'N/A'}
+                {userData?.stall_number || 'Loading...'}
               </Text>
             </View>
             {userData?.email && (
