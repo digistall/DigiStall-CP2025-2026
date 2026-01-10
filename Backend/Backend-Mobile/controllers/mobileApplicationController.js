@@ -348,19 +348,34 @@ export const updateMobileApplication = async (req, res) => {
 export const joinRaffle = async (req, res) => {
   let connection;
   
+  console.log('🎰 ====== BACKEND: JOIN RAFFLE START ======');
+  console.log('🎰 Request method:', req.method);
+  console.log('🎰 Request URL:', req.url);
+  console.log('🎰 Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('🎰 Request body (raw):', JSON.stringify(req.body, null, 2));
+  
   try {
     connection = await createConnection();
+    console.log('✅ Database connection established');
+    
     const { applicantId, stallId } = req.body;
 
-    console.log('🎰 Join Raffle Request:', { applicantId, stallId });
+    console.log('🎰 Extracted values:');
+    console.log('   - applicantId:', applicantId, '(type:', typeof applicantId, ')');
+    console.log('   - stallId:', stallId, '(type:', typeof stallId, ')');
 
     // Validation
     if (!applicantId || !stallId) {
+      console.error('❌ VALIDATION FAILED: Missing required fields');
+      console.error('   - applicantId present:', !!applicantId);
+      console.error('   - stallId present:', !!stallId);
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: applicantId and stallId are required'
       });
     }
+
+    console.log('✅ Validation passed, querying stall details...');
 
     // Get stall details to verify it's a raffle stall
     const [stallRows] = await connection.execute(
@@ -376,7 +391,10 @@ export const joinRaffle = async (req, res) => {
       [stallId]
     );
 
+    console.log('📊 Stall query result count:', stallRows?.length || 0);
+
     if (!stallRows || stallRows.length === 0) {
+      console.error('❌ Stall not found for stallId:', stallId);
       return res.status(404).json({
         success: false,
         message: 'Stall not found'
@@ -384,9 +402,11 @@ export const joinRaffle = async (req, res) => {
     }
 
     const stall = stallRows[0];
+    console.log('📊 Stall found:', JSON.stringify(stall, null, 2));
 
     // Verify it's a raffle stall
     if (stall.price_type !== 'Raffle') {
+      console.error('❌ Not a raffle stall - price_type:', stall.price_type);
       return res.status(400).json({
         success: false,
         message: 'This stall is not a raffle stall'
@@ -400,14 +420,18 @@ export const joinRaffle = async (req, res) => {
     });
 
     // Check if user already joined this raffle
+    console.log('🔍 Checking if user already joined raffle...');
     const [existingParticipant] = await connection.execute(
       `SELECT participant_id FROM raffle_participants rp
        JOIN raffle r ON rp.raffle_id = r.raffle_id
        WHERE rp.applicant_id = ? AND r.stall_id = ?`,
       [applicantId, stallId]
     );
+    
+    console.log('🔍 Existing participant check result:', existingParticipant?.length || 0, 'records found');
 
     if (existingParticipant && existingParticipant.length > 0) {
+      console.error('❌ User already joined this raffle - participant_id:', existingParticipant[0].participant_id);
       return res.status(400).json({
         success: false,
         message: 'You have already joined this raffle'
@@ -415,12 +439,15 @@ export const joinRaffle = async (req, res) => {
     }
 
     // Get or create raffle for this stall
+    console.log('🔍 Looking for existing raffle for stall:', stallId);
     let [raffleRows] = await connection.execute(
       `SELECT raffle_id, raffle_status, total_participants 
        FROM raffle WHERE stall_id = ? 
        ORDER BY created_at DESC LIMIT 1`,
       [stallId]
     );
+    
+    console.log('🔍 Raffle query result:', raffleRows?.length || 0, 'records found');
 
     let raffleId;
 
@@ -428,73 +455,106 @@ export const joinRaffle = async (req, res) => {
     if (!raffleRows || raffleRows.length === 0) {
       console.log('🆕 Creating new raffle for stall:', stallId);
       
-      const [newRaffleResult] = await connection.execute(
-        `INSERT INTO raffle (stall_id, raffle_status, total_participants, created_at)
-         VALUES (?, 'Active', 0, NOW())`,
-        [stallId]
-      );
-      raffleId = newRaffleResult.insertId;
-      console.log('✅ New raffle created with ID:', raffleId);
+      try {
+        const [newRaffleResult] = await connection.execute(
+          `INSERT INTO raffle (stall_id, raffle_status, total_participants, created_at)
+           VALUES (?, 'Active', 0, NOW())`,
+          [stallId]
+        );
+        raffleId = newRaffleResult.insertId;
+        console.log('✅ New raffle created with ID:', raffleId);
+      } catch (insertError) {
+        console.error('❌ Failed to create new raffle:', insertError.message);
+        throw insertError;
+      }
     } else {
       raffleId = raffleRows[0].raffle_id;
+      console.log('✅ Using existing raffle - ID:', raffleId, 'Status:', raffleRows[0].raffle_status);
     }
 
     // Insert into raffle_participants table
     // Note: application_id is NULL for pre-registration (joining raffle only, no full application yet)
     // The application will be created when the winner is selected by the branch manager
-    const [participantResult] = await connection.execute(
-      `INSERT INTO raffle_participants 
-       (raffle_id, applicant_id, application_id, participation_time, is_winner, created_at)
-       VALUES (?, ?, NULL, NOW(), 0, NOW())`,
-      [raffleId, applicantId]
-    );
+    console.log('📝 Inserting participant into raffle_participants...');
+    console.log('   - raffleId:', raffleId);
+    console.log('   - applicantId:', applicantId);
+    
+    try {
+      const [participantResult] = await connection.execute(
+        `INSERT INTO raffle_participants 
+         (raffle_id, applicant_id, application_id, participation_time, is_winner, created_at)
+         VALUES (?, ?, NULL, NOW(), 0, NOW())`,
+        [raffleId, applicantId]
+      );
 
-    const participantId = participantResult.insertId;
-    console.log('✅ Raffle participant added:', { participantId, raffleId, applicantId });
+      const participantId = participantResult.insertId;
+      console.log('✅ Raffle participant added:', { participantId, raffleId, applicantId });
 
-    // Update raffle total_participants count
-    await connection.execute(
-      `UPDATE raffle SET 
-        total_participants = total_participants + 1,
-        first_application_time = COALESCE(first_application_time, NOW()),
-        raffle_status = 'Active'
-      WHERE raffle_id = ?`,
-      [raffleId]
-    );
+      // Update raffle total_participants count
+      console.log('📝 Updating raffle total_participants count...');
+      await connection.execute(
+        `UPDATE raffle SET 
+          total_participants = total_participants + 1,
+          first_application_time = COALESCE(first_application_time, NOW()),
+          raffle_status = 'Active'
+        WHERE raffle_id = ?`,
+        [raffleId]
+      );
+      console.log('✅ Raffle count updated');
 
-    // Update stall's raffle_auction_status
-    await connection.execute(
-      `UPDATE stall SET 
-        raffle_auction_status = 'Active',
-        deadline_active = 1
-      WHERE stall_id = ?`,
-      [stallId]
-    );
+      // Update stall's raffle_auction_status
+      console.log('📝 Updating stall raffle_auction_status...');
+      await connection.execute(
+        `UPDATE stall SET 
+          raffle_auction_status = 'Active',
+          deadline_active = 1
+        WHERE stall_id = ?`,
+        [stallId]
+      );
+      console.log('✅ Stall status updated');
 
-    res.status(201).json({
-      success: true,
-      message: 'Successfully joined the raffle!',
-      data: {
-        participantId: participantId,
-        raffleId: raffleId,
-        stallId: stallId,
-        stallNo: stall.stall_no,
-        stallLocation: stall.stall_location,
-        branchName: stall.branch_name,
-        joinedAt: new Date().toISOString()
-      }
-    });
+      console.log('🎰 ====== BACKEND: JOIN RAFFLE SUCCESS ======');
+      res.status(201).json({
+        success: true,
+        message: 'Successfully joined the raffle!',
+        data: {
+          participantId: participantId,
+          raffleId: raffleId,
+          stallId: stallId,
+          stallNo: stall.stall_no,
+          stallLocation: stall.stall_location,
+          branchName: stall.branch_name,
+          joinedAt: new Date().toISOString()
+        }
+      });
+    } catch (dbError) {
+      console.error('❌ Database operation failed:', dbError.message);
+      console.error('❌ SQL State:', dbError.sqlState);
+      console.error('❌ Error code:', dbError.code);
+      throw dbError;
+    }
     
   } catch (error) {
-    console.error('❌ Join Raffle error:', error);
+    console.error('❌ ====== BACKEND: JOIN RAFFLE ERROR ======');
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     res.status(500).json({
       success: false,
       message: 'Failed to join raffle',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message,
+      errorDetails: {
+        name: error.name,
+        code: error.code,
+        sqlState: error.sqlState
+      }
     });
   } finally {
+    console.log('🔚 Closing database connection...');
     if (connection) {
       await connection.end();
+      console.log('✅ Database connection closed');
     }
   }
 };
