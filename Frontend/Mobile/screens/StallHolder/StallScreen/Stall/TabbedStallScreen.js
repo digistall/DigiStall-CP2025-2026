@@ -21,6 +21,7 @@ import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
 import FavoritesService from '../../../../services/FavoritesService';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import { getSafeUserName } from '../../../../services/DataDisplayUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -150,7 +151,7 @@ const TabbedStallScreen = () => {
       
       setUserData(userData);
       console.log('👤 User data loaded:', {
-        fullName: userData.user.full_name,
+        fullName: getSafeUserName(userData.user, 'User'),
         applicantId: userData.user.applicant_id,
         username: userData.user.username
       });
@@ -291,61 +292,38 @@ const TabbedStallScreen = () => {
     try {
       setApplying(stallId);
 
-      let response;
+      // Simple application data - using safe display utilities
+      const applicationData = {
+        applicantId: applicantId,
+        stallId: stallId,
+        businessName: getSafeUserName(userData.user, 'User') + "'s Business",
+        businessType: 'General Trade'
+      };
 
-      // Check if this is a Raffle tab - use joinRaffle endpoint
-      if (activeTab === 'Raffle') {
-        console.log('🎰 Joining raffle for stall:', stallId);
-        response = await ApiService.joinRaffle(applicantId, stallId);
-        
-        if (response.success) {
-          Alert.alert(
-            'Raffle Joined!',
-            'You have successfully joined the raffle. Good luck!',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  loadUserDataAndStalls();
-                }
+      console.log('📝 Submitting application:', applicationData);
+
+      const response = await ApiService.submitApplication(applicationData);
+
+      if (response.success) {
+        Alert.alert(
+          'Application Submitted',
+          `Your application for ${activeTab} stall has been submitted successfully!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Refresh stalls to show updated status
+                loadUserDataAndStalls();
               }
-            ]
-          );
-        } else {
-          Alert.alert('Join Failed', response.message || 'Failed to join raffle. Please try again.');
-        }
+            }
+          ]
+        );
       } else {
-        // Regular application for Fixed Price or Auction
-        const applicationData = {
-          applicantId: applicantId,
-          stallId: stallId,
-          businessName: userData.user.full_name + "'s Business",
-          businessType: 'General Trade'
-        };
-
-        console.log('📝 Submitting application:', applicationData);
-        response = await ApiService.submitApplication(applicationData);
-
-        if (response.success) {
-          Alert.alert(
-            'Application Submitted',
-            `Your application for ${activeTab} stall has been submitted successfully!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  loadUserDataAndStalls();
-                }
-              }
-            ]
-          );
-        } else {
-          Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
-        }
+        Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
       }
     } catch (error) {
       console.error('❌ Application error:', error);
-      Alert.alert('Error', 'Failed to process your request. Please check your connection and try again.');
+      Alert.alert('Error', 'Failed to submit application. Please check your connection and try again.');
     } finally {
       setApplying(null);
     }
