@@ -253,6 +253,7 @@ export const mobileLogin = async (req, res) => {
         branch_name: stallholderInfo.branch_name,
         stall_id: stallholderInfo.stall_id,
         stall_no: stallholderInfo.stall_no,
+        stall_number: stallholderInfo.stall_no, // Alias for frontend
         stall_location: stallholderInfo.stall_location,
         size: stallholderInfo.size,
         contract_start_date: stallholderInfo.contract_start_date,
