@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UserStorageService from '../../services/UserStorageService';
 import ApiService from '../../services/ApiService';
 import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
+import { getSafeStaffName, getSafeDisplayValue } from '../../services/DataDisplayUtils';
 
 const { width } = Dimensions.get('window');
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -226,10 +227,10 @@ const CollectorHome = () => {
               <Ionicons name="person-circle" size={80} color="#4A90D9" />
             </View>
             <Text style={styles.sidebarName}>
-              {userData?.staff?.first_name} {userData?.staff?.last_name}
+              {getSafeStaffName(userData, 'Collector')}
             </Text>
             <Text style={styles.sidebarRole}>Collector</Text>
-            <Text style={styles.sidebarBranch}>{userData?.staff?.branch_name}</Text>
+            <Text style={styles.sidebarBranch}>{getSafeDisplayValue(userData?.staff?.branch_name, '')}</Text>
           </View>
 
           {/* Menu Items */}
