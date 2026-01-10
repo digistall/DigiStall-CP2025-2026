@@ -84,6 +84,15 @@
               @toggle-permission="togglePermission"
             />
 
+            <!-- Fire Employee Dialog -->
+            <FireEmployeeDialog
+              v-model="fireEmployeeDialog"
+              :employee="selectedEmployee"
+              :saving="saving"
+              @confirm="confirmFireEmployee"
+              @close="closeFireEmployeeDialog"
+            />
+
             <!-- Toast Notification -->
             <ToastNotification
               :show="toast.show"
