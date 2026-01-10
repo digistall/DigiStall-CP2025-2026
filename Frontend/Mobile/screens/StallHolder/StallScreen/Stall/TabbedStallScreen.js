@@ -291,38 +291,61 @@ const TabbedStallScreen = () => {
     try {
       setApplying(stallId);
 
-      // Simple application data
-      const applicationData = {
-        applicantId: applicantId,
-        stallId: stallId,
-        businessName: userData.user.full_name + "'s Business",
-        businessType: 'General Trade'
-      };
+      let response;
 
-      console.log('📝 Submitting application:', applicationData);
-
-      const response = await ApiService.submitApplication(applicationData);
-
-      if (response.success) {
-        Alert.alert(
-          'Application Submitted',
-          `Your application for ${activeTab} stall has been submitted successfully!`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Refresh stalls to show updated status
-                loadUserDataAndStalls();
+      // Check if this is a Raffle tab - use joinRaffle endpoint
+      if (activeTab === 'Raffle') {
+        console.log('🎰 Joining raffle for stall:', stallId);
+        response = await ApiService.joinRaffle(applicantId, stallId);
+        
+        if (response.success) {
+          Alert.alert(
+            'Raffle Joined!',
+            'You have successfully joined the raffle. Good luck!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  loadUserDataAndStalls();
+                }
               }
-            }
-          ]
-        );
+            ]
+          );
+        } else {
+          Alert.alert('Join Failed', response.message || 'Failed to join raffle. Please try again.');
+        }
       } else {
-        Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
+        // Regular application for Fixed Price or Auction
+        const applicationData = {
+          applicantId: applicantId,
+          stallId: stallId,
+          businessName: userData.user.full_name + "'s Business",
+          businessType: 'General Trade'
+        };
+
+        console.log('📝 Submitting application:', applicationData);
+        response = await ApiService.submitApplication(applicationData);
+
+        if (response.success) {
+          Alert.alert(
+            'Application Submitted',
+            `Your application for ${activeTab} stall has been submitted successfully!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  loadUserDataAndStalls();
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
+        }
       }
     } catch (error) {
       console.error('❌ Application error:', error);
-      Alert.alert('Error', 'Failed to submit application. Please check your connection and try again.');
+      Alert.alert('Error', 'Failed to process your request. Please check your connection and try again.');
     } finally {
       setApplying(null);
     }
