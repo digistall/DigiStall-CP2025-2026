@@ -1,6 +1,20 @@
 import { createConnection } from '../../config/database.js';
 import jwt from 'jsonwebtoken';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { decryptData } from '../../services/encryptionService.js';
+
+// Helper function to decrypt data safely (handles both encrypted and plain text)
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 const PaymentController = {
   extractUserFromToken(req) {
@@ -824,7 +838,7 @@ const PaymentController = {
         branchId: p.branch_id,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
-        stallholderName: p.stallholder_name,
+        stallholderName: decryptSafe(p.stallholder_name),
         stallNo: p.stall_no,
         branchName: p.branch_name,
         violationType: p.violation_type,
@@ -834,8 +848,8 @@ const PaymentController = {
         penaltyRemarks: p.penalty_remarks,
         offenseNo: p.offense_no,
         severity: p.severity,
-        inspectorName: p.inspector_name,
-        collectedBy: p.collected_by_name || '-'
+        inspectorName: decryptSafe(p.inspector_name),
+        collectedBy: decryptSafe(p.collected_by_name) || '-'
       }));
       
       return res.status(200).json({
