@@ -9,6 +9,7 @@
 import ApiService from '../../../services/ApiService';
 import UserStorageService from '../../../services/UserStorageService';
 import { API_CONFIG } from '../../../config/networkConfig';
+import { getSafeUserName, getSafeStaffName } from '../../../services/DataDisplayUtils';
 
 // Unified Mobile login - automatically detects staff or regular user
 export const handleLogin = async (
@@ -93,7 +94,7 @@ export const handleLogin = async (
 
       // Navigate based on staff type
       const staffType = staffResponse.staffType || staffResponse.user?.staffType;
-      const staffName = staffResponse.user?.fullName || `${staffResponse.user?.firstName} ${staffResponse.user?.lastName}`;
+      const staffName = getSafeStaffName({ staff: staffResponse.user }, 'Staff');
       
       if (navigation) {
         if (staffType === 'inspector') {
@@ -160,8 +161,8 @@ export const handleLogin = async (
       // Stop the initial loading
       setIsLoading(false);
 
-      // Get user info for loading screen
-      const userName = userData.user?.full_name || userData.user?.username || 'User';
+      // Get user info for loading screen using safe utilities
+      const userName = getSafeUserName(userData.user, 'User');
       const isStallholder = userData.isStallholder;
       const stallNo = userData.stallholder?.stall_no;
 
@@ -303,9 +304,9 @@ export const handleStaffLogin = async (
 
       setIsLoading(false);
 
-      // Navigate based on staff type
+      // Navigate based on staff type using safe utilities
       const staffType = response.staffType || response.user?.staffType;
-      const staffName = response.user?.fullName || `${response.user?.firstName} ${response.user?.lastName}`;
+      const staffName = getSafeStaffName({ staff: response.user }, 'Staff');
       
       if (navigation) {
         if (staffType === 'inspector') {

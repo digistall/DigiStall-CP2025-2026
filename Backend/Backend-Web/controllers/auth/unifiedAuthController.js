@@ -4,6 +4,20 @@
 import { createConnection } from '../../config/database.js'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { decryptData } from '../../services/encryptionService.js'
+
+// Helper function to decrypt data safely (handles both encrypted and plain text)
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 // Helper function to get Philippine time in MySQL format
 const getPhilippineTime = () => {
@@ -211,14 +225,19 @@ export const login = async (req, res) => {
     // Get the username from the correct field
     const userUsername = user[usernameField];
     
+    // Decrypt user data before creating token
+    const decryptedFirstName = decryptSafe(user.first_name);
+    const decryptedLastName = decryptSafe(user.last_name);
+    const decryptedEmail = decryptSafe(user.email);
+    
     // Create JWT token
     const tokenPayload = {
       userId: user[userIdField],
       userType: userType.toLowerCase(),
       username: userUsername,
-      email: user.email || null,
-      firstName: user.first_name || null,
-      lastName: user.last_name || null,
+      email: decryptedEmail || null,
+      firstName: decryptedFirstName || null,
+      lastName: decryptedLastName || null,
       branchId: user.branch_id || null,
       permissions: additionalUserInfo.permissions || null
     };
@@ -235,9 +254,9 @@ export const login = async (req, res) => {
       id: user[userIdField],
       userType: userType.toLowerCase(),
       username: userUsername,
-      email: user.email || null,
-      firstName: user.first_name,
-      lastName: user.last_name,
+      email: decryptedEmail || null,
+      firstName: decryptedFirstName,
+      lastName: decryptedLastName,
       branchId: user.branch_id || null,
       ...additionalUserInfo
     };
@@ -442,6 +461,14 @@ export const getCurrentUser = async (req, res) => {
     
     // Remove password from response
     delete user.password;
+    
+    // Decrypt sensitive fields for display
+    if (user.first_name) user.first_name = decryptSafe(user.first_name);
+    if (user.last_name) user.last_name = decryptSafe(user.last_name);
+    if (user.email) user.email = decryptSafe(user.email);
+    if (user.contact_number) user.contact_number = decryptSafe(user.contact_number);
+    if (user.phone_number) user.phone_number = decryptSafe(user.phone_number);
+    if (user.address) user.address = decryptSafe(user.address);
     
     console.log('📤 getCurrentUser - Sending data for', userType, ':', JSON.stringify(user, null, 2));
     
