@@ -644,32 +644,81 @@ class ApiService {
 
   // Join Raffle - Pre-register for a raffle stall
   static async joinRaffle(applicantId, stallId) {
+    console.log('🎰 ====== JOIN RAFFLE START ======');
+    console.log('🎰 Input params - applicantId:', applicantId, 'type:', typeof applicantId);
+    console.log('🎰 Input params - stallId:', stallId, 'type:', typeof stallId);
+    
+    // Validate inputs before making the request
+    if (!applicantId) {
+      console.error('❌ VALIDATION ERROR: applicantId is missing or undefined');
+      return {
+        success: false,
+        message: 'Applicant ID is required to join raffle'
+      };
+    }
+    
+    if (!stallId) {
+      console.error('❌ VALIDATION ERROR: stallId is missing or undefined');
+      return {
+        success: false,
+        message: 'Stall ID is required to join raffle'
+      };
+    }
+    
     try {
+      console.log('🔌 Getting active server...');
       const server = await NetworkUtils.getActiveServer();
+      console.log('🔌 Active server:', server);
       
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.JOIN_RAFFLE}`;
-      console.log('🎰 Joining raffle at:', url);
-      console.log('📱 Raffle data:', { applicantId, stallId });
+      console.log('🎰 Full URL:', url);
+      
+      const requestBody = { applicantId, stallId };
+      console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('� Request headers:', JSON.stringify(API_CONFIG.HEADERS, null, 2));
 
+      console.log('🚀 Sending POST request...');
       const response = await fetch(url, {
         method: 'POST',
         headers: API_CONFIG.HEADERS,
-        body: JSON.stringify({ applicantId, stallId }),
+        body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response statusText:', response.statusText);
+      console.log('📡 Response ok:', response.ok);
+      
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('📡 Raw response text:', responseText);
+        data = JSON.parse(responseText);
+        console.log('📡 Parsed response data:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError.message);
+        throw new Error('Server returned invalid response');
+      }
 
       if (!response.ok) {
+        console.error('❌ Response not OK - Status:', response.status);
+        console.error('❌ Server error message:', data.message);
+        console.error('❌ Server error details:', data.error);
         throw new Error(data.message || 'Failed to join raffle');
       }
 
       console.log('✅ Successfully joined raffle:', data.message);
+      console.log('✅ Response data:', JSON.stringify(data.data, null, 2));
+      console.log('🎰 ====== JOIN RAFFLE SUCCESS ======');
       return {
         success: true,
         data: data.data,
         message: data.message
       };
     } catch (error) {
+      console.error('❌ ====== JOIN RAFFLE ERROR ======');
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       console.error('❌ Join Raffle API Error:', error);
       return {
         success: false,
