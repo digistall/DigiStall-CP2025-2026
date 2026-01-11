@@ -71,9 +71,10 @@ export async function createInspector(req, res) {
         console.log(`📱 Creating inspector: ${firstName} ${lastName} (${username})`);
 
         // Create inspector using stored procedure with encryption
+        // Stored procedure signature: (username, first_name, last_name, email, password_hash, contact_no)
         const [insertResult] = await connection.execute(
-            'CALL sp_createInspectorDirect(?, ?, ?, ?, ?, ?, ?, ?)',
-            [username, hashedPassword, firstName, lastName, null, email, phoneNumber || null, branchId]
+            'CALL sp_createInspectorDirect(?, ?, ?, ?, ?, ?)',
+            [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
         );
 
         const inspectorId = insertResult[0]?.[0]?.inspector_id;
@@ -224,9 +225,10 @@ export async function createCollector(req, res) {
         console.log(`📱 Creating collector: ${firstName} ${lastName} (${username})`);
 
         // Create collector using stored procedure with encryption
+        // Stored procedure signature: (username, first_name, last_name, email, password_hash, contact_no)
         const [insertResult] = await connection.execute(
-            'CALL sp_createCollectorDirect(?, ?, ?, ?, ?, ?, ?)',
-            [username, hashedPassword, firstName, lastName, null, email, phoneNumber || null]
+            'CALL sp_createCollectorDirect(?, ?, ?, ?, ?, ?)',
+            [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
         );
 
         const collectorId = insertResult[0]?.[0]?.collector_id;
