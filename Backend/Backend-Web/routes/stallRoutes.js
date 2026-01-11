@@ -32,6 +32,7 @@ import {
   joinRaffle,
   getActiveRaffles,
   getRaffleDetails,
+  getRaffleParticipantsByStall,
   extendRaffleTimer,
   cancelRaffle,
   selectRaffleWinner,
@@ -147,6 +148,7 @@ router.post('/:stallId/go-live', viewOnlyForOwners, startLiveSession)     // POS
 
 // ===== RAFFLE MANAGEMENT ROUTES =====
 router.get('/raffles/active', getActiveRaffles)                    // GET /api/stalls/raffles/active - Get all active raffles
+router.get('/raffles/stall/:stallId/participants', getRaffleParticipantsByStall)  // GET /api/stalls/raffles/stall/:stallId/participants - Get participants who joined raffle
 router.get('/raffles/:raffleId', getRaffleDetails)                 // GET /api/stalls/raffles/:raffleId - Get raffle details
 router.post('/raffles/:stallId/create', viewOnlyForOwners, createRaffle)              // POST /api/stalls/raffles/:stallId/create - Create raffle for stall
 router.post('/raffles/:stallId/join', viewOnlyForOwners, joinRaffle)                  // POST /api/stalls/raffles/:stallId/join - Join raffle (triggers timer)
