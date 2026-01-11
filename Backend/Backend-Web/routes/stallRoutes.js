@@ -11,8 +11,6 @@ import {
   getStallsByFilter,
   updateStall,
   deleteStall,
-  getLiveStallInfo,
-  startLiveSession,
   
   // Landing page functions (Public)
   getBranches,
@@ -141,10 +139,6 @@ router.get('/filter', getStallsByFilter)     // GET /api/stalls/filter - Get sta
 router.get('/:id', getStallById)             // GET /api/stalls/:id - Get stall by ID
 router.put('/:id', viewOnlyForOwners, updateStall)              // PUT /api/stalls/:id - Update stall
 router.delete('/:id', viewOnlyForOwners, deleteStall)           // DELETE /api/stalls/:id - Delete stall
-
-// ===== LIVE SYSTEM ROUTES =====
-router.get('/:stallId/live-info', getLiveStallInfo)    // GET /api/stalls/:stallId/live-info - Get live stall info (chat vs bidding)
-router.post('/:stallId/go-live', viewOnlyForOwners, startLiveSession)     // POST /api/stalls/:stallId/go-live - Start live session (activates chat/bidding)
 
 // ===== RAFFLE MANAGEMENT ROUTES =====
 router.get('/raffles/active', getActiveRaffles)                    // GET /api/stalls/raffles/active - Get all active raffles

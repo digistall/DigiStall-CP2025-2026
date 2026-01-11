@@ -9,7 +9,6 @@ import { getStallById } from './stallComponents/getStallById.js'
 import { getStallsByFilter } from './stallComponents/getStallsByFilter.js'
 import { updateStall } from './stallComponents/updateStall.js'
 import { deleteStall } from './stallComponents/deleteStall.js'
-import { getLiveStallInfo, startLiveSession } from './stallComponents/getLiveStallInfo.js'
 
 // Import landing page components (Public)
 import { getBranches } from './stallComponents/landingPageComponents/getBranches/getBranches.js'
@@ -49,8 +48,6 @@ export {
   getStallsByFilter,
   updateStall,
   deleteStall,
-  getLiveStallInfo,
-  startLiveSession,
   
   // Landing page functions (Public)
   getBranches,
