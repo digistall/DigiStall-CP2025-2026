@@ -8,8 +8,12 @@
   padding-left: 0 !important;
 }
 
+/* Payment main content - position relative for contained loading overlay */
+.payment-main-content {
+  position: relative;
+}
+
 .main-content {
-  background-color: #f5f7fa;
   min-height: calc(100vh - 64px);
   padding: 32px 24px;
 }

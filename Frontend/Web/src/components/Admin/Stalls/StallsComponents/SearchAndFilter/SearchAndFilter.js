@@ -67,6 +67,17 @@ export default {
       return [...new Set(types)].filter(Boolean).sort()
     },
     availabilityOptions() {
+      // For business_manager and business_employee, hide "Occupied" option
+      // since they can only see Available/Unavailable stalls
+      const userType = sessionStorage.getItem('userType')
+      if (userType === 'business_manager' || userType === 'business_employee') {
+        return [
+          { text: 'All', value: null },
+          { text: 'Available', value: true },
+          { text: 'Unavailable', value: false },
+        ]
+      }
+      // For system_administrator and stall_business_owner, show all options
       return [
         { text: 'All', value: null },
         { text: 'Available', value: true },
@@ -114,7 +125,7 @@ export default {
         const matchesPriceType =
           !this.selectedPriceType ||
           (this.selectedPriceType === 'Auction' &&
-            (stall.price.includes('Auction') ||
+            ((stall.price_type && stall.price_type.toLowerCase().includes('auction')) ||
               (stall.priceType && stall.priceType.toLowerCase().includes('auction')))) ||
           (this.selectedPriceType === 'Raffle' &&
             (stall.price.includes('Raffle') ||
@@ -261,12 +272,12 @@ export default {
       const userType = sessionStorage.getItem('userType')
 
       // Admins and branch managers always have access (check both formats)
-      if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
+      if (userType === 'system_administrator' || userType === 'stall_business_owner' || userType === 'business_manager') {
         return true
       }
 
       // For employees, check specific permissions - Handle both new and old formats
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try new format first (object)
         const permissions = JSON.parse(sessionStorage.getItem('permissions') || '{}')
         if (permissions.stalls === true) {
@@ -310,8 +321,7 @@ export default {
           '🔑 Token being used for API calls:',
           token ? `${token.substring(0, 30)}...` : 'null',
         )
-        console.log('🔑 Token length:', token?.length)
-        console.log('🔑 Is JWT format?', token?.includes('.') && token?.split('.').length === 3)
+        console.log('🔑 Authentication token available')
 
         // Load floors
         try {

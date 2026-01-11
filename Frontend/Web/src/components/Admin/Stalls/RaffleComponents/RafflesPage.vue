@@ -16,36 +16,13 @@
       @close-participants-modal="closeParticipantsModal"
     />
 
-    <!-- Enhanced Message Snackbar -->
-    <v-snackbar
-      v-model="showMessage"
-      :color="messageType"
-      :timeout="messageTimeout"
-      location="top right"
-      variant="elevated"
-      class="enhanced-snackbar"
-    >
-      <div class="snackbar-content">
-        <v-icon
-          :color="messageType === 'success' ? 'white' : 'white'"
-          class="snackbar-icon"
-        >
-          {{ messageType === "success" ? "mdi-check-circle" : "mdi-information" }}
-        </v-icon>
-        <span class="snackbar-text">{{ message }}</span>
-      </div>
-      <template v-slot:actions>
-        <v-btn
-          color="white"
-          variant="text"
-          size="small"
-          @click="showMessage = false"
-          class="snackbar-action"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 

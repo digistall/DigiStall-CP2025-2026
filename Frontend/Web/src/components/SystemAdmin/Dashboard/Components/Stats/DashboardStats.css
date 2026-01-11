@@ -1,0 +1,158 @@
+/* Statistics Cards - Modern Clean Design */
+.stat-card {
+  border-radius: 16px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 33, 129, 0.12) !important;
+  border-color: transparent !important;
+}
+
+.stat-content {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px !important;
+  gap: 18px;
+}
+
+/* Modern Icon Wrappers with subtle backgrounds */
+.stat-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.stat-icon-wrapper .v-icon {
+  font-size: 28px !important;
+}
+
+.stat-card:hover .stat-icon-wrapper {
+  transform: scale(1.08);
+}
+
+/* Modern Gradient Backgrounds */
+.primary-gradient {
+  background: linear-gradient(135deg, #002181 0%, #1565c0 100%);
+  box-shadow: 0 8px 20px rgba(0, 33, 129, 0.3);
+}
+
+.success-gradient {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+}
+
+.warning-gradient {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.3);
+}
+
+.error-gradient {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+.info-gradient {
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  box-shadow: 0 8px 20px rgba(8, 145, 178, 0.3);
+}
+
+.purple-gradient {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+}
+
+.amber-gradient {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.3);
+}
+
+/* Stat Info */
+.stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Remove old stat variants - no longer needed */
+.primary-stat,
+.success-stat,
+.warning-stat,
+.error-stat,
+.info-stat,
+.purple-stat,
+.amber-stat {
+  /* Clean white background for all cards */
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .stat-content {
+    padding: 18px 20px !important;
+  }
+  
+  .stat-icon-wrapper {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .stat-icon-wrapper .v-icon {
+    font-size: 24px !important;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stat-content {
+    padding: 16px !important;
+    gap: 14px;
+  }
+  
+  .stat-icon-wrapper {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+  
+  .stat-icon-wrapper .v-icon {
+    font-size: 22px !important;
+  }
+  
+  .stat-value {
+    font-size: 22px;
+  }
+}

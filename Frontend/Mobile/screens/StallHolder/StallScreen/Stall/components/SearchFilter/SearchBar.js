@@ -4,16 +4,16 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const { width } = Dimensions.get('window');
 
-const SearchBar = ({ searchText, onSearchChange, placeholder = "Search stalls, location, or floor..." }) => {
+const SearchBar = ({ searchText, onSearchChange, placeholder = "Search stalls, location, or floor...", theme }) => {
   return (
-    <View style={styles.searchContainer}>
-      <Icon name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+    <View style={[styles.searchContainer, theme && { backgroundColor: theme.colors.background }]}>
+      <Icon name="search" size={20} color={theme ? theme.colors.textTertiary : "#9CA3AF"} style={styles.searchIcon} />
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, theme && { color: theme.colors.text }]}
         placeholder={placeholder}
         value={searchText}
         onChangeText={onSearchChange}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={theme ? theme.colors.textTertiary : "#9CA3AF"}
       />
     </View>
   );

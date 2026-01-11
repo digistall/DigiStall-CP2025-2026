@@ -1,181 +1,129 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
 import { styles } from "./PaymentTableStyles";
 import ViewAllTable from "./ViewAllTable";
+import ApiService from "../../../../../../services/ApiService";
+import UserStorageService from "../../../../../../services/UserStorageService";
+import { Ionicons } from "@expo/vector-icons";
 
-const PaymentTable = ({ selectedPaymentMethod }) => {
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    card: '#ffffff',
+    text: '#1F2937',
+    textSecondary: '#6b7280',
+    border: '#F3F4F6',
+    background: '#FAFBFC',
+    primary: '#007AFF',
+  }
+};
+
+const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = false }) => {
+  const colors = theme?.colors || defaultTheme.colors;
   const [showViewAllModal, setShowViewAllModal] = useState(false);
+  const [paymentRecords, setPaymentRecords] = useState([]);
+  const [allPaymentRecords, setAllPaymentRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // All payment records data
-  const allPaymentRecords = [
-    // GCash transactions
-    {
-      id: 1,
-      date: "2024-03-15",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "GCash",
-      reference: "GC240315001",
-    },
-    {
-      id: 2,
-      date: "2024-02-15",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "GCash",
-      reference: "GC240215002",
-    },
-    {
-      id: 3,
-      date: "2024-01-15",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "GCash",
-      reference: "GC240115003",
-    },
-    {
-      id: 4,
-      date: "2023-12-15",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "GCash",
-      reference: "GC231215004",
-    },
-    {
-      id: 5,
-      date: "2023-11-15",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "GCash",
-      reference: "GC231115005",
-    },
+  // Check authentication status first
+  const checkAuth = useCallback(async () => {
+    try {
+      const token = await UserStorageService.getAuthToken();
+      const userData = await UserStorageService.getUserData();
+      
+      console.log('🔐 Payment - Token available:', !!token);
+      console.log('🔐 Payment - User data available:', !!userData);
+      
+      if (token && userData) {
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        setIsAuthenticated(false);
+        setError('Please log in to view payment records');
+        setLoading(false);
+        return false;
+      }
+    } catch (err) {
+      console.error('❌ Error checking auth:', err);
+      setIsAuthenticated(false);
+      setError('Authentication error');
+      setLoading(false);
+      return false;
+    }
+  }, []);
 
-    // PayMaya transactions
-    {
-      id: 6,
-      date: "2024-03-20",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "PayMaya",
-      reference: "PM240320006",
-    },
-    {
-      id: 7,
-      date: "2024-02-20",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "PayMaya",
-      reference: "PM240220007",
-    },
-    {
-      id: 8,
-      date: "2024-01-20",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "PayMaya",
-      reference: "PM240120008",
-    },
-    {
-      id: 9,
-      date: "2023-12-20",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Pending",
-      method: "PayMaya",
-      reference: "PM231220009",
-    },
-    {
-      id: 10,
-      date: "2023-11-20",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "PayMaya",
-      reference: "PM231120010",
-    },
+  // Fetch payment records on component mount
+  const fetchPaymentRecords = useCallback(async () => {
+    try {
+      setError(null);
+      
+      // Check auth first
+      const isAuth = await checkAuth();
+      if (!isAuth) {
+        return;
+      }
+      
+      console.log('📋 Fetching payment records...');
+      
+      // Fetch paginated records for main view (first 8)
+      const response = await ApiService.getPaymentRecords(1, 8);
+      
+      if (response.success) {
+        setPaymentRecords(response.data);
+        console.log('✅ Payment records loaded:', response.data.length);
+      } else {
+        setError(response.message || 'Failed to load payment records');
+        console.error('❌ Failed to fetch payment records:', response.message);
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('❌ Error fetching payment records:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [checkAuth]);
 
-    // Bank Transfer transactions
-    {
-      id: 11,
-      date: "2024-03-25",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "Bank Transfer",
-      reference: "BT240325011",
-    },
-    {
-      id: 12,
-      date: "2024-02-25",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "Bank Transfer",
-      reference: "BT240225012",
-    },
-    {
-      id: 13,
-      date: "2024-01-25",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Pending",
-      method: "Bank Transfer",
-      reference: "BT240125013",
-    },
-    {
-      id: 14,
-      date: "2023-12-25",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "Bank Transfer",
-      reference: "BT231225014",
-    },
-    {
-      id: 15,
-      date: "2023-11-25",
-      description: "Monthly Stall Rent",
-      amount: "₱5,000.00",
-      status: "Paid",
-      method: "Bank Transfer",
-      reference: "BT231125015",
-    },
-  ];
-
-  // Filter transactions based on selected payment method
-  const getFilteredRecords = () => {
-    if (!selectedPaymentMethod) return allPaymentRecords;
-
-    return allPaymentRecords.filter(
-      (record) =>
-        record.method.toLowerCase() === selectedPaymentMethod.name.toLowerCase()
-    );
+  // Fetch all records for the modal
+  const fetchAllPaymentRecords = async () => {
+    try {
+      console.log('📋 Fetching all payment records for modal...');
+      const response = await ApiService.getAllPaymentRecords();
+      
+      if (response.success) {
+        setAllPaymentRecords(response.data);
+        console.log('✅ All payment records loaded:', response.data.length);
+      } else {
+        console.error('❌ Failed to fetch all payment records:', response.message);
+      }
+    } catch (err) {
+      console.error('❌ Error fetching all payment records:', err);
+    }
   };
 
-  // Get records for main table (limited view)
-  const getMainTableRecords = () => {
-    const filteredRecords = getFilteredRecords();
-    return filteredRecords.slice(0, 8); // Show only first 8 records
-  };
+  useEffect(() => {
+    fetchPaymentRecords();
+  }, [fetchPaymentRecords]);
 
-  const paymentRecords = getMainTableRecords();
-  const allFilteredRecords = getFilteredRecords(); // For modal
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchPaymentRecords();
+  }, [fetchPaymentRecords]);
+
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "paid":
+      case "completed":
         return "#10B981";
       case "pending":
         return "#F59E0B";
       case "failed":
+      case "cancelled":
         return "#EF4444";
       default:
         return "#6B7280";
@@ -183,27 +131,35 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
   };
 
   const getMethodColor = (method) => {
-    switch (method.toLowerCase()) {
+    switch (method?.toLowerCase()) {
       case "gcash":
         return "#007DFE";
       case "paymaya":
+      case "maya":
         return "#00D632";
       case "bank transfer":
+      case "bank_transfer":
         return "#FF6B35";
+      case "onsite":
+        return "#8B5CF6";
+      case "online":
+        return "#06B6D4";
+      case "check":
+        return "#EC4899";
       default:
         return "#6B7280";
     }
   };
 
   const renderPaymentRecord = (record) => (
-    <TouchableOpacity key={record.id} style={styles.recordCard}>
+    <TouchableOpacity key={record.id} style={[styles.recordCard, { backgroundColor: isDark ? colors.surface : '#FAFBFC' }]}>
       <View style={styles.recordHeader}>
-        <Text style={styles.recordDescription}>{record.description}</Text>
+        <Text style={[styles.recordDescription, { color: colors.text }]}>{record.description}</Text>
         <Text style={styles.recordAmount}>{record.amount}</Text>
       </View>
 
       <View style={styles.recordDetails}>
-        <Text style={styles.recordDate}>{record.date}</Text>
+        <Text style={[styles.recordDate, { color: colors.textSecondary }]}>{record.date}</Text>
         <View style={styles.recordMeta}>
           <View
             style={[
@@ -230,7 +186,9 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
     </TouchableOpacity>
   );
 
-  const handleViewAllPress = () => {
+  const handleViewAllPress = async () => {
+    // Fetch all records when opening the modal
+    await fetchAllPaymentRecords();
     setShowViewAllModal(true);
   };
 
@@ -238,19 +196,89 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
     setShowViewAllModal(false);
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.card }]}>
+        <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.tableTitle, { color: colors.text }]}>
+            Transaction History
+          </Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary || "#007AFF"} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading payment records...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    const isAuthError = error.toLowerCase().includes('authentication') || error.toLowerCase().includes('token') || error.toLowerCase().includes('log in');
+    
+    return (
+      <View style={[styles.container, { backgroundColor: colors.card }]}>
+        <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.tableTitle, { color: colors.text }]}>
+            Transaction History
+          </Text>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons 
+            name={isAuthError ? "log-in-outline" : "alert-circle-outline"} 
+            size={48} 
+            color={isAuthError ? "#F59E0B" : "#EF4444"} 
+          />
+          <Text style={[styles.errorText, { color: colors.text }]}>
+            {isAuthError ? "Session Expired" : "Error"}
+          </Text>
+          <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
+            {isAuthError 
+              ? "Please log out and log in again to view your payment records." 
+              : error}
+          </Text>
+          {!isAuthError && (
+            <TouchableOpacity style={styles.retryButton} onPress={fetchPaymentRecords}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // Empty state
+  if (paymentRecords.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.card }]}>
+        <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.tableTitle, { color: colors.text }]}>
+            Transaction History
+          </Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="receipt-outline" size={48} color={colors.textSecondary} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>No payment records found</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            Your payment history will appear here
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <View style={styles.tableHeader}>
-        <Text style={styles.tableTitle}>
-          {selectedPaymentMethod
-            ? `${selectedPaymentMethod.name} Record Transactions`
-            : "Payment Records"}
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
+      <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.tableTitle, { color: colors.text }]}>
+          Transaction History
         </Text>
         <TouchableOpacity
-          style={styles.viewAllButton}
+          style={[styles.viewAllButton, { backgroundColor: isDark ? colors.surface : '#F8FAFC', borderColor: colors.border }]}
           onPress={handleViewAllPress}
         >
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={[styles.viewAllText, { color: colors.textSecondary }]}>View All</Text>
         </TouchableOpacity>
       </View>
 
@@ -259,6 +287,14 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
         showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
         contentContainerStyle={{ paddingBottom: 16 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary || "#007AFF"]}
+            tintColor={colors.primary || "#007AFF"}
+          />
+        }
       >
         {paymentRecords.map(renderPaymentRecord)}
       </ScrollView>
@@ -267,8 +303,9 @@ const PaymentTable = ({ selectedPaymentMethod }) => {
       <ViewAllTable
         visible={showViewAllModal}
         onClose={handleCloseModal}
-        paymentRecords={allFilteredRecords}
+        paymentRecords={allPaymentRecords}
         selectedPaymentMethod={selectedPaymentMethod}
+        theme={theme}
       />
     </View>
   );

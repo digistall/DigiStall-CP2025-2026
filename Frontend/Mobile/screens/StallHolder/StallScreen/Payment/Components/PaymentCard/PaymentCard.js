@@ -6,13 +6,26 @@ import {
   Dimensions,
   Animated,
   Image,
+  ImageBackground,
 } from "react-native";
 import { styles } from "./PaymentCardStyles";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.75 + 12;
 
-const PaymentCard = ({ onPaymentMethodSelect }) => {
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    card: '#ffffff',
+    text: '#333',
+    textSecondary: '#6b7280',
+    border: '#e5e7eb',
+  }
+};
+
+const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment, theme = defaultTheme, isDark = false }) => {
+  const colors = theme?.colors || defaultTheme.colors;
   const [selectedCard, setSelectedCard] = useState(0);
   const scrollViewRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -27,6 +40,7 @@ const PaymentCard = ({ onPaymentMethodSelect }) => {
       gradientColors: ["#007DFE", "#0056D6"],
       description: "Pay with your GCash wallet",
       logo: require("../../../../../../assets/gcash-logo.png"),
+      backgroundImage: require("../../../../../../assets/gcash-logo.png"),
     },
     {
       id: "paymaya",
@@ -36,7 +50,8 @@ const PaymentCard = ({ onPaymentMethodSelect }) => {
       backgroundColor: "#E8F8ED",
       gradientColors: ["#00D632", "#00A827"],
       description: "Pay with your PayMaya account",
-      logo: require("../../../../../../assets/pay-maya-logo.png"),
+      logo: require("../../../../../../assets/maya.png"),
+      backgroundImage: require("../../../../../../assets/maya.png"),
     },
     {
       id: "bank",
@@ -46,7 +61,8 @@ const PaymentCard = ({ onPaymentMethodSelect }) => {
       backgroundColor: "#FFF2E6",
       gradientColors: ["#FF6B35", "#E55A2B"],
       description: "Pay via bank transfer",
-      logo: null,
+      logo: require("../../../../../../assets/bank-image.png"),
+      backgroundImage: require("../../../../../../assets/bank-image.png"),
     },
   ];
 
@@ -85,62 +101,69 @@ const PaymentCard = ({ onPaymentMethodSelect }) => {
 
   const renderPaymentCard = (method, index) => {
     const isSelected = selectedCard === index;
+    // Adjust background color for dark mode
+    const cardBackgroundColor = isDark 
+      ? (method.color + '20') // Add 20% opacity of the method color in dark mode
+      : method.backgroundColor;
 
     return (
       <TouchableOpacity
         key={method.id}
-        style={[
-          styles.paymentCard,
-          { backgroundColor: method.backgroundColor },
-          isSelected && [
-            styles.selectedCard,
-            { borderColor: method.color }, // Dynamic border color
-          ],
-        ]}
         onPress={() => handleCardPress(index, method)}
         activeOpacity={0.8}
       >
-        <View style={styles.cardHeader}>
-          <View
-            style={[
-              styles.cardIcon,
-              { backgroundColor: method.logo ? "transparent" : method.color },
-            ]}
-          >
-            {method.logo ? (
-              <Image
-                source={method.logo}
-                style={styles.cardIconImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <Text style={styles.cardIconText}>{method.name.charAt(0)}</Text>
-            )}
+        <View
+          style={[
+            styles.paymentCard,
+            { backgroundColor: cardBackgroundColor },
+            isSelected && [styles.selectedCard, { borderColor: method.color }],
+          ]}
+        >
+          <View style={styles.cardHeader}>
+            <View
+              style={[
+                styles.cardIcon,
+                { backgroundColor: method.logo ? "transparent" : method.color },
+              ]}
+            >
+              {method.logo ? (
+                <Image
+                  source={method.logo}
+                  style={styles.cardIconImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={styles.cardIconText}>{method.name.charAt(0)}</Text>
+              )}
+            </View>
+            <View style={styles.cardInfo}>
+              <Text style={[styles.cardTitle, { color: isDark ? colors.text : '#333' }]}>{method.name}</Text>
+              <Text style={[styles.cardType, { color: isDark ? colors.textSecondary : '#6B7280' }]}>{method.type}</Text>
+            </View>
           </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{method.name}</Text>
-            <Text style={styles.cardType}>{method.type}</Text>
+
+          <Text style={[styles.cardDescription, { color: isDark ? colors.textSecondary : '#6B7280' }]}>{method.description}</Text>
+
+          <View style={styles.cardFooter}>
+            <View
+              style={[
+                styles.statusIndicator,
+                { backgroundColor: method.color },
+              ]}
+            >
+              <Text style={styles.statusText}>Available</Text>
+            </View>
           </View>
+
+          {isSelected && (
+            <View
+              style={[
+                styles.selectionIndicator,
+                { backgroundColor: method.color },
+              ]}
+            />
+          )}
         </View>
-
-        <Text style={styles.cardDescription}>{method.description}</Text>
-
-        <View style={styles.cardFooter}>
-          <View
-            style={[styles.statusIndicator, { backgroundColor: method.color }]}
-          >
-            <Text style={styles.statusText}>Available</Text>
-          </View>
-        </View>
-
-        {isSelected && (
-          <View
-            style={[
-              styles.selectionIndicator,
-              { backgroundColor: method.color },
-            ]}
-          />
-        )}
       </TouchableOpacity>
     );
   };
@@ -192,31 +215,79 @@ const PaymentCard = ({ onPaymentMethodSelect }) => {
     });
   };
 
+  const handleProceedPress = () => {
+    if (onProceedPayment) {
+      onProceedPayment(paymentMethods[selectedCard]);
+    }
+  };
+
+  // Determine which background image to use based on selected card
+  const getBackgroundImage = () => {
+    const selectedMethod = paymentMethods[selectedCard];
+    return selectedMethod?.backgroundImage || null;
+  };
+
+  const backgroundImage = getBackgroundImage();
+  const WrapperComponent = backgroundImage ? ImageBackground : View;
+  const wrapperProps = backgroundImage
+    ? {
+        source: backgroundImage,
+        style: styles.mainContainer,
+        imageStyle: styles.mainBackgroundImage,
+        resizeMode: "cover",
+      }
+    : {
+        style: styles.mainContainer,
+      };
+
+  // Override wrapper props for dark mode
+  const themedWrapperProps = backgroundImage
+    ? wrapperProps
+    : {
+        style: [styles.mainContainer, { backgroundColor: colors.card }],
+      };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Select Payment Method</Text>
+    <WrapperComponent {...themedWrapperProps}>
+      {/* Semi-transparent overlay for better visibility */}
+      {backgroundImage && <View style={styles.mainOverlay} />}
 
-      <Animated.ScrollView
-        ref={scrollViewRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContainer}
-        snapToInterval={CARD_WIDTH}
-        decelerationRate="fast"
-        snapToAlignment="start"
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        pagingEnabled={false}
-      >
-        {paymentMethods.map((method, index) =>
-          renderPaymentCard(method, index)
-        )}
-      </Animated.ScrollView>
+      <View style={styles.container}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Payment Method</Text>
 
-      <View style={styles.indicatorContainer}>
-        {renderAnimatedIndicators()}
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContainer}
+          snapToInterval={CARD_WIDTH}
+          decelerationRate="fast"
+          snapToAlignment="start"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          pagingEnabled={false}
+        >
+          {paymentMethods.map((method, index) =>
+            renderPaymentCard(method, index)
+          )}
+        </Animated.ScrollView>
+
+        <View style={styles.indicatorContainer}>
+          {renderAnimatedIndicators()}
+        </View>
+
+        {/* Proceed with Payment Button */}
+        <View style={styles.buttonWrapper}>
+          <TouchableOpacity
+            style={styles.proceedButton}
+            onPress={handleProceedPress}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.proceedButtonText}>Proceed with Payment</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </WrapperComponent>
   );
 };
 

@@ -1,26 +1,67 @@
 import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
 
 // Get floors with their sections nested (useful for hierarchical display)
 export const getFloorsWithSections = async (req, res) => {
-  const branch_manager_id = req.user?.branchManagerId;
-  if (!branch_manager_id)
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+  const userType = req.user?.userType || req.user?.role;
+  const userId = req.user?.userId;
+
+  console.log("🏢 GET FLOORS WITH SECTIONS DEBUG:");
+  console.log("- User Type:", userType);
+  console.log("- User ID:", userId);
+
+  if (!userId) {
+    return res.status(400).json({
+      success: false,
+      message: "User ID not found in authentication token",
+    });
+  }
   
   let connection;
   try {
     connection = await createConnection();
     
-    // Get floors for this branch manager
-    const [floors] = await connection.execute(
-      `SELECT f.floor_id as id, f.floor_number, f.floor_name as name, 
-              f.status, f.created_at
-       FROM floor f
-       INNER JOIN branch b ON f.branch_id = b.branch_id
-       INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-       WHERE bm.branch_manager_id = ?
-       ORDER BY f.floor_number ASC`,
-      [branch_manager_id]
-    );
+    // Get branch filter based on user role
+    const branchFilter = await getBranchFilter(req, connection);
+    
+    let floors = [];
+
+    if (branchFilter === null) {
+      // System administrator: Get all floors
+      const [result] = await connection.execute(
+        `SELECT f.floor_id as id, f.floor_number, f.floor_name as name, 
+                f.status, f.created_at, f.branch_id
+         FROM floor f
+         ORDER BY f.floor_number ASC`
+      );
+      floors = result;
+    } else if (branchFilter.length === 0) {
+      // No branches accessible
+      floors = [];
+    } else if (branchFilter.length === 1) {
+      // Single branch (business manager or employee)
+      const [result] = await connection.execute(
+        `SELECT f.floor_id as id, f.floor_number, f.floor_name as name, 
+                f.status, f.created_at, f.branch_id
+         FROM floor f
+         WHERE f.branch_id = ?
+         ORDER BY f.floor_number ASC`,
+        [branchFilter[0]]
+      );
+      floors = result;
+    } else {
+      // Multiple branches (business owner)
+      const placeholders = branchFilter.map(() => '?').join(',');
+      const [result] = await connection.execute(
+        `SELECT f.floor_id as id, f.floor_number, f.floor_name as name, 
+                f.status, f.created_at, f.branch_id
+         FROM floor f
+         WHERE f.branch_id IN (${placeholders})
+         ORDER BY f.floor_number ASC`,
+        branchFilter
+      );
+      floors = result;
+    }
 
     // Get sections for each floor and count stalls
     const floorsWithSections = await Promise.all(
@@ -43,6 +84,8 @@ export const getFloorsWithSections = async (req, res) => {
         };
       })
     );
+
+    console.log(`✅ Found ${floorsWithSections.length} floors with sections for ${userType} (ID: ${userId})`);
 
     res.json({
       success: true,

@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 import { createConnection } from '../../config/database.js'
+import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB } from '../../services/mysqlDecryptionService.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
 export const mobileLogin = async (req, res) => {
@@ -17,21 +19,17 @@ export const mobileLogin = async (req, res) => {
       })
     }
 
-    // Step 1: Get applicant credentials and basic info
+    // Step 1: Get applicant credentials and basic info using stored procedure
     console.log('🔍 Looking up user:', username)
-    const [credentialRows] = await connection.execute(
-      `SELECT 
-         c.registrationid, c.applicant_id, c.user_name, c.password_hash, 
-         c.is_active, c.created_date, c.last_login,
-         a.applicant_full_name, a.applicant_contact_number, a.applicant_address,
-         a.applicant_birthdate, a.applicant_civil_status, a.applicant_educational_attainment
-       FROM credential c
-       JOIN applicant a ON c.applicant_id = a.applicant_id
-       WHERE c.user_name = ? AND c.is_active = 1`,
+    
+    const [credentialResultRows] = await connection.execute(
+      'CALL sp_getCredentialWithApplicant(?)',
       [username]
-    )
+    );
+    const credentialRows = credentialResultRows[0] || [];
 
     console.log('📋 Credential rows found:', credentialRows.length)
+    console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
 
     if (credentialRows.length === 0) {
       console.log('❌ User not found or inactive')
@@ -42,12 +40,42 @@ export const mobileLogin = async (req, res) => {
     }
 
     const userCredentials = credentialRows[0]
-    console.log('👤 Found user:', userCredentials.applicant_full_name)
+    
+    // Decrypt user credentials if encrypted
+    const decryptedCredentials = await decryptApplicantData(userCredentials)
+    
+    console.log('👤 Found user:', decryptedCredentials.applicant_full_name)
+    console.log('🔍 User credentials structure:', {
+      registrationid: decryptedCredentials.registrationid,
+      applicant_id: decryptedCredentials.applicant_id,
+      user_name: decryptedCredentials.user_name,
+      has_password_hash: !!decryptedCredentials.password_hash,
+      password_hash_preview: decryptedCredentials.password_hash?.substring(0, 15) + '...',
+      applicant_full_name: decryptedCredentials.applicant_full_name,
+      is_active: decryptedCredentials.is_active
+    })
 
     // Verify password
     console.log('🔐 Verifying password...')
-    const isPasswordValid = await bcrypt.compare(password, userCredentials.password_hash)
-    console.log('🔑 Password valid:', isPasswordValid)
+    console.log('🔍 Password hash format:', decryptedCredentials.password_hash?.substring(0, 10) + '...')
+    
+    let isPasswordValid = false
+    
+    try {
+      // First try bcrypt comparison (for properly hashed passwords)
+      if (decryptedCredentials.password_hash?.startsWith('$2b$') || decryptedCredentials.password_hash?.startsWith('$2a$')) {
+        isPasswordValid = await bcrypt.compare(password, decryptedCredentials.password_hash)
+        console.log('🔑 BCrypt comparison result:', isPasswordValid)
+      } else {
+        // Fallback for legacy plain text passwords (temporary fix)
+        isPasswordValid = password === decryptedCredentials.password_hash
+        console.log('⚠️ Using plain text password comparison for user:', username)
+        console.log('🔑 Plain text comparison result:', isPasswordValid)
+      }
+    } catch (error) {
+      console.error('❌ Password verification error:', error)
+      isPasswordValid = false
+    }
     
     if (!isPasswordValid) {
       console.log('❌ Invalid password')
@@ -61,25 +89,14 @@ export const mobileLogin = async (req, res) => {
 
     // Step 2: Get areas where this applicant has applied (to fetch relevant stalls)
     const [appliedAreas] = await connection.execute(
-      `SELECT DISTINCT b.area, b.branch_id, b.branch_name, b.location
-       FROM application app
-       JOIN stall st ON app.stall_id = st.stall_id
-       JOIN section sec ON st.section_id = sec.section_id
-       JOIN floor f ON sec.floor_id = f.floor_id
-       JOIN branch b ON f.branch_id = b.branch_id
-       WHERE app.applicant_id = ?`,
-      [userCredentials.applicant_id]
+      'CALL getAppliedAreasByApplicant(?)',
+      [decryptedCredentials.applicant_id]
     )
 
     // If no applications yet, get all available areas
     let targetAreas = []
     if (appliedAreas.length === 0) {
-      const [allAreas] = await connection.execute(
-        `SELECT DISTINCT b.area, b.branch_id, b.branch_name, b.location
-         FROM branch b
-         WHERE b.is_active = 1
-         ORDER BY b.area`
-      )
+      const [allAreas] = await connection.execute('CALL getAllActiveBranches()')
       targetAreas = allAreas
     } else {
       targetAreas = appliedAreas
@@ -87,21 +104,8 @@ export const mobileLogin = async (req, res) => {
 
     // Step 3: Get applicant's current applications with detailed info
     const [myApplications] = await connection.execute(
-      `SELECT 
-         app.application_id, app.stall_id, app.application_date, app.application_status,
-         app.created_at, app.updated_at,
-         st.stall_no, st.stall_location, st.size, st.rental_price, st.price_type,
-         st.status as stall_status, st.description, st.stall_image,
-         sec.section_name, f.floor_name, b.branch_name, b.area, b.location as branch_location,
-         b.branch_id
-       FROM application app
-       JOIN stall st ON app.stall_id = st.stall_id
-       JOIN section sec ON st.section_id = sec.section_id
-       JOIN floor f ON st.floor_id = f.floor_id
-       JOIN branch b ON f.branch_id = b.branch_id
-       WHERE app.applicant_id = ?
-       ORDER BY app.created_at DESC`,
-      [userCredentials.applicant_id]
+      'CALL getApplicantApplicationsDetailed(?)',
+      [decryptedCredentials.applicant_id]
     )
 
     // Step 4: Count applications per branch (for 2-application limit)
@@ -112,37 +116,19 @@ export const mobileLogin = async (req, res) => {
     })
 
     // Step 5: Get available stalls in the areas where applicant applied (or all areas if no applications)
-    const areaConditions = targetAreas.map(() => 'b.area = ?').join(' OR ')
+    const [availableStalls] = await connection.execute(
+      'CALL getAvailableStallsByApplicant(?)',
+      [decryptedCredentials.applicant_id]
+    )
+    
+    // Filter by target areas if specific areas are applied
     const areaValues = targetAreas.map(area => area.area)
-
-    let stallsQuery = `
-      SELECT 
-        st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
-        sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
-        b.branch_name, b.area, b.location, b.branch_id,
-        CASE 
-          WHEN app_check.stall_id IS NOT NULL THEN 'applied'
-          ELSE 'available'
-        END as application_status
-      FROM stall st
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
-      WHERE st.is_available = 1 AND st.status = 'Active'`
-
-    if (areaValues.length > 0) {
-      stallsQuery += ` AND (${areaConditions})`
-    }
-
-    stallsQuery += ' ORDER BY b.branch_name, f.floor_name, sec.section_name, st.stall_no'
-
-    const queryParams = [userCredentials.applicant_id, ...areaValues]
-    const [availableStalls] = await connection.execute(stallsQuery, queryParams)
+    const filteredStalls = areaValues.length > 0 
+      ? availableStalls.filter(stall => areaValues.includes(stall.area))
+      : availableStalls
 
     // Step 6: Add additional metadata for React components
-    const stallsWithMetadata = availableStalls.map(stall => ({
+    const stallsWithMetadata = filteredStalls.map(stall => ({
       ...stall,
       can_apply: stall.application_status === 'available' && 
                  (branchApplicationCounts[stall.branch_id] || 0) < 2,
@@ -150,48 +136,142 @@ export const mobileLogin = async (req, res) => {
       max_applications_reached: (branchApplicationCounts[stall.branch_id] || 0) >= 2
     }))
 
-    // Step 7: Get additional applicant information
-    const [otherInfo] = await connection.execute(
-      `SELECT oi.email_address, oi.signature_of_applicant, oi.house_sketch_location, oi.valid_id,
-              bi.nature_of_business, bi.capitalization, bi.source_of_capital, 
-              bi.previous_business_experience, bi.relative_stall_owner,
-              s.spouse_full_name, s.spouse_birthdate, s.spouse_educational_attainment,
-              s.spouse_contact_number, s.spouse_occupation
-       FROM applicant a
-       LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
-       LEFT JOIN business_information bi ON a.applicant_id = bi.applicant_id
-       LEFT JOIN spouse s ON a.applicant_id = s.applicant_id
-       WHERE a.applicant_id = ?`,
-      [userCredentials.applicant_id]
+    // Step 7: Get additional applicant information (spouse, business, other info)
+    const otherInfoResultRaw = await connection.execute(
+      'CALL getApplicantAdditionalInfo(?)',
+      [decryptedCredentials.applicant_id]
     )
+    // Stored procedure returns [[rows], metadata] structure
+    // connection.execute returns [[[actual_data], procedure_metadata], query_metadata]
+    // We need to extract: [0] = [[actual_data], proc_metadata], [0][0] = [actual_data], [0][0][0] = actual_data object
+    const additionalInfoRows = otherInfoResultRaw[0] // This gives [[actual_data], proc_metadata]
+    let additionalInfo = additionalInfoRows && additionalInfoRows.length > 0 && additionalInfoRows[0] && additionalInfoRows[0].length > 0 
+      ? additionalInfoRows[0][0] 
+      : {}
+    
+    // Decrypt spouse data if present
+    if (additionalInfo && additionalInfo.spouse_full_name) {
+      additionalInfo = await decryptSpouseData(additionalInfo)
+    }
+    console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
-    const additionalInfo = otherInfo.length > 0 ? otherInfo[0] : {}
+    // Step 7b: Get stallholder information if user is a stallholder using stored procedure
+    const [stallholderRows] = await connection.execute(
+      'CALL sp_getFullStallholderInfo(?)',
+      [decryptedCredentials.applicant_id]
+    )
+    
+    let stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
+    // Decrypt stallholder data if present
+    if (stallholderInfo) {
+      stallholderInfo = await decryptStallholderData(stallholderInfo)
+    }
+    console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
-    // Step 8: Update last login
+    // Step 7c: Get application status using stored procedure
+    const [applicationRows] = await connection.execute(
+      'CALL sp_getLatestApplicationInfo(?)',
+      [decryptedCredentials.applicant_id]
+    )
+    
+    const applicationInfo = applicationRows[0]?.length > 0 ? applicationRows[0][0] : null
+    console.log('📄 Application info:', applicationInfo ? applicationInfo.status : 'No application')
+
+    // Step 8: Update last login using stored procedure
     await connection.execute(
-      'UPDATE credential SET last_login = NOW() WHERE applicant_id = ?',
-      [userCredentials.applicant_id]
+      'CALL updateCredentialLastLogin(?)',
+      [decryptedCredentials.applicant_id]
     )
 
-    // Step 9: Prepare React.js-friendly response
+    // Step 9: Prepare React.js-friendly response with complete user data (using decrypted data)
     const responseData = {
       // User profile for React state
       user: {
-        applicant_id: userCredentials.applicant_id,
-        registration_id: userCredentials.registrationid,
-        username: userCredentials.user_name,
-        full_name: userCredentials.applicant_full_name,
-        contact_number: userCredentials.applicant_contact_number,
-        address: userCredentials.applicant_address,
-        birthdate: userCredentials.applicant_birthdate,
-        civil_status: userCredentials.applicant_civil_status,
-        educational_attainment: userCredentials.applicant_educational_attainment,
-        email: additionalInfo.email_address || null, // Get email from other_information table
-        created_date: userCredentials.created_date,
+        applicant_id: decryptedCredentials.applicant_id,
+        registration_id: decryptedCredentials.registrationid,
+        username: decryptedCredentials.user_name,
+        full_name: stallholderInfo?.stallholder_name || decryptedCredentials.applicant_full_name,
+        stallholder_name: stallholderInfo?.stallholder_name || null,
+        contact_number: stallholderInfo?.stallholder_contact || decryptedCredentials.applicant_contact_number,
+        address: decryptedCredentials.applicant_address,
+        birthdate: decryptedCredentials.applicant_birthdate,
+        civil_status: decryptedCredentials.applicant_civil_status,
+        educational_attainment: decryptedCredentials.applicant_educational_attainment,
+        email: stallholderInfo?.stallholder_email || additionalInfo.email_address || null,
+        stall_number: stallholderInfo?.stall_no || null,
+        created_date: decryptedCredentials.created_date,
         last_login: new Date().toISOString()
       },
 
-      // Additional profile information
+      // Spouse information (separate object for frontend)
+      spouse: additionalInfo.spouse_full_name ? {
+        spouse_id: null, // Not available in current query
+        full_name: additionalInfo.spouse_full_name,
+        birthdate: additionalInfo.spouse_birthdate,
+        educational_attainment: additionalInfo.spouse_educational_attainment,
+        contact_number: additionalInfo.spouse_contact_number,
+        occupation: additionalInfo.spouse_occupation
+      } : null,
+
+      // Business information (separate object for frontend)
+      business: additionalInfo.nature_of_business ? {
+        business_id: null,
+        nature_of_business: additionalInfo.nature_of_business,
+        capitalization: additionalInfo.capitalization,
+        source_of_capital: additionalInfo.source_of_capital,
+        previous_business_experience: additionalInfo.previous_business_experience,
+        relative_stall_owner: additionalInfo.relative_stall_owner
+      } : null,
+
+      // Other information (separate object for frontend)
+      other_info: additionalInfo.email_address ? {
+        other_info_id: null,
+        email_address: additionalInfo.email_address,
+        signature_of_applicant: additionalInfo.signature_of_applicant,
+        house_sketch_location: additionalInfo.house_sketch_location,
+        valid_id: additionalInfo.valid_id
+      } : null,
+
+      // Application information
+      application: applicationInfo ? {
+        application_id: applicationInfo.application_id,
+        stall_id: applicationInfo.stall_id,
+        status: applicationInfo.status,
+        stall_no: applicationInfo.stall_no,
+        rental_price: applicationInfo.rental_price,
+        branch_name: applicationInfo.branch_name
+      } : null,
+
+      // Stallholder information (if user is a stallholder)
+      stallholder: stallholderInfo ? {
+        stallholder_id: stallholderInfo.stallholder_id,
+        stallholder_name: stallholderInfo.stallholder_name,
+        contact_number: stallholderInfo.stallholder_contact,
+        email: stallholderInfo.stallholder_email,
+        address: stallholderInfo.stallholder_address,
+        business_name: stallholderInfo.business_name,
+        business_type: stallholderInfo.business_type,
+        branch_id: stallholderInfo.branch_id,
+        branch_name: stallholderInfo.branch_name,
+        stall_id: stallholderInfo.stall_id,
+        stall_no: stallholderInfo.stall_no,
+        stall_number: stallholderInfo.stall_no, // Alias for frontend
+        stall_location: stallholderInfo.stall_location,
+        size: stallholderInfo.size,
+        contract_start_date: stallholderInfo.contract_start_date,
+        contract_end_date: stallholderInfo.contract_end_date,
+        contract_status: stallholderInfo.contract_status,
+        monthly_rent: stallholderInfo.monthly_rent,
+        payment_status: stallholderInfo.payment_status,
+        compliance_status: stallholderInfo.compliance_status
+      } : null,
+
+      // Computed fields for easy access
+      isStallholder: !!stallholderInfo,
+      isApproved: applicationInfo?.status === 'Approved',
+      applicationStatus: applicationInfo?.status || 'No Application',
+
+      // Legacy profile structure (for backward compatibility)
       profile: {
         other_info: {
           email_address: additionalInfo.email_address,
@@ -240,18 +320,43 @@ export const mobileLogin = async (req, res) => {
       }
     }
 
+    // Generate JWT token for authentication
+    const token = jwt.sign(
+      {
+        userId: decryptedCredentials.applicant_id,
+        applicantId: decryptedCredentials.applicant_id,
+        username: decryptedCredentials.user_name,
+        userType: 'stallholder',
+        registrationId: decryptedCredentials.registrationid,
+        stallholderId: stallholderInfo?.stallholder_id || null,
+        isStallholder: !!stallholderInfo
+      },
+      process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024',
+      { expiresIn: '7d' } // Token valid for 7 days
+    );
+    
+    console.log('🔐 JWT token generated for user:', decryptedCredentials.user_name);
+
     res.json({
       success: true,
       message: 'Mobile login successful',
+      token: token,  // ← TOKEN NOW INCLUDED!
       data: responseData
     })
 
   } catch (error) {
-    console.error('Mobile login error:', error)
+    console.error('🚨 DETAILED Mobile login error:', {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      stack: error.stack,
+      username: req.body.username
+    })
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message // Always show error message for debugging
     })
   } finally {
     await connection.end()
@@ -274,12 +379,7 @@ export const submitApplication = async (req, res) => {
 
     // Check if stall is available
     const [stallCheck] = await connection.execute(
-      `SELECT st.stall_id, st.is_available, st.status, b.branch_id, b.branch_name
-       FROM stall st
-       JOIN section sec ON st.section_id = sec.section_id
-       JOIN floor f ON sec.floor_id = f.floor_id
-       JOIN branch b ON f.branch_id = b.branch_id
-       WHERE st.stall_id = ?`,
+      'CALL getStallWithBranchInfo(?)',
       [stall_id]
     )
 
@@ -301,7 +401,7 @@ export const submitApplication = async (req, res) => {
 
     // Check if applicant already applied for this stall
     const [existingApplication] = await connection.execute(
-      'SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ?',
+      'CALL checkExistingApplication(?, ?)',
       [applicant_id, stall_id]
     )
 
@@ -312,16 +412,12 @@ export const submitApplication = async (req, res) => {
       })
     }
 
-    // Check 2-application limit per branch
-    const [branchApplications] = await connection.execute(
-      `SELECT COUNT(*) as count FROM application app
-       JOIN stall st ON app.stall_id = st.stall_id
-       JOIN section sec ON st.section_id = sec.section_id
-       JOIN floor f ON sec.floor_id = f.floor_id
-       JOIN branch b ON f.branch_id = b.branch_id
-       WHERE app.applicant_id = ? AND b.branch_id = ?`,
+    // Check 2-application limit per branch using stored procedure
+    const [branchAppRows] = await connection.execute(
+      'CALL sp_countBranchApplicationsForApplicant(?, ?)',
       [applicant_id, stall.branch_id]
     )
+    const branchApplications = branchAppRows[0]
 
     if (branchApplications[0].count >= 2) {
       return res.status(400).json({
@@ -330,18 +426,17 @@ export const submitApplication = async (req, res) => {
       })
     }
 
-    // Submit the application
-    const [insertResult] = await connection.execute(
-      `INSERT INTO application (applicant_id, stall_id, application_date, application_status, created_at, updated_at)
-       VALUES (?, ?, NOW(), 'Pending', NOW(), NOW())`,
-      [applicant_id, stall_id]
+    // Submit the application using stored procedure
+    const [[insertResult]] = await connection.execute(
+      'CALL createApplication(?, ?, NOW(), ?)',
+      [applicant_id, stall_id, 'Pending']
     )
 
     res.json({
       success: true,
       message: 'Application submitted successfully',
       data: {
-        application_id: insertResult.insertId,
+        application_id: insertResult.application_id,
         stall_id: stall_id,
         applicant_id: applicant_id,
         status: 'Pending',

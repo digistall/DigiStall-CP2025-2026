@@ -3,6 +3,11 @@
   padding-left: 0 !important;
 }
 
+/* Complaints main content - position relative for contained loading overlay */
+.complaints-main-content {
+  position: relative;
+}
+
 .main-wrapper {
   margin-left: 80px; /* Fixed margin - no longer changes with sidebar expansion */
   transition: none; /* Remove transition to prevent shifting */

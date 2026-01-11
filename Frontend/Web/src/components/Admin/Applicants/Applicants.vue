@@ -5,6 +5,13 @@
       <!-- Main Content -->
       <v-main>
         <v-container fluid class="main-content">
+          <!-- Standardized Loading Overlay -->
+          <LoadingOverlay 
+            :loading="loading && currentApplicantType === 'Stall Applicants'" 
+            text="Loading stall applicants..."
+            :full-page="false"
+          />
+          
           <v-row>
             <v-col cols="12">
               <!-- Page Title with Dropdown -->
@@ -43,22 +50,17 @@
               <!-- Search and Filter Section -->
               <VendorSearchFilter @search="handleSearch" @filter="handleFilter" />
 
-              <!-- Loading State -->
-              <div
-                v-if="loading && currentApplicantType === 'Stall Applicants'"
-                class="text-center py-8"
-              >
-                <v-progress-circular
-                  indeterminate
-                  color="primary"
-                  size="64"
-                ></v-progress-circular>
-                <p class="mt-4 text-h6">Loading stall applicants...</p>
-              </div>
+              <!-- Toast Notification -->
+              <ToastNotification
+                :show="toast.show"
+                :message="toast.message"
+                :type="toast.type"
+                @close="toast.show = false"
+              />
 
               <!-- Error State -->
               <div
-                v-else-if="error && currentApplicantType === 'Stall Applicants'"
+                v-if="error && currentApplicantType === 'Stall Applicants'"
                 class="text-center py-8"
               >
                 <v-icon color="error" size="64">mdi-alert-circle</v-icon>
@@ -71,7 +73,7 @@
 
               <!-- Applicants Table -->
               <VendorApplicantsTable
-                v-else
+                v-if="!loading && !error"
                 :applicants="filteredApplicants"
                 :applicant-type="currentApplicantType"
                 @accept="handleAccept"

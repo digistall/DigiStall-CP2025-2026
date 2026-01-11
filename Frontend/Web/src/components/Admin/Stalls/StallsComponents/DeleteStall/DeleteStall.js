@@ -17,10 +17,6 @@ export default {
   data() {
     return {
       loading: false,
-      showSuccessPopup: false,
-      popupState: 'loading', // 'loading' or 'success'
-      successMessage: '',
-      popupTimeout: null,
       // API base URL
       apiBaseUrl: (() => {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -29,43 +25,6 @@ export default {
     }
   },
   methods: {
-    showSuccessAnimation(message) {
-      console.log('🎬 Showing delete success animation...')
-      console.log(`✅ Success message: ${message}`)
-
-      this.successMessage = message
-      this.popupState = 'loading'
-      this.showSuccessPopup = true
-
-      // Transition to success state after loading animation
-      setTimeout(() => {
-        console.log('🎉 Transitioning to success state')
-        this.popupState = 'success'
-
-        // Auto close after 2 seconds
-        this.popupTimeout = setTimeout(() => {
-          console.log('⏰ Auto-closing success popup')
-          this.closeSuccessPopup()
-        }, 2000)
-      }, 1500)
-    },
-
-    closeSuccessPopup() {
-      console.log('🚪 Closing success popup and returning to main view')
-
-      if (this.popupTimeout) {
-        clearTimeout(this.popupTimeout)
-        this.popupTimeout = null
-      }
-      this.showSuccessPopup = false
-      this.popupState = 'loading'
-      this.successMessage = ''
-      this.loading = false
-
-      // Close the main modal after success popup closes
-      this.handleCancel()
-    },
-
     async handleConfirmDelete() {
       // Check for stall ID using correct field names from backend
       const stallId = this.stallData.stall_id || this.stallData.ID || this.stallData.id
@@ -92,8 +51,13 @@ export default {
         const token = sessionStorage.getItem('authToken')
 
         if (!token) {
-          this.$emit('error', 'Authentication token not found. Please login again.')
-          this.$router.push('/login')
+          this.$emit('error', {
+            message: '🔒 Authentication Required: Please login again to continue.',
+            error: new Error('Authentication token not found')
+          })
+          setTimeout(() => {
+            this.$router.push('/login')
+          }, 2000)
           return
         }
 
@@ -123,8 +87,13 @@ export default {
 
         if (!response.ok) {
           if (response.status === 401) {
-            this.$emit('error', 'Session expired. Please login again.')
-            this.$router.push('/login')
+            this.$emit('error', {
+              message: '🔒 Session Expired: Please login again to continue.',
+              error: new Error('Session expired')
+            })
+            setTimeout(() => {
+              this.$router.push('/login')
+            }, 2000)
             return
           } else if (response.status === 403) {
             throw new Error('Access denied - you do not have permission to delete this stall')
@@ -137,9 +106,6 @@ export default {
         if (result.success) {
           console.log('✅ Stall deletion successful!')
           console.log(`🎉 Successfully deleted stall: ${stallNumber}`)
-
-          // Show success animation after API success
-          this.showSuccessAnimation(result.message || `Stall ${stallNumber} deleted successfully!`)
 
           // Emit success event to parent component
           this.$emit('deleted', {
@@ -155,6 +121,10 @@ export default {
             priceType: this.stallData?.priceType || this.stallData?.price_type,
             message: result.message || `Stall ${stallNumber} deleted successfully`,
           })
+
+          // Close the modal after successful delete
+          this.loading = false
+          this.handleCancel()
         } else {
           throw new Error(result.message || 'Failed to delete stall')
         }
@@ -167,11 +137,29 @@ export default {
         })
 
         this.loading = false
-        this.closeSuccessPopup()
+
+        // Format error message with appropriate icon
+        let errorMessage = '❌ Error: Failed to delete stall'
+        
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = '❌ Network Error: Unable to connect to server. Please check your connection and try again.'
+        } else if (error.message.includes('Application records exist') || error.message.includes('Stallholder records exist')) {
+          errorMessage = `⚠️ Cannot Delete: ${error.message}. Please archive the stall instead.`
+        } else if (error.message.includes('Access denied')) {
+          errorMessage = `🚫 Access Denied: ${error.message}`
+        } else if (error.message.includes('Stall not found')) {
+          errorMessage = `⚠️ Not Found: ${error.message}`
+        } else if (error.message.includes('Auction records exist') || error.message.includes('Raffle records exist')) {
+          errorMessage = `⚠️ Cannot Delete: ${error.message}. Archive stall instead of deleting.`
+        } else if (error.message.includes('Violation reports exist')) {
+          errorMessage = `⚠️ Cannot Delete: ${error.message}. Archive stall instead of deleting.`
+        } else if (error.message) {
+          errorMessage = `❌ Error: ${error.message}`
+        }
 
         // Emit error event to parent component
         this.$emit('error', {
-          message: error.message || 'Failed to delete stall',
+          message: errorMessage,
           error: error,
         })
       }

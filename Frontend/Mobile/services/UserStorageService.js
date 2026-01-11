@@ -121,6 +121,29 @@ class UserStorageService {
     }
   }
 
+  // Save authentication token (JWT)
+  static async saveAuthToken(token) {
+    try {
+      if (!token) return false;
+      await AsyncStorage.setItem(this.AUTH_TOKEN_KEY, token);
+      return true;
+    } catch (error) {
+      console.error('Error saving auth token:', error);
+      return false;
+    }
+  }
+
+  // Get stored authentication token
+  static async getAuthToken() {
+    try {
+      const token = await AsyncStorage.getItem(this.AUTH_TOKEN_KEY);
+      return token || null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  }
+
   // Check if user is logged in (updated for new backend structure)
   static async isLoggedIn() {
     try {

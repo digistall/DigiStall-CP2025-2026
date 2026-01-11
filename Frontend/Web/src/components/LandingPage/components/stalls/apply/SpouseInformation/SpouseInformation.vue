@@ -1,23 +1,54 @@
 <template>
     <div class="overlay">
         <div class="form-container">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div v-for="step in totalSteps" :key="step" class="step-dot" 
+                    :class="{ 'active': step === currentStep, 'completed': step < currentStep }">
+                    {{ step }}
+                </div>
+            </div>
+            
             <h3>Spouse Information</h3>
+
+            <!-- Error Message Display -->
+            <div v-if="errorMessage" class="error-message-box">
+                <span class="error-text">{{ errorMessage }}</span>
+            </div>
+
             <form @submit.prevent>
                 <label>
                     Full Name of Spouse:
-                    <input type="text" v-model="spouseName" :required="personalInfo.civilStatus !== 'Single'" />
+                    <input type="text" v-model="spouseName" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.spouseName }" />
                 </label>
 
                 <label>
                     Date of Birth of Spouse:
-                    <input type="date" v-model="spouseBirthdate" :required="personalInfo.civilStatus !== 'Single'" />
-                    <span v-if="calculatedSpouseAge !== null" class="age-display">Age: {{ calculatedSpouseAge }} years
+                    <input type="text" v-model="formattedSpouseBirthdate" @click="datePickerMenu = true" 
+                        :required="personalInfo.civilStatus !== 'Single'" readonly
+                        placeholder="Click to select date" :class="{ 'input-error': errors.spouseBirthdate }"
+                        style="cursor: pointer;" />
+                    
+                    <v-dialog v-model="datePickerMenu" width="auto" :z-index="9999999">
+                        <v-date-picker 
+                            v-model="spouseBirthdateDate" 
+                            @update:model-value="updateSpouseBirthdate" 
+                            :max="maxDate"
+                            show-adjacent-months 
+                            header="Select Birth Date"
+                        ></v-date-picker>
+                    </v-dialog>
+                    
+                    <span v-if="calculatedSpouseAge !== null" class="age-display"
+                        :class="{ 'age-error': calculatedSpouseAge < 18 }">Age: {{ calculatedSpouseAge }} years
                         old</span>
                 </label>
 
                 <label>
                     Educational Attainment of Spouse:
-                    <select v-model="spouseEducation" :required="personalInfo.civilStatus !== 'Single'">
+                    <select v-model="spouseEducation" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.spouseEducation }">
                         <option disabled value="">Please select</option>
                         <option v-for="level in educationLevels" :key="level" :value="level">
                             {{ level }}
@@ -27,12 +58,15 @@
 
                 <label>
                     Occupation:
-                    <input type="text" v-model="occupation" :required="personalInfo.civilStatus !== 'Single'" />
+                    <input type="text" v-model="occupation" :required="personalInfo.civilStatus !== 'Single'"
+                        :class="{ 'input-error': errors.occupation }" />
                 </label>
 
                 <label>
                     Contact Number:
-                    <input type="tel" v-model="spouseContact" :required="personalInfo.civilStatus !== 'Single'" />
+                    <input type="tel" v-model="spouseContact" :required="personalInfo.civilStatus !== 'Single'"
+                        placeholder="09XXXXXXXXX" :class="{ 'input-error': errors.spouseContact }" />
+                    <small class="input-hint">Format: 09XXXXXXXXX (11 digits)</small>
                 </label>
 
                 <div class="children-section">
@@ -59,12 +93,26 @@ export default {
     emits: ['previous', 'next'],
     props: {
         stall: Object,
-        personalInfo: Object
+        personalInfo: Object,
+        savedData: {
+            type: Object,
+            default: null
+        },
+        currentStep: {
+            type: Number,
+            default: 2
+        },
+        totalSteps: {
+            type: Number,
+            default: 4
+        }
     },
     data() {
         return {
             spouseName: '',
             spouseBirthdate: '',
+            spouseBirthdateDate: null,
+            datePickerMenu: false,
             spouseEducation: '',
             educationLevels: [
                 'No Formal Education',
@@ -77,7 +125,37 @@ export default {
             ],
             occupation: '',
             spouseContact: '',
-            childrenNames: ''
+            childrenNames: '',
+            errorMessage: '',
+            errors: {
+                spouseName: false,
+                spouseBirthdate: false,
+                spouseEducation: false,
+                occupation: false,
+                spouseContact: false
+            }
+        }
+    },
+    mounted() {
+        // Initialize form with saved data if available
+        if (this.savedData) {
+            this.spouseName = this.savedData.spouseName || '';
+            this.spouseBirthdate = this.savedData.spouseBirthdate || '';
+            this.spouseEducation = this.savedData.spouseEducation || '';
+            this.occupation = this.savedData.occupation || '';
+            this.spouseContact = this.savedData.spouseContact || '';
+            
+            // Handle children names - convert array back to string
+            if (this.savedData.childrenNames && Array.isArray(this.savedData.childrenNames)) {
+                this.childrenNames = this.savedData.childrenNames.join('\n');
+            } else {
+                this.childrenNames = '';
+            }
+            
+            // Initialize date picker date if birthdate exists
+            if (this.spouseBirthdate) {
+                this.spouseBirthdateDate = new Date(this.spouseBirthdate);
+            }
         }
     },
     computed: {
@@ -95,26 +173,81 @@ export default {
 
             return age;
         },
+        formattedSpouseBirthdate() {
+            if (!this.spouseBirthdate) return '';
+            const date = new Date(this.spouseBirthdate);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        maxDate() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        },
         childrenArray() {
             if (!this.childrenNames.trim()) return [];
             return this.childrenNames.trim().split('\n').filter(name => name.trim() !== '');
         }
     },
     methods: {
+        updateSpouseBirthdate(date) {
+            if (date) {
+                this.spouseBirthdateDate = date;
+                // Fix timezone issue by creating date in local timezone
+                const selectedDate = new Date(date);
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                this.spouseBirthdate = `${year}-${month}-${day}`;
+                this.datePickerMenu = false;
+            }
+        },
+        clearErrors() {
+            this.errorMessage = '';
+            this.errors = {
+                spouseName: false,
+                spouseBirthdate: false,
+                spouseEducation: false,
+                occupation: false,
+                spouseContact: false
+            };
+        },
+        showError(message, fields = []) {
+            this.errorMessage = message;
+            fields.forEach(field => {
+                if (this.errors.hasOwnProperty(field)) {
+                    this.errors[field] = true;
+                }
+            });
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                this.errorMessage = '';
+            }, 5000);
+        },
         goNext() {
+            this.clearErrors();
+
+            // Check required fields
             if (!this.spouseName || !this.spouseBirthdate || !this.spouseEducation || !this.occupation || !this.spouseContact) {
-                console.error("Please fill in all required fields.");
+                const missingFields = [];
+                if (!this.spouseName) missingFields.push('spouseName');
+                if (!this.spouseBirthdate) missingFields.push('spouseBirthdate');
+                if (!this.spouseEducation) missingFields.push('spouseEducation');
+                if (!this.occupation) missingFields.push('occupation');
+                if (!this.spouseContact) missingFields.push('spouseContact');
+
+                this.showError("Please fill in all required spouse information fields.", missingFields);
                 return;
             }
 
+            // Check spouse age requirement
             if (this.calculatedSpouseAge < 18) {
-                console.error("Spouse must be at least 18 years old.");
+                this.showError("Spouse must be at least 18 years old.", ['spouseBirthdate']);
                 return;
             }
 
+            // Check phone number format
             const phonePattern = /^09\d{9}$/;
             if (!phonePattern.test(this.spouseContact)) {
-                console.error("Contact number must be 11 digits and start with '09'.");
+                this.showError("Contact number must be 11 digits and start with '09' (e.g., 09123456789).", ['spouseContact']);
                 return;
             }
 
@@ -136,4 +269,24 @@ export default {
 
 <style scoped>
 @import '@/assets/LandingPage/css/applicationformstyle.css';
+</style>
+
+<!-- Unscoped styles to fix Vuetify date picker z-index -->
+<style>
+/* Force date picker to appear above the overlay (must be higher than 999999 used by application modal) */
+.v-overlay-container {
+    z-index: 9999999 !important;
+}
+
+.v-overlay.v-menu {
+    z-index: 9999999 !important;
+}
+
+.v-overlay__content {
+    z-index: 9999999 !important;
+}
+
+.v-picker {
+    z-index: 9999999 !important;
+}
 </style>

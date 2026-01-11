@@ -8,21 +8,21 @@ export const getAvailableMarkets = async (req, res) => {
 
     const [markets] = await connection.execute(`
       SELECT 
-        bm.area,
-        bm.location,
+        b.area,
+        b.location,
         COUNT(s.stall_id) as total_stalls,
         SUM(CASE WHEN s.is_available = 1 THEN 1 ELSE 0 END) as available_stalls,
         MIN(s.rental_price) as min_price,
         MAX(s.rental_price) as max_price,
         AVG(s.rental_price) as avg_price
-      FROM branch_manager bm
-      LEFT JOIN floor f ON bm.branch_manager_id = f.branch_manager_id
+      FROM branch b
+      LEFT JOIN floor f ON b.branch_id = f.branch_id
       LEFT JOIN section sec ON f.floor_id = sec.floor_id
       LEFT JOIN stall s ON sec.section_id = s.section_id AND s.status = 'Active'
-      WHERE bm.status = 'Active'
-      GROUP BY bm.area, bm.location, bm.branch_manager_id
+      WHERE b.status = 'Active'
+      GROUP BY b.area, b.location, b.branch_id
       HAVING total_stalls > 0
-      ORDER BY bm.area, bm.location
+      ORDER BY b.area, b.location
     `)
 
     res.json({

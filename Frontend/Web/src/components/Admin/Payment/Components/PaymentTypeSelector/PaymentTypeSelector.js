@@ -11,7 +11,8 @@ export default {
       showDropdown: false,
       paymentTypes: [
         { value: 'stall', label: 'Stall Applicants', icon: 'mdi-store' },
-        { value: 'vendor', label: 'Vendor Applicants', icon: 'mdi-account-tie' }
+        { value: 'vendor', label: 'Vendor Applicants', icon: 'mdi-account-tie' },
+        { value: 'penalty', label: 'Penalty Payments', icon: 'mdi-alert-circle' }
       ]
     }
   },

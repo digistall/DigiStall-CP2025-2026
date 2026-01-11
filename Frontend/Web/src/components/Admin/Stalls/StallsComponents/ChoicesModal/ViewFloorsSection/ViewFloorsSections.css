@@ -295,3 +295,57 @@
 .v-select.v-input--focused .v-field {
   box-shadow: 0 0 0 2px rgba(0, 33, 129, 0.2) !important;
 }
+
+/* Custom Snackbar Styling - White background with colored text */
+/* Using :deep() for scoped CSS to reach teleported snackbar content */
+:deep(.custom-snackbar .v-snackbar__wrapper) {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+}
+
+/* Success Snackbar - White bg, green text */
+:deep(.success-snackbar .v-snackbar__wrapper) {
+  background-color: #ffffff !important;
+  border-left: 4px solid #4caf50 !important;
+}
+
+:deep(.success-snackbar .v-snackbar__content) {
+  background-color: #ffffff !important;
+}
+
+.success-icon {
+  color: #4caf50 !important;
+}
+
+.success-text {
+  color: #2e7d32 !important;
+  font-weight: 500 !important;
+}
+
+.success-close-btn {
+  color: #4caf50 !important;
+}
+
+/* Error Snackbar - White bg, red text */
+:deep(.error-snackbar .v-snackbar__wrapper) {
+  background-color: #ffffff !important;
+  border-left: 4px solid #f44336 !important;
+}
+
+:deep(.error-snackbar .v-snackbar__content) {
+  background-color: #ffffff !important;
+}
+
+.error-icon {
+  color: #f44336 !important;
+}
+
+.error-text {
+  color: #c62828 !important;
+  font-weight: 500 !important;
+}
+
+.error-close-btn {
+  color: #f44336 !important;
+}

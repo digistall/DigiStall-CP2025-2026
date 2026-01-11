@@ -3,7 +3,7 @@
   props: {
     employees: Array,
   },
-  emits: ['edit-employee', 'manage-permissions', 'toggle-status', 'reset-password'],
+  emits: ['edit-employee', 'manage-permissions', 'toggle-status', 'reset-password', 'fire-employee'],
 
   data() {
     return {
@@ -50,8 +50,42 @@
       this.closeActionsDialog()
     },
 
+    handleFireEmployee() {
+      this.$emit('fire-employee', this.selectedEmployee)
+      this.closeActionsDialog()
+    },
+
     getStatusColor(status) {
-      return status === 'active' ? 'success' : 'warning'
+      return status?.toLowerCase() === 'active' ? 'success' : 'warning'
+    },
+
+    capitalizeStatus(status) {
+      if (!status) return 'Unknown'
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+    },
+
+    getRoleColor(employee) {
+      if (!employee) return 'primary'
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
+      }
+      return 'primary' // Web employee
+    },
+
+    getEmployeeTypeColor(employee) {
+      if (!employee) return 'primary'
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
+      }
+      return 'primary' // Web employee
+    },
+
+    getRoleIcon(employee) {
+      if (!employee) return 'mdi-account'
+      if (employee.employee_type === 'mobile') {
+        return employee.mobile_role === 'inspector' ? 'mdi-clipboard-check' : 'mdi-account-cash'
+      }
+      return 'mdi-account' // Web employee
     },
 
     getPermissionText(permission) {
@@ -65,18 +99,69 @@
         stallholders: 'Stallholders',
         collectors: 'Collectors',
         stalls: 'Stalls',
+        mobile_inspector: 'Mobile Inspector',
+        mobile_collector: 'Mobile Collector',
       }
       return permissionLabels[permission] || permission
     },
 
+    isEmployeeOnline(employee) {
+      if (!employee.last_login) return false
+      
+      try {
+        // Database stores PH time, treat as local time (no UTC conversion needed)
+        const lastLoginDate = new Date(employee.last_login)
+        
+        if (isNaN(lastLoginDate.getTime())) return false
+        
+        const now = new Date()
+        
+        // Consider online if last login was within 5 minutes
+        const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000))
+        return lastLoginDate > fiveMinutesAgo
+      } catch (error) {
+        console.error('Error checking online status:', employee.last_login, error)
+        return false
+      }
+    },
+
     formatDate(date) {
       if (!date) return 'Never'
-      return new Date(date).toLocaleDateString()
+      try {
+        // Database stores PH time, treat as local time (no UTC conversion needed)
+        const localDate = new Date(date)
+        
+        if (isNaN(localDate.getTime())) return 'Invalid Date'
+        
+        return new Intl.DateTimeFormat('en-PH', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        }).format(localDate)
+      } catch (error) {
+        console.error('Error formatting date:', date, error)
+        return 'Invalid Date'
+      }
     },
 
     formatTime(date) {
-      if (!date) return 'Never'
-      return new Date(date).toLocaleTimeString()
+      if (!date) return ''
+      try {
+        // Database stores PH time, treat as local time (no UTC conversion needed)
+        const localDate = new Date(date)
+        
+        if (isNaN(localDate.getTime())) return ''
+        
+        return new Intl.DateTimeFormat('en-PH', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }).format(localDate)
+      } catch (error) {
+        console.error('Error formatting time:', date, error)
+        return ''
+      }
     },
 
     showPermissionsPopup(employee, event) {
