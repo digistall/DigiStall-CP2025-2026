@@ -642,6 +642,91 @@ class ApiService {
     }
   }
 
+  // Join Raffle - Pre-register for a raffle stall
+  static async joinRaffle(applicantId, stallId) {
+    console.log('🎰 ====== JOIN RAFFLE START ======');
+    console.log('🎰 Input params - applicantId:', applicantId, 'type:', typeof applicantId);
+    console.log('🎰 Input params - stallId:', stallId, 'type:', typeof stallId);
+    
+    // Validate inputs before making the request
+    if (!applicantId) {
+      console.error('❌ VALIDATION ERROR: applicantId is missing or undefined');
+      return {
+        success: false,
+        message: 'Applicant ID is required to join raffle'
+      };
+    }
+    
+    if (!stallId) {
+      console.error('❌ VALIDATION ERROR: stallId is missing or undefined');
+      return {
+        success: false,
+        message: 'Stall ID is required to join raffle'
+      };
+    }
+    
+    try {
+      console.log('🔌 Getting active server...');
+      const server = await NetworkUtils.getActiveServer();
+      console.log('🔌 Active server:', server);
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.JOIN_RAFFLE}`;
+      console.log('🎰 Full URL:', url);
+      
+      const requestBody = { applicantId, stallId };
+      console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('� Request headers:', JSON.stringify(API_CONFIG.HEADERS, null, 2));
+
+      console.log('🚀 Sending POST request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response statusText:', response.statusText);
+      console.log('📡 Response ok:', response.ok);
+      
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('📡 Raw response text:', responseText);
+        data = JSON.parse(responseText);
+        console.log('📡 Parsed response data:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError.message);
+        throw new Error('Server returned invalid response');
+      }
+
+      if (!response.ok) {
+        console.error('❌ Response not OK - Status:', response.status);
+        console.error('❌ Server error message:', data.message);
+        console.error('❌ Server error details:', data.error);
+        throw new Error(data.message || 'Failed to join raffle');
+      }
+
+      console.log('✅ Successfully joined raffle:', data.message);
+      console.log('✅ Response data:', JSON.stringify(data.data, null, 2));
+      console.log('🎰 ====== JOIN RAFFLE SUCCESS ======');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ ====== JOIN RAFFLE ERROR ======');
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Join Raffle API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // Get user's applications (requires authentication)
   static async getMyApplications(token) {
     try {
@@ -802,8 +887,10 @@ class ApiService {
     }
   }
 
-  // Join raffle (if raffle joining is implemented)
-  static async joinRaffle(raffleId, applicantId, token) {
+  // ===== LEGACY RAFFLE METHOD (DEPRECATED) =====
+  // Note: Use joinRaffle(applicantId, stallId) instead - defined earlier in this file
+  // This method is kept for backward compatibility but should not be used
+  static async joinRaffleLegacy(raffleId, applicantId, token) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
@@ -1371,6 +1458,54 @@ class ApiService {
         success: false,
         message: error.message || 'Network error occurred',
         data: []
+      };
+    }
+  }
+  
+  /**
+   * Get stallholder profile with stall information
+   * @param {number} stallholderId - The stallholder ID
+   */
+  static async getStallholderProfile(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}/api/mobile/stallholder/profile/${stallholderId}`;
+      console.log('🔄 Fetching stallholder profile from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholder profile');
+      }
+      
+      console.log('✅ Stallholder profile fetched:', data.data?.stall_number || 'No stall');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Stallholder Profile Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: null
       };
     }
   }

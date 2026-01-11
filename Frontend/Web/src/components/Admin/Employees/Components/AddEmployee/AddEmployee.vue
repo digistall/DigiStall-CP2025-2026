@@ -311,22 +311,6 @@
               required
             ></v-select>
           </div>
-
-          <v-alert
-              type="info"
-              variant="tonal"
-              class="mobile-alert mb-4"
-            >
-              <div class="alert-content">
-                <v-icon class="alert-icon">mdi-cellphone</v-icon>
-                <div class="alert-text">
-                  <div class="alert-title">Mobile Staff Account</div>
-                  <div class="alert-description">
-                    This is a {{ mobileRole === 'inspector' ? 'Inspector' : 'Collector' }} account for the mobile app.
-                  </div>
-                </div>
-              </div>
-            </v-alert>
         </v-form>
       </v-card-text>
 
