@@ -21,6 +21,7 @@ import ApiService from '../../../../services/ApiService';
 import UserStorageService from '../../../../services/UserStorageService';
 import FavoritesService from '../../../../services/FavoritesService';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import { getSafeUserName } from '../../../../services/DataDisplayUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -150,7 +151,7 @@ const TabbedStallScreen = () => {
       
       setUserData(userData);
       console.log('👤 User data loaded:', {
-        fullName: userData.user.full_name,
+        fullName: getSafeUserName(userData.user, 'User'),
         applicantId: userData.user.applicant_id,
         username: userData.user.username
       });
@@ -271,60 +272,111 @@ const TabbedStallScreen = () => {
   };
 
   const handleStallApplication = async (stallId) => {
+    console.log('🎯 ====== HANDLE STALL APPLICATION START ======');
+    console.log('🎯 stallId:', stallId);
+    console.log('🎯 activeTab (stall type):', activeTab);
+    console.log('🎯 userData:', JSON.stringify(userData, null, 2));
+    
     if (!userData || !userData.user || !userData.user.applicant_id) {
+      console.error('❌ User validation failed - missing userData or applicant_id');
       Alert.alert('Error', 'Please login again to apply for stalls.');
       return;
     }
     
     if (!userData.user) {
+      console.error('❌ User validation failed - userData.user is missing');
       Alert.alert('Error', 'User information not available. Please login again.');
       return;
     }
     
     const applicantId = userData.user.applicant_id;
+    console.log('🎯 applicantId extracted:', applicantId);
     
     if (!applicantId) {
+      console.error('❌ applicantId is null/undefined after extraction');
       Alert.alert('Error', 'User ID not found. Please login again.');
       return;
     }
 
     try {
       setApplying(stallId);
-
-      // Simple application data
-      const applicationData = {
-        applicantId: applicantId,
-        stallId: stallId,
-        businessName: userData.user.full_name + "'s Business",
-        businessType: 'General Trade'
-      };
-
-      console.log('📝 Submitting application:', applicationData);
-
-      const response = await ApiService.submitApplication(applicationData);
-
-      if (response.success) {
-        Alert.alert(
-          'Application Submitted',
-          `Your application for ${activeTab} stall has been submitted successfully!`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Refresh stalls to show updated status
-                loadUserDataAndStalls();
+      
+      let response;
+      
+      // Check if this is a Raffle stall - use joinRaffle endpoint instead of submitApplication
+      if (activeTab === 'Raffle') {
+        console.log('🎰 ====== RAFFLE STALL DETECTED ======');
+        console.log('🎰 Calling ApiService.joinRaffle with:');
+        console.log('   - applicantId:', applicantId);
+        console.log('   - stallId:', stallId);
+        
+        response = await ApiService.joinRaffle(applicantId, stallId);
+        
+        console.log('🎰 joinRaffle response:', JSON.stringify(response, null, 2));
+        
+        if (response.success) {
+          Alert.alert(
+            'Raffle Joined! 🎉',
+            `You have successfully joined the raffle for this stall. Good luck!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Refresh stalls to show updated status
+                  loadUserDataAndStalls();
+                }
               }
-            }
-          ]
-        );
+            ]
+          );
+        } else {
+          console.error('❌ joinRaffle failed:', response.message);
+          Alert.alert('Failed to Join Raffle', response.message || 'Failed to join raffle. Please try again.');
+        }
       } else {
-        Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
+        // For Fixed Price and Auction stalls, use submitApplication
+        console.log('📝 ====== NON-RAFFLE STALL (using submitApplication) ======');
+        
+        const applicationData = {
+          applicantId: applicantId,
+          stallId: stallId,
+          businessName: getSafeUserName(userData.user, 'User') + "'s Business",
+          businessType: 'General Trade'
+        };
+
+        console.log('📝 Submitting application with data:', JSON.stringify(applicationData, null, 2));
+
+        response = await ApiService.submitApplication(applicationData);
+        
+        console.log('📝 submitApplication response:', JSON.stringify(response, null, 2));
+
+        if (response.success) {
+          Alert.alert(
+            'Application Submitted',
+            `Your application for ${activeTab} stall has been submitted successfully!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Refresh stalls to show updated status
+                  loadUserDataAndStalls();
+                }
+              }
+            ]
+          );
+        } else {
+          console.error('❌ submitApplication failed:', response.message);
+          Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
+        }
       }
     } catch (error) {
-      console.error('❌ Application error:', error);
+      console.error('❌ ====== APPLICATION ERROR ======');
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       Alert.alert('Error', 'Failed to submit application. Please check your connection and try again.');
     } finally {
       setApplying(null);
+      console.log('🎯 ====== HANDLE STALL APPLICATION END ======');
     }
   };
 

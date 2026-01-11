@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../services/UserStorageService";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 
@@ -77,14 +78,23 @@ const Sidebar = ({
     }
   }, [isVisible]);
 
-  // Helper function to get user initials
-  const getUserInitials = (fullName) => {
-    if (!fullName) return "U";
-    const names = fullName.split(' ');
-    if (names.length >= 2) {
-      return (names[0][0] + names[1][0]).toUpperCase();
-    }
-    return fullName[0].toUpperCase();
+  // Get display name using safe utilities
+  const getDisplayName = () => {
+    if (!userData) return "Loading...";
+    return getSafeUserName(userData, "User");
+  };
+
+  // Get display contact using safe utilities
+  const getDisplayContact = () => {
+    if (!userData) return "";
+    return getSafeContactInfo(userData, "");
+  };
+
+  // Get safe initials using safe utilities
+  const getDisplayInitials = () => {
+    if (!userData) return "U";
+    const name = getSafeUserName(userData, "");
+    return getUserInitials(name, "U");
   };
 
   // Professional icon components using SVG-like paths rendered as text
@@ -181,17 +191,17 @@ const Sidebar = ({
                   <View style={baseStyles.profileImageContainer}>
                     <View style={[baseStyles.profileImage, { backgroundColor: colors.primary }]}>
                       <Text style={baseStyles.profileInitials}>
-                        {userData ? getUserInitials(userData.full_name || userData.username) : "U"}
+                        {getDisplayInitials()}
                       </Text>
                     </View>
                     <View style={baseStyles.statusIndicator} />
                   </View>
                   <View style={baseStyles.profileInfo}>
                     <Text style={[baseStyles.profileName, { color: colors.text }]}>
-                      {userData ? userData.full_name : "Loading..."}
+                      {getDisplayName()}
                     </Text>
                     <Text style={[baseStyles.profileEmail, { color: colors.textSecondary }]}>
-                      {userData ? (userData.email || userData.contact_number || userData.username) : ""}
+                      {getDisplayContact()}
                     </Text>
                     <Text style={baseStyles.profileStatus}>Online</Text>
                   </View>
