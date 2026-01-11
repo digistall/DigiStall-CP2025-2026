@@ -15,7 +15,7 @@ BEGIN
     SELECT 
         i.inspector_id,
         i.username,
-        i.password as password_hash,
+        i.password_hash,
         i.branch_id,
         -- Decrypt from Base64-encoded VARCHAR columns
         CASE WHEN i.is_encrypted = 1 AND v_key IS NOT NULL THEN 
