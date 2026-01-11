@@ -2,6 +2,7 @@ import CardStallsComponent from '../Stalls/StallsComponents/CardStallsComponent/
 import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFilter.vue'
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
+import RaffleParticipantsModal from './RaffleComponents/RaffleParticipantsModal/RaffleParticipantsModal.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
@@ -14,6 +15,7 @@ export default {
     SearchFilter,
     AddChoiceModal,
     EditStall,
+    RaffleParticipantsModal,
     ToastNotification,
     LoadingOverlay,
   },
@@ -49,6 +51,10 @@ export default {
       
       // Flag to track when we're in the middle of updating a stall
       isUpdatingStall: false,
+
+      // Raffle Participants Modal
+      showRaffleParticipantsModal: false,
+      selectedRaffleStall: null,
     }
   },
 
@@ -919,14 +925,30 @@ export default {
       console.log('========================')
     },
 
-    // NEW: Handle raffle management
+    // NEW: Handle raffle management - opens modal with participants
     handleRaffleManagement(stall) {
-      console.log('Navigate to raffle management for stall:', stall)
-      // Navigate to the raffles page with a specific stall focus
-      this.$router.push({
-        path: '/stalls/raffles',
-        query: { stallId: stall.id, stallNumber: stall.stallNumber },
-      })
+      console.log('🎰 Opening raffle participants modal for stall:', stall)
+      this.selectedRaffleStall = stall
+      this.showRaffleParticipantsModal = true
+    },
+
+    // Close raffle participants modal
+    closeRaffleParticipantsModal() {
+      console.log('🎰 Closing raffle participants modal')
+      this.showRaffleParticipantsModal = false
+      this.selectedRaffleStall = null
+    },
+
+    // Handle raffle winner selected
+    handleRaffleWinnerSelected(winnerData) {
+      console.log('🏆 Raffle winner selected:', winnerData)
+      this.toast = {
+        show: true,
+        message: `Winner selected: ${winnerData?.winner_name || 'Unknown'}`,
+        type: 'success'
+      }
+      // Refresh stalls data to update the UI
+      this.fetchStalls()
     },
 
     // NEW: Handle auction management
