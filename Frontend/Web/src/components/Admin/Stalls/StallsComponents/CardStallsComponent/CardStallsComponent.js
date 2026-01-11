@@ -57,6 +57,34 @@ export default {
       }
     },
 
+    // Get color for availability status badge
+    getAvailabilityColor(status) {
+      switch (status) {
+        case 'Available':
+          return 'success'
+        case 'Occupied':
+          return 'error'
+        case 'Unavailable':
+          return 'grey'
+        default:
+          return 'success'
+      }
+    },
+
+    // Get icon for availability status badge
+    getAvailabilityIcon(status) {
+      switch (status) {
+        case 'Available':
+          return 'mdi-check-circle'
+        case 'Occupied':
+          return 'mdi-account-check'
+        case 'Unavailable':
+          return 'mdi-close-circle'
+        default:
+          return 'mdi-check-circle'
+      }
+    },
+
     // NEW: Check if description is long enough to need truncation
     isDescriptionLong(description) {
       if (!description) return false

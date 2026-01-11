@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
   },
   viewAllButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#002181',
     borderRadius: 6,
     paddingVertical: width * 0.025,
     alignItems: 'center',

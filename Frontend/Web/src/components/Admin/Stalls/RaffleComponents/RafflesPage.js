@@ -1,6 +1,7 @@
 import ActiveRaffles from './ActiveRaffles/ActiveRaffles.vue'
 import StallParticipants from '../StallsComponents/StallParticipants/StallParticipants.vue'
 import RaffleDetailsPopup from './RaffleDetailsPopup/RaffleDetailsPopup.vue'
+import ToastNotification from '../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'RafflesPage',
@@ -8,14 +9,16 @@ export default {
     ActiveRaffles,
     StallParticipants,
     RaffleDetailsPopup,
+    ToastNotification
   },
   data() {
     return {
-      // Message and Modal data
-      showMessage: false,
-      message: '',
-      messageType: 'info',
-      messageTimeout: 5000,
+      // Toast notification
+      toast: {
+        show: false,
+        message: '',
+        type: 'info'
+      },
       showDetailsModal: false,
       selectedRaffle: null,
       showParticipantsModal: false,
@@ -25,9 +28,25 @@ export default {
   methods: {
     // Message and Modal methods
     handleMessage(message, type = 'info') {
-      this.message = message
-      this.messageType = type
-      this.showMessage = true
+      // Add emoji icons based on type
+      const iconMap = {
+        success: '✅ ',
+        error: '❌ ',
+        warning: '⚠️ ',
+        info: 'ℹ️ ',
+        delete: '🗑️ ',
+        update: '📝 '
+      }
+      const prefix = iconMap[type] || ''
+      this.showToast(prefix + message, type)
+    },
+
+    showToast(message, type = 'info') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
+      }
     },
 
     handleViewDetails(raffle) {

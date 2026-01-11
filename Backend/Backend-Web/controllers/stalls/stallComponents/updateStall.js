@@ -1,6 +1,6 @@
-import { createConnection } from "../../../config/database.js";
+﻿import { createConnection } from '../../../config/database.js'
 
-// Update stall (for branch managers and employees with stalls permission)
+// Update stall using direct SQL (no stored procedure dependency)
 export const updateStall = async (req, res) => {
   let connection;
   try {
@@ -8,12 +8,7 @@ export const updateStall = async (req, res) => {
     const updateData = req.body;
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
-
-    console.log("🔄 UPDATE STALL DEBUG:");
-    console.log("- Stall ID:", id);
-    console.log("- User Type:", userType);
-    console.log("- User ID:", userId);
-    console.log("- Update data:", updateData);
+    const branchId = req.user?.branchId;
 
     if (!userId) {
       return res.status(400).json({
@@ -22,199 +17,203 @@ export const updateStall = async (req, res) => {
       });
     }
 
-    // Authorization check based on user type
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager authorization (existing logic)
-      console.log("🔍 Authorizing branch manager for stall update");
-    } else if (userType === "employee") {
-      // Employee authorization - check permissions
-      const permissions = req.user?.permissions || [];
-      const hasStallsPermission = Array.isArray(permissions)
-        ? permissions.includes("stalls")
-        : permissions.stalls || false;
+    connection = await createConnection();
 
-      console.log("🔍 Employee permission check for stall update:", {
-        permissions,
-        hasStallsPermission,
+    // Prepare parameters with proper null handling
+    const stallNo = updateData.stall_no || updateData.stallNo || null;
+    const stallLocation = updateData.stall_location || updateData.location || null;
+    const size = updateData.size || null;
+    const floorId = updateData.floor_id || updateData.floorId || null;
+    const sectionId = updateData.section_id || updateData.sectionId || null;
+    const priceType = updateData.price_type || updateData.priceType || "Fixed Price";
+    const status = updateData.status || "Active";
+    const description = updateData.description || null;
+    const stallImage = updateData.stall_image || updateData.image || null;
+    
+    // NEW: Rental calculation fields
+    const baseRate = parseFloat(updateData.base_rate || updateData.baseRate || 0);
+    const areaSqm = parseFloat(updateData.area_sqm || updateData.areaSqm || 0);
+    
+    // Calculate rental price and rate per sqm
+    // Formula: Monthly Rent = RENTAL RATE (2010) × 2
+    let rentalPrice;
+    let ratePerSqm = null;
+    
+    if (baseRate > 0) {
+      rentalPrice = Math.round(baseRate * 2 * 100) / 100;
+      if (areaSqm > 0) {
+        ratePerSqm = Math.round((rentalPrice / areaSqm) * 100) / 100;
+      }
+      console.log(`📊 RENTAL RATE 2010: ${baseRate} | Monthly Rent (×2): ${rentalPrice} | Rate/sqm: ${ratePerSqm}`);
+    } else {
+      rentalPrice = parseFloat(updateData.rental_price || updateData.price || 0) || null;
+    }
+    
+    // Handle is_available with multiple possible field names and proper boolean conversion
+    let isAvailable = 1; // Default to available
+    if (updateData.is_available !== undefined) {
+      isAvailable = updateData.is_available ? 1 : 0;
+    } else if (updateData.isAvailable !== undefined) {
+      isAvailable = updateData.isAvailable ? 1 : 0;
+    }
+    const deadline = updateData.raffle_auction_deadline || updateData.deadline;
+    const parsedDeadline = deadline ? new Date(deadline) : null;
+
+    console.log('📝 Update stall params:', {
+      id, stallNo, stallLocation, size, floorId, sectionId, 
+      rentalPrice, baseRate, areaSqm, ratePerSqm, priceType, status, description, isAvailable
+    });
+
+    // Get the branch the stall belongs to
+    const [stallBranch] = await connection.execute(
+      `SELECT f.branch_id 
+       FROM stall s
+       INNER JOIN section sec ON s.section_id = sec.section_id
+       INNER JOIN floor f ON sec.floor_id = f.floor_id
+       WHERE s.stall_id = ?`,
+      [id]
+    );
+
+    if (stallBranch.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stall not found'
       });
+    }
 
-      if (!hasStallsPermission) {
+    const existingBranchId = stallBranch[0].branch_id;
+
+    // Authorization check
+    if (userType === 'business_manager') {
+      const [managerCheck] = await connection.execute(
+        `SELECT business_manager_id FROM business_manager WHERE business_manager_id = ? AND branch_id = ?`,
+        [userId, branchId]
+      );
+      
+      if (managerCheck.length === 0 || branchId !== existingBranchId) {
         return res.status(403).json({
           success: false,
-          message:
-            "Access denied. Employee does not have stalls permission for updating.",
+          message: 'Access denied. You do not manage this branch or stall'
+        });
+      }
+    } else if (userType === 'business_employee') {
+      if (branchId !== existingBranchId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Stall does not belong to your branch'
         });
       }
     } else {
       return res.status(403).json({
         success: false,
-        message: `Access denied. User type '${userType}' cannot update stalls.`,
+        message: `Access denied. User type '${userType}' cannot update stalls`
       });
     }
 
-    connection = await createConnection();
+    // Check for duplicate stall number
+    const [duplicateCheck] = await connection.execute(
+      `SELECT stall_id FROM stall WHERE stall_no = ? AND section_id = ? AND stall_id != ?`,
+      [stallNo, sectionId, id]
+    );
 
-    // Check if stall exists and user has permission to update it
-    let stallQuery, stallParams;
-
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // Branch manager: Check if stall belongs to their branch
-      const branchManagerId = req.user?.branchManagerId || userId;
-      stallQuery = `SELECT s.stall_id, s.stall_no 
-                   FROM stall s
-                   INNER JOIN section sec ON s.section_id = sec.section_id
-                   INNER JOIN floor f ON sec.floor_id = f.floor_id
-                   INNER JOIN branch b ON f.branch_id = b.branch_id
-                   INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
-                   WHERE s.stall_id = ? AND bm.branch_manager_id = ?`;
-      stallParams = [id, branchManagerId];
-    } else if (userType === "employee") {
-      // Employee: Check if stall belongs to their branch
-      const branchId = req.user?.branchId;
-      if (!branchId) {
-        return res.status(400).json({
-          success: false,
-          message: "Branch ID not found for employee",
-        });
-      }
-      stallQuery = `SELECT s.stall_id, s.stall_no 
-                   FROM stall s
-                   INNER JOIN section sec ON s.section_id = sec.section_id
-                   INNER JOIN floor f ON sec.floor_id = f.floor_id
-                   INNER JOIN branch b ON f.branch_id = b.branch_id
-                   WHERE s.stall_id = ? AND b.branch_id = ?`;
-      stallParams = [id, branchId];
-    }
-
-    const [existingStall] = await connection.execute(stallQuery, stallParams);
-
-    if (existingStall.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Stall not found or you do not have permission to update it",
-      });
-    }
-
-    // Build dynamic update query
-    const updateFields = [];
-    const updateValues = [];
-
-    // Map frontend fields to database fields
-    if (updateData.stallNo || updateData.stallNumber) {
-      updateFields.push("stall_no = ?");
-      updateValues.push(updateData.stallNo || updateData.stallNumber);
-    }
-
-    if (updateData.stall_location || updateData.location) {
-      updateFields.push("stall_location = ?");
-      updateValues.push(updateData.stall_location || updateData.location);
-    }
-
-    if (updateData.size) {
-      updateFields.push("size = ?");
-      updateValues.push(updateData.size);
-    }
-
-    if (updateData.rental_price || updateData.price) {
-      updateFields.push("rental_price = ?");
-      updateValues.push(
-        parseFloat(updateData.rental_price || updateData.price)
-      );
-    }
-
-    if (updateData.price_type || updateData.priceType) {
-      updateFields.push("price_type = ?");
-      updateValues.push(updateData.price_type || updateData.priceType);
-    }
-
-    if (updateData.status) {
-      updateFields.push("status = ?");
-      updateValues.push(updateData.status);
-    }
-
-    if (updateData.description !== undefined) {
-      updateFields.push("description = ?");
-      updateValues.push(updateData.description);
-    }
-
-    if (updateData.stall_image || updateData.image) {
-      updateFields.push("stall_image = ?");
-      updateValues.push(updateData.stall_image || updateData.image);
-    }
-
-    if (
-      updateData.is_available !== undefined ||
-      updateData.isAvailable !== undefined
-    ) {
-      const isAvailable =
-        updateData.is_available !== undefined
-          ? updateData.is_available
-          : updateData.isAvailable;
-      updateFields.push("is_available = ?");
-      updateValues.push(isAvailable ? 1 : 0);
-    }
-
-    if (updateFields.length === 0) {
+    if (duplicateCheck.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "No valid fields provided for update",
+        message: `Stall number ${stallNo} already exists in this section`
       });
     }
 
-    // Add updated_at timestamp
-    updateFields.push("updated_at = NOW()");
-    updateValues.push(id);
+    // Update the stall with rental calculation fields
+    await connection.execute(
+      `UPDATE stall SET
+        stall_no = ?,
+        stall_location = ?,
+        size = ?,
+        area_sqm = ?,
+        floor_id = ?,
+        section_id = ?,
+        rental_price = ?,
+        base_rate = ?,
+        rate_per_sqm = ?,
+        price_type = ?,
+        status = ?,
+        description = ?,
+        is_available = ?,
+        raffle_auction_deadline = ?,
+        updated_at = NOW()
+      WHERE stall_id = ?`,
+      [
+        stallNo,
+        stallLocation,
+        size,
+        areaSqm || null,
+        floorId,
+        sectionId,
+        rentalPrice,
+        baseRate || null,
+        ratePerSqm,
+        priceType,
+        status,
+        description,
+        isAvailable,
+        parsedDeadline,
+        id
+      ]
+    );
 
-    const updateQuery = `UPDATE stall SET ${updateFields.join(
-      ", "
-    )} WHERE stall_id = ?`;
-
-    await connection.execute(updateQuery, updateValues);
-
-    // Get updated stall data with explicit field selection to avoid ID confusion
+    // Fetch the updated stall data
     const [updatedStall] = await connection.execute(
       `SELECT 
         s.stall_id,
-        s.stall_id as id,
         s.stall_no,
         s.stall_location,
         s.size,
+        s.area_sqm,
+        s.base_rate,
+        s.rate_per_sqm,
+        s.floor_id,
+        f.floor_name,
+        s.section_id,
+        sec.section_name,
         s.rental_price,
         s.price_type,
         s.status,
+        s.stamp,
         s.description,
-        s.stall_image,
+        si.image_url as stall_image,
         s.is_available,
+        s.raffle_auction_deadline,
+        s.deadline_active,
+        s.raffle_auction_status,
+        s.created_by_business_manager,
         s.created_at,
         s.updated_at,
-        s.stamp,
-        sec.section_id,
-        sec.section_name,
-        f.floor_id,
-        f.floor_name,
-        f.floor_number,
         b.branch_id,
         b.branch_name,
         b.area,
-        b.location as branch_location
+        CASE 
+          WHEN sh.stall_id IS NOT NULL THEN 'Occupied'
+          WHEN s.is_available = 1 THEN 'Available'
+          ELSE 'Unavailable'
+        END as availability_status,
+        sh.stallholder_id,
+        sh.stallholder_name
       FROM stall s
       INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
+      INNER JOIN floor f ON s.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.stall_id = ?`,
       [id]
     );
 
-    console.log(
-      `✅ Stall updated successfully by ${userType}:`,
-      existingStall[0].stall_no
-    );
-
     res.json({
       success: true,
-      message: "Stall updated successfully",
-      data: updatedStall[0],
+      message: 'Stall updated successfully',
+      data: updatedStall[0]
     });
+
   } catch (error) {
     console.error("❌ Update stall error:", error);
     res.status(500).json({

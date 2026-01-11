@@ -21,11 +21,11 @@
 .header-row,
 .table-row {
   display: grid;
-  grid-template-columns: 3fr 1.5fr 1fr 2fr 1.5fr;
-  min-height: 60px;
+  grid-template-columns: 2fr 1.2fr 0.8fr 1.5fr 1fr;
+  min-height: 56px;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: 4px;
+  padding: 0 12px;
   width: 100%;
 }
 
@@ -50,7 +50,7 @@
 
 .header-cell,
 .table-cell {
-  padding: 16px 8px;
+  padding: 12px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,10 +60,10 @@
 
 .header-cell {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: white;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -71,7 +71,7 @@
 }
 
 .table-cell {
-  font-size: 15px;
+  font-size: 14px;
   color: #2c3e50;
   word-wrap: break-word;
   overflow: hidden;
@@ -83,7 +83,7 @@
   justify-content: flex-start;
 }
 
-.username-col,
+.role-col,
 .status-col,
 .login-col,
 .actions-col {
@@ -406,4 +406,131 @@
 .permission-chip.more-chip:hover {
   background-color: rgba(0, 0, 0, 0.05) !important;
   transform: scale(1.05);
+}
+/* Enhanced Employee Actions Popup Styles */
+.employee-actions-popup {
+  overflow: hidden;
+}
+
+.popup-header {
+  background: rgb(0, 33, 129);
+  padding: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.employee-avatar-section {
+  position: relative;
+}
+
+.employee-avatar {
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.employee-info-section {
+  flex: 1;
+  color: white;
+}
+
+.employee-name-large {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.employee-email-display {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.role-chip-popup {
+  color: #333 !important;
+  font-weight: 500;
+}
+
+.role-chip-popup .v-icon {
+  color: #333 !important;
+}
+
+.popup-header .close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+}
+
+.popup-header .close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.popup-actions {
+  background-color: #fafafa;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 14px 16px !important;
+  border-radius: 10px !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  transition: all 0.2s ease !important;
+  height: auto !important;
+}
+
+.action-btn .action-text {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+}
+
+.action-btn.edit-btn {
+  background-color: #e3f2fd !important;
+  color: #1565c0 !important;
+}
+
+.action-btn.edit-btn:hover {
+  background-color: #bbdefb !important;
+  transform: translateX(4px);
+}
+
+.action-btn.permissions-btn {
+  background-color: #ede7f6 !important;
+  color: #5e35b1 !important;
+}
+
+.action-btn.permissions-btn:hover {
+  background-color: #d1c4e9 !important;
+  transform: translateX(4px);
+}
+
+.action-btn.reset-btn {
+  background-color: #fff3e0 !important;
+  color: #ef6c00 !important;
+}
+
+.action-btn.reset-btn:hover {
+  background-color: #ffe0b2 !important;
+  transform: translateX(4px);
+}
+
+.action-btn.fire-btn {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+}
+
+.action-btn.fire-btn:hover {
+  background-color: #ffcdd2 !important;
+  transform: translateX(4px);
 }

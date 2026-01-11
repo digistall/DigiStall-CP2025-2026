@@ -52,11 +52,11 @@ export const joinRaffle = async (req, res) => {
     if (raffle.end_time && new Date() > new Date(raffle.end_time)) {
       // Auto-update status to ended
       await connection.execute(
-        'UPDATE raffle SET raffle_status = "Ended" WHERE raffle_id = ?',
+        `UPDATE raffle SET raffle_status = 'Ended' WHERE raffle_id = ?`,
         [raffle.raffle_id]
       );
       await connection.execute(
-        'UPDATE stall SET raffle_auction_status = "Ended" WHERE stall_id = ?',
+        `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
         [stallId]
       );
       

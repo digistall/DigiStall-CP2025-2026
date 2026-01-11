@@ -1,22 +1,27 @@
 <!-- ComplaintsTable.vue (component) -->
 <template>
   <div class="complaints-table-container">
-    <div class="complaints-table-wrapper">
+    <div class="complaints-table-wrapper scrollable-table-wrapper">
       <table class="complaints-table">
         <thead>
           <tr>
-            <th>Complaints ID</th>
+            <th>Complaint ID</th>
             <th>Date</th>
             <th>Type</th>
             <th>Sender</th>
             <th>Stallholder</th>
             <th>Status</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           <!-- ✅ Use paginatedComplaints instead of filteredComplaints -->
-          <tr v-for="complaints in paginatedComplaints" :key="complaints.id">
+          <tr
+            v-for="complaints in paginatedComplaints"
+            :key="complaints.id"
+            @click="viewComplaints(complaints)"
+            class="complaints-row-clickable"
+            :title="'Click to view details'"
+          >
             <td>{{ complaints.id }}</td>
             <td>{{ complaints.date }}</td>
             <td>{{ complaints.type }}</td>
@@ -36,28 +41,6 @@
               >
                 {{ complaints.status.toUpperCase() }}
               </span>
-            </td>
-            <td class="complaints-actions-cell">
-              <button
-                class="complaints-action-btn complaints-view-btn"
-                @click="viewComplaints(complaints)"
-                title="View Details"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-              <button
-                class="complaints-action-btn complaints-edit-btn"
-                @click="editComplaints(complaints)"
-                title="Edit"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="m18.5 2.5-5.5 5.5-2-2 5.5-5.5a2.1 2.1 0 0 1 3 3z"></path>
-                </svg>
-              </button>
             </td>
           </tr>
         </tbody>

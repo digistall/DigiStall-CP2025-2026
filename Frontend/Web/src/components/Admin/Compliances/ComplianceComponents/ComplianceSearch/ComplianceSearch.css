@@ -239,6 +239,91 @@
   border-color: rgb(0, 33, 129);
 }
 
+/* Severity color variations */
+.status-btn.severity-low {
+  border-color: #e8f5e9;
+}
+
+.status-btn.severity-low:hover {
+  border-color: #4caf50;
+  color: #2e7d32;
+}
+
+.status-btn.severity-low.active {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+.status-btn.severity-medium {
+  border-color: #fff3e0;
+}
+
+.status-btn.severity-medium:hover {
+  border-color: #ff9800;
+  color: #e65100;
+}
+
+.status-btn.severity-medium.active {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: white;
+}
+
+.status-btn.severity-high {
+  border-color: #fff3e0;
+}
+
+.status-btn.severity-high:hover {
+  border-color: #f57c00;
+  color: #bf360c;
+}
+
+.status-btn.severity-high.active {
+  background: #f57c00;
+  border-color: #f57c00;
+  color: white;
+}
+
+.status-btn.severity-critical {
+  border-color: #ffebee;
+}
+
+.status-btn.severity-critical:hover {
+  border-color: #f44336;
+  color: #b71c1c;
+}
+
+.status-btn.severity-critical.active {
+  background: #f44336;
+  border-color: #f44336;
+  color: white;
+}
+
+/* Filter select styling */
+.filter-select {
+  margin-top: 8px;
+}
+
+/* Date range styling */
+.date-range-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.date-input {
+  flex: 1;
+}
+
+.date-separator {
+  color: #6c757d;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 4px;
+}
+
 /* Action buttons */
 .filter-actions {
   display: flex;
