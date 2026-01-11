@@ -6,8 +6,17 @@ import { createConnection } from '../config/database.js'
 export const submitMobileApplication = async (req, res) => {
   let connection;
   
+  console.log('📱 ====== SUBMIT MOBILE APPLICATION START ======');
+  console.log('📱 Request method:', req.method);
+  console.log('📱 Request URL:', req.url);
+  console.log('📱 Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('📱 Request body (raw):', JSON.stringify(req.body, null, 2));
+  
   try {
+    console.log('🔌 Establishing database connection...');
     connection = await createConnection();
+    console.log('✅ Database connection established');
+    
     const { 
       applicantId, 
       stallId, 
@@ -17,20 +26,27 @@ export const submitMobileApplication = async (req, res) => {
       documentUrls 
     } = req.body;
 
-    console.log('📱 Mobile Application Submission:', {
+    console.log('📱 Extracted request data:', {
       applicantId,
+      applicantIdType: typeof applicantId,
       stallId,
+      stallIdType: typeof stallId,
       businessName,
       businessType
     });
 
     // Validation: Check if all required fields are provided
     if (!applicantId || !stallId) {
+      console.error('❌ VALIDATION FAILED: Missing required fields');
+      console.error('   - applicantId present:', !!applicantId);
+      console.error('   - stallId present:', !!stallId);
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: applicantId and stallId are required'
       });
     }
+
+    console.log('✅ Validation passed, querying stall details...');
 
     // Get stall details including price_type using direct query
     const [stallRows] = await connection.execute(
@@ -45,8 +61,11 @@ export const submitMobileApplication = async (req, res) => {
       WHERE s.stall_id = ?`,
       [stallId]
     );
+    
+    console.log('📊 Stall query result count:', stallRows?.length || 0);
 
     if (!stallRows || stallRows.length === 0) {
+      console.error('❌ Stall not found for stallId:', stallId);
       return res.status(404).json({
         success: false,
         message: 'Stall not found'
@@ -55,6 +74,9 @@ export const submitMobileApplication = async (req, res) => {
 
     const stall = stallRows[0];
     const isRaffleStall = stall.price_type === 'Raffle';
+    
+    console.log('📊 Stall found:', JSON.stringify(stall, null, 2));
+    console.log('📊 Is Raffle stall:', isRaffleStall);
 
     console.log('📊 Stall details:', {
       stallId: stall.stall_id,
@@ -203,17 +225,31 @@ export const submitMobileApplication = async (req, res) => {
         status: 'Pending'
       }
     });
+    console.log('📱 ====== SUBMIT MOBILE APPLICATION SUCCESS ======');
     
   } catch (error) {
-    console.error('❌ Submit mobile pre-registration error:', error);
+    console.error('❌ ====== SUBMIT MOBILE APPLICATION ERROR ======');
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ SQL State:', error.sqlState);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     res.status(500).json({
       success: false,
       message: 'Failed to submit pre-registration',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message,
+      errorDetails: {
+        name: error.name,
+        code: error.code,
+        sqlState: error.sqlState
+      }
     });
   } finally {
+    console.log('🔚 Closing database connection...');
     if (connection) {
       await connection.end();
+      console.log('✅ Database connection closed');
     }
   }
 };
