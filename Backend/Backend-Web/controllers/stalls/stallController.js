@@ -28,6 +28,7 @@ import { getLandingPageFilterOptions } from './stallComponents/landingPageCompon
 import { createRaffle } from './stallComponents/raffleComponents/createRaffle.js'
 import { joinRaffle } from './stallComponents/raffleComponents/joinRaffle.js'
 import { getActiveRaffles, getRaffleDetails } from './stallComponents/raffleComponents/getRaffles.js'
+import { getRaffleParticipantsByStall } from './stallComponents/raffleComponents/getRaffleParticipantsByStall.js'
 import { extendRaffleTimer, cancelRaffle } from './stallComponents/raffleComponents/manageRaffle.js'
 import { selectRaffleWinner, autoSelectWinnerForExpiredRaffles } from './stallComponents/raffleComponents/selectWinner.js'
 
@@ -69,6 +70,7 @@ export {
   joinRaffle,
   getActiveRaffles,
   getRaffleDetails,
+  getRaffleParticipantsByStall,
   extendRaffleTimer,
   cancelRaffle,
   selectRaffleWinner,

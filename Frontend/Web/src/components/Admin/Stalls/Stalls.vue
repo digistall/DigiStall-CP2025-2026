@@ -100,6 +100,15 @@
         @stall-deleted="handleStallDeleted"
         @error="handleEditError"
       />
+
+      <!-- Raffle Participants Modal -->
+      <RaffleParticipantsModal
+        :show="showRaffleParticipantsModal"
+        :stall="selectedRaffleStall"
+        @close="closeRaffleParticipantsModal"
+        @winner-selected="handleRaffleWinnerSelected"
+        @show-message="handleShowMessage"
+      />
     </v-main>
 
     <!-- Warning Container Dialog -->
