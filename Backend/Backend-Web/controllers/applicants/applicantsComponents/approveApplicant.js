@@ -1,4 +1,18 @@
 import { createConnection } from '../../../config/database.js';
+import { decryptData } from '../../../services/encryptionService.js';
+
+// Helper function to decrypt data safely (handles both encrypted and plain text)
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 // Approve applicant and store credentials for mobile app access
 // Also creates stallholder record and assigns stall ownership
@@ -59,7 +73,19 @@ export const approveApplicant = async (req, res) => {
       });
     }
 
-    const applicant = applicantRows[0];
+    // Decrypt applicant data before using
+    const applicantRaw = applicantRows[0];
+    const applicant = {
+      applicant_id: applicantRaw.applicant_id,
+      applicant_full_name: decryptSafe(applicantRaw.applicant_full_name),
+      applicant_contact_number: decryptSafe(applicantRaw.applicant_contact_number),
+      applicant_address: decryptSafe(applicantRaw.applicant_address),
+      email_address: decryptSafe(applicantRaw.email_address),
+      business_name: applicantRaw.business_name,
+      business_type: applicantRaw.business_type
+    };
+    
+    console.log(`📋 Decrypted applicant:`, { name: applicant.applicant_full_name, email: applicant.email_address });
 
     // Check if username already exists in credential table
     const [existingCredential] = await connection.execute(
@@ -181,14 +207,14 @@ export const approveApplicant = async (req, res) => {
     );
     console.log(`✅ Stall ${application.stall_id} marked as occupied`);
 
-    // 5. Decline any other pending applications for the same stall
+    // 5. Reject any other pending applications for the same stall
     await connection.execute(
       `UPDATE application 
-       SET application_status = 'Declined', updated_at = NOW()
+       SET application_status = 'Rejected', updated_at = NOW()
        WHERE stall_id = ? AND application_id != ? AND application_status = 'Pending'`,
       [application.stall_id, application.application_id]
     );
-    console.log(`✅ Other pending applications for stall ${application.stall_id} declined`);
+    console.log(`✅ Other pending applications for stall ${application.stall_id} rejected`);
 
     await connection.commit();
 

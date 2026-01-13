@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UserStorageService from '../../services/UserStorageService';
 import ApiService from '../../services/ApiService';
 import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
+import { getSafeStaffName, getSafeDisplayValue } from '../../services/DataDisplayUtils';
 
 const { width } = Dimensions.get('window');
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -57,7 +58,7 @@ const CollectorHome = () => {
   const sendHeartbeat = useCallback(async () => {
     try {
       const data = await UserStorageService.getUserData();
-      const token = data?.token;
+      const token = await UserStorageService.getAuthToken();
       const staffId = data?.staff?.collector_id || data?.staff?.staffId;
       
       if (token && staffId) {
@@ -77,12 +78,16 @@ const CollectorHome = () => {
     
     try {
       const data = await UserStorageService.getUserData();
-      const token = data?.token;
+      const token = await UserStorageService.getAuthToken();
       const staffId = data?.staff?.collector_id || data?.staff?.staffId;
       
+      console.log('🔍 Auto-logout data - token:', token ? 'EXISTS' : 'MISSING', 'staffId:', staffId);
+      
       if (token && staffId) {
-        await ApiService.staffAutoLogout(token, staffId, 'collector');
-        console.log('✅ Auto-logout recorded');
+        const result = await ApiService.staffAutoLogout(token, staffId, 'collector');
+        console.log('✅ Auto-logout API result:', result);
+      } else {
+        console.log('⚠️ Missing token or staffId for auto-logout');
       }
       
       await UserStorageService.clearUserData();
@@ -154,6 +159,13 @@ const CollectorHome = () => {
       return;
     }
     
+    // CRITICAL: Clear heartbeat interval FIRST to prevent last_login updates after logout
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+      console.log('✅ Heartbeat interval cleared before logout');
+    }
+    
     // Close sidebar first
     setSidebarVisible(false);
     
@@ -215,10 +227,10 @@ const CollectorHome = () => {
               <Ionicons name="person-circle" size={80} color="#4A90D9" />
             </View>
             <Text style={styles.sidebarName}>
-              {userData?.staff?.first_name} {userData?.staff?.last_name}
+              {getSafeStaffName(userData, 'Collector')}
             </Text>
             <Text style={styles.sidebarRole}>Collector</Text>
-            <Text style={styles.sidebarBranch}>{userData?.staff?.branch_name}</Text>
+            <Text style={styles.sidebarBranch}>{getSafeDisplayValue(userData?.staff?.branch_name, '')}</Text>
           </View>
 
           {/* Menu Items */}

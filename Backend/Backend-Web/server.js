@@ -11,6 +11,8 @@ import { getPerformanceStats } from './config/performanceMonitor.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+// REMOVED: decryptResponseMiddleware - stored procedures handle decryption
+// import { decryptResponseMiddleware } from './middleware/dataProtection.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +33,8 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
-
+import documentRoutes from './routes/documentRoutes.js';
+import { getComplianceEvidenceImage } from './controllers/compliances/complianceController.js';
 const app = express();
 const PORT = process.env.WEB_PORT || 3001;
 
@@ -41,6 +44,9 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser()); // For handling httpOnly cookies
 app.use(cors(corsConfig));
+
+// REMOVED: Auto-decrypt middleware - stored procedures already decrypt data
+// app.use(decryptResponseMiddleware);
 
 // Request logging disabled to prevent console flooding
 // Enable for debugging: uncomment below
@@ -55,12 +61,14 @@ app.use(cors(corsConfig));
 // ===== ROUTES =====
 
 // Public routes (no authentication required)
+app.get('/api/compliances/:id/evidence/image', getComplianceEvidenceImage);
 app.use('/api/auth/v2', enhancedAuthRoutes);    // Enhanced JWT auth with refresh tokens (NEW)
 app.use('/api/auth', authRoutes);               // Legacy auth routes (backward compatibility)
 app.use('/api/stalls', stallRoutes);            // Stalls routes (public for landing page + protected for admin)
 app.use('/api/applications', applicationRoutes); // Applications (public for submissions)
 app.use('/api/landing-applicants', landingApplicantRoutes); // Landing page applicant submissions (public)
 app.use('/api/employees', employeeRoutes);      // Employee routes (login is public, others protected internally)
+app.use('/api/documents', documentRoutes);      // Document blob routes (public for preview)
 
 // Management routes (authentication required)
 // Use enhancedAuthMiddleware for new implementation, authMiddleware for backward compatibility

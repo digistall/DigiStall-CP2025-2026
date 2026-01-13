@@ -494,6 +494,609 @@ export const getAllDocumentTypes = async (req, res) => {
   }
 };
 
+// ============================================================
+// DOCUMENT SUBMISSION REVIEW FUNCTIONS (Branch Manager)
+// ============================================================
+
+export const getPendingDocumentSubmissions = async (req, res) => {
+  let connection;
+  try {
+    const userRole = req.user.role;
+    const userId = req.user.userId;
+    
+    connection = await createConnection();
+    
+    // Determine branch ID based on user role
+    let branchIds = [];
+    
+    if (userRole === 'stall_business_owner') {
+      // Business owners can see all their branches
+      const [branches] = await connection.execute(`
+        SELECT DISTINCT b.branch_id
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+      `, [userId]);
+      
+      if (branches.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No branches found for this business owner'
+        });
+      }
+      branchIds = branches.map(b => b.branch_id);
+    } else {
+      // Branch managers see their assigned branch
+      const branch_id = req.user.branchId || req.user.branch_id;
+      if (!branch_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
+      branchIds = [branch_id];
+    }
+    
+    // Fetch pending submissions for all accessible branches
+    let allSubmissions = [];
+    for (const branchId of branchIds) {
+      const [rows] = await connection.execute('CALL sp_getPendingDocumentSubmissions(?)', [branchId]);
+      if (rows[0] && rows[0].length > 0) {
+        allSubmissions = allSubmissions.concat(rows[0]);
+      }
+    }
+    
+    // Sort by uploaded_at descending
+    allSubmissions.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
+    
+    res.json({
+      success: true,
+      data: allSubmissions,
+      count: allSubmissions.length,
+      branches: branchIds
+    });
+    
+  } catch (error) {
+    console.error('❌ Get pending document submissions error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending document submissions',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get all document submissions for branch with filtering and pagination
+ */
+export const getAllDocumentSubmissions = async (req, res) => {
+  let connection;
+  try {
+    const userRole = req.user.role;
+    const userId = req.user.userId;
+    const { status = 'all', page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    connection = await createConnection();
+    
+    // Determine branch ID based on user role
+    let branchIds = [];
+    
+    if (userRole === 'stall_business_owner') {
+      const [branches] = await connection.execute(`
+        SELECT DISTINCT b.branch_id
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+      `, [userId]);
+      
+      if (branches.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No branches found for this business owner'
+        });
+      }
+      branchIds = branches.map(b => b.branch_id);
+    } else {
+      const branch_id = req.user.branchId || req.user.branch_id;
+      if (!branch_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: No branch associated with user'
+        });
+      }
+      branchIds = [branch_id];
+    }
+    
+    // Fetch submissions for all accessible branches
+    let allSubmissions = [];
+    for (const branchId of branchIds) {
+      const [rows] = await connection.execute(
+        'CALL sp_getAllDocumentSubmissionsForBranch(?, ?, ?, ?)', 
+        [branchId, status, parseInt(limit), offset]
+      );
+      if (rows[0] && rows[0].length > 0) {
+        allSubmissions = allSubmissions.concat(rows[0]);
+      }
+    }
+    
+    // Sort by uploaded_at descending
+    allSubmissions.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
+    
+    res.json({
+      success: true,
+      data: allSubmissions,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: allSubmissions.length
+      },
+      filter: status
+    });
+    
+  } catch (error) {
+    console.error('❌ Get all document submissions error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch document submissions',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get document submission counts for dashboard statistics
+ */
+export const getDocumentSubmissionCounts = async (req, res) => {
+  let connection;
+  try {
+    const userRole = req.user.role;
+    const userId = req.user.userId;
+    
+    connection = await createConnection();
+    
+    // Determine branch ID based on user role
+    let branchIds = [];
+    
+    if (userRole === 'stall_business_owner') {
+      const [branches] = await connection.execute(`
+        SELECT DISTINCT b.branch_id
+        FROM business_owner_managers bom
+        INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bom.business_owner_id = ? AND bom.status = 'Active' AND b.status = 'Active'
+      `, [userId]);
+      
+      branchIds = branches.map(b => b.branch_id);
+    } else {
+      const branch_id = req.user.branchId || req.user.branch_id;
+      if (branch_id) branchIds = [branch_id];
+    }
+    
+    if (branchIds.length === 0) {
+      return res.json({
+        success: true,
+        data: { total: 0, pending_count: 0, approved_count: 0, rejected_count: 0 }
+      });
+    }
+    
+    // Aggregate counts across all branches
+    let totals = { total: 0, pending_count: 0, approved_count: 0, rejected_count: 0 };
+    
+    for (const branchId of branchIds) {
+      const [rows] = await connection.execute('CALL sp_getDocumentSubmissionCounts(?)', [branchId]);
+      if (rows[0] && rows[0][0]) {
+        totals.total += parseInt(rows[0][0].total) || 0;
+        totals.pending_count += parseInt(rows[0][0].pending_count) || 0;
+        totals.approved_count += parseInt(rows[0][0].approved_count) || 0;
+        totals.rejected_count += parseInt(rows[0][0].rejected_count) || 0;
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: totals
+    });
+    
+  } catch (error) {
+    console.error('❌ Get document submission counts error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch document submission counts',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get a specific document submission by ID
+ */
+export const getDocumentSubmissionById = async (req, res) => {
+  let connection;
+  try {
+    const { submissionId } = req.params;
+    
+    connection = await createConnection();
+    
+    const [rows] = await connection.execute('CALL sp_getDocumentSubmissionById(?)', [submissionId]);
+    
+    if (!rows[0] || rows[0].length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document submission not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: rows[0][0]
+    });
+    
+  } catch (error) {
+    console.error('❌ Get document submission by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch document submission',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get document submission BLOB data (for viewing/downloading)
+ */
+export const getDocumentSubmissionBlob = async (req, res) => {
+  let connection;
+  try {
+    const { submissionId } = req.params;
+    
+    connection = await createConnection();
+    
+    const [rows] = await connection.execute('CALL sp_getDocumentSubmissionBlobById(?)', [submissionId]);
+    
+    if (!rows[0] || rows[0].length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+    
+    const doc = rows[0][0];
+    
+    // If document_data exists (BLOB), return it as binary
+    if (doc.document_data) {
+      res.set({
+        'Content-Type': doc.file_type || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${doc.file_name}"`,
+        'Cache-Control': 'public, max-age=3600'
+      });
+      return res.send(doc.document_data);
+    }
+    
+    // Otherwise return metadata with file_url for external retrieval
+    res.json({
+      success: true,
+      data: {
+        submission_id: doc.submission_id,
+        file_url: doc.file_url,
+        file_name: doc.file_name,
+        file_type: doc.file_type,
+        file_size: doc.file_size,
+        document_name: doc.document_name
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Get document submission blob error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch document',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Review (approve/reject) a document submission
+ */
+export const reviewDocumentSubmission = async (req, res) => {
+  let connection;
+  try {
+    const { submissionId } = req.params;
+    const { status, rejection_reason } = req.body;
+    const reviewedBy = req.user.userId || req.user.businessManagerId || req.user.id;
+    
+    // Validate status
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be either "approved" or "rejected"'
+      });
+    }
+    
+    // Rejection reason is required when rejecting
+    if (status === 'rejected' && !rejection_reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required when rejecting a document'
+      });
+    }
+    
+    connection = await createConnection();
+    
+    const [rows] = await connection.execute(
+      'CALL sp_reviewDocumentSubmission(?, ?, ?, ?)',
+      [submissionId, status, rejection_reason || null, reviewedBy]
+    );
+    
+    const result = rows[0][0];
+    
+    if (result.success === 0) {
+      return res.status(404).json({
+        success: false,
+        message: result.message
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: result.message,
+      data: {
+        submission_id: result.submission_id,
+        new_status: result.new_status,
+        reviewed_by: reviewedBy
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Review document submission error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to review document submission',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get all documents for a specific stallholder (from stallholder_documents table)
+ */
+export const getStallholderDocumentSubmissions = async (req, res) => {
+  let connection;
+  try {
+    const { stallholderId } = req.params;
+    
+    connection = await createConnection();
+    
+    // Use stored procedure to get stallholder documents
+    const [rows] = await connection.execute('CALL sp_getDocumentsByStallholderId(?)', [stallholderId]);
+    
+    // Map the results to match expected frontend format
+    const documents = (rows[0] || []).map(doc => ({
+      ...doc,
+      submission_id: doc.document_id, // Map for frontend compatibility
+      file_name: doc.original_filename,
+      file_url: doc.file_path,
+      uploaded_at: doc.upload_date,
+      // Map verification_status to status for frontend
+      status: doc.status === 'verified' ? 'approved' : doc.status
+    }));
+    
+    res.json({
+      success: true,
+      data: documents,
+      stallholder_id: stallholderId
+    });
+    
+  } catch (error) {
+    console.error('❌ Get stallholder documents error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch stallholder documents',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Review/verify a stallholder document (approve or reject)
+ * Uses stored procedure sp_reviewStallholderDocument
+ */
+export const reviewStallholderDocument = async (req, res) => {
+  let connection;
+  try {
+    const { documentId } = req.params;
+    const { status, rejection_reason } = req.body;
+    const reviewedBy = req.user?.userId || req.user?.business_manager_id || req.user?.id || null;
+    
+    // Map frontend status to database status
+    const dbStatus = status === 'approved' ? 'verified' : status;
+    
+    connection = await createConnection();
+    
+    // Use stored procedure to review document
+    const [rows] = await connection.execute(
+      'CALL sp_reviewStallholderDocument(?, ?, ?, ?)',
+      [documentId, dbStatus, rejection_reason || null, reviewedBy]
+    );
+    
+    const result = rows[0]?.[0];
+    
+    if (result?.success) {
+      res.json({
+        success: true,
+        message: result.message,
+        document_id: documentId,
+        new_status: status
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result?.message || 'Failed to review document'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Review stallholder document error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to review document',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get document file for viewing/downloading (from stallholder_documents table)
+ */
+export const getStallholderDocumentFile = async (req, res) => {
+  let connection;
+  try {
+    const { documentId } = req.params;
+    
+    connection = await createConnection();
+    
+    const [rows] = await connection.execute('CALL sp_getDocumentById(?)', [documentId]);
+    
+    const doc = rows[0]?.[0];
+    
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+    
+    // Return document metadata (file is stored on filesystem via file_path)
+    res.json({
+      success: true,
+      data: {
+        document_id: doc.document_id,
+        file_path: doc.file_path,
+        file_name: doc.original_filename,
+        file_size: doc.file_size,
+        document_name: doc.document_name
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Get stallholder document file error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch document file',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
+/**
+ * Get stallholder document blob by document_id
+ * Serves the actual binary file content for preview/download
+ */
+export const getStallholderDocumentBlob = async (req, res) => {
+  let connection;
+  try {
+    const { documentId } = req.params;
+    
+    if (!documentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Document ID is required'
+      });
+    }
+
+    console.log(`📄 Fetching document blob for document_id: ${documentId}`);
+    
+    connection = await createConnection();
+    
+    // Get the document with its blob data
+    // Columns based on actual table structure: document_id, stallholder_id, document_type_id, 
+    // file_path, original_filename, document_data, storage_type
+    const [rows] = await connection.execute(`
+      SELECT 
+        sd.document_id,
+        sd.original_filename,
+        sd.file_size,
+        sd.document_data,
+        dt.document_name
+      FROM stallholder_documents sd
+      LEFT JOIN document_types dt ON sd.document_type_id = dt.document_type_id
+      WHERE sd.document_id = ?
+    `, [documentId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    const doc = rows[0];
+    
+    // Check if document has blob data
+    if (!doc.document_data) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document file data not found'
+      });
+    }
+
+    // Determine content type from filename extension (no mime_type column in table)
+    let contentType = 'application/octet-stream';
+    if (doc.original_filename) {
+      const ext = doc.original_filename.toLowerCase().split('.').pop();
+      const mimeTypes = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'pdf': 'application/pdf'
+      };
+      contentType = mimeTypes[ext] || 'application/octet-stream';
+    }
+
+    console.log(`✅ Serving document: ${doc.original_filename}, type: ${contentType}, size: ${doc.document_data.length} bytes`);
+    
+    // Set headers for binary response
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', doc.document_data.length);
+    res.setHeader('Content-Disposition', `inline; filename="${doc.original_filename || 'document'}"`);
+    
+    // Send the binary data
+    res.send(doc.document_data);
+    
+  } catch (error) {
+    console.error('❌ Get stallholder document blob error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch document blob',
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+};
+
 // Legacy DocumentController object for backward compatibility
 const DocumentController = {
   getAllDocumentTypes: async (req, res) => {

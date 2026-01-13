@@ -6,40 +6,9 @@ export const getAllParticipants = async (req, res) => {
   try {
     connection = await createConnection();
 
-    const [participants] = await connection.execute(
-      `SELECT 
-        a.applicant_id as participant_id,
-        a.applicant_full_name,
-        a.applicant_contact_number as contact_number,
-        a.applicant_address as address,
-        a.applicant_birthdate,
-        a.applicant_civil_status,
-        a.applicant_educational_attainment,
-        -- Application details
-        app.application_id,
-        app.application_status,
-        app.application_date,
-        -- Stall details
-        s.stall_id,
-        s.stall_no,
-        s.status as stall_status,
-        s.rental_price,
-        -- Branch/Location details
-        b.branch_name,
-        b.area,
-        b.location as branch_location,
-        f.floor_name,
-        sec.section_name
-      FROM applicant a
-      INNER JOIN application app ON a.applicant_id = app.applicant_id
-      INNER JOIN stall s ON app.stall_id = s.stall_id
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.application_status = 'Approved' 
-        AND s.status = 'Occupied'
-      ORDER BY app.application_date DESC`
-    );
+    // Use stored procedure instead of raw SQL
+    const [result] = await connection.execute('CALL sp_getAllParticipants()');
+    const participants = result[0] || [];
 
     // Format the response data
     const formattedParticipants = participants.map(participant => {

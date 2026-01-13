@@ -38,7 +38,7 @@ export async function createEmployee(req, res) {
         // Convert permissions array to JSON string
         const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
 
-        // Call stored procedure (correct procedure name: createBusinessEmployee)
+        // Call stored procedure - now with built-in encryption
         const [[result]] = await connection.execute(
             'CALL createBusinessEmployee(?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [username, hashedPassword, firstName, lastName, email, phoneNumber, finalBranchId, finalCreatedBy, permissionsJson]
@@ -79,16 +79,16 @@ export async function getAllEmployees(req, res) {
         
         let employees;
         if (branchFilter === null) {
-            // System administrator - see all employees using stored procedure
-            const [result] = await connection.execute(`CALL sp_getAllEmployeesAll(?)`, ['Active']);
+            // System administrator - see all employees using decrypted stored procedure
+            const [result] = await connection.execute(`CALL sp_getBusinessEmployeesAllDecrypted(?)`, ['Active']);
             employees = result[0] || [];
         } else if (branchFilter.length === 0) {
             // Business owner with no accessible branches
             employees = [];
         } else {
-            // Business owner (multiple branches) or business manager using stored procedure
+            // Business owner (multiple branches) or business manager using decrypted stored procedure
             const branchIdsString = branchFilter.join(',');
-            const [result] = await connection.execute(`CALL sp_getAllEmployeesByBranches(?, ?)`, [branchIdsString, 'Active']);
+            const [result] = await connection.execute(`CALL sp_getBusinessEmployeesByBranchDecrypted(?, ?)`, [branchIdsString, 'Active']);
             employees = result[0] || [];
         }
         
@@ -598,8 +598,8 @@ export async function getActiveSessions(req, res) {
         let staffSessions = [];
         
         // Get employee sessions (web employees)
-        // NOTE: Web employee sessions already store Philippine time via CONVERT_TZ in stored procedures
-        // So we query WITHOUT timezone conversion to avoid double conversion
+        // IMPORTANT: Return sessions from last 24 hours to ensure we have logout status
+        // The Dashboard uses is_active flag as PRIMARY source of truth for online status
         try {
             const [empRows] = await connection.execute(`
                 SELECT 
@@ -618,7 +618,7 @@ export async function getActiveSessions(req, res) {
                 INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
                 LEFT JOIN branch b ON be.branch_id = b.branch_id
                 WHERE es.is_active = 1 
-                   OR es.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                   OR es.login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
             `);
             employeeSessions = empRows.map(row => ({
                 ...row,
@@ -630,8 +630,10 @@ export async function getActiveSessions(req, res) {
         }
         
         // Get staff sessions (inspector/collector from mobile)
-        // NOTE: Mobile staff sessions store UTC time, so we need timezone conversion
-        // Set timezone ONLY for staff_session query
+        // IMPORTANT: Return sessions from last 24 hours to ensure we have logout status
+        // The Dashboard uses is_active flag as PRIMARY source of truth for online status
+        // NOTE: Times are already stored in Philippine time (SET time_zone before INSERT)
+        // So we just query them directly without CONVERT_TZ
         try {
             await connection.execute(`SET time_zone = '+08:00'`);
             const [staffRows] = await connection.execute(`
@@ -645,7 +647,8 @@ export async function getActiveSessions(req, res) {
                     ss.logout_time
                 FROM staff_session ss
                 WHERE ss.is_active = 1 
-                   OR ss.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                   OR ss.login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                ORDER BY ss.last_activity DESC
             `);
             staffSessions = staffRows;
             console.log(`📊 Found ${staffSessions.length} staff sessions, active: ${staffSessions.filter(s => s.is_active).length}`);

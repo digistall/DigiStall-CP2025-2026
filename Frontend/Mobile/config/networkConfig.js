@@ -6,18 +6,21 @@
 
 export const API_CONFIG = {
   // Multiple possible server endpoints (in order of preference)
-  // Mobile API runs on Backend-Mobile server (port 3002)
+  // For PRODUCTION builds, the DigitalOcean server should be FIRST
+  // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // Local Development - Port 3002 (Backend-Mobile Server)
-    'http://192.168.1.101:3002',   // User's current IP
-    'http://192.168.100.241:3002',
-    'http://localhost:3002',
-    'http://192.168.1.101:5001',   // Fallback to old port
-    'http://localhost:5001',
+    // DigitalOcean Production Server - MUST BE FIRST FOR DEPLOYED APPS
+    // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
+    'http://68.183.154.125:5001',   // Production Backend-Mobile API
+    'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
     
-    // DigitalOcean Production Server
-    'http://68.183.154.125:3002',
-    'http://68.183.154.125:5001',
+    // Local Development - Only works when running on emulator/same network
+    // Move these to top ONLY for local testing with Expo Go
+    'http://192.168.1.101:5001',
+    'http://192.168.1.101:3002',
+    'http://192.168.100.241:3002',
+    'http://localhost:5001',        // Only works on emulator
+    'http://localhost:3002',        // Only works on emulator
   ],
   
   // Static file server for images (Apache on port 80)
@@ -50,6 +53,7 @@ export const API_CONFIG = {
     
     // Application endpoints
     SUBMIT_APPLICATION: '/api/mobile/applications/submit',
+    JOIN_RAFFLE: '/api/mobile/applications/join-raffle',
     GET_MY_APPLICATIONS: '/api/mobile/applications/my',
     GET_APPLICATION_STATUS: '/api/mobile/applications',
     UPDATE_APPLICATION: '/api/mobile/applications',
@@ -65,6 +69,15 @@ export const API_CONFIG = {
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
+    
+    // Stallholder complaint endpoints
+    SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
+    GET_MY_COMPLAINTS: '/api/mobile/stallholder/complaints',
+    
+    // Stallholder payment endpoints
+    GET_PAYMENT_RECORDS: '/api/mobile/stallholder/payments',
+    GET_ALL_PAYMENT_RECORDS: '/api/mobile/stallholder/payments/all',
+    GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
     
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint

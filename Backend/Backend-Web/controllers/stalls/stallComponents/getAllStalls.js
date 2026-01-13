@@ -17,9 +17,9 @@ export const getAllStalls = async (req, res) => {
 
     connection = await createConnection();
 
-    // Call stored procedure - it handles ALL authorization
+    // Call decrypted stored procedure - it handles ALL authorization
     const [result] = await connection.execute(
-      `CALL sp_getAllStalls_complete(?, ?, ?)`,
+      `CALL sp_getAllStalls_complete_decrypted(?, ?, ?)`,
       [userId, userType, branchId]
     );
 

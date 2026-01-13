@@ -105,9 +105,13 @@
             </div>
 
             <div class="table-cell login-col">
-              <div v-if="employee.last_login">
+              <div v-if="isEmployeeOnline(employee)">
                 <div class="login-date">{{ formatDate(employee.last_login) }}</div>
                 <div class="login-time">{{ formatTime(employee.last_login) }}</div>
+              </div>
+              <div v-else-if="employee.last_logout">
+                <div class="login-date">{{ formatDate(employee.last_logout) }}</div>
+                <div class="login-time">{{ formatTime(employee.last_logout) }}</div>
               </div>
               <span v-else class="text-grey">Never</span>
             </div>
@@ -143,80 +147,76 @@
         </div>
       </div>
 
-      <!-- Actions Popup Dialog -->
-      <v-dialog v-model="showActionsDialog" max-width="400">
-        <v-card class="simple-popup">
-          <v-card-title class="simple-popup-header">
-            <div class="text-h6">{{ selectedEmployee?.first_name }} {{ selectedEmployee?.last_name }}</div>
-            <div class="text-caption text-medium-emphasis">{{ selectedEmployee?.email }}</div>
-          </v-card-title>
+      <!-- Actions Popup Dialog - Enhanced Design -->
+      <v-dialog v-model="showActionsDialog" max-width="420">
+        <v-card class="employee-actions-popup" rounded="lg" elevation="8">
+          <!-- Header with Employee Info -->
+          <div class="popup-header">
+            <div class="employee-avatar-section">
+              <v-avatar size="64" :color="getEmployeeTypeColor(selectedEmployee)" class="employee-avatar">
+                <v-img v-if="selectedEmployee?.avatar" :src="selectedEmployee.avatar" />
+                <span v-else class="text-white text-h5 font-weight-bold">
+                  {{ selectedEmployee?.first_name?.charAt(0) }}{{ selectedEmployee?.last_name?.charAt(0) }}
+                </span>
+              </v-avatar>
+            </div>
+            <div class="employee-info-section">
+              <div class="employee-name-large">{{ selectedEmployee?.first_name }} {{ selectedEmployee?.last_name }}</div>
+              <div class="employee-email-display">{{ selectedEmployee?.email }}</div>
+              <v-chip size="small" color="white" variant="flat" class="mt-1 role-chip-popup">
+                <v-icon size="14" class="me-1">{{ getRoleIcon(selectedEmployee) }}</v-icon>
+                {{ selectedEmployee?.display_role || 'Employee' }}
+              </v-chip>
+            </div>
+            <v-btn icon variant="flat" size="default" class="close-btn" @click="closeActionsDialog">
+              <v-icon size="24">mdi-close</v-icon>
+            </v-btn>
+          </div>
 
-          <v-card-text class="simple-popup-content">
+          <v-divider></v-divider>
+
+          <!-- Action Buttons -->
+          <v-card-text class="popup-actions pa-4">
+            <!-- Edit Employee -->
             <v-btn
               block
-              color="rgb(0, 33, 129)"
               variant="flat"
-              class="simple-action-btn mb-3"
+              class="action-btn edit-btn mb-3"
               @click="handleEdit"
             >
-              <v-icon class="me-2">mdi-pencil</v-icon>
-              Edit Employee
+              <v-icon class="me-3" size="20">mdi-pencil-outline</v-icon>
+              <span class="action-text">Edit Employee</span>
+              <v-icon class="ms-auto" size="18" color="grey-darken-1">mdi-chevron-right</v-icon>
             </v-btn>
 
+            <!-- Reset Password -->
             <v-btn
               block
-              color="rgb(0, 33, 129)"
               variant="flat"
-              class="simple-action-btn mb-3"
-              @click="handleManagePermissions"
-            >
-              <v-icon class="me-2">mdi-shield-account</v-icon>
-              Manage Permissions
-            </v-btn>
-
-            <v-btn
-              block
-              :color="selectedEmployee?.status === 'active' ? 'orange' : 'green'"
-              variant="flat"
-              class="simple-action-btn mb-3"
-              @click="handleToggleStatus"
-            >
-              <v-icon class="me-2">
-                {{ selectedEmployee?.status === 'active' ? 'mdi-account-off' : 'mdi-account-check' }}
-              </v-icon>
-              {{ selectedEmployee?.status === 'active' ? 'Deactivate' : 'Activate' }} Employee
-            </v-btn>
-
-            <v-btn
-              block
-              color="warning"
-              variant="flat"
-              class="simple-action-btn mb-3"
+              class="action-btn reset-btn mb-3"
               @click="handleResetPassword"
             >
-              <v-icon class="me-2">mdi-key-variant</v-icon>
-              Reset Password
+              <v-icon class="me-3" size="20">mdi-key-outline</v-icon>
+              <span class="action-text">Reset Password</span>
+              <v-icon class="ms-auto" size="18" color="grey-darken-1">mdi-chevron-right</v-icon>
             </v-btn>
 
+            <v-divider class="my-3"></v-divider>
+
+            <!-- Fire Employee - Danger Action -->
             <v-btn
               block
-              color="red-darken-3"
               variant="flat"
-              class="simple-action-btn mb-4"
+              class="action-btn fire-btn"
               @click="handleFireEmployee"
             >
-              <v-icon class="me-2">mdi-account-remove</v-icon>
-              Fire Employee
-            </v-btn>
-
-            <v-btn
-              block
-              variant="outlined"
-              @click="closeActionsDialog"
-            >
-              Close
+              <v-icon class="me-3" size="20">mdi-account-remove-outline</v-icon>
+              <span class="action-text">Fire Employee</span>
+              <v-icon class="ms-auto" size="18">mdi-chevron-right</v-icon>
             </v-btn>
           </v-card-text>
+
+          <!-- Footer removed - X button only -->
         </v-card>
       </v-dialog>
 
