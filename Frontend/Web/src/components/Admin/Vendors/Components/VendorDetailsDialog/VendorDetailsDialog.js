@@ -2,9 +2,13 @@ import { computed, reactive, onUnmounted } from 'vue'
 
 export default {
   setup(props, { emit }) {
+    // Support both v-model (modelValue) and :isVisible + @close API
     const model = computed({
-      get: () => props.modelValue,
-      set: (v) => emit('update:modelValue', v),
+      get: () => (props.isVisible === undefined ? props.modelValue : props.isVisible),
+      set: (v) => {
+        emit('update:modelValue', v)
+        if (props.isVisible !== undefined && !v) emit('close')
+      },
     })
 
     // Flatten data for easier access
@@ -110,13 +114,14 @@ export default {
       toUrl,
       fileName,
       downloadFile,
-      openFile
+      openFile,
     }
   },
   props: {
     modelValue: { type: Boolean, default: false },
+    isVisible: { type: Boolean, required: false },
     data: { type: Object, default: () => ({}) }, // full form payload
     photo: { type: String, default: 'https://i.pravatar.cc/200?img=12' },
   },
-  emits: ['update:modelValue']
+  emits: ['update:modelValue', 'close'],
 }

@@ -41,22 +41,39 @@
 }
 
 .close-button {
+  /* Reset defaults to prevent shifting */
   background: rgba(255, 255, 255, 0.2);
   border: none;
-  font-size: 20px;
-  color: white;
-  cursor: pointer;
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
+  padding: 0;
+  margin: 0;
+
+  /* Perfect Centering */
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: background 0.2s ease;
+
+  /* Sizing */
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+
+  /* Text Styling */
+  color: white;
+  font-size: 24px;   /* Larger X looks cleaner */
+  line-height: 1;    /* Crucial: removes invisible font spacing */
+  font-family: sans-serif; /* Ensures a symmetrical X */
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .close-button:hover {
   background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1); /* Adds a subtle pop effect */
+}
+
+/* Optional: Adds a click effect */
+.close-button:active {
+  transform: scale(0.95);
 }
 
 /* Body */

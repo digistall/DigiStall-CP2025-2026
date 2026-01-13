@@ -8,11 +8,26 @@ import {
   ScrollView,
   Modal,
   Image,
+  StyleSheet,
 } from "react-native";
-import { styles } from "./css/styles";
+import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../services/UserStorageService";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
+
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    surface: '#ffffff',
+    background: '#f8fafc',
+    text: '#1e293b',
+    textSecondary: '#64748b',
+    border: '#e2e8f0',
+    primary: '#3b82f6',
+    card: '#ffffff',
+  }
+};
 
 const Sidebar = ({
   isVisible,
@@ -20,7 +35,10 @@ const Sidebar = ({
   onProfilePress,
   onMenuItemPress,
   activeMenuItem = "dashboard",
+  theme = defaultTheme,
+  isDarkMode = false,
 }) => {
+  const colors = theme?.colors || defaultTheme.colors;
   const slideAnim = useRef(new Animated.Value(-width * 0.85)).current;
   const [userData, setUserData] = useState(null);
 
@@ -60,14 +78,23 @@ const Sidebar = ({
     }
   }, [isVisible]);
 
-  // Helper function to get user initials
-  const getUserInitials = (fullName) => {
-    if (!fullName) return "U";
-    const names = fullName.split(' ');
-    if (names.length >= 2) {
-      return (names[0][0] + names[1][0]).toUpperCase();
-    }
-    return fullName[0].toUpperCase();
+  // Get display name using safe utilities
+  const getDisplayName = () => {
+    if (!userData) return "Loading...";
+    return getSafeUserName(userData, "User");
+  };
+
+  // Get display contact using safe utilities
+  const getDisplayContact = () => {
+    if (!userData) return "";
+    return getSafeContactInfo(userData, "");
+  };
+
+  // Get safe initials using safe utilities
+  const getDisplayInitials = () => {
+    if (!userData) return "U";
+    const name = getSafeUserName(userData, "");
+    return getUserInitials(name, "U");
   };
 
   // Professional icon components using SVG-like paths rendered as text
@@ -107,14 +134,8 @@ const Sidebar = ({
     },
     {
       id: "reports",
-      title: "Reports", 
+      title: "Complaints", 
       icon: require("../../../assets/report-icon.png"),
-      isImage: true,
-    },
-    {
-      id: "settings",
-      title: "Settings",
-      icon: require("../../../assets/Settings-icon.png"),
       isImage: true,
     },
     {
@@ -129,6 +150,12 @@ const Sidebar = ({
       icon: require("../../../assets/Notifications-icon.png"),
       isImage: true,
     },
+    {
+      id: "settings",
+      title: "Settings",
+      icon: require("../../../assets/Settings-icon.png"),
+      isImage: true,
+    },
   ];
 
   return (
@@ -138,84 +165,85 @@ const Sidebar = ({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={baseStyles.container}>
         <TouchableOpacity
-          style={styles.overlay}
+          style={baseStyles.overlay}
           onPress={onClose}
           activeOpacity={1}
         />
 
         <Animated.View
-          style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}
+          style={[baseStyles.sidebar, { backgroundColor: colors.surface, transform: [{ translateX: slideAnim }] }]}
         >
           <ScrollView
-            style={styles.content}
+            style={baseStyles.content}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ flexGrow: 1 }}
           >
             {/* Header Gradient */}
-            <View style={styles.headerGradient}>
+            <View style={[baseStyles.headerGradient, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
               {/* Profile Section */}
-              <View style={styles.profileSection}>
+              <View style={baseStyles.profileSection}>
                 <TouchableOpacity
-                  style={styles.profileContainer}
+                  style={baseStyles.profileContainer}
                   onPress={onProfilePress}
                 >
-                  <View style={styles.profileImageContainer}>
-                    <View style={styles.profileImage}>
-                      <Text style={styles.profileInitials}>
-                        {userData ? getUserInitials(userData.full_name || userData.username) : "U"}
+                  <View style={baseStyles.profileImageContainer}>
+                    <View style={[baseStyles.profileImage, { backgroundColor: colors.primary }]}>
+                      <Text style={baseStyles.profileInitials}>
+                        {getDisplayInitials()}
                       </Text>
                     </View>
-                    <View style={styles.statusIndicator} />
+                    <View style={baseStyles.statusIndicator} />
                   </View>
-                  <View style={styles.profileInfo}>
-                    <Text style={styles.profileName}>
-                      {userData ? userData.full_name : "Loading..."}
+                  <View style={baseStyles.profileInfo}>
+                    <Text style={[baseStyles.profileName, { color: colors.text }]}>
+                      {getDisplayName()}
                     </Text>
-                    <Text style={styles.profileEmail}>
-                      {userData ? (userData.email || userData.contact_number || userData.username) : ""}
+                    <Text style={[baseStyles.profileEmail, { color: colors.textSecondary }]}>
+                      {getDisplayContact()}
                     </Text>
-                    <Text style={styles.profileStatus}>Online</Text>
+                    <Text style={baseStyles.profileStatus}>Online</Text>
                   </View>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Navigation Items */}
-            <View style={styles.navigationSection}>
-              <Text style={styles.sectionTitle}>NAVIGATION</Text>
+            <View style={baseStyles.navigationSection}>
+              <Text style={[baseStyles.sectionTitle, { color: colors.textSecondary }]}>NAVIGATION</Text>
               {menuItems.map((item, index) => (
                 <TouchableOpacity
                   key={item.id}
                   style={[
-                    styles.menuItem,
-                    activeMenuItem === item.id && styles.activeMenuItem,
+                    baseStyles.menuItem,
+                    activeMenuItem === item.id && [baseStyles.activeMenuItem, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#f1f5f9', borderColor: colors.border }],
                   ]}
                   onPress={() => onMenuItemPress(item.id)}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.menuIconContainer}>
+                  <View style={baseStyles.menuIconContainer}>
                     {item.isImage ? (
                       <Image
                         source={item.icon}
-                        style={styles.menuItemIconImage}
+                        style={[baseStyles.menuItemIconImage, { tintColor: activeMenuItem === item.id ? colors.primary : colors.textSecondary }]}
                         resizeMode="contain"
                       />
                     ) : (
-                      <Text style={styles.menuItemIcon}>{item.icon}</Text>
+                      <Text style={[baseStyles.menuItemIcon, { color: colors.textSecondary }]}>{item.icon}</Text>
                     )}
                   </View>
                   <Text
                     style={[
-                      styles.menuItemText,
-                      activeMenuItem === item.id && styles.activeMenuItemText,
+                      baseStyles.menuItemText,
+                      { color: colors.textSecondary },
+                      activeMenuItem === item.id && [baseStyles.activeMenuItemText, { color: colors.text }],
                     ]}
                   >
                     {item.title}
                   </Text>
                   {activeMenuItem === item.id && (
-                    <View style={styles.activeIndicator} />
+                    <View style={[baseStyles.activeIndicator, { backgroundColor: colors.primary }]} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -223,25 +251,25 @@ const Sidebar = ({
           </ScrollView>
 
           {/* Fixed Bottom Section */}
-          <View style={styles.bottomSection}>
-            <View style={styles.divider} />
+          <View style={[baseStyles.bottomSection, { backgroundColor: colors.surface }]}>
+            <View style={[baseStyles.divider, { backgroundColor: colors.border }]} />
             <TouchableOpacity
-              style={styles.logoutItem}
+              style={baseStyles.logoutItem}
               onPress={() => onMenuItemPress("logout")}
               activeOpacity={0.7}
             >
-              <View style={styles.logoutIconContainer}>
-                <View style={styles.logoutIcon}>
-                  <View style={styles.logoutArrow} />
-                  <View style={styles.logoutDoor} />
+              <View style={baseStyles.logoutIconContainer}>
+                <View style={baseStyles.logoutIcon}>
+                  <View style={baseStyles.logoutArrow} />
+                  <View style={baseStyles.logoutDoor} />
                 </View>
               </View>
-              <Text style={styles.logoutText}>Sign Out</Text>
+              <Text style={baseStyles.logoutText}>Sign Out</Text>
             </TouchableOpacity>
 
             {/* App Version */}
-            <View style={styles.versionContainer}>
-              <Text style={styles.versionText}>Version 1.2.0</Text>
+            <View style={baseStyles.versionContainer}>
+              <Text style={[baseStyles.versionText, { color: colors.textSecondary }]}>Version 1.2.0</Text>
             </View>
           </View>
         </Animated.View>

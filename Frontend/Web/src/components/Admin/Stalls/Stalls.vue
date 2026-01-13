@@ -2,19 +2,16 @@
 <template>
   <v-app>
     <!-- Main Content -->
-    <v-main>
-      <!-- Loading Overlay -->
-      <v-overlay v-if="loading" contained>
-        <v-progress-circular
-          indeterminate
-          size="64"
-          color="primary"
-        ></v-progress-circular>
-        <div class="text-h6 mt-4">Loading stalls...</div>
-      </v-overlay>
+    <v-main class="stalls-main-content">
+      <!-- Standardized Loading Overlay - contained within main content -->
+      <LoadingOverlay 
+        :loading="loading" 
+        text="Loading stalls..."
+        :full-page="false"
+      />
 
       <!-- Error State -->
-      <v-alert v-if="error && !loading" type="error" prominent border="left" class="ma-4">
+      <v-alert v-if="error && !loading" type="error" prominent border="start" class="ma-4">
         <div class="text-h6">Failed to load stalls</div>
         <div>{{ error }}</div>
         <template v-slot:append>
@@ -103,6 +100,15 @@
         @stall-deleted="handleStallDeleted"
         @error="handleEditError"
       />
+
+      <!-- Raffle Participants Modal -->
+      <RaffleParticipantsModal
+        :show="showRaffleParticipantsModal"
+        :stall="selectedRaffleStall"
+        @close="closeRaffleParticipantsModal"
+        @winner-selected="handleRaffleWinnerSelected"
+        @show-message="handleShowMessage"
+      />
     </v-main>
 
     <!-- Warning Container Dialog -->
@@ -138,14 +144,12 @@
       </v-card>
     </v-dialog>
 
-    <!-- Custom Universal Popup -->
-    <UniversalPopup
-      :show="popup.show"
-      :message="popup.message"
-      :type="popup.type"
-      :operation="popup.operation"
-      :operationType="popup.operationType"
-      @close="popup.show = false"
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
     />
   </v-app>
 </template>

@@ -2,9 +2,13 @@ import { computed, reactive, watch, ref } from 'vue'
 
 export default {
   setup(props, { emit }) {
-    const model = computed({
-      get: () => props.modelValue,
-      set: (v) => emit('update:modelValue', v),
+    // Support both v-model (modelValue) and :isVisible + @close API
+    const visible = computed({
+      get: () => (props.isVisible === undefined ? props.modelValue : props.isVisible),
+      set: (v) => {
+        emit('update:modelValue', v)
+        if (props.isVisible !== undefined && !v) emit('close')
+      },
     })
 
     const step = ref(1)
@@ -85,27 +89,28 @@ export default {
         raw: { ...form, files: { ...form.files } }, // keep File refs
       }
       emit('update', updatedRow)
-      model.value = false
+      visible.value = false
     }
 
     function cancel() {
-      model.value = false
+      visible.value = false
       step.value = 1
     }
 
     return {
-      model,
+      model: visible,
       step,
       form,
       goNext,
       submit,
-      cancel
+      cancel,
     }
   },
   props: {
     modelValue: { type: Boolean, default: false },
+    isVisible: { type: Boolean, required: false },
     /** pass the full vendor payload (what you stored in item.raw) */
     data: { type: Object, default: () => ({}) },
   },
-  emits: ['update:modelValue', 'update']
+  emits: ['update:modelValue', 'update', 'close'],
 }

@@ -9,7 +9,6 @@ import { getStallById } from './stallComponents/getStallById.js'
 import { getStallsByFilter } from './stallComponents/getStallsByFilter.js'
 import { updateStall } from './stallComponents/updateStall.js'
 import { deleteStall } from './stallComponents/deleteStall.js'
-import { getLiveStallInfo, startLiveSession } from './stallComponents/getLiveStallInfo.js'
 
 // Import landing page components (Public)
 import { getBranches } from './stallComponents/landingPageComponents/getBranches/getBranches.js'
@@ -19,11 +18,16 @@ import { getLocationsByArea } from './stallComponents/landingPageComponents/getL
 import { getStallsByArea } from './stallComponents/landingPageComponents/getStallsByArea/getStallsByArea.js'
 import { getStallsByLocation } from './stallComponents/landingPageComponents/getStallsByLocation/getStallsByLocation.js'
 import { getFilteredStalls } from './stallComponents/landingPageComponents/getFilteredStalls/getFilteredStalls.js'
+import { getLandingPageStats } from './stallComponents/landingPageComponents/getLandingPageStats/getLandingPageStats.js'
+import { getLandingPageStallholders } from './stallComponents/landingPageComponents/getLandingPageStallholders/getLandingPageStallholders.js'
+import { getLandingPageStallsList } from './stallComponents/landingPageComponents/getLandingPageStallsList/getLandingPageStallsList.js'
+import { getLandingPageFilterOptions } from './stallComponents/landingPageComponents/getLandingPageFilterOptions/getLandingPageFilterOptions.js'
 
 // Import raffle components
 import { createRaffle } from './stallComponents/raffleComponents/createRaffle.js'
 import { joinRaffle } from './stallComponents/raffleComponents/joinRaffle.js'
 import { getActiveRaffles, getRaffleDetails } from './stallComponents/raffleComponents/getRaffles.js'
+import { getRaffleParticipantsByStall } from './stallComponents/raffleComponents/getRaffleParticipantsByStall.js'
 import { extendRaffleTimer, cancelRaffle } from './stallComponents/raffleComponents/manageRaffle.js'
 import { selectRaffleWinner, autoSelectWinnerForExpiredRaffles } from './stallComponents/raffleComponents/selectWinner.js'
 
@@ -44,8 +48,6 @@ export {
   getStallsByFilter,
   updateStall,
   deleteStall,
-  getLiveStallInfo,
-  startLiveSession,
   
   // Landing page functions (Public)
   getBranches,
@@ -55,12 +57,17 @@ export {
   getStallsByArea,
   getStallsByLocation,
   getFilteredStalls,
+  getLandingPageStats,
+  getLandingPageStallholders,
+  getLandingPageStallsList,
+  getLandingPageFilterOptions,
   
   // Raffle management
   createRaffle,
   joinRaffle,
   getActiveRaffles,
   getRaffleDetails,
+  getRaffleParticipantsByStall,
   extendRaffleTimer,
   cancelRaffle,
   selectRaffleWinner,

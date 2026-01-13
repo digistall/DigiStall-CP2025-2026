@@ -6,11 +6,36 @@ export default {
       activeFilter: 'all',
       showFilterPanel: false,
       searchTimeout: null,
+      filters: {
+        status: 'all',
+        severity: 'all',
+        type: 'All Types',
+        dateFrom: '',
+        dateTo: ''
+      },
+      typeOptions: [
+        'All Types',
+        'Health & Sanitation',
+        'Safety',
+        'Documentation',
+        'Payment',
+        'Structural',
+        'Operational',
+        'Environmental',
+        'Other'
+      ]
     }
   },
   computed: {
     hasActiveFilters() {
-      return this.activeFilter !== 'all' || this.searchQuery.trim() !== '';
+      return (
+        this.filters.status !== 'all' ||
+        this.filters.severity !== 'all' ||
+        this.filters.type !== 'All Types' ||
+        this.filters.dateFrom !== '' ||
+        this.filters.dateTo !== '' ||
+        this.searchQuery.trim() !== ''
+      );
     }
   },
   mounted() {
@@ -30,12 +55,13 @@ export default {
     handleSearch() {
       this.$emit('search', {
         query: this.searchQuery.trim(),
-        filter: this.activeFilter,
+        filter: this.filters.status,
+        filters: { ...this.filters }
       });
     },
 
     setFilter(filter) {
-      this.activeFilter = filter;
+      this.filters.status = filter;
       this.handleSearch();
     },
 
@@ -46,7 +72,13 @@ export default {
 
     clearAllFilters() {
       this.searchQuery = '';
-      this.activeFilter = 'all';
+      this.filters = {
+        status: 'all',
+        severity: 'all',
+        type: 'All Types',
+        dateFrom: '',
+        dateTo: ''
+      };
       this.handleSearch();
       this.showFilterPanel = false;
     },

@@ -10,13 +10,13 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 const { width } = Dimensions.get("window");
 
-const NotificationHeader = ({ unreadCount, onMarkAllRead, onClearAll }) => {
+const NotificationHeader = ({ unreadCount, onMarkAllRead, onClearAll, theme }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, theme && { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={[styles.title, theme && { color: theme.colors.text }]}>Notifications</Text>
         {unreadCount > 0 && (
-          <View style={styles.badge}>
+          <View style={[styles.badge, theme && { backgroundColor: theme.colors.primary }]}>
             <Text style={styles.badgeText}>
               {unreadCount > 99 ? "99+" : unreadCount}
             </Text>
@@ -26,13 +26,13 @@ const NotificationHeader = ({ unreadCount, onMarkAllRead, onClearAll }) => {
 
       <View style={styles.actionsContainer}>
         {unreadCount > 0 && (
-          <TouchableOpacity style={styles.iconButton} onPress={onMarkAllRead}>
-            <Icon name="done-all" size={22} color="#002181" />
+          <TouchableOpacity style={[styles.iconButton, theme && { backgroundColor: theme.colors.background }]} onPress={onMarkAllRead}>
+            <Icon name="done-all" size={22} color={theme ? theme.colors.primary : "#002181"} />
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.iconButton} onPress={onClearAll}>
-          <Icon name="clear-all" size={22} color="#6B7280" />
+        <TouchableOpacity style={[styles.iconButton, theme && { backgroundColor: theme.colors.background }]} onPress={onClearAll}>
+          <Icon name="clear-all" size={22} color={theme ? theme.colors.textSecondary : "#6B7280"} />
         </TouchableOpacity>
       </View>
     </View>

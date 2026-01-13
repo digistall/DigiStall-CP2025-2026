@@ -1,13 +1,16 @@
 <template>
   <div class="loading-overlay">
     <div class="loading-content">
+      <!-- Logo Header - Always visible -->
+      <div class="logo-header">
+        <img src="@/assets/DigiStall-Logo.png" alt="DigiStall" class="digistall-logo" />
+      </div>
+
       <!-- Preparing State -->
       <div v-if="state === 'preparing'" class="loading-state">
         <div class="loading-icon preparing-icon">
-          <div class="document-icon">
-            <div class="document-lines"></div>
-            <div class="document-lines"></div>
-            <div class="document-lines"></div>
+          <div class="spinner-container">
+            <div class="spinner-ring-logo"></div>
           </div>
         </div>
         <h3 class="loading-title">Preparing Application</h3>
@@ -20,14 +23,12 @@
       <!-- Submitting State -->
       <div v-else-if="state === 'submitting'" class="loading-state">
         <div class="loading-icon submitting-icon">
-          <div class="spinner-modern">
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
+          <div class="spinner-container">
+            <div class="spinner-ring-logo submitting"></div>
           </div>
         </div>
         <h3 class="loading-title">Submitting Application</h3>
-        <p class="loading-subtitle">Sending your application to the database...</p>
+        <p class="loading-subtitle">Saving your Application</p>
         <div class="progress-bar">
           <div class="progress-fill submitting-progress"></div>
         </div>
@@ -86,26 +87,26 @@ export default {
 
 <style scoped>
 .loading-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1001;
+  z-index: 999999;
 }
 
 .loading-content {
   background: white;
-  padding: 3rem 2rem;
+  padding: 2.5rem 2rem;
   border-radius: 20px;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  max-width: 400px;
-  min-width: 350px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 420px;
+  min-width: 360px;
   position: relative;
   overflow: hidden;
 }
@@ -116,9 +117,9 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, #4CAF50, #2196F3, #FF9800, #E91E63);
-  background-size: 300% 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #002181, #1976D2, #002181);
+  background-size: 200% 100%;
   animation: gradient-shift 2s ease-in-out infinite;
 }
 
@@ -127,107 +128,69 @@ export default {
   50% { background-position: 100% 0%; }
 }
 
+/* Logo Header */
+.logo-header {
+  margin-bottom: 1.5rem;
+}
+
+.digistall-logo {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+}
+
 .loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.2rem;
 }
 
 .loading-icon {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-/* Preparing State Styles */
-.preparing-icon {
-  animation: bounce 2s infinite;
-}
-
-.document-icon {
-  width: 50px;
-  height: 60px;
-  background: #2196F3;
-  border-radius: 5px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-}
-
-.document-icon::before {
-  content: '';
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 15px;
-  height: 15px;
-  background: #2196F3;
-  clip-path: polygon(0 100%, 100% 0, 100% 100%);
-}
-
-.document-lines {
-  width: 30px;
-  height: 3px;
-  background: white;
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-10px); }
-  60% { transform: translateY(-5px); }
-}
-
-/* Submitting State Styles */
-.spinner-modern {
+/* Spinner with Logo Theme */
+.spinner-container {
   position: relative;
   width: 60px;
   height: 60px;
 }
 
-.spinner-ring {
+.spinner-ring-logo {
   position: absolute;
   width: 100%;
   height: 100%;
-  border: 3px solid transparent;
+  border: 4px solid #e3e8f0;
+  border-top-color: #002181;
   border-radius: 50%;
-  animation: spin 1.5s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
-.spinner-ring:nth-child(1) {
-  border-top-color: #4CAF50;
-  animation-delay: 0s;
-}
-
-.spinner-ring:nth-child(2) {
-  border-right-color: #2196F3;
-  animation-delay: 0.3s;
-  width: 80%;
-  height: 80%;
-  top: 10%;
-  left: 10%;
-}
-
-.spinner-ring:nth-child(3) {
-  border-bottom-color: #FF9800;
-  animation-delay: 0.6s;
-  width: 60%;
-  height: 60%;
-  top: 20%;
-  left: 20%;
+.spinner-ring-logo.submitting {
+  border-top-color: #1976D2;
+  border-right-color: #002181;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Submitting State Styles */
+.submitting-icon {
+  animation: pulse-scale 1.5s ease-in-out infinite;
 }
 
 /* Success State Styles */

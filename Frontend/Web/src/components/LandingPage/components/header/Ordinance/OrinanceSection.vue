@@ -163,6 +163,7 @@ export default {
             default: false
         }
     },
+    emits: ['update:isVisible', 'close-modal'], // Declare emitted events
     computed: {
         isOrdinanceModalVisible: {
             get() {

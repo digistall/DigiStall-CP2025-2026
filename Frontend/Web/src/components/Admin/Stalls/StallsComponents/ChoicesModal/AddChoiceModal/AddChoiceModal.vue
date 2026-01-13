@@ -215,8 +215,8 @@
       @open-add-floor-section="handleOpenAddFloorSection"
     />
 
-    <!-- Floating Button Container -->
-    <div class="floating-button-container">
+    <!-- Floating Button Container (Hidden for business owners - view only) -->
+    <div class="floating-button-container" v-if="!isBusinessOwner">
       <!-- Pulse rings for ambient effect -->
       <div class="pulse-rings" v-if="!showModal">
         <div class="pulse-ring pulse-ring-1"></div>

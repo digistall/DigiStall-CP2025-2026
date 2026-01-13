@@ -1,29 +1,29 @@
 <template>
-    <div class="overlay" v-if="showForm">
+    <Teleport to="body">
         <!-- Enhanced Loading Overlay -->
-        <ApplicationLoadingOverlay 
-            v-if="isSubmitting" 
-            :state="loadingState" 
-            :error-message="loadingErrorMessage"
-            @retry="retrySubmission" 
-        />
+        <ApplicationLoadingOverlay v-if="showForm && isSubmitting" :state="loadingState" :error-message="loadingErrorMessage"
+            @retry="retrySubmission" />
 
         <!-- Step 1: Personal Information -->
-        <PersonalInformation v-if="currentStep === 1 && !isSubmitting" :stall="stall" @close="closeForm"
-            @next="handlePersonalInfoNext" />
+        <PersonalInformation v-if="showForm && currentStep === 1 && !isSubmitting" :stall="stall" 
+            :savedData="personalInfo" :currentStep="currentStep" :totalSteps="4"
+            @close="closeForm" @next="handlePersonalInfoNext" />
 
         <!-- Step 2: Spouse Information -->
-        <SpouseInformation v-if="currentStep === 2 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+        <SpouseInformation v-if="showForm && currentStep === 2 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+            :savedData="spouseInfo" :currentStep="currentStep" :totalSteps="4"
             @previous="goToPreviousStep" @next="handleSpouseInfoNext" />
 
         <!-- Step 3: Business Information -->
-        <BusinessInformation v-if="currentStep === 3 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
-            :spouseInfo="spouseInfo" @previous="goToPreviousStep" @next="handleBusinessInfoNext" @close="closeForm" />
+        <BusinessInformation v-if="showForm && currentStep === 3 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+            :spouseInfo="spouseInfo" :savedData="businessInfo" :currentStep="currentStep" :totalSteps="4"
+            @previous="goToPreviousStep" @next="handleBusinessInfoNext" @close="closeForm" />
 
         <!-- Step 4: Other Information -->
-        <OtherInformation v-if="currentStep === 4 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
-            :spouseInfo="spouseInfo" @previous="goToPreviousStep" @next="handleOtherInfoNext" />
-    </div>
+        <OtherInformation v-if="showForm && currentStep === 4 && !isSubmitting" :stall="stall" :personalInfo="personalInfo"
+            :spouseInfo="spouseInfo" :savedData="otherInfo" :currentStep="currentStep" :totalSteps="4"
+            @previous="goToPreviousStep" @next="handleOtherInfoNext" />
+    </Teleport>
 </template>
 
 <script>
@@ -31,17 +31,6 @@ import StallApplicationContainerScript from './StallApplicationContainer.js';
 export default StallApplicationContainerScript;
 </script>
 
-<style scoped>
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
+<style>
+/* Styles removed - child components handle their own overlay styling via applicationformstyle.css */
 </style>
