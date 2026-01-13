@@ -21,6 +21,7 @@ import UserStorageService from '../../../../services/UserStorageService';
 import DocumentUploadHelper from '../../../../services/DocumentUploadHelper';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
 import DocumentPreviewModal from './DocumentPreviewModal';
+import AuthenticatedImage from './AuthenticatedImage';
 
 const { width, height } = Dimensions.get("window");
 
@@ -475,16 +476,18 @@ const DocumentsScreen = () => {
       )}
 
       {/* Image Preview */}
-      {doc.status !== 'not_uploaded' && doc.blob_url && (
+      {doc.status !== 'not_uploaded' && doc.document_id && (
         <TouchableOpacity
           style={[styles.imagePreviewContainer, { backgroundColor: isDark ? theme.colors.surface : '#f1f5f9' }]}
           onPress={() => openDocumentPreview(doc, doc.document_type_id)}
         >
-          <Image
-            source={{ uri: doc.blob_url }}
+          <AuthenticatedImage
+            documentId={doc.document_id}
             style={styles.imagePreview}
+            resizeMode="cover"
+            placeholderColor={isDark ? theme.colors.surface : '#f1f5f9'}
             onError={(error) => {
-              console.error('❌ Error loading image preview:', error);
+              console.log('⚠️ Image preview load failed for document:', doc.document_id);
             }}
           />
           <View style={styles.previewOverlay}>

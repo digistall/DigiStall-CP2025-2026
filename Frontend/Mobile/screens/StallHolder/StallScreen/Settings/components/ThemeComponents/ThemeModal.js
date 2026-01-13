@@ -6,11 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  ScrollView,
+  StatusBar,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../ThemeComponents/ThemeContext";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const ThemeModal = ({ visible, onClose, currentTheme, onThemeChange }) => {
   const [selectedTheme, setSelectedTheme] = useState(currentTheme || "light");
@@ -62,6 +65,14 @@ const ThemeModal = ({ visible, onClose, currentTheme, onThemeChange }) => {
   const handleApply = () => {
     onThemeChange(selectedTheme);
     onClose();
+  };
+
+  // Get gradient colors based on current theme
+  const getGradientColors = () => {
+    if (theme.isDark) {
+      return ['#1a237e', '#0d47a1', '#1565c0'];
+    }
+    return ['#1a237e', '#283593', '#3949ab'];
   };
 
   const renderThemeOption = (themeOption) => {
@@ -182,59 +193,52 @@ const ThemeModal = ({ visible, onClose, currentTheme, onThemeChange }) => {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
+      <StatusBar barStyle="light-content" backgroundColor="#1a237e" />
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <View
-          style={[
-            styles.header,
-            {
-              borderBottomColor: theme.colors.border,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={getGradientColors()}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
         >
-          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-            <Ionicons
-              name="close"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Choose Theme
-          </Text>
-          <TouchableOpacity onPress={handleApply} style={styles.headerButton}>
-            <Text style={[styles.applyText, { color: theme.colors.primary }]}>
-              Apply
-            </Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Choose Theme</Text>
+            <TouchableOpacity onPress={handleApply} style={styles.applyButton}>
+              <Text style={styles.applyText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.content}>
+          {/* Icon and Description */}
           <View style={styles.introSection}>
-            <MaterialIcons
-              name="palette"
-              size={32}
-              color={theme.colors.primary}
-            />
-            <Text style={[styles.introTitle, { color: theme.colors.text }]}>
-              Personalize Your Experience
-            </Text>
-            <Text
-              style={[
-                styles.introDescription,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons name="palette" size={36} color="#1a237e" />
+            </View>
+            <Text style={styles.introTitle}>Personalize Your Experience</Text>
+            <Text style={styles.introDescription}>
               Choose a theme that suits your preference and lighting conditions.
             </Text>
           </View>
+        </LinearGradient>
 
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.themesContainer}>
             {themes.map(renderThemeOption)}
           </View>
-        </View>
+          
+          {/* Bottom Spacing */}
+          <View style={{ height: 20 }} />
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -244,65 +248,110 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerGradient: {
+    paddingTop: height * 0.02,
+    paddingBottom: height * 0.03,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
+    marginBottom: height * 0.02,
   },
-  headerButton: {
-    padding: 4,
-    minWidth: 60,
+  closeButton: {
+    padding: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+    minWidth: 40,
+    alignItems: "center",
+  },
+  applyButton: {
+    padding: 8,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   applyText: {
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "right",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
+    color: "#fff",
   },
   introSection: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingHorizontal: 20,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   introTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    marginTop: 16,
+    color: "#fff",
     marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   introDescription: {
-    fontSize: 16,
+    fontSize: 15,
+    color: "rgba(255, 255, 255, 0.9)",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 22,
   },
-  themesContainer: {
+  scrollContent: {
     flex: 1,
   },
+  scrollContentContainer: {
+    paddingTop: height * 0.025,
+  },
+  themesContainer: {
+    paddingHorizontal: 20,
+  },
   themeOption: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 16,
     borderWidth: 2,
     borderColor: "transparent",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   themeHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   themeIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -312,47 +361,48 @@ const styles = StyleSheet.create({
   },
   themeName: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 2,
+    fontWeight: "700",
+    marginBottom: 4,
   },
   themeDescription: {
     fontSize: 14,
+    lineHeight: 20,
   },
   themePreview: {
     alignItems: "center",
   },
   previewContainer: {
-    width: width * 0.7,
-    height: 120,
-    borderRadius: 12,
+    width: width * 0.75,
+    height: 140,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   previewHeader: {
-    height: 40,
+    height: 45,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   previewHeaderItem: {
-    width: 20,
-    height: 8,
-    borderRadius: 4,
+    width: 24,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
   },
   previewBody: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   previewLine: {
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 8,
+    height: 5,
+    borderRadius: 2.5,
+    marginBottom: 10,
   },
   previewLineShort: {
     width: "60%",
