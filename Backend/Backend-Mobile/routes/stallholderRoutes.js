@@ -19,6 +19,27 @@ import {
   updateStallholderDocumentVerificationStatus
 } from '../controllers/documents/stallholderDocumentBlobController.js';
 
+// Import complaint controller
+import {
+  submitComplaint,
+  getMyComplaints
+} from '../controllers/stallholder/complaintController.js';
+
+// Import profile controller
+import {
+  getStallholderProfile
+} from '../controllers/stallholder/profileController.js';
+
+// Import payment controller
+import {
+  getPaymentRecords,
+  getAllPaymentRecords,
+  getPaymentSummary
+} from '../controllers/stallholder/paymentController.js';
+
+// Import auth middleware
+import { verifyToken } from '../middleware/auth.js';
+
 const router = express.Router();
 
 // Get directory path for uploads
@@ -132,5 +153,57 @@ router.delete('/documents/blob/:document_id', deleteStallholderDocumentBlob);
  * @desc Update document verification status
  */
 router.put('/documents/blob/:document_id/verify', updateStallholderDocumentVerificationStatus);
+
+// =============================================
+// STALLHOLDER COMPLAINT ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/profile/:stallholder_id
+ * @desc Get stallholder profile with stall information
+ * @access Protected (Stallholder only)
+ */
+router.get('/profile/:stallholder_id', verifyToken, getStallholderProfile);
+
+/**
+ * @route POST /api/mobile/stallholder/complaint
+ * @desc Submit a complaint
+ * @access Protected (Stallholder only)
+ */
+router.post('/complaint', verifyToken, submitComplaint);
+
+/**
+ * @route GET /api/mobile/stallholder/complaints
+ * @desc Get stallholder's complaints
+ * @access Protected (Stallholder only)
+ */
+router.get('/complaints', verifyToken, getMyComplaints);
+
+// =============================================
+// STALLHOLDER PAYMENT ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/payments
+ * @desc Get payment records for stallholder (paginated)
+ * @query page - Page number (default: 1)
+ * @query limit - Records per page (default: 10)
+ * @access Protected (Stallholder only)
+ */
+router.get('/payments', verifyToken, getPaymentRecords);
+
+/**
+ * @route GET /api/mobile/stallholder/payments/all
+ * @desc Get all payment records for stallholder (no pagination)
+ * @access Protected (Stallholder only)
+ */
+router.get('/payments/all', verifyToken, getAllPaymentRecords);
+
+/**
+ * @route GET /api/mobile/stallholder/payments/summary
+ * @desc Get payment summary/statistics for stallholder
+ * @access Protected (Stallholder only)
+ */
+router.get('/payments/summary', verifyToken, getPaymentSummary);
 
 export default router;

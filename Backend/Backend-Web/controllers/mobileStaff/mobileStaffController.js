@@ -70,7 +70,8 @@ export async function createInspector(req, res) {
 
         console.log(`📱 Creating inspector: ${firstName} ${lastName} (${username})`);
 
-        // Create inspector using stored procedure
+        // Create inspector using stored procedure with encryption
+        // Stored procedure signature: (username, first_name, last_name, email, password_hash, contact_no)
         const [insertResult] = await connection.execute(
             'CALL sp_createInspectorDirect(?, ?, ?, ?, ?, ?)',
             [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
@@ -223,7 +224,8 @@ export async function createCollector(req, res) {
 
         console.log(`📱 Creating collector: ${firstName} ${lastName} (${username})`);
 
-        // Create collector using stored procedure
+        // Create collector using stored procedure with encryption
+        // Stored procedure signature: (username, first_name, last_name, email, password_hash, contact_no)
         const [insertResult] = await connection.execute(
             'CALL sp_createCollectorDirect(?, ?, ?, ?, ?, ?)',
             [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
@@ -288,15 +290,15 @@ export async function getInspectorsByBranch(req, res) {
         let inspectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided using stored procedure
+            // Filter by branch if branchId is provided using decrypted stored procedure
             const [result] = await connection.execute(
-                'CALL sp_getInspectorsByBranch(?)',
+                'CALL sp_getInspectorsByBranchDecrypted(?)',
                 [branchId]
             );
             inspectors = result[0] || [];
         } else {
-            // Return all inspectors if no branchId (for admin view) using stored procedure
-            const [result] = await connection.execute('CALL sp_getInspectorsAll()');
+            // Return all inspectors if no branchId (for admin view) using decrypted stored procedure
+            const [result] = await connection.execute('CALL sp_getInspectorsAllDecrypted()');
             inspectors = result[0] || [];
         }
 
@@ -347,15 +349,15 @@ export async function getCollectorsByBranch(req, res) {
         let collectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided using stored procedure
+            // Filter by branch if branchId is provided using decrypted stored procedure
             const [result] = await connection.execute(
-                'CALL sp_getCollectorsByBranch(?)',
+                'CALL sp_getCollectorsByBranchDecrypted(?)',
                 [branchId]
             );
             collectors = result[0] || [];
         } else {
-            // Return all collectors if no branchId (for admin view) using stored procedure
-            const [result] = await connection.execute('CALL sp_getCollectorsAll()');
+            // Return all collectors if no branchId (for admin view) using decrypted stored procedure
+            const [result] = await connection.execute('CALL sp_getCollectorsAllDecrypted()');
             collectors = result[0] || [];
         }
 

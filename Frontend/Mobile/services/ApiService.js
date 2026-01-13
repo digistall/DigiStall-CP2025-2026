@@ -97,7 +97,8 @@ class ApiService {
         message: data.message
       };
     } catch (error) {
-      console.error('❌ Staff Login API Error:', error);
+      // Don't log as error - this is expected for non-staff users (stallholders)
+      console.log('ℹ️ Staff login check:', error.message || 'Not a staff user');
       return {
         success: false,
         message: error.message || 'Network error occurred'
@@ -301,11 +302,13 @@ class ApiService {
   }
 
   // Staff (Inspector/Collector) auto-logout due to inactivity
+  // Uses the same endpoint as manual logout since staff-auto-logout may not be deployed
   static async staffAutoLogout(token, staffId, staffType) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
-      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_AUTO_LOGOUT}`, {
+      // Use the working staff-logout endpoint (same functionality)
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGOUT}`, {
         method: 'POST',
         headers: {
           ...API_CONFIG.HEADERS,
@@ -314,12 +317,17 @@ class ApiService {
         body: JSON.stringify({
           staffId: staffId,
           staffType: staffType,
-          reason: 'inactivity'
+          reason: 'inactivity' // Include reason for logging purposes
         })
       });
 
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.message || 'Auto-logout failed');
+      }
+
+      console.log('✅ Staff auto-logout API called - last_logout updated');
       return {
         success: true,
         data: data,
@@ -634,6 +642,91 @@ class ApiService {
     }
   }
 
+  // Join Raffle - Pre-register for a raffle stall
+  static async joinRaffle(applicantId, stallId) {
+    console.log('🎰 ====== JOIN RAFFLE START ======');
+    console.log('🎰 Input params - applicantId:', applicantId, 'type:', typeof applicantId);
+    console.log('🎰 Input params - stallId:', stallId, 'type:', typeof stallId);
+    
+    // Validate inputs before making the request
+    if (!applicantId) {
+      console.error('❌ VALIDATION ERROR: applicantId is missing or undefined');
+      return {
+        success: false,
+        message: 'Applicant ID is required to join raffle'
+      };
+    }
+    
+    if (!stallId) {
+      console.error('❌ VALIDATION ERROR: stallId is missing or undefined');
+      return {
+        success: false,
+        message: 'Stall ID is required to join raffle'
+      };
+    }
+    
+    try {
+      console.log('🔌 Getting active server...');
+      const server = await NetworkUtils.getActiveServer();
+      console.log('🔌 Active server:', server);
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.JOIN_RAFFLE}`;
+      console.log('🎰 Full URL:', url);
+      
+      const requestBody = { applicantId, stallId };
+      console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('� Request headers:', JSON.stringify(API_CONFIG.HEADERS, null, 2));
+
+      console.log('🚀 Sending POST request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response statusText:', response.statusText);
+      console.log('📡 Response ok:', response.ok);
+      
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('📡 Raw response text:', responseText);
+        data = JSON.parse(responseText);
+        console.log('📡 Parsed response data:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError.message);
+        throw new Error('Server returned invalid response');
+      }
+
+      if (!response.ok) {
+        console.error('❌ Response not OK - Status:', response.status);
+        console.error('❌ Server error message:', data.message);
+        console.error('❌ Server error details:', data.error);
+        throw new Error(data.message || 'Failed to join raffle');
+      }
+
+      console.log('✅ Successfully joined raffle:', data.message);
+      console.log('✅ Response data:', JSON.stringify(data.data, null, 2));
+      console.log('🎰 ====== JOIN RAFFLE SUCCESS ======');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ ====== JOIN RAFFLE ERROR ======');
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Join Raffle API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // Get user's applications (requires authentication)
   static async getMyApplications(token) {
     try {
@@ -794,8 +887,10 @@ class ApiService {
     }
   }
 
-  // Join raffle (if raffle joining is implemented)
-  static async joinRaffle(raffleId, applicantId, token) {
+  // ===== LEGACY RAFFLE METHOD (DEPRECATED) =====
+  // Note: Use joinRaffle(applicantId, stallId) instead - defined earlier in this file
+  // This method is kept for backward compatibility but should not be used
+  static async joinRaffleLegacy(raffleId, applicantId, token) {
     try {
       const server = await NetworkUtils.getActiveServer();
 
@@ -1368,6 +1463,54 @@ class ApiService {
   }
   
   /**
+   * Get stallholder profile with stall information
+   * @param {number} stallholderId - The stallholder ID
+   */
+  static async getStallholderProfile(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}/api/mobile/stallholder/profile/${stallholderId}`;
+      console.log('🔄 Fetching stallholder profile from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch stallholder profile');
+      }
+      
+      console.log('✅ Stallholder profile fetched:', data.data?.stall_number || 'No stall');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Stallholder Profile Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: null
+      };
+    }
+  }
+  
+  /**
    * Get stallholder details by ID
    * @param {number} stallholderId - The stallholder ID
    */
@@ -1584,6 +1727,255 @@ class ApiService {
       return {
         success: false,
         message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // ===== COMPLAINT METHODS =====
+
+  /**
+   * Submit a complaint from stallholder
+   * @param {object} complaintData - The complaint data
+   */
+  static async submitComplaint(complaintData) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_COMPLAINT}`;
+      console.log('🔄 Submitting complaint to:', url);
+      console.log('📝 Complaint data:', complaintData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(complaintData)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit complaint');
+      }
+      
+      console.log('✅ Complaint submitted successfully');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message || 'Complaint submitted successfully'
+      };
+      
+    } catch (error) {
+      console.error('❌ Submit Complaint Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Get stallholder's complaints
+   */
+  static async getMyComplaints() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_MY_COMPLAINTS}`;
+      console.log('🔄 Fetching complaints from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch complaints');
+      }
+      
+      console.log('✅ Complaints fetched successfully:', data.count);
+      return {
+        success: true,
+        data: data.data || [],
+        count: data.count || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Complaints Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  // ===== STALLHOLDER PAYMENT METHODS =====
+
+  /**
+   * Get payment records for stallholder (paginated)
+   * @param {number} page - Page number (default: 1)
+   * @param {number} limit - Records per page (default: 10)
+   */
+  static async getPaymentRecords(page = 1, limit = 10) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      console.log('🔐 Payment API - Token check:', token ? `Found (${token.substring(0, 20)}...)` : 'NOT FOUND');
+      
+      if (!token) {
+        console.log('⚠️ No auth token in storage. User may need to log in again.');
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+       
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_PAYMENT_RECORDS}?page=${page}&limit=${limit}`;
+      console.log('🔄 Fetching payment records from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment records');
+      }
+      
+      console.log('✅ Payment records fetched successfully:', data.data?.length || 0, 'records');
+      return {
+        success: true,
+        data: data.data || [],
+        pagination: data.pagination || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Payment Records Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get all payment records for stallholder (no pagination)
+   */
+  static async getAllPaymentRecords() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_ALL_PAYMENT_RECORDS}`;
+      console.log('🔄 Fetching all payment records from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch all payment records');
+      }
+      
+      console.log('✅ All payment records fetched successfully:', data.totalRecords || 0, 'records');
+      return {
+        success: true,
+        data: data.data || [],
+        totalRecords: data.totalRecords || 0,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get All Payment Records Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get payment summary/statistics for stallholder
+   */
+  static async getPaymentSummary() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_PAYMENT_SUMMARY}`;
+      console.log('🔄 Fetching payment summary from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment summary');
+      }
+      
+      console.log('✅ Payment summary fetched successfully');
+      return {
+        success: true,
+        data: data.data || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Payment Summary Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: {}
       };
     }
   }

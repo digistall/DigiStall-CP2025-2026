@@ -5,6 +5,7 @@ import { mockUser } from "../mockUser";
 import EditProfileModal from "../EditComponents/editProfile";
 import UserStorageService from "../../../../../../../services/UserStorageService";
 import { useTheme } from "../../../../Settings/components/ThemeComponents/ThemeContext";
+import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../../../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 
@@ -88,33 +89,33 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
       };
       
       return {
-        // Personal Information
-        fullName: user.full_name || user.fullName || "Not specified",
-        education: user.educational_attainment || "Not specified",
+        // Personal Information - using safe display utilities
+        fullName: getSafeDisplayValue(user.full_name || user.fullName, "Not specified"),
+        education: getSafeDisplayValue(user.educational_attainment, "Not specified"),
         birthDate: formatDate(user.birthdate),
-        civilStatus: user.civil_status || "Single",
-        contactNumber: user.contact_number || user.contactNumber || "Not specified",
-        mailingAddress: user.address || "Not specified",
+        civilStatus: getSafeDisplayValue(user.civil_status, "Single"),
+        contactNumber: getSafeDisplayValue(user.contact_number || user.contactNumber, "Not specified"),
+        mailingAddress: getSafeDisplayValue(user.address, "Not specified"),
 
         // Spouse Information (from spouse table) - only if spouse exists
         hasSpouse: !!spouse,
-        spouseName: spouse?.full_name || "Not specified",
+        spouseName: getSafeDisplayValue(spouse?.full_name, "Not specified"),
         spouseBirthDate: formatDate(spouse?.birthdate),
-        spouseEducation: spouse?.educational_attainment || "Not specified",
-        occupation: spouse?.occupation || "Not specified",
-        spouseContact: spouse?.contact_number || "Not specified",
+        spouseEducation: getSafeDisplayValue(spouse?.educational_attainment, "Not specified"),
+        occupation: getSafeDisplayValue(spouse?.occupation, "Not specified"),
+        spouseContact: getSafeDisplayValue(spouse?.contact_number, "Not specified"),
 
         // Business Information (from business_information table)
         hasBusiness: !!business,
-        businessNature: business?.nature_of_business || "Not specified",
+        businessNature: getSafeDisplayValue(business?.nature_of_business, "Not specified"),
         businessCapitalization: business?.capitalization ? Number(business.capitalization) : null,
-        sourceOfCapital: business?.source_of_capital || "Not specified",
-        previousBusiness: business?.previous_business_experience || business?.previous_experience || "None",
-        applicantRelative: business?.relative_stall_owner || "None",
+        sourceOfCapital: getSafeDisplayValue(business?.source_of_capital, "Not specified"),
+        previousBusiness: getSafeDisplayValue(business?.previous_business_experience || business?.previous_experience, "None"),
+        applicantRelative: getSafeDisplayValue(business?.relative_stall_owner, "None"),
 
         // Other Information (from other_information table)
         hasOtherInfo: !!otherInfo,
-        emailAddress: otherInfo?.email_address || user.email || "Not specified",
+        emailAddress: getSafeDisplayValue(otherInfo?.email_address || user.email, "Not specified"),
         signature: (otherInfo?.signature_of_applicant || otherInfo?.signature) ? "✓ Uploaded" : "Not uploaded",
         houseSketch: (otherInfo?.house_sketch_location || otherInfo?.house_sketch) ? "✓ Uploaded" : "Not uploaded",
         validId: otherInfo?.valid_id ? "✓ Uploaded" : "Not uploaded",

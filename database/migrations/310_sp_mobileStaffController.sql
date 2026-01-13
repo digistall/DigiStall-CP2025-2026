@@ -636,7 +636,7 @@ CREATE PROCEDURE sp_resetInspectorPassword(
 )
 BEGIN
     UPDATE inspector 
-    SET password = p_password_hash 
+    SET password_hash = p_password_hash 
     WHERE inspector_id = p_inspector_id;
     
     SELECT ROW_COUNT() as affected_rows;
