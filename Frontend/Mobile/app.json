@@ -9,7 +9,15 @@
     "newArchEnabled": false,
     "plugins": [
       "expo-image-picker",
-      "expo-document-picker"
+      "expo-document-picker",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -25,13 +33,11 @@
     },
     "android": {
       "package": "com.digistall.mobile",
-      "versionCode": 3,
+      "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/DigiStall-Logo.png",
         "backgroundColor": "#ffffff"
       },
-      "usesCleartextTraffic": true,
-      "networkSecurityConfig": "./android-network-security-config.xml",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
