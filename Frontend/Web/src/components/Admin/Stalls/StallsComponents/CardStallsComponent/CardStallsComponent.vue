@@ -125,7 +125,7 @@
             class="action-btn"
           >
             <v-icon left size="small" class="me-2">mdi-ticket-percent</v-icon>
-            MANAGE RAFFLE
+            VIEW PARTICIPANTS
           </v-btn>
 
           <!-- Auction Management Button -->
