@@ -923,7 +923,7 @@ export const reviewStallholderDocument = async (req, res) => {
   try {
     const { documentId } = req.params;
     const { status, rejection_reason } = req.body;
-    const reviewedBy = req.user?.business_manager_id || req.user?.id;
+    const reviewedBy = req.user?.userId || req.user?.business_manager_id || req.user?.id || null;
     
     // Map frontend status to database status
     const dbStatus = status === 'approved' ? 'verified' : status;
