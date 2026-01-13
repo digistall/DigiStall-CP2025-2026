@@ -1,6 +1,20 @@
 import { createConnection } from '../../config/database.js';
 import jwt from 'jsonwebtoken';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { decryptData } from '../../services/encryptionService.js';
+
+// Helper function to decrypt data safely (handles both encrypted and plain text)
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 const PaymentController = {
   extractUserFromToken(req) {
@@ -63,10 +77,10 @@ const PaymentController = {
       
       console.log('🔍 getStallholdersByBranch called for branch:', branchId);
       
-      // Use stored procedure for consistency with working getStallholderDetails
+      // Use decrypted stored procedure for frontend display
       console.log('🔍 Executing stored procedure with branchId:', branchId);
       const [result] = await connection.execute(
-        'CALL sp_get_all_stallholders(?)',
+        'CALL sp_get_all_stallholders_decrypted(?)',
         [branchId]
       );
       
@@ -121,7 +135,7 @@ const PaymentController = {
       console.log('🔍 getStallholderDetails called for stallholderId:', stallholderId);
       
       const [result] = await connection.execute(
-        'CALL sp_get_stallholder_details(?)',
+        'CALL sp_get_stallholder_details_decrypted(?)',
         [parseInt(stallholderId)]
       );
       
@@ -296,7 +310,7 @@ const PaymentController = {
       
       if (branchFilter === null) {
         // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAll(?, ?, ?)`, [search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -314,7 +328,7 @@ const PaymentController = {
       } else {
         // Filter by accessible branches using stored procedure
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranches(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -353,7 +367,7 @@ const PaymentController = {
       
       if (branchFilter === null) {
         // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAll(?, ?, ?)`, [search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -371,7 +385,7 @@ const PaymentController = {
       } else {
         // Filter by accessible branches using stored procedure
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranches(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
         return res.status(200).json({
@@ -824,7 +838,7 @@ const PaymentController = {
         branchId: p.branch_id,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
-        stallholderName: p.stallholder_name,
+        stallholderName: decryptSafe(p.stallholder_name),
         stallNo: p.stall_no,
         branchName: p.branch_name,
         violationType: p.violation_type,
@@ -834,8 +848,8 @@ const PaymentController = {
         penaltyRemarks: p.penalty_remarks,
         offenseNo: p.offense_no,
         severity: p.severity,
-        inspectorName: p.inspector_name,
-        collectedBy: p.collected_by_name || '-'
+        inspectorName: decryptSafe(p.inspector_name),
+        collectedBy: decryptSafe(p.collected_by_name) || '-'
       }));
       
       return res.status(200).json({
