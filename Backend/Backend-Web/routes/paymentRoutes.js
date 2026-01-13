@@ -1,8 +1,9 @@
-import express from 'express';
-import PaymentController from '../controllers/payments/paymentController.js';
-import authMiddleware from '../middleware/auth.js';
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
-import { authorizePermission } from '../middleware/enhancedAuth.js';
+import express from "express";
+import PaymentController from "../controllers/payments/paymentController.js";
+import DailyPaymentController from "../controllers/payments/dailyPaymentController.js";
+import authMiddleware from "../middleware/auth.js";
+import { viewOnlyForOwners } from "../middleware/rolePermissions.js";
+import { authorizePermission } from "../middleware/enhancedAuth.js";
 
 const router = express.Router();
 
@@ -19,7 +20,8 @@ const router = express.Router();
  * @route GET /api/payments
  * @description Get all onsite payments (redirects to /onsite)
  */
-router.get('/', 
+router.get(
+  "/",
   authMiddleware.authenticateToken,
   PaymentController.getOnsitePayments
 );
@@ -28,7 +30,8 @@ router.get('/',
  * @route GET /api/payments/stats
  * @description Get payment statistics
  */
-router.get('/stats', 
+router.get(
+  "/stats",
   authMiddleware.authenticateToken,
   PaymentController.getPaymentStats
 );
@@ -37,7 +40,8 @@ router.get('/stats',
  * @route GET /api/payments/stallholders
  * @description Get stallholders list for payment dropdown (branch-filtered)
  */
-router.get('/stallholders', 
+router.get(
+  "/stallholders",
   authMiddleware.authenticateToken,
   PaymentController.getStallholdersByBranch
 );
@@ -46,7 +50,8 @@ router.get('/stallholders',
  * @route GET /api/payments/stallholders/:stallholderId
  * @description Get stallholder details for auto-population
  */
-router.get('/stallholders/:stallholderId', 
+router.get(
+  "/stallholders/:stallholderId",
   authMiddleware.authenticateToken,
   PaymentController.getStallholderDetails
 );
@@ -55,7 +60,8 @@ router.get('/stallholders/:stallholderId',
  * @route GET /api/payments/online
  * @description Get online payments
  */
-router.get('/online', 
+router.get(
+  "/online",
   authMiddleware.authenticateToken,
   PaymentController.getOnlinePayments
 );
@@ -64,7 +70,8 @@ router.get('/online',
  * @route GET /api/payments/onsite
  * @description Get onsite payments with filtering
  */
-router.get('/onsite', 
+router.get(
+  "/onsite",
   authMiddleware.authenticateToken,
   PaymentController.getOnsitePayments
 );
@@ -73,7 +80,8 @@ router.get('/onsite',
  * @route GET /api/payments/generate-receipt-number
  * @description Generate new receipt number for onsite payment
  */
-router.get('/generate-receipt-number', 
+router.get(
+  "/generate-receipt-number",
   authMiddleware.authenticateToken,
   PaymentController.generateReceiptNumber
 );
@@ -86,7 +94,8 @@ router.get('/generate-receipt-number',
  * @route POST /api/payments/onsite
  * @description Create new onsite payment record
  */
-router.post('/onsite', 
+router.post(
+  "/onsite",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
   PaymentController.addOnsitePayment
@@ -100,7 +109,8 @@ router.post('/onsite',
  * @route GET /api/payments/violations/unpaid/:stallholderId
  * @description Get unpaid violations for a stallholder
  */
-router.get('/violations/unpaid/:stallholderId', 
+router.get(
+  "/violations/unpaid/:stallholderId",
   authMiddleware.authenticateToken,
   PaymentController.getUnpaidViolations
 );
@@ -109,7 +119,8 @@ router.get('/violations/unpaid/:stallholderId',
  * @route POST /api/payments/violations/pay
  * @description Process payment for a violation
  */
-router.post('/violations/pay', 
+router.post(
+  "/violations/pay",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
   PaymentController.processViolationPayment
@@ -119,9 +130,87 @@ router.post('/violations/pay',
  * @route GET /api/payments/penalty
  * @description Get penalty payments (from penalty_payments table)
  */
-router.get('/penalty', 
+router.get(
+  "/penalty",
   authMiddleware.authenticateToken,
   PaymentController.getPenaltyPayments
+);
+
+// ============================================================================
+// DAILY PAYMENT ROUTES
+// ============================================================================
+
+/**
+ * @route GET /api/payments/daily/vendors
+ * @description Get all active vendors for dropdown
+ */
+router.get(
+  "/daily/vendors",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getAllVendors
+);
+
+/**
+ * @route GET /api/payments/daily/collectors
+ * @description Get all active collectors for dropdown
+ */
+router.get(
+  "/daily/collectors",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getAllCollectors
+);
+
+/**
+ * @route GET /api/payments/daily
+ * @description Get all daily payments
+ */
+router.get(
+  "/daily",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getAllDailyPayments
+);
+
+/**
+ * @route GET /api/payments/daily/:receiptId
+ * @description Get a single daily payment by receipt ID
+ */
+router.get(
+  "/daily/:receiptId",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getDailyPaymentById
+);
+
+/**
+ * @route POST /api/payments/daily
+ * @description Add a new daily payment
+ */
+router.post(
+  "/daily",
+  authMiddleware.authenticateToken,
+  viewOnlyForOwners,
+  DailyPaymentController.addDailyPayment
+);
+
+/**
+ * @route PUT /api/payments/daily/:receiptId
+ * @description Update an existing daily payment
+ */
+router.put(
+  "/daily/:receiptId",
+  authMiddleware.authenticateToken,
+  viewOnlyForOwners,
+  DailyPaymentController.updateDailyPayment
+);
+
+/**
+ * @route DELETE /api/payments/daily/:receiptId
+ * @description Delete a daily payment
+ */
+router.delete(
+  "/daily/:receiptId",
+  authMiddleware.authenticateToken,
+  viewOnlyForOwners,
+  DailyPaymentController.deleteDailyPayment
 );
 
 export default router;
