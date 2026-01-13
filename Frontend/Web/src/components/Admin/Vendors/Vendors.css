@@ -3,10 +3,34 @@
   padding-left: 0 !important;
 }
 
+/* Vendors main content - position relative for contained loading overlay */
+.vendors-main-content {
+  position: relative;
+}
+
 .main-content {
   background-color: #fafafa;
   min-height: calc(100vh - 64px);
   padding: 24px;
+}
+
+/* Floating Action Button */
+.floating-add-btn {
+  position: fixed !important;
+  bottom: 32px !important;
+  right: 32px !important;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 33, 129, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.floating-add-btn:hover {
+  box-shadow: 0 6px 20px rgba(0, 33, 129, 0.4) !important;
+  transform: scale(1.1);
+}
+
+.floating-add-btn:active {
+  transform: scale(0.95);
 }
 
 .content-placeholder {

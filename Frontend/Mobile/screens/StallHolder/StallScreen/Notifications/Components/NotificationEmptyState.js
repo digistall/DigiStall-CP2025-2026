@@ -3,16 +3,16 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 const { width, height } = Dimensions.get("window");
 
-const NotificationEmptyState = () => {
+const NotificationEmptyState = ({ theme }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, theme && { backgroundColor: theme.colors.background }]}>
       <View style={styles.iconContainer}>
-        <Icon name="notifications-none" size={80} color="#E5E7EB" />
+        <Icon name="notifications-none" size={80} color={theme ? theme.colors.border : "#E5E7EB"} />
       </View>
 
-      <Text style={styles.title}>No Notifications Yet</Text>
+      <Text style={[styles.title, theme && { color: theme.colors.text }]}>No Notifications Yet</Text>
 
-      <Text style={styles.message}>
+      <Text style={[styles.message, theme && { color: theme.colors.textSecondary }]}>
         When you have new notifications, they will appear here. Stay tuned for
         updates about auctions, raffles, payments, and important announcements.
       </Text>

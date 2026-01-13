@@ -15,6 +15,7 @@ const NotificationCard = ({
   onPress,
   onMarkAsRead,
   onDelete,
+  theme,
 }) => {
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -67,7 +68,7 @@ const NotificationCard = ({
 
   return (
     <TouchableOpacity
-      style={[styles.container, !notification.isRead && styles.unreadContainer]}
+      style={[styles.container, !notification.isRead && styles.unreadContainer, theme && { backgroundColor: notification.isRead ? theme.colors.card : theme.colors.surface, borderBottomColor: theme.colors.border }]}
       onPress={() => onPress(notification)}
       activeOpacity={0.7}
     >
@@ -104,16 +105,16 @@ const NotificationCard = ({
       <View style={styles.contentContainer}>
         <View style={styles.headerRow}>
           <Text
-            style={[styles.title, !notification.isRead && styles.unreadTitle]}
+            style={[styles.title, !notification.isRead && styles.unreadTitle, theme && { color: theme.colors.text }]}
           >
             {notification.title}
           </Text>
-          <Text style={styles.timeText}>
+          <Text style={[styles.timeText, theme && { color: theme.colors.textTertiary }]}>
             {formatNotificationTime(notification.timestamp)}
           </Text>
         </View>
 
-        <Text style={styles.message} numberOfLines={2}>
+        <Text style={[styles.message, theme && { color: theme.colors.textSecondary }]} numberOfLines={2}>
           {notification.message}
         </Text>
 

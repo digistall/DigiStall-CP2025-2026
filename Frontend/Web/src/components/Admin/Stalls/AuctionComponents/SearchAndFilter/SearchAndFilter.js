@@ -19,7 +19,7 @@ export default {
       loading: false,
       availableFloors: [],
       availableSections: [],
-      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
     }
   },
   computed: {
@@ -141,12 +141,12 @@ export default {
       const userType = sessionStorage.getItem('userType')
 
       // Admins and branch managers always have access
-      if (userType === 'admin' || userType === 'branch-manager' || userType === 'branch_manager') {
+      if (userType === 'system_administrator' || userType === 'stall_business_owner' || userType === 'business_manager') {
         return true
       }
 
       // For employees, check specific permissions
-      if (userType === 'employee') {
+      if (userType === 'business_employee') {
         // Try new format first (object)
         const permissions = JSON.parse(sessionStorage.getItem('permissions') || '{}')
         if (permissions.stalls === true) {

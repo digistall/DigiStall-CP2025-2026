@@ -22,13 +22,6 @@ export default {
       sendNotification: true,
       reasonError: '',
       processingMessage: '',
-
-      // Loading popup states (like AddAvailableStall)
-      showLoadingPopup: false,
-      popupState: 'loading', // 'loading', 'success', 'error'
-      loadingMessage: 'Declining application...',
-      successMessage: 'Application declined successfully!',
-      errorMessage: '',
     }
   },
   watch: {
@@ -53,13 +46,6 @@ export default {
       this.sendNotification = true
       this.reasonError = ''
       this.processingMessage = ''
-
-      // Reset loading popup states
-      this.showLoadingPopup = false
-      this.popupState = 'loading'
-      this.loadingMessage = 'Declining application...'
-      this.successMessage = 'Application declined successfully!'
-      this.errorMessage = ''
     },
 
     closeModal() {
@@ -93,12 +79,15 @@ export default {
         console.log('🎯 Declining applicant:', this.applicant)
         console.log('📝 Decline reason:', this.declineReason)
 
-        // Step 1: Show loading popup (like AddAvailableStall)
-        this.showLoadingPopup = true
-        this.popupState = 'loading'
-        this.loadingMessage = 'Sending decline notification...'
+        // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+        const applicantId = this.applicant.applicant_id || 
+          (this.applicant.id && typeof this.applicant.id === 'string' 
+            ? parseInt(this.applicant.id.replace('#', ''), 10) 
+            : this.applicant.id)
 
-        // Step 2: Send decline email first if requested
+        console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
+        // Step 1: Send decline email first if requested
         let emailSuccess = false
         if (this.sendNotification) {
           console.log('📧 Sending decline email to:', this.applicant.email)
@@ -117,12 +106,9 @@ export default {
           }
         }
 
-        // Step 3: Update loading message for status update
-        this.loadingMessage = 'Declining applicant and updating status...'
-
-        // Step 4: Update applicant status to 'Rejected' via backend (no data deletion)
+        // Step 2: Update applicant status to 'Rejected' via backend (no data deletion)
         const declineResult = await this.updateApplicantStatus(
-          this.applicant.applicant_id || this.applicant.id,
+          applicantId,
           'Rejected',
           this.declineReason.trim(),
         )
@@ -133,62 +119,39 @@ export default {
 
         console.log('✅ Applicant status updated to Rejected successfully')
 
-        // Step 5: Show success state
-        this.popupState = 'success'
-        this.successMessage = emailSuccess
-          ? 'Application declined and notification sent!'
-          : 'Application declined successfully!'
+        // Step 3: Close modal and emit events for realtime updates
+        this.closeModal()
 
-        // Step 6: Auto-close success popup and emit events for realtime updates
-        setTimeout(() => {
-          this.showLoadingPopup = false
-          this.closeModal()
+        // Emit events for realtime updates (status changed, not deleted)
+        this.$emit('declined', {
+          applicant: this.applicant,
+          reason: this.declineReason,
+          emailSent: this.emailSent,
+          statusUpdated: true,
+        })
 
-          // Emit events for realtime updates (status changed, not deleted)
-          this.$emit('declined', {
-            applicant: this.applicant,
-            reason: this.declineReason,
-            emailSent: this.emailSent,
-            statusUpdated: true,
-          })
+        // Emit to parent components for immediate list updates
+        this.$emit('applicant-status-updated', {
+          id: applicantId,
+          status: 'Rejected',
+          declined_at: new Date().toISOString(),
+        })
+        this.$emit('refresh-data')
 
-          // Emit to parent components for immediate list updates
-          this.$emit('applicant-status-updated', {
-            id: this.applicant.applicant_id || this.applicant.id,
-            status: 'Rejected',
-            declined_at: new Date().toISOString(),
-          })
-          this.$emit('refresh-data')
-
-          // Show success toast
-          if (this.$toast) {
-            this.$toast.success(`✅ ${this.applicant.fullName} application declined successfully`)
-          }
-
-          console.log('✅ Applicant declined successfully:', {
-            applicant: this.applicant.fullName,
-            email: this.applicant.email,
-            reason: this.declineReason,
-            emailSent: this.emailSent,
-          })
-        }, 2000) // Show success for 2 seconds
+        console.log('✅ Applicant declined successfully:', {
+          applicant: this.applicant.fullName,
+          email: this.applicant.email,
+          reason: this.declineReason,
+          emailSent: this.emailSent,
+        })
       } catch (error) {
         console.error('❌ Error in decline process:', error)
-
-        // Show error state in popup
-        this.popupState = 'error'
-        this.errorMessage = error.message || 'Failed to decline application'
-
-        // Auto-close error popup
-        setTimeout(() => {
-          this.showLoadingPopup = false
-
-          if (this.$toast) {
-            this.$toast.error(`❌ Failed to decline applicant: ${error.message}`)
-          } else {
-            alert(`❌ Failed to decline applicant: ${error.message}`)
-          }
-        }, 3000)
+        
+        if (this.$toast) {
+          this.$toast.error(`❌ Failed to decline applicant: ${error.message}`)
+        } else {
+          alert(`❌ Failed to decline applicant: ${error.message}`)
+        }
       }
     },
 

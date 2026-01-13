@@ -29,26 +29,21 @@ export const createApplicant = async (req, res) => {
     connection = await createConnection();
 
     // Check if email already exists
-    const [existingApplicant] = await connection.execute(
-      'SELECT applicant_id FROM applicant WHERE email = ?',
+    const [[existingApplicant]] = await connection.execute(
+      'CALL getApplicantByEmail(?)',
       [email]
     );
 
-    if (existingApplicant.length > 0) {
+    if (existingApplicant) {
       return res.status(400).json({
         success: false,
         message: 'Email already exists'
       });
     }
 
-    // Insert new applicant
-    const [result] = await connection.execute(
-      `INSERT INTO applicant (
-        first_name, last_name, email, contact_number, address,
-        business_type, business_name, business_description,
-        preferred_area, preferred_location, application_status,
-        applied_date, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+    // Insert new applicant using stored procedure
+    const [[createdApplicant]] = await connection.execute(
+      'CALL createApplicant(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         first_name, last_name, email, contact_number, address,
         business_type, business_name, business_description,
@@ -56,20 +51,12 @@ export const createApplicant = async (req, res) => {
       ]
     );
 
-    const applicantId = result.insertId;
-
-    // Get the created applicant
-    const [createdApplicant] = await connection.execute(
-      'SELECT * FROM applicant WHERE applicant_id = ?',
-      [applicantId]
-    );
-
     console.log('✅ Applicant created successfully:', email);
 
     res.status(201).json({
       success: true,
       message: 'Applicant created successfully',
-      data: createdApplicant[0]
+      data: createdApplicant
     });
 
   } catch (error) {

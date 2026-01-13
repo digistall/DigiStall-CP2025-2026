@@ -54,6 +54,21 @@ export default {
         this.processingMessage = 'Generating credentials...'
 
         console.log('🎯 Approving applicant:', this.applicant)
+        console.log('🔍 DEBUG - applicant_id:', this.applicant.applicant_id)
+        console.log('🔍 DEBUG - application_id:', this.applicant.application_id)
+        console.log('🔍 DEBUG - id:', this.applicant.id)
+
+        // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
+        const applicantId = this.applicant.applicant_id || 
+          (this.applicant.id && typeof this.applicant.id === 'string' 
+            ? parseInt(this.applicant.id.replace('#', ''), 10) 
+            : this.applicant.id)
+
+        console.log('🔍 DEBUG - Using applicantId:', applicantId)
+
+        if (!applicantId) {
+          throw new Error('Cannot determine applicant ID')
+        }
 
         // Generate credentials for the applicant
         const username = generateUsername()
@@ -72,7 +87,7 @@ export default {
 
         // Update database status to approved using the same endpoint that works for decline/recheck
         const updateResult = await this.updateApplicantStatus(
-          this.applicant.applicant_id,
+          applicantId,
           'Approved', // Use proper capitalization for database enum
           username,
           password,
@@ -155,17 +170,15 @@ export default {
           throw new Error('Authentication token not found. Please log in again.')
         }
 
-        // Use the same /status endpoint that works for decline/recheck
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-        const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/status`, {
+        // Use the approve endpoint which creates credentials
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+        const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/approve`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            status: status,
-            // Note: credentials are just for email/frontend display, not stored in DB
             username: username,
             password: password,
           }),

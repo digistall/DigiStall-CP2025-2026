@@ -78,15 +78,13 @@
       </v-card>
     </v-dialog>
 
-    <!-- Message Snackbar -->
-    <v-snackbar v-model="showMessage" :color="messageType" :timeout="messageTimeout" top>
-      {{ message }}
-      <template v-slot:actions>
-        <v-btn color="white" text @click="showMessage = false">
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 

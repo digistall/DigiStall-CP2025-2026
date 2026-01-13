@@ -197,13 +197,13 @@ export const cancelRaffle = async (req, res) => {
 
     // Update raffle status
     await connection.execute(
-      'UPDATE raffle SET raffle_status = "Cancelled", updated_at = NOW() WHERE raffle_id = ?',
+      `UPDATE raffle SET raffle_status = 'Cancelled', updated_at = NOW() WHERE raffle_id = ?`,
       [raffleId]
     );
 
     // Update stall status
     await connection.execute(
-      'UPDATE stall SET raffle_auction_status = "Cancelled" WHERE stall_id = ?',
+      `UPDATE stall SET raffle_auction_status = 'Cancelled' WHERE stall_id = ?`,
       [raffle.stall_id]
     );
 

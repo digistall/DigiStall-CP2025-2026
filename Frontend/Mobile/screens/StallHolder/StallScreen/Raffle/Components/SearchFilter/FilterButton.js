@@ -14,7 +14,9 @@ const { width } = Dimensions.get('window');
 
 const FilterButton = ({ 
   selectedFilters = [],
-  onFilter 
+  onFilter,
+  theme,
+  isDark
 }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempFilters, setTempFilters] = useState(selectedFilters);
@@ -75,7 +77,11 @@ const FilterButton = ({
     <TouchableOpacity
       style={[
         styles.dropdownItem,
-        tempFilters.includes(item.id) && styles.activeDropdownItem
+        { backgroundColor: isDark ? theme?.colors?.card : 'transparent' },
+        tempFilters.includes(item.id) && [
+          styles.activeDropdownItem,
+          { backgroundColor: isDark ? `${theme?.colors?.primary}20` : 'rgba(0, 33, 129, 0.1)' }
+        ]
       ]}
       onPress={() => handleFilterToggle(item.id)}
       activeOpacity={0.7}
@@ -83,16 +89,20 @@ const FilterButton = ({
       <View style={styles.filterOptionContent}>
         <Text style={[
           styles.dropdownItemText,
-          tempFilters.includes(item.id) && styles.activeDropdownItemText
+          { color: theme?.colors?.text || '#374151' },
+          tempFilters.includes(item.id) && [
+            styles.activeDropdownItemText,
+            { color: theme?.colors?.primary || '#002181' }
+          ]
         ]}>
           {item.label}
         </Text>
-        <Text style={styles.filterDescription}>
+        <Text style={[styles.filterDescription, { color: theme?.colors?.textSecondary || '#64748b' }]}>
           {item.description}
         </Text>
       </View>
       {tempFilters.includes(item.id) && (
-        <Icon name="check" size={16} color="#002181" />
+        <Icon name="check" size={16} color={theme?.colors?.primary || "#002181"} />
       )}
     </TouchableOpacity>
   );
@@ -102,14 +112,15 @@ const FilterButton = ({
       <TouchableOpacity 
         style={[
           styles.filterButton,
-          hasActiveFilters && styles.filterButtonActive
+          { backgroundColor: isDark ? theme?.colors?.card : '#ffffff' },
+          hasActiveFilters && [styles.filterButtonActive, { backgroundColor: theme?.colors?.primary || '#3b82f6' }]
         ]}
         onPress={openModal}
       >
         <Icon 
           name="filter-list" 
           size={20} 
-          color={hasActiveFilters ? "#002181" : "#6b7280"} 
+          color={hasActiveFilters ? "#ffffff" : (theme?.colors?.textSecondary || "#6b7280")} 
         />
         {hasActiveFilters && (
           <View style={styles.filterBadge}>
@@ -129,19 +140,19 @@ const FilterButton = ({
           activeOpacity={1}
           onPress={() => setShowFilterModal(false)}
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Raffles</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme?.colors?.surface || '#FFFFFF' }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme?.colors?.border || '#E5E7EB' }]}>
+              <Text style={[styles.modalTitle, { color: theme?.colors?.text || '#1f2937' }]}>Filter Raffles</Text>
               <TouchableOpacity 
                 onPress={() => setShowFilterModal(false)}
                 style={styles.closeButton}
               >
-                <Icon name="close" size={20} color="#6b7280" />
+                <Icon name="close" size={20} color={theme?.colors?.textSecondary || "#6b7280"} />
               </TouchableOpacity>
             </View>
             
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Raffle Status</Text>
+              <Text style={[styles.sectionTitle, { color: theme?.colors?.primary || '#002181' }]}>Raffle Status</Text>
               <FlatList
                 data={filterOptions}
                 keyExtractor={(item) => item.id}
@@ -151,19 +162,26 @@ const FilterButton = ({
               />
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme?.colors?.border || '#E5E7EB' }]} />
 
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={styles.clearButton}
+                style={[
+                  styles.clearButton,
+                  { 
+                    borderColor: theme?.colors?.border || '#e5e7eb',
+                    backgroundColor: theme?.colors?.surface || '#ffffff'
+                  }
+                ]}
                 onPress={clearAllFilters}
                 activeOpacity={0.7}
               >
-                <Text style={styles.clearButtonText}>Clear All</Text>
+                <Text style={[styles.clearButtonText, { color: theme?.colors?.textSecondary || '#6b7280' }]}>Clear All</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[
                   styles.applyButton,
+                  { backgroundColor: theme?.colors?.primary || '#002181' },
                   tempFilters.length === 0 && styles.applyButtonDisabled
                 ]}
                 onPress={applyFilters}

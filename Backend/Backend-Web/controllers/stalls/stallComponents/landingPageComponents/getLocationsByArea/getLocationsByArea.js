@@ -23,7 +23,7 @@ export const getLocationsByArea = async (req, res) => {
 
     // Query locations based on branch_name (preferred) or area (legacy)
     const [locations] = await connection.execute(
-      `SELECT DISTINCT location, branch_name as branch FROM branch WHERE ${filterColumn} = ? AND status = "Active" ORDER BY location`,
+      `SELECT DISTINCT location, branch_name as branch FROM branch WHERE ${filterColumn} = ? AND status = 'Active' ORDER BY location`,
       [filterParam]
     );
 

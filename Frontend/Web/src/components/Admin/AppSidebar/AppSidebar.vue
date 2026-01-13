@@ -51,9 +51,9 @@
           </v-tooltip>
         </v-list-item>
 
-        <!-- More Section - Show only for branch managers -->
+        <!-- More Section - Show for Business Managers and Business Owners (not System Admin or Employees) -->
         <v-list-item
-          v-if="isExpanded && !isAdmin && !isEmployee"
+          v-if="isExpanded && !isEmployee && !isSystemAdministrator"
           class="sidebar-item more-item"
           :class="{ active: showMoreItems }"
           @click="toggleMoreItems"
@@ -74,12 +74,13 @@
 
         <!-- Employee-specific items - Show stalls for employees with stalls permission -->
         <v-list-item
-          v-if="isEmployee && userPermissions.includes('stalls')"
+          v-if="isEmployee && hasStallsPermission"
           class="sidebar-item"
           :class="{ 
             active: isActiveRoute('/app/stalls'),
             'has-submenu': true,
             'submenu-expanded': showStallsSubMenu,
+            collapsed: !isExpanded,
           }"
           @click="setActiveItem(9, '/app/stalls', true)"
         >
@@ -87,7 +88,7 @@
             <template v-slot:activator="{ props }">
               <div class="item-container" v-bind="props">
                 <v-icon 
-                  class="sidebar-icon mr-3"
+                  class="sidebar-icon"
                   :color="isActiveRoute('/app/stalls') ? 'white' : 'dark'"
                 >
                   mdi-store
@@ -115,7 +116,7 @@
 
         <!-- Submenu items for Stalls (Employee version) -->
         <div
-          v-if="isEmployee && userPermissions.includes('stalls') && showStallsSubMenu && isExpanded"
+          v-if="isEmployee && hasStallsPermission && showStallsSubMenu && isExpanded"
           class="stalls-submenu"
         >
           <v-list-item
@@ -140,8 +141,8 @@
           </v-list-item>
         </div>
 
-        <!-- Additional Items (when More is expanded) - Show only for branch managers -->
-        <div v-if="isExpanded && showMoreItems && !isAdmin && !isEmployee" class="more-items">
+        <!-- Additional Items (when More is expanded) - Show for Business Managers and Business Owners -->
+        <div v-if="isExpanded && showMoreItems && !isEmployee && !isSystemAdministrator" class="more-items">
           <div v-for="item in filteredMoreItems" :key="item.id">
             <!-- Regular menu item or item with submenu -->
             <v-list-item

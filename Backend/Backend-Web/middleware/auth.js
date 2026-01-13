@@ -57,14 +57,7 @@ const authenticateToken = (req, res, next) => {
         role: userType, // Use the actual userType instead of defaulting
       };
 
-      console.log("🔍 Authenticated user details:", {
-        username: req.user.username,
-        userType: req.user.userType,
-        role: req.user.role,
-        userId: req.user.userId,
-        branchId: req.user.branchId, // ✅ Log branchId
-        permissions: req.user.permissions, // ✅ Log permissions
-      });
+      // User authenticated silently
 
       next();
     }
@@ -97,23 +90,23 @@ const authorizeRole = (...roles) => {
   };
 };
 
-// Specific middleware for branch manager authentication
-const authenticateBranchManager = (req, res, next) => {
+// Specific middleware for business manager authentication
+const authenticateBusinessManager = (req, res, next) => {
   authenticateToken(req, res, (err) => {
     if (err) return next(err);
 
-    if (req.user.userType !== "branch_manager") {
+    if (req.user.userType !== "business_manager") {
       return res.status(403).json({
         success: false,
-        message: "Access denied. Branch manager access required.",
+        message: "Access denied. Business manager access required.",
       });
     }
 
-    // Ensure branch manager ID is available for stall filtering
-    if (!req.user.branchManagerId) {
+    // Ensure business manager ID is available for stall filtering
+    if (!req.user.businessManagerId) {
       return res.status(400).json({
         success: false,
-        message: "Branch manager ID not found in token",
+        message: "Business manager ID not found in token",
       });
     }
 
@@ -121,15 +114,31 @@ const authenticateBranchManager = (req, res, next) => {
   });
 };
 
-// Specific middleware for admin authentication
-const authenticateAdmin = (req, res, next) => {
+// Specific middleware for stall business owner authentication
+const authenticateStallBusinessOwner = (req, res, next) => {
   authenticateToken(req, res, (err) => {
     if (err) return next(err);
 
-    if (req.user.userType !== "admin") {
+    if (req.user.userType !== "stall_business_owner") {
       return res.status(403).json({
         success: false,
-        message: "Access denied. Admin access required.",
+        message: "Access denied. Stall business owner access required.",
+      });
+    }
+
+    next();
+  });
+};
+
+// Specific middleware for system administrator authentication
+const authenticateSystemAdministrator = (req, res, next) => {
+  authenticateToken(req, res, (err) => {
+    if (err) return next(err);
+
+    if (req.user.userType !== "system_administrator") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. System administrator access required.",
       });
     }
 
@@ -143,7 +152,8 @@ const authenticateUser = authenticateToken;
 export default {
   authenticateToken,
   authenticateUser,
-  authenticateBranchManager,
-  authenticateAdmin,
+  authenticateBusinessManager,
+  authenticateStallBusinessOwner,
+  authenticateSystemAdministrator,
   authorizeRole,
 };

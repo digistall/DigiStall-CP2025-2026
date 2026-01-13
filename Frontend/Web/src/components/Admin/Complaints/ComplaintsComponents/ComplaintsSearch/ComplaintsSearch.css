@@ -210,13 +210,13 @@
 
 /* Status buttons */
 .status-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .status-btn {
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: white;
   border: 2px solid #e9ecef;
   border-radius: 8px;
@@ -225,6 +225,9 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex: 1;
+  min-width: 90px;
+  text-align: center;
 }
 
 .status-btn:hover {
@@ -237,6 +240,30 @@
   background: rgb(0, 33, 129);
   color: white;
   border-color: rgb(0, 33, 129);
+}
+
+.status-btn.resolved:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.status-btn.resolved.active {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.status-btn.rejected:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.status-btn.rejected.active {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
 }
 
 /* Action buttons */

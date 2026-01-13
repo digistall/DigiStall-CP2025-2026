@@ -1,6 +1,6 @@
 import { createConnection } from '../../config/database.js'
 
-// Get all available stalls for mobile app (restricted to applicant's applied areas)
+// Get all available stalls for mobile app (restricted to applicant's applied areas) - Uses stored procedures
 export const getAllStalls = async (req, res) => {
   const connection = await createConnection()
   
@@ -14,16 +14,9 @@ export const getAllStalls = async (req, res) => {
       })
     }
 
-    // First, get the areas where this applicant has applied
-    const [appliedAreas] = await connection.execute(`
-      SELECT DISTINCT b.area, b.branch_id, b.branch_name, b.location
-      FROM application app
-      JOIN stall st ON app.stall_id = st.stall_id
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ?
-    `, [applicant_id])
+    // First, get the areas where this applicant has applied using stored procedure
+    const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
+    const appliedAreas = appliedAreasRows[0]
 
     if (appliedAreas.length === 0) {
       return res.json({
@@ -41,29 +34,12 @@ export const getAllStalls = async (req, res) => {
       })
     }
 
-    // Build area filter conditions
-    const areaConditions = appliedAreas.map(() => 'b.area = ?').join(' OR ')
-    const areaValues = appliedAreas.map(area => area.area)
+    // Build area list for stored procedure (quoted values for IN clause)
+    const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
 
-    // Get available stalls only in the areas where applicant has applied
-    const [availableStalls] = await connection.execute(`
-      SELECT 
-        st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
-        sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
-        b.branch_name, b.area, b.location, b.branch_id,
-        CASE 
-          WHEN app_check.stall_id IS NOT NULL THEN 'applied'
-          ELSE 'available'
-        END as application_status
-      FROM stall st
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
-      WHERE st.is_available = 1 AND st.status = 'Active' AND (${areaConditions})
-      ORDER BY st.price_type, b.branch_name, f.floor_name, sec.section_name, st.stall_no
-    `, [applicant_id, ...areaValues])
+    // Get available stalls using stored procedure
+    const [stallsRows] = await connection.execute('CALL sp_getAvailableStallsForApplicant(?, ?)', [applicant_id, areaList])
+    const availableStalls = stallsRows[0]
 
     // Format stalls for mobile app
     const formattedStalls = availableStalls.map(stall => ({
@@ -145,7 +121,7 @@ export const getAllStalls = async (req, res) => {
   }
 }
 
-// Get stalls by type (Fixed Price, Raffle, Auction) - restricted to applicant's applied areas
+// Get stalls by type (Fixed Price, Raffle, Auction) - restricted to applicant's applied areas - Uses stored procedures
 export const getStallsByType = async (req, res) => {
   const connection = await createConnection()
   
@@ -175,16 +151,9 @@ export const getStallsByType = async (req, res) => {
       })
     }
 
-    // First, get the areas where this applicant has applied
-    const [appliedAreas] = await connection.execute(`
-      SELECT DISTINCT b.area, b.branch_id, b.branch_name, b.location
-      FROM application app
-      JOIN stall st ON app.stall_id = st.stall_id
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ?
-    `, [applicant_id])
+    // First, get the areas where this applicant has applied using stored procedure
+    const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
+    const appliedAreas = appliedAreasRows[0]
 
     if (appliedAreas.length === 0) {
       return res.json({
@@ -201,28 +170,12 @@ export const getStallsByType = async (req, res) => {
       })
     }
 
-    // Build area filter conditions
-    const areaConditions = appliedAreas.map(() => 'b.area = ?').join(' OR ')
-    const areaValues = appliedAreas.map(area => area.area)
+    // Build area list for stored procedure
+    const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
 
-    const [stalls] = await connection.execute(`
-      SELECT 
-        st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
-        sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
-        b.branch_name, b.area, b.location, b.branch_id,
-        CASE 
-          WHEN app_check.stall_id IS NOT NULL THEN 'applied'
-          ELSE 'available'
-        END as application_status
-      FROM stall st
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
-      WHERE st.is_available = 1 AND st.status = 'Active' AND st.price_type = ? AND (${areaConditions})
-      ORDER BY b.branch_name, f.floor_name, sec.section_name, st.stall_no
-    `, [applicant_id, type, ...areaValues])
+    // Get stalls by type using stored procedure
+    const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [applicant_id, type, areaList])
+    const stalls = stallsRows[0]
 
     // Format for mobile app
     const formattedStalls = stalls.map(stall => ({
@@ -292,7 +245,7 @@ export const getStallsByType = async (req, res) => {
   }
 }
 
-// Get stalls by area - restricted to applicant's applied areas
+// Get stalls by area - restricted to applicant's applied areas - Uses stored procedures
 export const getStallsByArea = async (req, res) => {
   const connection = await createConnection()
   
@@ -314,18 +267,11 @@ export const getStallsByArea = async (req, res) => {
       })
     }
 
-    // First, check if the applicant has applied to this area
-    const [appliedAreas] = await connection.execute(`
-      SELECT DISTINCT b.area, b.branch_id, b.branch_name, b.location
-      FROM application app
-      JOIN stall st ON app.stall_id = st.stall_id
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ? AND b.area = ?
-    `, [applicant_id, area])
+    // Check if the applicant has applied to this area using stored procedure
+    const [accessRows] = await connection.execute('CALL sp_checkApplicantAreaAccess(?, ?)', [applicant_id, area])
+    const accessCheck = accessRows[0]
 
-    if (appliedAreas.length === 0) {
+    if (!accessCheck || accessCheck.length === 0 || accessCheck[0].has_access === 0) {
       return res.status(403).json({
         success: false,
         message: `Access denied. You don't have applications in ${area}. You can only view stalls in areas where you have submitted applications.`,
@@ -336,34 +282,9 @@ export const getStallsByArea = async (req, res) => {
       })
     }
 
-    let query = `
-      SELECT 
-        st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
-        sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
-        b.branch_name, b.area, b.location, b.branch_id,
-        CASE 
-          WHEN app_check.stall_id IS NOT NULL THEN 'applied'
-          ELSE 'available'
-        END as application_status
-      FROM stall st
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
-      WHERE st.is_available = 1 AND st.status = 'Active' AND b.area = ?`
-
-    const queryParams = [applicant_id || null, area]
-
-    // Add type filter if provided
-    if (type) {
-      query += ` AND st.price_type = ?`
-      queryParams.push(type)
-    }
-
-    query += ` ORDER BY st.price_type, b.branch_name, f.floor_name, sec.section_name, st.stall_no`
-
-    const [stalls] = await connection.execute(query, queryParams)
+    // Get stalls by area using stored procedure
+    const [stallsRows] = await connection.execute('CALL sp_getStallsByAreaForApplicant(?, ?, ?)', [applicant_id, area, type || ''])
+    const stalls = stallsRows[0]
 
     // Format for mobile app
     const formattedStalls = stalls.map(stall => ({
@@ -446,25 +367,9 @@ export const getStallById = async (req, res) => {
       })
     }
 
-    const [stallData] = await connection.execute(`
-      SELECT 
-        st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
-        st.created_at, st.updated_at,
-        sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
-        b.branch_name, b.area, b.location, b.branch_id, b.address as branch_address,
-        CASE 
-          WHEN app_check.stall_id IS NOT NULL THEN 'applied'
-          ELSE 'available'
-        END as application_status,
-        app_check.application_id, app_check.application_date, app_check.application_status as app_status
-      FROM stall st
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
-      WHERE st.stall_id = ?
-    `, [applicant_id || null, id])
+    // Get stall details using stored procedure
+    const [stallDataRows] = await connection.execute('CALL sp_getStallDetailForApplicant(?, ?)', [id, applicant_id || null])
+    const stallData = stallDataRows[0]
 
     if (stallData.length === 0) {
       return res.status(404).json({
@@ -475,17 +380,11 @@ export const getStallById = async (req, res) => {
 
     const stall = stallData[0]
 
-    // Check application limits if applicant_id provided
+    // Check application limits if applicant_id provided using stored procedure
     let applicationLimits = null
     if (applicant_id) {
-      const [branchApplications] = await connection.execute(`
-        SELECT COUNT(*) as count FROM application app
-        JOIN stall st ON app.stall_id = st.stall_id
-        JOIN section sec ON st.section_id = sec.section_id
-        JOIN floor f ON sec.floor_id = f.floor_id
-        JOIN branch b ON f.branch_id = b.branch_id
-        WHERE app.applicant_id = ? AND b.branch_id = ?
-      `, [applicant_id, stall.branch_id])
+      const [branchAppRows] = await connection.execute('CALL sp_countBranchApplications(?, ?)', [applicant_id, stall.branch_id])
+      const branchApplications = branchAppRows[0]
 
       applicationLimits = {
         current_applications_in_branch: branchApplications[0].count,
@@ -569,7 +468,7 @@ export const getStallById = async (req, res) => {
   }
 }
 
-// Get available areas for stalls - only areas where applicant has applications
+// Get available areas for stalls - only areas where applicant has applications - Uses stored procedures
 export const getAvailableAreas = async (req, res) => {
   const connection = await createConnection()
   
@@ -583,19 +482,9 @@ export const getAvailableAreas = async (req, res) => {
       })
     }
 
-    // Get only areas where this applicant has applications
-    const [areas] = await connection.execute(`
-      SELECT DISTINCT b.area, b.location, COUNT(st.stall_id) as stall_count,
-             COUNT(CASE WHEN st.is_available = 1 AND st.status = 'Active' THEN 1 END) as available_stall_count
-      FROM application app
-      JOIN stall st ON app.stall_id = st.stall_id
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ? AND b.is_active = 1
-      GROUP BY b.area, b.location
-      ORDER BY b.area, b.location
-    `, [applicant_id])
+    // Get only areas where this applicant has applications using stored procedure
+    const [areasRows] = await connection.execute('CALL sp_getAvailableAreasForApplicant(?)', [applicant_id])
+    const areas = areasRows[0]
 
     if (areas.length === 0) {
       return res.json({
@@ -639,7 +528,7 @@ export const getAvailableAreas = async (req, res) => {
   }
 }
 
-// Search stalls with filters - restricted to applicant's applied areas
+// Search stalls with filters - restricted to applicant's applied areas - Uses stored procedures
 export const searchStalls = async (req, res) => {
   const connection = await createConnection()
   
@@ -661,16 +550,9 @@ export const searchStalls = async (req, res) => {
       })
     }
 
-    // First, get the areas where this applicant has applied
-    const [appliedAreas] = await connection.execute(`
-      SELECT DISTINCT b.area, b.branch_id, b.branch_name, b.location
-      FROM application app
-      JOIN stall st ON app.stall_id = st.stall_id
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      WHERE app.applicant_id = ?
-    `, [applicant_id])
+    // First, get the areas where this applicant has applied using stored procedure
+    const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
+    const appliedAreas = appliedAreasRows[0]
 
     if (appliedAreas.length === 0) {
       return res.json({
@@ -683,35 +565,6 @@ export const searchStalls = async (req, res) => {
           restriction_message: 'Search is restricted to areas where you have applications'
         }
       })
-    }
-
-    // Build area filter conditions for applied areas
-    const areaConditions = appliedAreas.map(() => 'b.area = ?').join(' OR ')
-    const areaValues = appliedAreas.map(areaItem => areaItem.area)
-
-    let query = `
-      SELECT 
-        st.stall_id, st.stall_no, st.stall_location, st.size, st.rental_price, 
-        st.price_type, st.status, st.description, st.stall_image, st.is_available,
-        sec.section_name, sec.section_id, f.floor_name, f.floor_id, 
-        b.branch_name, b.area, b.location, b.branch_id,
-        CASE 
-          WHEN app_check.stall_id IS NOT NULL THEN 'applied'
-          ELSE 'available'
-        END as application_status
-      FROM stall st
-      JOIN section sec ON st.section_id = sec.section_id
-      JOIN floor f ON sec.floor_id = f.floor_id
-      JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN application app_check ON st.stall_id = app_check.stall_id AND app_check.applicant_id = ?
-      WHERE st.is_available = 1 AND st.status = 'Active' AND (${areaConditions})`
-
-    const queryParams = [applicant_id, ...areaValues]
-
-    // Add additional filters
-    if (type) {
-      query += ` AND st.price_type = ?`
-      queryParams.push(type)
     }
 
     // If area filter is specified, check if it's in applied areas
@@ -728,33 +581,26 @@ export const searchStalls = async (req, res) => {
           }
         })
       }
-      query += ` AND b.area = ?`
-      queryParams.push(area)
     }
 
-    if (min_price) {
-      query += ` AND st.rental_price >= ?`
-      queryParams.push(parseFloat(min_price))
-    }
+    // Build area list for stored procedure
+    const areaList = appliedAreas.map(areaItem => `'${areaItem.area}'`).join(',')
 
-    if (max_price) {
-      query += ` AND st.rental_price <= ?`
-      queryParams.push(parseFloat(max_price))
-    }
-
-    if (size) {
-      query += ` AND st.size LIKE ?`
-      queryParams.push(`%${size}%`)
-    }
-
-    if (search_term) {
-      query += ` AND (st.stall_no LIKE ? OR st.description LIKE ? OR b.branch_name LIKE ?)`
-      queryParams.push(`%${search_term}%`, `%${search_term}%`, `%${search_term}%`)
-    }
-
-    query += ` ORDER BY st.price_type, b.branch_name, f.floor_name, sec.section_name, st.stall_no`
-
-    const [stalls] = await connection.execute(query, queryParams)
+    // Search stalls using stored procedure
+    const [stallsRows] = await connection.execute(
+      'CALL sp_searchStallsForApplicant(?, ?, ?, ?, ?, ?, ?, ?)', 
+      [
+        applicant_id, 
+        areaList, 
+        type || null, 
+        area || null, 
+        min_price ? parseFloat(min_price) : null, 
+        max_price ? parseFloat(max_price) : null, 
+        size || null, 
+        search_term || null
+      ]
+    )
+    const stalls = stallsRows[0]
 
     // Format for mobile app
     const formattedStalls = stalls.map(stall => ({
@@ -804,7 +650,7 @@ export const searchStalls = async (req, res) => {
         applied_areas: appliedAreas,
         restriction_info: {
           message: 'Search is restricted to areas where you have applications',
-          areas_with_access: appliedAreas.map(area => area.area)
+          areas_with_access: appliedAreas.map(areaItem => areaItem.area)
         }
       }
     })
@@ -814,6 +660,92 @@ export const searchStalls = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to search stalls',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    })
+  } finally {
+    await connection.end()
+  }
+}
+
+// Get all images for a specific stall
+export const getStallImages = async (req, res) => {
+  const connection = await createConnection()
+  
+  try {
+    const { stall_id } = req.params
+
+    if (!stall_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stall ID is required'
+      })
+    }
+
+    // Get all images for this stall using stored procedure
+    const [imagesRows] = await connection.execute('CALL sp_getStallImagesPublic(?)', [stall_id])
+    const images = imagesRows[0]
+
+    // Get stall info using stored procedure
+    const [stallInfoRows] = await connection.execute('CALL sp_checkStallExists(?)', [stall_id])
+    const stallInfo = stallInfoRows[0]
+
+    if (stallInfo.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stall not found'
+      })
+    }
+
+    const stall = stallInfo[0]
+    
+    // Use API endpoint for BLOB images (works with cloud database)
+    const baseImageUrl = `${req.protocol}://${req.get('host')}/api/stalls/images/blob/id`
+
+    // Format images with full URLs pointing to BLOB endpoint
+    const formattedImages = images.map(img => ({
+      id: img.id,
+      stall_id: img.stall_id,
+      image_url: `${baseImageUrl}/${img.id}`,  // Use BLOB serving endpoint
+      original_url: img.image_url,
+      is_primary: img.is_primary === 1,
+      display_order: img.display_order,
+      mime_type: img.mime_type,
+      file_name: img.file_name
+    }))
+
+    // If no images in database, return empty with API endpoint info
+    if (formattedImages.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No images found for this stall.',
+        data: {
+          images: [],
+          stall_id: stall.stall_id,
+          stall_no: stall.stall_no,
+          branch_id: stall.branch_id,
+          upload_endpoint: '/api/stalls/images/blob/upload',
+          note: 'Images are stored in cloud database. Use the upload endpoint to add images.'
+        }
+      })
+    }
+
+    res.json({
+      success: true,
+      message: `Retrieved ${formattedImages.length} images for stall ${stall.stall_no}`,
+      data: {
+        images: formattedImages,
+        stall_id: stall.stall_id,
+        stall_no: stall.stall_no,
+        total_count: formattedImages.length,
+        primary_image: formattedImages.find(img => img.is_primary) || formattedImages[0] || null
+      }
+    })
+
+  } catch (error) {
+    console.error('Get stall images error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve stall images',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     })
   } finally {
