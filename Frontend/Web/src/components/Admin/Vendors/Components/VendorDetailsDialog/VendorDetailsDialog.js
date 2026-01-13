@@ -23,17 +23,17 @@ export default {
         .filter(Boolean)
         .join(' '),
     )
-    const spouseFull = computed(() =>
-      [d.value.spouse_first_name, d.value.spouse_middle_name, d.value.spouse_last_name]
-        .filter(Boolean)
-        .join(' '),
-    )
-    const childFull = computed(() =>
-      [d.value.child_first_name, d.value.child_middle_name, d.value.child_last_name]
-        .filter(Boolean)
-        .join(' '),
-    )
+    const spouseFull = computed(() => d.value.spouse_full_name || '')
+    const childFull = computed(() => d.value.child_full_name || '')
     const photoSrc = computed(() => props.photo)
+
+    // Format date to YYYY-MM-DD
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A'
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'N/A'
+      return date.toISOString().split('T')[0]
+    }
 
     // All documents in one list
     const allDocuments = [
@@ -129,6 +129,7 @@ export default {
       childFull,
       photoSrc,
       allDocuments,
+      formatDate,
       toUrl,
       fileName,
       downloadFile,

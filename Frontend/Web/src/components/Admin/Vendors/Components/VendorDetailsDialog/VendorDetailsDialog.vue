@@ -2,12 +2,12 @@
   <v-dialog v-model="model" max-width="1200px" persistent>
     <v-card>
       <!-- Header with gradient matching Stallholder -->
-      <v-card-title class="details-header">
-        <div class="header-content">
-          <v-icon class="mr-2">mdi-store</v-icon>
-          <h2 class="header-title">Vendor Details - {{ fullName }}</h2>
-        </div>
-      </v-card-title>
+      <v-toolbar color="primary" dark dense>
+        <v-toolbar-title class="toolbar-title">
+          <v-icon left>mdi-store</v-icon>
+          Vendor Details - {{ fullName }}
+        </v-toolbar-title>
+      </v-toolbar>
 
       <!-- Tabs matching Stallholder structure -->
       <v-tabs v-model="activeTab" bg-color="transparent" class="detail-tabs">
@@ -36,21 +36,21 @@
                 <div class="info-value">{{ fullName }}</div>
 
                 <div class="info-label mt-4">PHONE NUMBER:</div>
-                <div class="info-value">{{ d.phone }}</div>
+                <div class="info-value">{{ d.contact_number || d.phone || 'N/A' }}</div>
 
                 <div class="info-label mt-4">ADDRESS:</div>
-                <div class="info-value">{{ d.address }}</div>
+                <div class="info-value">{{ d.address || 'N/A' }}</div>
               </v-col>
 
               <v-col cols="12" md="6">
                 <div class="info-label">EMAIL:</div>
-                <div class="info-value">{{ d.email }}</div>
+                <div class="info-value">{{ d.email || 'N/A' }}</div>
 
                 <div class="info-label mt-4">DATE OF BIRTH:</div>
-                <div class="info-value">{{ d.birthdate }}</div>
+                <div class="info-value">{{ formatDate(d.birthdate) }}</div>
 
                 <div class="info-label mt-4">GENDER:</div>
-                <div class="info-value">{{ d.gender }}</div>
+                <div class="info-value">{{ d.gender || 'N/A' }}</div>
               </v-col>
             </v-row>
 
@@ -59,11 +59,20 @@
               <v-col cols="12" md="6">
                 <div class="info-label">SPOUSE'S NAME:</div>
                 <div class="info-value">{{ spouseFull || '—' }}</div>
+
+                <div class="info-label mt-4">SPOUSE'S AGE:</div>
+                <div class="info-value">{{ d.spouse_age || '—' }}</div>
+
+                <div class="info-label mt-4">SPOUSE'S EDUCATION:</div>
+                <div class="info-value">{{ d.spouse_education || '—' }}</div>
               </v-col>
 
               <v-col cols="12" md="6">
                 <div class="info-label">CHILD'S NAME:</div>
                 <div class="info-value">{{ childFull || '—' }}</div>
+
+                <div class="info-label mt-4">CHILD'S AGE:</div>
+                <div class="info-value">{{ d.child_age || '—' }}</div>
               </v-col>
             </v-row>
           </v-tabs-window-item>
@@ -74,21 +83,30 @@
             <v-row>
               <v-col cols="12" md="6">
                 <div class="info-label">BUSINESS NAME:</div>
-                <div class="info-value">{{ d.business_name }}</div>
+                <div class="info-value">{{ d.business_name || 'N/A' }}</div>
 
                 <div class="info-label mt-4">BUSINESS TYPE:</div>
-                <div class="info-value">{{ d.business_type }}</div>
+                <div class="info-value">{{ d.business_type || 'N/A' }}</div>
 
                 <div class="info-label mt-4">PRODUCTS SOLD:</div>
                 <div class="info-value">{{ d.business_description || 'N/A' }}</div>
               </v-col>
 
               <v-col cols="12" md="6">
-                <div class="info-label">BUSINESS ADDRESS:</div>
-                <div class="info-value">{{ d.business_address || 'N/A' }}</div>
+                <div class="info-label">ASSIGNED LOCATION:</div>
+                <div class="info-value">{{ d.location_name || 'N/A' }}</div>
+
+                <div class="info-label mt-4">VENDOR ID:</div>
+                <div class="info-value">{{ d.vendor_identifier || 'N/A' }}</div>
 
                 <div class="info-label mt-4">VENDING TIME:</div>
-                <div class="info-value">{{ d.vend_start }} – {{ d.vend_end }}</div>
+                <div class="info-value">
+                  {{
+                    d.vending_time_start && d.vending_time_end
+                      ? d.vending_time_start + ' – ' + d.vending_time_end
+                      : 'N/A'
+                  }}
+                </div>
               </v-col>
             </v-row>
           </v-tabs-window-item>

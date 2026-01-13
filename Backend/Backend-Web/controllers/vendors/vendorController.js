@@ -16,16 +16,33 @@ export async function createVendor(req, res) {
       firstName,
       lastName,
       middleName,
-      phone,
+      suffix,
+      contactNumber,
       email,
       birthdate,
       gender,
       address,
+      vendorIdentifier,
+      status,
+      // Spouse info
+      spouseFullName,
+      spouseAge,
+      spouseBirthdate,
+      spouseEducation,
+      spouseContact,
+      spouseOccupation,
+      // Child info
+      childFullName,
+      childAge,
+      childBirthdate,
+      // Business info
       businessName,
       businessType,
       businessDescription,
-      vendorIdentifier,
-      collectorId,
+      vendingTimeStart,
+      vendingTimeEnd,
+      // Location info
+      locationName,
     } = req.body;
 
     // Validate required fields
@@ -53,31 +70,49 @@ export async function createVendor(req, res) {
       }
     }
 
-    console.log(`🏪 Creating vendor: ${firstName} ${lastName}`);
+    console.log(`🏪 Creating vendor with relations: ${firstName} ${lastName}`);
 
-    // Create vendor using stored procedure
+    // Create vendor using stored procedure with all relations
     const [insertResult] = await connection.execute(
-      `CALL createVendor(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `CALL createVendorWithRelations(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        // Vendor personal info
         firstName,
         lastName,
         middleName || null,
-        phone || null,
+        suffix || null,
+        contactNumber || null,
         email || null,
         birthdate || null,
         gender || null,
         address || null,
+        vendorIdentifier || null,
+        status || "Active",
+        // Spouse info
+        spouseFullName || null,
+        spouseAge || null,
+        spouseBirthdate || null,
+        spouseEducation || null,
+        spouseContact || null,
+        spouseOccupation || null,
+        // Child info
+        childFullName || null,
+        childAge || null,
+        childBirthdate || null,
+        // Business info
         businessName || null,
         businessType || null,
         businessDescription || null,
-        vendorIdentifier || null,
-        collectorId || null,
+        vendingTimeStart || null,
+        vendingTimeEnd || null,
+        // Location info
+        locationName || null,
       ]
     );
 
     const vendorId = insertResult[0]?.[0]?.vendor_id;
 
-    console.log("✅ Vendor created successfully");
+    console.log("✅ Vendor created successfully with all relations");
 
     return res.status(201).json({
       success: true,
@@ -87,7 +122,7 @@ export async function createVendor(req, res) {
         firstName,
         lastName,
         businessName,
-        collectorId,
+        locationName,
       },
     });
   } catch (error) {
@@ -119,18 +154,11 @@ export async function getAllVendors(req, res) {
 
     let vendors;
 
-    if (collectorId) {
-      // Get vendors by collector ID using stored procedure
-      const [result] = await connection.execute(
-        "CALL getVendorsByCollectorId(?)",
-        [collectorId]
-      );
-      vendors = result[0] || [];
-    } else {
-      // Return all vendors using stored procedure
-      const [result] = await connection.execute("CALL getAllVendors()");
-      vendors = result[0] || [];
-    }
+    // Return all vendors with relations using stored procedure
+    const [result] = await connection.execute(
+      "CALL getAllVendorsWithRelations()"
+    );
+    vendors = result[0] || [];
 
     res.json({
       success: true,
@@ -162,8 +190,11 @@ export async function getVendorById(req, res) {
     // Set session timezone to Philippine time
     await connection.execute(`SET time_zone = '+08:00'`);
 
-    // Get vendor by ID using stored procedure
-    const [result] = await connection.execute("CALL getVendorById(?)", [id]);
+    // Get vendor by ID with all relations using stored procedure
+    const [result] = await connection.execute(
+      "CALL getVendorWithRelations(?)",
+      [id]
+    );
 
     const vendor = result[0]?.[0];
 
@@ -202,42 +233,75 @@ export async function updateVendor(req, res) {
       firstName,
       lastName,
       middleName,
-      phone,
+      suffix,
+      contactNumber,
       email,
       birthdate,
       gender,
       address,
+      vendorIdentifier,
+      status,
+      // Spouse info
+      spouseFullName,
+      spouseAge,
+      spouseBirthdate,
+      spouseEducation,
+      spouseContact,
+      spouseOccupation,
+      // Child info
+      childFullName,
+      childAge,
+      childBirthdate,
+      // Business info
       businessName,
       businessType,
       businessDescription,
-      vendorIdentifier,
-      collectorId,
-      status,
+      vendingTimeStart,
+      vendingTimeEnd,
+      // Location info
+      locationName,
     } = req.body;
 
     connection = await createConnection();
 
-    console.log(`🔄 Updating vendor: ${id}`);
+    console.log(`🔄 Updating vendor with relations: ${id}`);
 
-    // Update vendor using stored procedure
+    // Update vendor with all relations using stored procedure
     await connection.execute(
-      `CALL updateVendor(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `CALL updateVendorWithRelations(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
+        // Vendor personal info
         firstName,
         lastName,
         middleName || null,
-        phone || null,
+        suffix || null,
+        contactNumber || null,
         email || null,
         birthdate || null,
         gender || null,
         address || null,
+        vendorIdentifier || null,
+        status || "Active",
+        // Spouse info
+        spouseFullName || null,
+        spouseAge || null,
+        spouseBirthdate || null,
+        spouseEducation || null,
+        spouseContact || null,
+        spouseOccupation || null,
+        // Child info
+        childFullName || null,
+        childAge || null,
+        childBirthdate || null,
+        // Business info
         businessName || null,
         businessType || null,
         businessDescription || null,
-        vendorIdentifier || null,
-        collectorId || null,
-        status || "Active",
+        vendingTimeStart || null,
+        vendingTimeEnd || null,
+        // Location info
+        locationName || null,
       ]
     );
 
@@ -270,10 +334,13 @@ export async function deleteVendor(req, res) {
 
     connection = await createConnection();
 
-    console.log(`🗑️ Deleting vendor: ${id}`);
+    console.log(`🗑️ Deleting vendor with relations: ${id}`);
 
-    // Delete vendor using stored procedure
-    await connection.execute("CALL deleteVendor(?)", [id]);
+    // Delete vendor using stored procedure (soft delete, keep relations)
+    await connection.execute("CALL deleteVendorWithRelations(?, ?)", [
+      id,
+      false,
+    ]);
 
     console.log("✅ Vendor deleted successfully");
 

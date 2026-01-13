@@ -34,7 +34,7 @@ export default {
     function makeInitialForm(src) {
       // shallow copy is enough for primitives + File refs
       const f = {
-        // page 1
+        // Vendor personal info
         lastName: '',
         firstName: '',
         middleName: '',
@@ -45,19 +45,30 @@ export default {
         email: '',
         vendorId: '',
         address: '',
-        spouseLast: '',
-        spouseFirst: '',
-        spouseMiddle: '',
-        childLast: '',
-        childFirst: '',
-        childMiddle: '',
-        // page 2
+
+        // Spouse info
+        spouseFullName: '',
+        spouseAge: null,
+        spouseBirthdate: '',
+        spouseEducation: '',
+        spouseContact: '',
+        spouseOccupation: '',
+
+        // Child info
+        childFullName: '',
+        childAge: null,
+        childBirthdate: '',
+
+        // Business info
         businessName: '',
         businessType: '',
-        productsSold: '',
+        businessDescription: '',
         vendStart: '',
         vendEnd: '',
-        businessAddress: '',
+
+        // Location info
+        locationName: '',
+
         // files
         files: {
           clearance: null,
@@ -77,38 +88,80 @@ export default {
         f.suffix = src.suffix || ''
         f.birthdate = src.birthdate || ''
         f.gender = src.gender || 'Male'
-        f.phone = src.phone || ''
+        f.phone = src.contact_number || src.phone || ''
         f.email = src.email || ''
         f.vendorId = src.vendor_identifier || src.vendorId || src.vendor_id || ''
         f.address = src.address || ''
-        f.spouseLast = src.spouse_last || src.spouseLast || ''
-        f.spouseFirst = src.spouse_first || src.spouseFirst || ''
-        f.spouseMiddle = src.spouse_middle || src.spouseMiddle || ''
-        f.childLast = src.child_last || src.childLast || ''
-        f.childFirst = src.child_first || src.childFirst || ''
-        f.childMiddle = src.child_middle || src.childMiddle || ''
+
+        // Spouse fields from database
+        f.spouseFullName = src.spouse_full_name || src.spouseFullName || ''
+        f.spouseAge = src.spouse_age || src.spouseAge || null
+        f.spouseBirthdate = src.spouse_birthdate || src.spouseBirthdate || ''
+        f.spouseEducation = src.spouse_education || src.spouseEducation || ''
+        f.spouseContact = src.spouse_contact || src.spouseContact || ''
+        f.spouseOccupation = src.spouse_occupation || src.spouseOccupation || ''
+
+        // Child fields from database
+        f.childFullName = src.child_full_name || src.childFullName || ''
+        f.childAge = src.child_age || src.childAge || null
+        f.childBirthdate = src.child_birthdate || src.childBirthdate || ''
+
+        // Business fields from database
         f.businessName = src.business_name || src.businessName || ''
         f.businessType = src.business_type || src.businessType || ''
-        f.productsSold = src.business_description || src.productsSold || ''
-        f.vendStart = src.vend_start || src.vendStart || ''
-        f.vendEnd = src.vend_end || src.vendEnd || ''
-        f.businessAddress = src.business_address || src.businessAddress || ''
+        f.businessDescription =
+          src.business_description || src.productsSold || src.businessDescription || ''
+        f.vendStart = src.vending_time_start || src.vendStart || ''
+        f.vendEnd = src.vending_time_end || src.vendEnd || ''
+
+        // Location field from database
+        f.locationName = src.location_name || src.locationName || ''
+
         f.files = { ...f.files, ...(src.files || {}) }
       }
       return f
     }
 
     function submit() {
-      // return both compact row and full raw payload
-      const updatedRow = {
-        id: form.vendorId,
-        name: [form.firstName, form.lastName].filter(Boolean).join(' '),
-        business: form.businessName,
-        collector: 'John Smith',
-        status: 'Active',
-        raw: { ...form, files: { ...form.files } }, // keep File refs
+      // return complete payload with all relations
+      const payload = {
+        // Vendor personal info
+        firstName: form.firstName,
+        lastName: form.lastName,
+        middleName: form.middleName,
+        suffix: form.suffix,
+        contactNumber: form.phone,
+        email: form.email,
+        birthdate: form.birthdate,
+        gender: form.gender,
+        address: form.address,
+        vendorIdentifier: form.vendorId,
+        status: form.status || 'Active',
+
+        // Spouse info
+        spouseFullName: form.spouseFullName,
+        spouseAge: form.spouseAge,
+        spouseBirthdate: form.spouseBirthdate,
+        spouseEducation: form.spouseEducation,
+        spouseContact: form.spouseContact,
+        spouseOccupation: form.spouseOccupation,
+
+        // Child info
+        childFullName: form.childFullName,
+        childAge: form.childAge,
+        childBirthdate: form.childBirthdate,
+
+        // Business info
+        businessName: form.businessName,
+        businessType: form.businessType,
+        businessDescription: form.businessDescription,
+        vendingTimeStart: form.vendStart,
+        vendingTimeEnd: form.vendEnd,
+
+        // Location info
+        locationName: form.locationName,
       }
-      emit('update', updatedRow)
+      emit('update', payload)
       visible.value = false
     }
 

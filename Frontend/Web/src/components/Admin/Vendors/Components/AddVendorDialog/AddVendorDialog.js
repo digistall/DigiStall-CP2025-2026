@@ -21,15 +21,37 @@ export default {
         lastName: '',
         firstName: '',
         middleName: '',
+        suffix: '',
         phone: '',
         email: '',
         birthdate: '',
         gender: '',
         address: '',
+        vendorId: '',
+
+        // Spouse Info
+        spouseFullName: '',
+        spouseAge: null,
+        spouseBirthdate: '',
+        spouseEducation: '',
+        spouseContact: '',
+        spouseOccupation: '',
+
+        // Child Info
+        childFullName: '',
+        childAge: null,
+        childBirthdate: '',
+
+        // Business Info
         businessName: '',
         businessType: '',
         businessDescription: '',
-        vendorId: '',
+        vendStart: '',
+        vendEnd: '',
+
+        // Location Info
+        locationName: '',
+
         assignedCollector: '',
       },
 
@@ -103,16 +125,45 @@ export default {
 
       // Simulate API call
       setTimeout(() => {
-        const newRow = {
-          id: this.form.vendorId || Math.floor(Math.random() * 1000000),
-          name: `${this.form.firstName} ${this.form.lastName}`,
-          business: this.form.businessName,
-          collector: this.form.assignedCollector || 'John Smith',
+        const payload = {
+          // Vendor personal info
+          firstName: this.form.firstName,
+          lastName: this.form.lastName,
+          middleName: this.form.middleName,
+          suffix: this.form.suffix,
+          contactNumber: this.form.phone,
+          email: this.form.email,
+          birthdate: this.form.birthdate,
+          gender: this.form.gender,
+          address: this.form.address,
+          vendorIdentifier: this.form.vendorId,
           status: 'Active',
-          raw: JSON.parse(JSON.stringify(this.form)),
+
+          // Spouse info
+          spouseFullName: this.form.spouseFullName,
+          spouseAge: this.form.spouseAge,
+          spouseBirthdate: this.form.spouseBirthdate,
+          spouseEducation: this.form.spouseEducation,
+          spouseContact: this.form.spouseContact,
+          spouseOccupation: this.form.spouseOccupation,
+
+          // Child info
+          childFullName: this.form.childFullName,
+          childAge: this.form.childAge,
+          childBirthdate: this.form.childBirthdate,
+
+          // Business info
+          businessName: this.form.businessName,
+          businessType: this.form.businessType,
+          businessDescription: this.form.businessDescription,
+          vendingTimeStart: this.form.vendStart,
+          vendingTimeEnd: this.form.vendEnd,
+
+          // Location info
+          locationName: this.form.locationName,
         }
 
-        this.$emit('save', newRow)
+        this.$emit('save', payload)
         this.saving = false
         this.showToast('✅ Vendor added successfully!', 'success')
         this.$emit('update:modelValue', false)
