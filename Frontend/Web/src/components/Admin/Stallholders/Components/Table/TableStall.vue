@@ -446,7 +446,7 @@
                           color="success"
                           variant="flat"
                           size="small"
-                          @click="approveStallholderDocument(doc)"
+                          @click="approveDocument(doc)"
                           :loading="processingDocId === doc.submission_id"
                           class="ml-2"
                         >
@@ -457,7 +457,7 @@
                           color="error"
                           variant="outlined"
                           size="small"
-                          @click="openDocRejectDialog(doc)"
+                          @click="openRejectDialog(doc)"
                           class="ml-2"
                         >
                           <v-icon start>mdi-close</v-icon>
@@ -818,7 +818,7 @@
           <v-btn 
             color="error" 
             variant="outlined"
-            @click="openDocRejectDialog(previewingDocument); showDocPreviewDialog = false"
+            @click="openRejectDialog(previewingDocument); showDocPreviewDialog = false"
           >
             <v-icon start>mdi-close</v-icon>
             Reject
@@ -826,7 +826,7 @@
           <v-btn 
             color="success" 
             variant="flat"
-            @click="approveStallholderDocument(previewingDocument)"
+            @click="approveDocument(previewingDocument)"
             :loading="processingDocId === previewingDocument.submission_id"
           >
             <v-icon start>mdi-check</v-icon>

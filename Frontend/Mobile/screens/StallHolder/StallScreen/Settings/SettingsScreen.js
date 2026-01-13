@@ -20,8 +20,8 @@ import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../.
 
 const { width } = Dimensions.get("window");
 
-const SettingsScreen = ({ user }) => {
-  const [showProfile, setShowProfile] = useState(false);
+const SettingsScreen = ({ user, initialShowProfile = false }) => {
+  const [showProfile, setShowProfile] = useState(initialShowProfile);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
