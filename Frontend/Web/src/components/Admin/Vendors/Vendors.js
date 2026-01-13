@@ -111,11 +111,10 @@ export default {
             id: vendor.vendor_id,
             name: `${vendor.first_name} ${vendor.last_name}`,
             business: vendor.business_name || 'N/A',
+            location: vendor.location_name || 'N/A',
             email: vendor.email || 'N/A',
-            phone: vendor.phone || 'N/A',
-            collector: vendor.collector_name || 'Unassigned',
+            phone: vendor.contact_number || 'N/A',
             status: vendor.status,
-            compliance: 'Compliant',
             raw: vendor,
           }))
 
@@ -164,7 +163,7 @@ export default {
     },
 
     // receive new row and add to table
-    async handleSave(newRow) {
+    async handleSave(payload) {
       this.loading = true
       try {
         const token = localStorage.getItem('authToken')
@@ -174,20 +173,7 @@ export default {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            firstName: newRow.firstName,
-            lastName: newRow.lastName,
-            middleName: newRow.middleName,
-            phone: newRow.phone,
-            email: newRow.email,
-            birthdate: newRow.birthdate,
-            gender: newRow.gender,
-            address: newRow.address,
-            businessName: newRow.businessName,
-            businessType: newRow.businessType,
-            businessDescription: newRow.productsSold,
-            vendorIdentifier: newRow.vendorId,
-          }),
+          body: JSON.stringify(payload),
         })
 
         if (!response.ok) {
@@ -215,9 +201,35 @@ export default {
       this.statusFilter = payload.filter || 'all'
     },
 
-    view(row) {
-      this.detailsData = row?.raw || row
-      this.detailsDialog = true
+    async view(row) {
+      // Fetch full vendor details with all relations
+      try {
+        const vendorId = row?.id || row?.vendor_id
+        const token = localStorage.getItem('authToken')
+        const response = await fetch(`${this.apiBaseUrl}/vendors/${vendorId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch vendor details: ${response.status}`)
+        }
+
+        const result = await response.json()
+
+        if (result.success && result.data) {
+          this.detailsData = result.data
+          this.detailsDialog = true
+        }
+      } catch (error) {
+        console.error('❌ Error loading vendor details:', error)
+        // Fallback to cached data
+        this.detailsData = row?.raw || row
+        this.detailsDialog = true
+      }
     },
 
     edit(row) {
@@ -227,7 +239,7 @@ export default {
     },
 
     // called when Edit dialog submits
-    async handleEditUpdate(updatedRow) {
+    async handleEditUpdate(payload) {
       this.loading = true
       try {
         const token = localStorage.getItem('authToken')
@@ -237,21 +249,7 @@ export default {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            firstName: updatedRow.firstName,
-            lastName: updatedRow.lastName,
-            middleName: updatedRow.middleName,
-            phone: updatedRow.phone,
-            email: updatedRow.email,
-            birthdate: updatedRow.birthdate,
-            gender: updatedRow.gender,
-            address: updatedRow.address,
-            businessName: updatedRow.businessName,
-            businessType: updatedRow.businessType,
-            businessDescription: updatedRow.productsSold,
-            vendorIdentifier: updatedRow.vendorId,
-            status: updatedRow.status || 'Active',
-          }),
+          body: JSON.stringify(payload),
         })
 
         if (!response.ok) {
