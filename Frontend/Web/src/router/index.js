@@ -467,21 +467,6 @@ const router = createRouter({
           meta: { title: 'Stalls' },
           beforeEnter: requiresPermission('stalls'),
         },
-        {
-          path: 'stalls/raffles',
-          name: 'Raffles',
-          component: () => import('../components/Admin/Stalls/RaffleComponents/RafflesPage.vue'),
-          meta: { title: 'Active Raffles' },
-          beforeEnter: requiresPermission('stalls'),
-        },
-        {
-          path: 'stalls/auctions',
-          name: 'Auctions',
-          component: () =>
-            import('../components/Admin/Stalls/AuctionComponents/AuctionsPage/AuctionsPage.vue'),
-          meta: { title: 'Active Auctions' },
-          beforeEnter: requiresPermission('stalls'),
-        },
       ],
     },
 
