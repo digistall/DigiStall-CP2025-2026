@@ -34,7 +34,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
-
+import { getComplianceEvidenceImage } from './controllers/compliances/complianceController.js';
 const app = express();
 const PORT = process.env.WEB_PORT || 3001;
 
@@ -61,6 +61,7 @@ app.use(cors(corsConfig));
 // ===== ROUTES =====
 
 // Public routes (no authentication required)
+app.get('/api/compliances/:id/evidence/image', getComplianceEvidenceImage);
 app.use('/api/auth/v2', enhancedAuthRoutes);    // Enhanced JWT auth with refresh tokens (NEW)
 app.use('/api/auth', authRoutes);               // Legacy auth routes (backward compatibility)
 app.use('/api/stalls', stallRoutes);            // Stalls routes (public for landing page + protected for admin)
