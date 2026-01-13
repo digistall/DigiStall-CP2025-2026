@@ -105,29 +105,63 @@
       return permissionLabels[permission] || permission
     },
 
+    isEmployeeOnline(employee) {
+      if (!employee.last_login) return false
+      
+      try {
+        // Database stores PH time, treat as local time (no UTC conversion needed)
+        const lastLoginDate = new Date(employee.last_login)
+        
+        if (isNaN(lastLoginDate.getTime())) return false
+        
+        const now = new Date()
+        
+        // Consider online if last login was within 5 minutes
+        const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000))
+        return lastLoginDate > fiveMinutesAgo
+      } catch (error) {
+        console.error('Error checking online status:', employee.last_login, error)
+        return false
+      }
+    },
+
     formatDate(date) {
       if (!date) return 'Never'
-      // Database stores UTC, add 8 hours to get Philippine time
-      const utcDate = new Date(date)
-      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
-      return new Intl.DateTimeFormat('en-PH', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }).format(phDate)
+      try {
+        // Database stores PH time, treat as local time (no UTC conversion needed)
+        const localDate = new Date(date)
+        
+        if (isNaN(localDate.getTime())) return 'Invalid Date'
+        
+        return new Intl.DateTimeFormat('en-PH', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        }).format(localDate)
+      } catch (error) {
+        console.error('Error formatting date:', date, error)
+        return 'Invalid Date'
+      }
     },
 
     formatTime(date) {
       if (!date) return ''
-      // Database stores UTC, add 8 hours to get Philippine time
-      const utcDate = new Date(date)
-      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000))
-      return new Intl.DateTimeFormat('en-PH', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
-      }).format(phDate)
+      try {
+        // Database stores PH time, treat as local time (no UTC conversion needed)
+        const localDate = new Date(date)
+        
+        if (isNaN(localDate.getTime())) return ''
+        
+        return new Intl.DateTimeFormat('en-PH', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }).format(localDate)
+      } catch (error) {
+        console.error('Error formatting time:', date, error)
+        return ''
+      }
     },
 
     showPermissionsPopup(employee, event) {
