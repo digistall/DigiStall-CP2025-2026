@@ -10,47 +10,53 @@ export const getPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    console.log('🔐 User data from token:', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    // If stallholderId is null but we have applicantId, try to look up stallholder_id from database
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.',
+        data: []
+      });
+    }
     
     const { page = 1, limit = 10 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 10)); // Sanitize limit (1-100)
+    const pageInt = Math.max(1, parseInt(page) || 1); // Sanitize page (min 1)
+    const offsetInt = (pageInt - 1) * limitInt;
     
-    console.log('📋 Fetching payment records for stallholder:', stallholderId);
+    console.log('📋 Fetching payment records for stallholder:', stallholderId, 'page:', pageInt, 'limit:', limitInt);
     
     connection = await createConnection();
     
-    // Get total count of payments
+    // If we only have applicantId, try to get stallholder_id using stored procedure
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
+        [userData.applicantId]
+      );
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
+        console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
+    
+    // Get total count of payments using stored procedure
     const [countResult] = await connection.execute(
-      `SELECT COUNT(*) as total FROM payments WHERE stallholder_id = ?`,
+      'CALL sp_getPaymentCountByStallholder(?)',
       [stallholderId]
     );
-    const totalRecords = countResult[0].total;
+    const totalRecords = countResult[0]?.[0]?.total || 0;
     
-    // Get payment records with pagination
-    const [payments] = await connection.execute(
-      `SELECT 
-        p.payment_id,
-        p.stallholder_id,
-        p.payment_method,
-        p.amount,
-        p.payment_date,
-        p.payment_time,
-        p.payment_for_month,
-        p.payment_type,
-        p.reference_number,
-        p.collected_by,
-        p.payment_status,
-        p.notes,
-        p.branch_id,
-        p.created_at,
-        b.branch_name
-       FROM payments p
-       LEFT JOIN branch b ON p.branch_id = b.branch_id
-       WHERE p.stallholder_id = ?
-       ORDER BY p.payment_date DESC, p.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [stallholderId, parseInt(limit), offset]
+    // Get payment records with pagination using stored procedure
+    const [paymentResult] = await connection.execute(
+      'CALL sp_getPaymentsByStallholderPaginated(?, ?, ?)',
+      [stallholderId, limitInt, offsetInt]
     );
+    const payments = paymentResult[0] || [];
     
     await connection.end();
     
@@ -78,10 +84,10 @@ export const getPaymentRecords = async (req, res) => {
       success: true,
       data: formattedPayments,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalRecords / parseInt(limit)),
+        currentPage: pageInt,
+        totalPages: Math.ceil(totalRecords / limitInt),
         totalRecords,
-        limit: parseInt(limit)
+        limit: limitInt
       }
     });
     
@@ -113,36 +119,40 @@ export const getAllPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    console.log('🔐 User data from token (getAllPaymentRecords):', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.',
+        data: []
+      });
+    }
     
     console.log('📋 Fetching ALL payment records for stallholder:', stallholderId);
     
     connection = await createConnection();
     
-    // Get all payment records
-    const [payments] = await connection.execute(
-      `SELECT 
-        p.payment_id,
-        p.stallholder_id,
-        p.payment_method,
-        p.amount,
-        p.payment_date,
-        p.payment_time,
-        p.payment_for_month,
-        p.payment_type,
-        p.reference_number,
-        p.collected_by,
-        p.payment_status,
-        p.notes,
-        p.branch_id,
-        p.created_at,
-        b.branch_name
-       FROM payments p
-       LEFT JOIN branch b ON p.branch_id = b.branch_id
-       WHERE p.stallholder_id = ?
-       ORDER BY p.payment_date DESC, p.created_at DESC`,
+    // If we only have applicantId, try to get stallholder_id using stored procedure
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
+        [userData.applicantId]
+      );
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
+        console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
+    
+    // Get all payment records using stored procedure
+    const [paymentResult] = await connection.execute(
+      'CALL sp_getAllPaymentsByStallholder(?)',
       [stallholderId]
     );
+    const payments = paymentResult[0] || [];
     
     await connection.end();
     
@@ -200,38 +210,46 @@ export const getPaymentSummary = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    console.log('🔐 User data from token (getPaymentSummary):', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.'
+      });
+    }
     
     console.log('📊 Fetching payment summary for stallholder:', stallholderId);
     
     connection = await createConnection();
     
-    // Get payment summary statistics
-    const [summary] = await connection.execute(
-      `SELECT 
-        COUNT(*) as total_payments,
-        SUM(CASE WHEN payment_status = 'completed' THEN amount ELSE 0 END) as total_paid,
-        SUM(CASE WHEN payment_status = 'pending' THEN amount ELSE 0 END) as total_pending,
-        SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) as completed_count,
-        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-        MAX(payment_date) as last_payment_date
-       FROM payments 
-       WHERE stallholder_id = ?`,
+    // If we only have applicantId, try to get stallholder_id using stored procedure
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
+        [userData.applicantId]
+      );
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
+        console.log('📊 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
+    
+    // Get payment summary statistics using stored procedure
+    const [summaryResult] = await connection.execute(
+      'CALL sp_getPaymentSummaryByStallholder(?)',
       [stallholderId]
     );
+    const summary = summaryResult[0] || [];
     
-    // Get stallholder's monthly rent and payment status
-    const [stallholderInfo] = await connection.execute(
-      `SELECT 
-        monthly_rent,
-        payment_status,
-        last_payment_date,
-        contract_start_date,
-        contract_end_date
-       FROM stallholder 
-       WHERE stallholder_id = ? OR applicant_id = ?`,
-      [stallholderId, stallholderId]
+    // Get stallholder's monthly rent and payment status using stored procedure
+    const [stallholderResult] = await connection.execute(
+      'CALL sp_getStallholderByApplicantId(?)',
+      [stallholderId]
     );
+    const stallholderInfo = stallholderResult[0] || [];
     
     await connection.end();
     

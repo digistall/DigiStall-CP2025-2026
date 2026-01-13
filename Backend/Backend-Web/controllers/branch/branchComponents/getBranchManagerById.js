@@ -27,31 +27,13 @@ export const getBranchManagerById = async (req, res) => {
     connection = await createConnection();
     console.log('✅ Database connection established');
 
-    // Get manager data with branch information
+    // Get manager data with branch information using stored procedure
     console.log('🔍 Fetching manager data:', managerId);
-    const [managerData] = await connection.execute(
-      `SELECT 
-        bm.branch_manager_id,
-        bm.branch_id,
-        bm.first_name,
-        bm.last_name,
-        bm.manager_username,
-        bm.email,
-        bm.contact_number,
-        bm.status,
-        bm.created_at,
-        bm.updated_at,
-        b.branch_name,
-        b.area,
-        b.location,
-        b.address as branch_address,
-        b.contact_number as branch_contact,
-        b.email as branch_email
-      FROM branch_manager bm
-      LEFT JOIN branch b ON bm.branch_id = b.branch_id
-      WHERE bm.branch_manager_id = ?`,
+    const [managerResult] = await connection.execute(
+      'CALL sp_getBranchManagerById(?)',
       [managerId]
     );
+    const managerData = managerResult[0] || [];
 
     if (managerData.length === 0) {
       console.log('❌ Manager not found:', managerId);
