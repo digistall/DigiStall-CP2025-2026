@@ -13,6 +13,7 @@ import {
   uploadStallholderDocumentSubmissionBlob,
   getStallholderDocumentBlob,
   getStallholderDocumentBlobById,
+  getStallholderDocumentBlobByIdBase64,
   getStallholderDocumentSubmissionBlob,
   getStallholderDocuments,
   deleteStallholderDocumentBlob,
@@ -24,6 +25,11 @@ import {
   submitComplaint,
   getMyComplaints
 } from '../controllers/stallholder/complaintController.js';
+
+// Import profile controller
+import {
+  getStallholderProfile
+} from '../controllers/stallholder/profileController.js';
 
 // Import payment controller
 import {
@@ -113,16 +119,25 @@ router.post('/documents/blob/upload', uploadStallholderDocumentBlob);
 router.post('/documents/submission/blob/upload', uploadStallholderDocumentSubmissionBlob);
 
 /**
- * @route GET /api/mobile/stallholder/documents/blob/:stallholder_id/:document_type_id
- * @desc Get document BLOB by stallholder and document type (returns binary)
- */
-router.get('/documents/blob/:stallholder_id/:document_type_id', getStallholderDocumentBlob);
-
-/**
  * @route GET /api/mobile/stallholder/documents/blob/id/:document_id
  * @desc Get document BLOB by document ID (returns binary)
+ * NOTE: This route MUST come before /documents/blob/:stallholder_id/:document_type_id
  */
 router.get('/documents/blob/id/:document_id', getStallholderDocumentBlobById);
+
+/**
+ * @route GET /api/mobile/stallholder/documents/blob/base64/:document_id
+ * @desc Get document BLOB as base64 JSON (React Native compatible)
+ * NOTE: This route MUST come before /documents/blob/:stallholder_id/:document_type_id
+ */
+router.get('/documents/blob/base64/:document_id', getStallholderDocumentBlobByIdBase64);
+
+/**
+ * @route GET /api/mobile/stallholder/documents/blob/:stallholder_id/:document_type_id
+ * @desc Get document BLOB by stallholder and document type (returns binary)
+ * NOTE: This route MUST come after more specific /documents/blob/id/ and /documents/blob/base64/ routes
+ */
+router.get('/documents/blob/:stallholder_id/:document_type_id', getStallholderDocumentBlob);
 
 /**
  * @route GET /api/mobile/stallholder/documents/submission/blob/:submission_id
@@ -152,6 +167,13 @@ router.put('/documents/blob/:document_id/verify', updateStallholderDocumentVerif
 // =============================================
 // STALLHOLDER COMPLAINT ROUTES
 // =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/profile/:stallholder_id
+ * @desc Get stallholder profile with stall information
+ * @access Protected (Stallholder only)
+ */
+router.get('/profile/:stallholder_id', verifyToken, getStallholderProfile);
 
 /**
  * @route POST /api/mobile/stallholder/complaint

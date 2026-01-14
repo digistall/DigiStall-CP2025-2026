@@ -8,7 +8,6 @@ import Applicants from '../components/Admin/Applicants/Applicants.vue'
 import Complaints from '../components/Admin/Complaints/Complaints.vue'
 import Compliances from '../components/Admin/Compliances/Compliance.vue'
 import Vendors from '../components/Admin/Vendors/Vendors.vue'
-import Collectors from '../components/Admin/Collectors/Collectors.vue'
 import Stallholders from '../components/Admin/Stallholders/Stallholders.vue'
 import MainLayout from '../components/MainLayout/MainLayout.vue'
 import Stalls from '../components/Admin/Stalls/Stalls.vue'
@@ -30,32 +29,32 @@ import Reports from '../components/SystemAdmin/Reports/Reports.vue'
  * Check if user is authenticated (checks sessionStorage)
  */
 const isAuthenticated = () => {
-  const token = sessionStorage.getItem('authToken')
-  const user = sessionStorage.getItem('currentUser')
-  const isAuth = !!(token && user)
-  console.log('🔍 isAuthenticated check:', { hasToken: !!token, hasUser: !!user, result: isAuth })
-  return isAuth
+  const token = sessionStorage.getItem('authToken');
+  const user = sessionStorage.getItem('currentUser');
+  const isAuth = !!(token && user);
+  console.log('🔍 isAuthenticated check:', { hasToken: !!token, hasUser: !!user, result: isAuth });
+  return isAuth;
 }
 
 /**
  * Check if user has required role(s)
  */
 const hasRole = (...roles) => {
-  const userData = sessionStorage.getItem('currentUser')
-  console.log('🔍 hasRole called - userData exists:', !!userData)
-  if (!userData) return false
+  const userData = sessionStorage.getItem('currentUser');
+  console.log('🔍 hasRole called - userData exists:', !!userData);
+  if (!userData) return false;
 
   try {
-    const user = JSON.parse(userData)
-    console.log('🔍 hasRole - Parsed user:', user)
-    console.log('🔍 hasRole - User type:', user.userType)
-    console.log('🔍 hasRole - Required roles:', roles)
-    const result = roles.some((role) => role.toLowerCase() === user.userType?.toLowerCase())
-    console.log('🔍 hasRole result:', result)
-    return result
+    const user = JSON.parse(userData);
+    console.log('🔍 hasRole - Parsed user:', user);
+    console.log('🔍 hasRole - User type:', user.userType);
+    console.log('🔍 hasRole - Required roles:', roles);
+    const result = roles.some(role => role.toLowerCase() === user.userType?.toLowerCase());
+    console.log('🔍 hasRole result:', result);
+    return result;
   } catch (error) {
-    console.error('❌ hasRole parse error:', error)
-    return false
+    console.error('❌ hasRole parse error:', error);
+    return false;
   }
 }
 
@@ -63,26 +62,24 @@ const hasRole = (...roles) => {
  * Check if user has required permission(s)
  */
 const hasPermission = (...permissions) => {
-  const userData = sessionStorage.getItem('currentUser')
-  console.log('🔍 hasPermission called - userData:', userData)
+  const userData = sessionStorage.getItem('currentUser');
+  console.log('🔍 hasPermission called - userData:', userData);
   if (!userData) {
-    console.log('❌ No userData in sessionStorage')
-    return false
+    console.log('❌ No userData in sessionStorage');
+    return false;
   }
 
   try {
-    const user = JSON.parse(userData)
-    console.log('🔍 Parsed user:', user)
-    console.log('🔍 User type:', user.userType)
+    const user = JSON.parse(userData);
+    console.log('🔍 Parsed user:', user);
+    console.log('🔍 User type:', user.userType);
 
     // System administrators, stall business owners, and business managers have all permissions
-    if (
-      user.userType === 'system_administrator' ||
-      user.userType === 'stall_business_owner' ||
-      user.userType === 'business_manager'
-    ) {
-      console.log('✅ User has admin/owner/manager role - granting all permissions')
-      return true
+    if (user.userType === 'system_administrator' || 
+        user.userType === 'stall_business_owner' || 
+        user.userType === 'business_manager') {
+      console.log('✅ User has admin/owner/manager role - granting all permissions');
+      return true;
     }
 
     // Check business employee permissions
@@ -90,25 +87,25 @@ const hasPermission = (...permissions) => {
       // Handle both array format ['dashboard', 'applicants'] and object format { dashboard: true }
       if (Array.isArray(user.permissions)) {
         // Array format: check if permission exists in array
-        const hasIt = permissions.some((permission) => user.permissions.includes(permission))
-        console.log('🔍 Array permissions check:', hasIt)
-        return hasIt
+        const hasIt = permissions.some(permission => user.permissions.includes(permission));
+        console.log('🔍 Array permissions check:', hasIt);
+        return hasIt;
       } else {
         // Object format: check if permission value is true
-        const hasIt = permissions.some((permission) => {
-          const permValue = user.permissions[permission]
-          return permValue === true || permValue === 1
-        })
-        console.log('🔍 Object permissions check:', hasIt)
-        return hasIt
+        const hasIt = permissions.some(permission => {
+          const permValue = user.permissions[permission];
+          return permValue === true || permValue === 1;
+        });
+        console.log('🔍 Object permissions check:', hasIt);
+        return hasIt;
       }
     }
 
-    console.log('❌ No matching permission or role')
-    return false
+    console.log('❌ No matching permission or role');
+    return false;
   } catch (error) {
-    console.error('❌ Error in hasPermission:', error)
-    return false
+    console.error('❌ Error in hasPermission:', error);
+    return false;
   }
 }
 
@@ -117,39 +114,39 @@ const hasPermission = (...permissions) => {
  * If user doesn't have dashboard permission, redirect to first available page
  */
 const getDashboardPath = () => {
-  const userData = sessionStorage.getItem('currentUser')
-  if (!userData) return '/app/dashboard'
+  const userData = sessionStorage.getItem('currentUser');
+  if (!userData) return '/app/dashboard';
 
   try {
-    const user = JSON.parse(userData)
-
+    const user = JSON.parse(userData);
+    
     // System administrator always goes to system admin dashboard
     if (user.userType === 'system_administrator') {
-      return '/system-admin/dashboard'
+      return '/system-admin/dashboard';
     }
-
+    
     // Business owner and manager always have dashboard
     if (user.userType === 'stall_business_owner' || user.userType === 'business_manager') {
-      return '/app/dashboard'
+      return '/app/dashboard';
     }
-
+    
     // For business employees, check their permissions
     if (user.userType === 'business_employee' && user.permissions) {
-      const permissions = user.permissions
-
+      const permissions = user.permissions;
+      
       // Helper to check permission
       const hasPermission = (perm) => {
         if (Array.isArray(permissions)) {
-          return permissions.includes(perm)
+          return permissions.includes(perm);
         }
-        return permissions[perm] === true
-      }
-
+        return permissions[perm] === true;
+      };
+      
       // If has dashboard permission, go to dashboard
       if (hasPermission('dashboard')) {
-        return '/app/dashboard'
+        return '/app/dashboard';
       }
-
+      
       // Otherwise, find the first available page based on permissions
       const permissionRoutes = [
         { perm: 'payments', route: '/app/payment' },
@@ -158,24 +155,24 @@ const getDashboardPath = () => {
         { perm: 'compliances', route: '/app/compliance' },
         { perm: 'vendors', route: '/app/vendor' },
         { perm: 'stallholders', route: '/app/stallholder' },
-        { perm: 'stalls', route: '/app/stalls' },
-      ]
-
+        { perm: 'stalls', route: '/app/stalls' }
+      ];
+      
       for (const { perm, route } of permissionRoutes) {
         if (hasPermission(perm)) {
-          console.log(`🔄 User doesn't have dashboard permission, redirecting to ${route}`)
-          return route
+          console.log(`🔄 User doesn't have dashboard permission, redirecting to ${route}`);
+          return route;
         }
       }
-
+      
       // If no permissions at all, still try dashboard (they might see a restricted view)
-      console.log('⚠️ User has no recognized permissions, defaulting to dashboard')
-      return '/app/dashboard'
+      console.log('⚠️ User has no recognized permissions, defaulting to dashboard');
+      return '/app/dashboard';
     }
-
-    return '/app/dashboard'
+    
+    return '/app/dashboard';
   } catch {
-    return '/app/dashboard'
+    return '/app/dashboard';
   }
 }
 
@@ -204,8 +201,8 @@ const requireRole = (...roles) => {
       return
     }
 
-    const userData = sessionStorage.getItem('currentUser')
-    const user = userData ? JSON.parse(userData) : {}
+    const userData = sessionStorage.getItem('currentUser');
+    const user = userData ? JSON.parse(userData) : {};
     console.log('🔐 Role check for route:', to.path)
     console.log('🔐 Required roles:', roles)
     console.log('🔐 User type:', user.userType)
@@ -226,35 +223,35 @@ const requireRole = (...roles) => {
  */
 const requirePermission = (...permissions) => {
   return (to, from, next) => {
-    console.log('🚀🚀🚀 [STALLHOLDER FIX] requirePermission called for:', to.path)
-    console.log('🚀 [STALLHOLDER FIX] Required permissions:', permissions)
-    console.log('🚀 [STALLHOLDER FIX] From route:', from.path)
-
+    console.log('🚀🚀🚀 [STALLHOLDER FIX] requirePermission called for:', to.path);
+    console.log('🚀 [STALLHOLDER FIX] Required permissions:', permissions);
+    console.log('🚀 [STALLHOLDER FIX] From route:', from.path);
+    
     if (!isAuthenticated()) {
       console.log('❌ [STALLHOLDER FIX] Not authenticated - redirecting to login')
       next('/login')
       return
     }
 
-    console.log('✅ [STALLHOLDER FIX] User is authenticated')
+    console.log('✅ [STALLHOLDER FIX] User is authenticated');
 
-    const userData = sessionStorage.getItem('currentUser')
-    console.log('🔍 [STALLHOLDER FIX] Raw userData from sessionStorage:', userData)
-
-    const user = userData ? JSON.parse(userData) : {}
-    console.log('🔐 [STALLHOLDER FIX] Parsed user object:', JSON.stringify(user, null, 2))
-    console.log('🔐 [STALLHOLDER FIX] User type:', user.userType)
-    console.log('🔐 [STALLHOLDER FIX] Calling hasPermission with:', permissions)
-
-    const permissionResult = hasPermission(...permissions)
-    console.log('🔐 [STALLHOLDER FIX] hasPermission returned:', permissionResult)
+    const userData = sessionStorage.getItem('currentUser');
+    console.log('🔍 [STALLHOLDER FIX] Raw userData from sessionStorage:', userData);
+    
+    const user = userData ? JSON.parse(userData) : {};
+    console.log('🔐 [STALLHOLDER FIX] Parsed user object:', JSON.stringify(user, null, 2));
+    console.log('🔐 [STALLHOLDER FIX] User type:', user.userType);
+    console.log('🔐 [STALLHOLDER FIX] Calling hasPermission with:', permissions);
+    
+    const permissionResult = hasPermission(...permissions);
+    console.log('🔐 [STALLHOLDER FIX] hasPermission returned:', permissionResult);
 
     if (permissionResult) {
       console.log('✅✅✅ [STALLHOLDER FIX] Permission check PASSED - allowing navigation')
       next()
     } else {
-      console.log('❌❌❌ [STALLHOLDER FIX] Permission check FAILED')
-      console.log('⚠️ [STALLHOLDER FIX] FORCING NAVIGATION ANYWAY (debug mode)')
+      console.log('❌❌❌ [STALLHOLDER FIX] Permission check FAILED');
+      console.log('⚠️ [STALLHOLDER FIX] FORCING NAVIGATION ANYWAY (debug mode)');
       // Force navigation to see the actual error
       next()
     }
@@ -281,7 +278,7 @@ const requireRoleOrPermission = (roles = [], permissions = []) => {
       console.log('✅ Access granted')
       next()
     } else {
-      console.log('❌ Access denied')
+      console.log('❌ Access denied');
       next('/app/dashboard')
     }
   }
@@ -310,34 +307,32 @@ const requireDashboardAccess = (to, from, next) => {
 
   try {
     const user = JSON.parse(userData)
-
+    
     // System administrators, owners, and managers always have dashboard access
-    if (
-      user.userType === 'system_administrator' ||
-      user.userType === 'stall_business_owner' ||
-      user.userType === 'business_manager'
-    ) {
+    if (user.userType === 'system_administrator' ||
+        user.userType === 'stall_business_owner' ||
+        user.userType === 'business_manager') {
       next()
       return
     }
-
+    
     // For business employees, check if they have dashboard permission
     if (user.userType === 'business_employee' && user.permissions) {
       const permissions = user.permissions
-
+      
       const hasPerm = (perm) => {
         if (Array.isArray(permissions)) {
           return permissions.includes(perm)
         }
         return permissions[perm] === true || permissions[perm] === 1
       }
-
+      
       // If user has dashboard permission, allow access
       if (hasPerm('dashboard')) {
         next()
         return
       }
-
+      
       // Find first available page based on permissions
       const permissionRoutes = [
         { perm: 'payments', route: '/app/payment' },
@@ -346,9 +341,9 @@ const requireDashboardAccess = (to, from, next) => {
         { perm: 'compliances', route: '/app/compliances' },
         { perm: 'vendors', route: '/app/vendors' },
         { perm: 'stallholders', route: '/app/stallholders' },
-        { perm: 'stalls', route: '/app/stalls' },
+        { perm: 'stalls', route: '/app/stalls' }
       ]
-
+      
       for (const { perm, route } of permissionRoutes) {
         if (hasPerm(perm)) {
           console.log(`🔄 Employee doesn't have dashboard permission, redirecting to ${route}`)
@@ -356,11 +351,11 @@ const requireDashboardAccess = (to, from, next) => {
           return
         }
       }
-
+      
       // No permissions at all - show unauthorized or stay (component will handle)
       console.log('⚠️ Employee has no recognized permissions')
     }
-
+    
     // Default: allow but component will show appropriate message
     next()
   } catch (error) {
@@ -381,7 +376,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: 'dashboard',
+          redirect: 'dashboard'
         },
         {
           path: 'dashboard',
@@ -404,7 +399,7 @@ const router = createRouter({
           meta: {
             title: 'Branch Management',
             requiresAuth: true,
-            requiresRole: ['stall_business_owner'],
+            requiresRole: ['stall_business_owner']
           },
           beforeEnter: requireRole('stall_business_owner'),
         },
@@ -415,7 +410,7 @@ const router = createRouter({
           meta: {
             title: 'My Subscription',
             requiresAuth: true,
-            requiresRole: ['stall_business_owner'],
+            requiresRole: ['stall_business_owner']
           },
           beforeEnter: requireRole('stall_business_owner'),
         },
@@ -426,7 +421,7 @@ const router = createRouter({
           meta: {
             title: 'Employee Management',
             requiresAuth: true,
-            requiresRole: ['stall_business_owner', 'business_manager'],
+            requiresRole: ['stall_business_owner', 'business_manager']
           },
           beforeEnter: requireRole('stall_business_owner', 'business_manager'),
         },
@@ -459,13 +454,6 @@ const router = createRouter({
           beforeEnter: requiresPermission('vendors'),
         },
         {
-          path: 'collectors',
-          name: 'Collectors',
-          component: Collectors,
-          meta: { title: 'Collectors' },
-          beforeEnter: requiresPermission('collectors'),
-        },
-        {
           path: 'stallholders',
           name: 'Stallholders',
           component: Stallholders,
@@ -479,21 +467,6 @@ const router = createRouter({
           meta: { title: 'Stalls' },
           beforeEnter: requiresPermission('stalls'),
         },
-        {
-          path: 'stalls/raffles',
-          name: 'Raffles',
-          component: () => import('../components/Admin/Stalls/RaffleComponents/RafflesPage.vue'),
-          meta: { title: 'Active Raffles' },
-          beforeEnter: requiresPermission('stalls'),
-        },
-        {
-          path: 'stalls/auctions',
-          name: 'Auctions',
-          component: () =>
-            import('../components/Admin/Stalls/AuctionComponents/AuctionsPage/AuctionsPage.vue'),
-          meta: { title: 'Active Auctions' },
-          beforeEnter: requiresPermission('stalls'),
-        },
       ],
     },
 
@@ -505,7 +478,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: 'dashboard',
+          redirect: 'dashboard'
         },
         {
           path: 'dashboard',
@@ -575,18 +548,14 @@ router.beforeEach(async (to, from, next) => {
 
   // Prevent system administrators from accessing /app routes
   if (to.path.startsWith('/app') && hasRole('system_administrator')) {
-    console.log(
-      '⚠️ System administrator trying to access /app route, redirecting to system admin dashboard',
-    )
+    console.log('⚠️ System administrator trying to access /app route, redirecting to system admin dashboard')
     next('/system-admin/dashboard')
     return
   }
 
   // Check role-based access
   if (to.meta?.requiresRole && to.meta.requiresRole.length > 0) {
-    const roles = Array.isArray(to.meta.requiresRole)
-      ? to.meta.requiresRole
-      : [to.meta.requiresRole]
+    const roles = Array.isArray(to.meta.requiresRole) ? to.meta.requiresRole : [to.meta.requiresRole]
     if (!hasRole(...roles)) {
       console.log(`❌ Role check failed. Required: ${roles.join(', ')}`)
       next(getDashboardPath())
@@ -596,9 +565,7 @@ router.beforeEach(async (to, from, next) => {
 
   // Check permission-based access
   if (to.meta?.requiresPermission && to.meta.requiresPermission.length > 0) {
-    const permissions = Array.isArray(to.meta.requiresPermission)
-      ? to.meta.requiresPermission
-      : [to.meta.requiresPermission]
+    const permissions = Array.isArray(to.meta.requiresPermission) ? to.meta.requiresPermission : [to.meta.requiresPermission]
     if (!hasPermission(...permissions)) {
       console.log(`❌ Permission check failed. Required: ${permissions.join(', ')}`)
       next(getDashboardPath())
@@ -613,10 +580,7 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
-  if (
-    to.meta?.requiresBranchManager &&
-    !hasRole('system_administrator', 'stall_business_owner', 'business_manager')
-  ) {
+  if (to.meta?.requiresBranchManager && !hasRole('system_administrator', 'stall_business_owner', 'business_manager')) {
     console.log('❌ Business manager or admin access required')
     next(getDashboardPath())
     return

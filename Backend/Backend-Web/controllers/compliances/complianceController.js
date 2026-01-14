@@ -50,7 +50,7 @@ export const getAllComplianceRecords = async (req, res) => {
       // System administrator - see all compliance records
       console.log('🔍 getAllComplianceRecords - System admin viewing all branches');
       const [records] = await connection.execute(
-        'CALL getAllComplianceRecords(?, ?, ?)',
+        'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
         [null, statusParam, searchParam]
       );
       complianceRecords = records[0];
@@ -62,7 +62,7 @@ export const getAllComplianceRecords = async (req, res) => {
       // Single branch (business manager or owner with one branch)
       console.log(`🔍 getAllComplianceRecords - Fetching for branch: ${branchFilter[0]}`);
       const [records] = await connection.execute(
-        'CALL getAllComplianceRecords(?, ?, ?)',
+        'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
         [branchFilter[0], statusParam, searchParam]
       );
       complianceRecords = records[0];
@@ -73,7 +73,7 @@ export const getAllComplianceRecords = async (req, res) => {
       const allRecords = [];
       for (const branchId of branchFilter) {
         const [records] = await connection.execute(
-          'CALL getAllComplianceRecords(?, ?, ?)',
+          'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
           [branchId, statusParam, searchParam]
         );
         allRecords.push(...records[0]);
@@ -120,7 +120,7 @@ export const getComplianceRecordById = async (req, res) => {
     connection = await createConnection();
 
     const [records] = await connection.execute(
-      'CALL getComplianceRecordById(?)',
+      'CALL getComplianceRecordByIdDecrypted(?)',
       [id]
     );
 

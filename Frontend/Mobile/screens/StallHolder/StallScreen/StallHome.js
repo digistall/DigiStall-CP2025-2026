@@ -38,6 +38,7 @@ const StallHome = ({ navigation }) => {
   const [currentScreen, setCurrentScreen] = useState("stall");
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showProfileDirectly, setShowProfileDirectly] = useState(false);
 
   const handleLogout = async () => {
     // Prevent multiple clicks
@@ -88,7 +89,10 @@ const StallHome = ({ navigation }) => {
   };
 
   const handleProfilePress = () => {
-    console.log("Profile pressed - show account options");
+    console.log("Profile pressed - navigating to settings/profile");
+    setShowProfileDirectly(true);
+    setCurrentScreen("settings");
+    setSidebarVisible(false);
   };
 
   // Handle navigation from sidebar
@@ -100,6 +104,11 @@ const StallHome = ({ navigation }) => {
       return;
     }
 
+    // Reset profile flag when navigating to settings via menu (not profile)
+    if (itemId === "settings") {
+      setShowProfileDirectly(false);
+    }
+
     setCurrentScreen(itemId);
     setSidebarVisible(false);
   };
@@ -107,6 +116,10 @@ const StallHome = ({ navigation }) => {
   // Handle navigation from bottom navbar
   const handleNavigation = (screen) => {
     console.log(`Bottom nav - Navigating to: ${screen}`);
+    // Reset profile flag when navigating via bottom navbar
+    if (screen === "settings") {
+      setShowProfileDirectly(false);
+    }
     setCurrentScreen(screen);
   };
 
@@ -160,7 +173,7 @@ const StallHome = ({ navigation }) => {
       case "reports":
         return <ComplaintScreen />;
       case "settings":
-        return <SettingsScreen />;
+        return <SettingsScreen initialShowProfile={showProfileDirectly} />;
       case "notifications":
         return <NotificationsScreen />;
       case "documents":
