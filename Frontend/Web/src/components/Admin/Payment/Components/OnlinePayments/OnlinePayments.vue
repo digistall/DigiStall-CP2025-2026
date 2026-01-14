@@ -44,7 +44,7 @@
           </div>
           <div class="tab-info">
             <span class="tab-label">All</span>
-            <span class="tab-count">{{ onlinePayments.length }}</span>
+            <span class="tab-count">{{ filteredPayments.length }}</span>
           </div>
         </div>
       </div>
@@ -53,7 +53,7 @@
     <!-- Payments Table -->
     <div class="payments-table-container">
       <v-card class="payments-card" elevation="0">
-        <div class="table-wrapper">
+        <div class="table-wrapper scrollable-table-wrapper">
           <table class="payments-table">
             <thead>
               <tr>
@@ -81,10 +81,10 @@
                 <td class="id-cell" @click="viewPaymentDetails(payment)">{{ payment.id }}</td>
                 <td class="name-cell" @click="viewPaymentDetails(payment)">
                   <div class="stallholder-info">
-                    <div class="avatar">{{ payment.stallholderName.charAt(0) }}</div>
+                    <div class="avatar">{{ (payment.stallholderName || 'N/A').charAt(0) }}</div>
                     <div class="name-details">
-                      <span class="name">{{ payment.stallholderName }}</span>
-                      <span class="stall-no">Stall #{{ payment.stallNo }}</span>
+                      <span class="name">{{ payment.stallholderName || 'Unknown' }}</span>
+                      <span class="stall-no">Stall #{{ payment.stallNo || 'N/A' }}</span>
                     </div>
                   </div>
                 </td>
@@ -99,7 +99,7 @@
                 </td>
                 <td class="amount-cell" @click="viewPaymentDetails(payment)">{{ formatCurrency(payment.amount) }}</td>
                 <td class="reference-cell" @click="viewPaymentDetails(payment)">{{ payment.referenceNo }}</td>
-                <td class="date-cell" @click="viewPaymentDetails(payment)">{{ formatDate(payment.date) }}</td>
+                <td class="date-cell" @click="viewPaymentDetails(payment)">{{ formatDate(payment.paymentDate || payment.date || payment.payment_date) }}</td>
                 <td class="actions-cell">
                   <div class="action-buttons">
                     <button class="table-action-btn accept-btn" @click.stop="acceptPayment(payment)">
@@ -186,9 +186,139 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- Accept Payment Confirmation Dialog -->
+    <v-dialog v-model="showAcceptDialog" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="bg-success text-white">
+          <div class="d-flex align-center">
+            <v-icon class="mr-2" color="white">mdi-check-circle</v-icon>
+            <span>Accept Payment</span>
+          </div>
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <div v-if="pendingPayment" class="text-center py-4">
+            <v-icon size="64" color="success" class="mb-3">mdi-cash-check</v-icon>
+            <h3 class="mb-2">Confirm Payment Acceptance</h3>
+            <p class="text-medium-emphasis mb-4">
+              Are you sure you want to accept this payment?
+            </p>
+            <v-card variant="outlined" class="mb-4">
+              <v-card-text>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="font-weight-medium">Payment ID:</span>
+                  <span>#{{ pendingPayment.id }}</span>
+                </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="font-weight-medium">Stallholder:</span>
+                  <span>{{ pendingPayment.stallholderName }}</span>
+                </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="font-weight-medium">Amount:</span>
+                  <span class="text-success font-weight-bold">{{ formatCurrency(pendingPayment.amount) }}</span>
+                </div>
+                <div class="d-flex justify-space-between">
+                  <span class="font-weight-medium">Method:</span>
+                  <v-chip :color="getMethodColor(pendingPayment.method)" size="small">{{ pendingPayment.method }}</v-chip>
+                </div>
+              </v-card-text>
+            </v-card>
+          </div>
+        </v-card-text>
+        <v-card-actions class="px-4 pb-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="cancelAcceptDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="success"
+            variant="flat"
+            @click="confirmAcceptPayment"
+          >
+            <v-icon class="mr-2">mdi-check</v-icon>
+            Accept Payment
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Decline Payment Confirmation Dialog -->
+    <v-dialog v-model="showDeclineDialog" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <div class="d-flex align-center">
+            <v-icon class="mr-2" color="white">mdi-close-circle</v-icon>
+            <span>Decline Payment</span>
+          </div>
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <div v-if="pendingPayment" class="py-4">
+            <div class="text-center mb-4">
+              <v-icon size="64" color="error" class="mb-3">mdi-alert-circle</v-icon>
+              <h3 class="mb-2">Confirm Payment Decline</h3>
+              <p class="text-medium-emphasis">
+                Are you sure you want to decline this payment?
+              </p>
+            </div>
+            <v-card variant="outlined" class="mb-4">
+              <v-card-text>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="font-weight-medium">Payment ID:</span>
+                  <span>#{{ pendingPayment.id }}</span>
+                </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="font-weight-medium">Stallholder:</span>
+                  <span>{{ pendingPayment.stallholderName }}</span>
+                </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="font-weight-medium">Amount:</span>
+                  <span class="font-weight-bold">{{ formatCurrency(pendingPayment.amount) }}</span>
+                </div>
+              </v-card-text>
+            </v-card>
+            <v-textarea
+              v-model="declineReason"
+              label="Reason for Decline (Optional)"
+              placeholder="Enter the reason for declining this payment..."
+              variant="outlined"
+              rows="3"
+              counter="200"
+              maxlength="200"
+            ></v-textarea>
+          </div>
+        </v-card-text>
+        <v-card-actions class="px-4 pb-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="cancelDeclineDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="confirmDeclinePayment"
+          >
+            <v-icon class="mr-2">mdi-close</v-icon>
+            Decline Payment
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Toast Notification -->
+    <ToastNotification
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @close="toast.show = false"
+    />
   </div>
 </template>
 
 <script src="./OnlinePayments.js"></script>
 <style scoped src="./OnlinePayments.css"></style>
-          stallholderName: 'Juan Dela Cruz',

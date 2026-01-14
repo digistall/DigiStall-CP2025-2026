@@ -3,23 +3,24 @@ export default {
   props: {
     selectedType: {
       type: String,
-      default: 'stall'
-    }
+      default: 'stall',
+    },
   },
   data() {
     return {
       showDropdown: false,
       paymentTypes: [
         { value: 'stall', label: 'Stall Applicants', icon: 'mdi-store' },
-        { value: 'vendor', label: 'Vendor Applicants', icon: 'mdi-account-tie' }
-      ]
+        { value: 'daily', label: 'Daily Payment', icon: 'mdi-calendar-today' },
+        { value: 'penalty', label: 'Penalty Payments', icon: 'mdi-alert-circle' },
+      ],
     }
   },
   computed: {
     selectedTypeLabel() {
-      const type = this.paymentTypes.find(t => t.value === this.selectedType)
+      const type = this.paymentTypes.find((t) => t.value === this.selectedType)
       return type ? type.label : 'Stall Applicants'
-    }
+    },
   },
   mounted() {
     document.addEventListener('click', this.handleClickOutside)
@@ -40,6 +41,6 @@ export default {
       if (dropdown && !dropdown.contains(event.target)) {
         this.showDropdown = false
       }
-    }
-  }
+    },
+  },
 }

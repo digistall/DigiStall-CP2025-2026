@@ -24,9 +24,9 @@ export const addStall = async (req, res) => {
     }
 
     // Authorization check based on user type
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      console.log("🔍 Authorizing branch manager for stall creation");
-    } else if (userType === "employee") {
+    if (userType === "business_manager") {
+      console.log("🔍 Authorizing business manager for stall creation");
+    } else if (userType === "business_employee") {
       // Employee authorization - check permissions
       const permissions = req.user?.permissions || [];
       const hasStallsPermission = Array.isArray(permissions)
@@ -57,6 +57,10 @@ export const addStall = async (req, res) => {
       stallNo,
       price,
       rental_price,
+      base_rate,
+      baseRate,
+      area_sqm,
+      areaSqm,
       floor_id,
       floor,
       floorId,
@@ -80,13 +84,45 @@ export const addStall = async (req, res) => {
 
     // Use the mapped values with multiple fallbacks
     const stallNo_final = stallNo || stallNumber;
-    const price_final = rental_price || price;
     const location_final = stall_location || location;
     const image_final = stall_image || image;
     const priceType_final = price_type || priceType || "Fixed Price";
     const floor_id_final = floor_id || floor || floorId;
     const section_id_final = section_id || section || sectionId;
     const deadline_final = deadline || applicationDeadline;
+    const baseRate_final = parseFloat(base_rate || baseRate || 0);
+    const areaSqm_final = parseFloat(area_sqm || areaSqm || 0);
+    
+    // ===== RENTAL CALCULATION FORMULA =====
+    // Based on MASTERLIST Excel:
+    // RENTAL RATE (2010) = base_rate (input)
+    // NEW RATE FOR 2013 = RENTAL RATE (2010) × 2 (monthly rent)
+    // DISCOUNTED = NEW RATE FOR 2013 × 0.75 (25% off for early payment)
+    // Rate per sq.m = Monthly Rent / Area (sq.m)
+    let calculatedRentalPrice;
+    let calculatedRatePerSqm = null;
+    
+    if (baseRate_final > 0) {
+      // baseRate is RENTAL RATE (2010), multiply by 2 to get monthly rent
+      calculatedRentalPrice = Math.round(baseRate_final * 2 * 100) / 100; // Round to 2 decimals
+      const discountedRate = Math.round(calculatedRentalPrice * 0.75 * 100) / 100;
+      console.log(`📊 RENTAL RATE 2010: ${baseRate_final}`);
+      console.log(`📊 Monthly Rent (×2): ${calculatedRentalPrice}`);
+      console.log(`📊 Discounted Rate (early payment): ${calculatedRentalPrice} × 0.75 = ${discountedRate}`);
+      
+      if (areaSqm_final > 0) {
+        calculatedRatePerSqm = Math.round((calculatedRentalPrice / areaSqm_final) * 100) / 100;
+        console.log(`📊 Rate per Sq.m: ${calculatedRentalPrice} / ${areaSqm_final} = ${calculatedRatePerSqm}`);
+      }
+    } else {
+      // If no base_rate, use rental_price directly (backward compatibility)
+      calculatedRentalPrice = parseFloat(rental_price || price || 0);
+    }
+    
+    // For auction, starting price might be different from rental price
+    const finalPrice = priceType_final === "Auction" && startingPrice 
+      ? parseFloat(startingPrice) 
+      : calculatedRentalPrice;
     
     // Validate deadline for raffle/auction
     let parsedDeadline = null;
@@ -122,15 +158,13 @@ export const addStall = async (req, res) => {
         message: `Invalid price type. Must be one of: ${validPriceTypes.join(', ')}`
       });
     }
-    
-    // For auction, starting price might be different from rental price
-    const finalPrice = priceType_final === "Auction" && startingPrice 
-      ? parseFloat(startingPrice) 
-      : parseFloat(price_final);
 
     console.log("Mapped values:", {
       stallNo_final,
-      price_final, 
+      baseRate_final,
+      calculatedRentalPrice,
+      areaSqm_final,
+      calculatedRatePerSqm,
       location_final,
       floor_id_final,
       section_id_final,
@@ -142,7 +176,7 @@ export const addStall = async (req, res) => {
     // Validation
     let validationErrors = [];
     if (!stallNo_final) validationErrors.push("stallNumber/stallNo");
-    if (!finalPrice || finalPrice <= 0) validationErrors.push("price/rental_price/startingPrice");
+    if (!finalPrice || finalPrice <= 0) validationErrors.push("price/rental_price/base_rate/startingPrice");
     if (!location_final) validationErrors.push("location/stall_location");
     if (!size) validationErrors.push("size");
     if (!floor_id_final) validationErrors.push("floor_id/floor/floorId");
@@ -180,47 +214,44 @@ export const addStall = async (req, res) => {
     let branchName;
     let actualManagerId = null; // Will be set based on user type
 
-    if (userType === "branch_manager" || userType === "branch-manager") {
-      // For branch managers, get their branch directly
-      const branchManagerId = req.user?.branchManagerId || userId;
+    if (userType === "business_manager") {
+      // For business managers, get their branch directly using stored procedure
+      const businessManagerId = req.user?.businessManagerId || userId;
       
-      const [branchManagerInfo] = await connection.execute(
-        `SELECT bm.branch_id, b.branch_name, b.area, bm.branch_manager_id
-         FROM branch_manager bm
-         INNER JOIN branch b ON bm.branch_id = b.branch_id
-         WHERE bm.branch_manager_id = ?`,
-        [branchManagerId]
+      const [businessManagerResult] = await connection.execute(
+        'CALL sp_getBusinessManagerWithBranch(?)',
+        [businessManagerId]
       );
+      const businessManagerInfo = businessManagerResult[0] || [];
 
-      if (!branchManagerInfo || branchManagerInfo.length === 0) {
+      if (!businessManagerInfo || businessManagerInfo.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Branch manager not found or not assigned to a branch",
+          message: "Business manager not found or not assigned to a branch",
         });
       }
 
-      branchInfo = branchManagerInfo[0];
+      branchInfo = businessManagerInfo[0];
       managerBranchId = branchInfo.branch_id;
       branchName = branchInfo.branch_name;
-      actualManagerId = branchInfo.branch_manager_id;
+      actualManagerId = branchInfo.business_manager_id;
       
-    } else if (userType === "employee") {
+    } else if (userType === "business_employee") {
       // 🔧 FIXED: For employees, get branch info differently
       console.log("🔍 Getting employee branch information...");
       
       // Try to get branch ID from token first
       let employeeBranchId = req.user?.branchId || req.user?.branch_id;
       
-      // If not in token, get from employee table
+      // If not in token, get from employee table using stored procedure
       if (!employeeBranchId) {
         console.log("🔍 Branch ID not in token, querying employee table...");
         
-        const [employeeRecord] = await connection.execute(
-          `SELECT e.branch_id, e.employee_id, e.first_name, e.last_name
-           FROM employee e 
-           WHERE e.employee_id = ?`,
+        const [employeeResult] = await connection.execute(
+          'CALL sp_getEmployeeWithBranchInfo(?)',
           [userId]
         );
+        const employeeRecord = employeeResult[0] || [];
 
         if (!employeeRecord || employeeRecord.length === 0) {
           return res.status(400).json({
@@ -247,14 +278,12 @@ export const addStall = async (req, res) => {
         });
       }
 
-      // Get branch information (branch manager is optional for employees)
-      const [employeeBranchInfo] = await connection.execute(
-        `SELECT b.branch_id, b.branch_name, b.area, bm.branch_manager_id
-         FROM branch b
-         LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
-         WHERE b.branch_id = ?`,
+      // Get branch information using stored procedure
+      const [branchResult] = await connection.execute(
+        'CALL sp_getBranchInfoWithManager(?)',
         [employeeBranchId]
       );
+      const employeeBranchInfo = branchResult[0] || [];
 
       if (!employeeBranchInfo || employeeBranchInfo.length === 0) {
         return res.status(400).json({
@@ -266,20 +295,18 @@ export const addStall = async (req, res) => {
       branchInfo = employeeBranchInfo[0];
       managerBranchId = branchInfo.branch_id;
       branchName = branchInfo.branch_name;
-      // For employees creating stalls, we can use the branch manager ID if available, or null
-      actualManagerId = branchInfo.branch_manager_id || null;
+      // For employees creating stalls, we can use the business manager ID if available, or null
+      actualManagerId = branchInfo.business_manager_id || null;
       
       console.log(`✅ Employee ${userId} authorized to create stalls in branch ${branchName} (ID: ${managerBranchId})`);
     }
 
-    // Validate that the provided floor and section belong to this branch
-    const [floorSectionCheck] = await connection.execute(
-      `SELECT s.section_id, s.section_name, f.floor_id, f.floor_name 
-       FROM section s
-       INNER JOIN floor f ON s.floor_id = f.floor_id
-       WHERE f.branch_id = ? AND f.floor_id = ? AND s.section_id = ?`,
+    // Validate that the provided floor and section belong to this branch using stored procedure
+    const [floorSectionResult] = await connection.execute(
+      'CALL sp_validateFloorSectionBranch(?, ?, ?)',
       [managerBranchId, floor_id_final, section_id_final]
     );
+    const floorSectionCheck = floorSectionResult[0] || [];
 
     if (!floorSectionCheck || floorSectionCheck.length === 0) {
       return res.status(400).json({
@@ -295,15 +322,12 @@ export const addStall = async (req, res) => {
     
     console.log(`Using floor_id ${targetFloorId} (${floorName}) and section_id ${targetSectionId} (${sectionName}) in branch ${branchName}`);
 
-    // Check if stall number already exists in the same section
-    const [existingStall] = await connection.execute(
-      `SELECT s.stall_id, f.floor_name, sec.section_name
-       FROM stall s
-       INNER JOIN section sec ON s.section_id = sec.section_id
-       INNER JOIN floor f ON sec.floor_id = f.floor_id
-       WHERE s.stall_no = ? AND s.section_id = ?`,
+    // Check if stall number already exists in the same section using stored procedure
+    const [existingStallResult] = await connection.execute(
+      'CALL sp_checkStallExistsInSection(?, ?)',
       [stallNo_final, targetSectionId]
     );
+    const existingStall = existingStallResult[0] || [];
 
     if (existingStall.length > 0) {
       return res.status(400).json({
@@ -317,14 +341,17 @@ export const addStall = async (req, res) => {
       stall_no: stallNo_final,
       stall_location: location_final,
       size: size,
+      area_sqm: areaSqm_final > 0 ? areaSqm_final : null,
       floor_id: targetFloorId,
       section_id: targetSectionId,
+      base_rate: baseRate_final > 0 ? baseRate_final : null,
       rental_price: finalPrice,
+      rate_per_sqm: calculatedRatePerSqm,
       price_type: priceType_final,
       status: isAvailable !== false ? "Active" : "Inactive",
       stamp: "APPROVED",
       description: description || null,
-      stall_image: image_final || null,
+      stall_image: null, // Images now stored in BLOB storage (stall_images table), not in stall table
       is_available: isAvailable !== false ? 1 : 0,
       raffle_auction_deadline: (priceType_final === "Raffle" || priceType_final === "Auction") ? parsedDeadline : null,
       deadline_active: 0,
@@ -334,20 +361,19 @@ export const addStall = async (req, res) => {
 
     console.log("Final stall data for insertion:", stallData);
 
-    // Insert new stall
-    const [result] = await connection.execute(
-      `INSERT INTO stall (
-        stall_no, stall_location, size, floor_id, section_id, rental_price, 
-        price_type, status, stamp, description, stall_image, is_available, 
-        raffle_auction_deadline, deadline_active, raffle_auction_status, created_by_manager, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    // Insert new stall using stored procedure
+    const [insertResult] = await connection.execute(
+      'CALL sp_insertStallFull(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         stallData.stall_no,
         stallData.stall_location,
         stallData.size,
+        stallData.area_sqm,
         stallData.floor_id,
         stallData.section_id,
+        stallData.base_rate,
         stallData.rental_price,
+        stallData.rate_per_sqm,
         stallData.price_type,
         stallData.status,
         stallData.stamp,
@@ -361,33 +387,59 @@ export const addStall = async (req, res) => {
       ]
     );
 
-    const stallId = result.insertId;
+    const stallId = insertResult[0]?.[0]?.stall_id || insertResult[0]?.insertId;
     console.log("✅ Stall created with ID:", stallId);
+
+    // Handle BLOB image uploads if base64Images provided
+    if (req.body.base64Images) {
+      try {
+        const base64Images = JSON.parse(req.body.base64Images)
+        console.log(`📸 Processing ${base64Images.length} images for BLOB storage...`)
+        
+        for (let i = 0; i < base64Images.length; i++) {
+          const imgData = base64Images[i]
+          const base64Data = imgData.image_data.replace(/^data:image\/\w+;base64,/, '')
+          const imageBuffer = Buffer.from(base64Data, 'base64')
+          const mimeType = imgData.mime_type || 'image/jpeg'
+          const fileName = imgData.file_name || `stall_${stallId}_${Date.now()}_${i}.jpg`
+          const imageUrl = `/api/stalls/images/blob/${stallId}/${i + 1}`
+          const isPrimary = i === 0 ? 1 : 0
+          
+          console.log(`  📸 Uploading image ${i + 1}: ${fileName} (${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
+          
+          await connection.execute(
+            'CALL sp_insertStallImageBlob(?, ?, ?, ?, ?, ?, ?)',
+            [stallId, imageUrl, imageBuffer, mimeType, fileName, i + 1, isPrimary]
+          )
+        }
+        
+        console.log(`✅ ${base64Images.length} images uploaded to BLOB storage`)
+      } catch (imgError) {
+        console.error('⚠️ Error uploading images to BLOB:', imgError.message)
+        // Don't fail the whole operation if images fail
+      }
+    }
 
     // Create raffle or auction record if needed
     let additionalInfo = {};
     
     if (priceType_final === "Raffle") {
       const [raffleResult] = await connection.execute(
-        `INSERT INTO raffle (
-          stall_id, raffle_status, created_by_manager, created_at
-        ) VALUES (?, 'Waiting for Participants', ?, NOW())`,
+        'CALL sp_insertRaffleRecord(?, ?)',
         [stallId, actualManagerId]
       );
       
-      additionalInfo.raffleId = raffleResult.insertId;
-      console.log("✅ Raffle created with ID:", raffleResult.insertId);
+      additionalInfo.raffleId = raffleResult[0]?.[0]?.raffle_id;
+      console.log("✅ Raffle created with ID:", additionalInfo.raffleId);
       
     } else if (priceType_final === "Auction") {
       const [auctionResult] = await connection.execute(
-        `INSERT INTO auction (
-          stall_id, starting_price, auction_status, created_by_manager, created_at
-        ) VALUES (?, ?, 'Waiting for Bidders', ?, NOW())`,
+        'CALL sp_insertAuctionRecord(?, ?, ?)',
         [stallId, finalPrice, actualManagerId]
       );
       
-      additionalInfo.auctionId = auctionResult.insertId;
-      console.log("✅ Auction created with ID:", auctionResult.insertId);
+      additionalInfo.auctionId = auctionResult[0]?.[0]?.auction_id;
+      console.log("✅ Auction created with ID:", additionalInfo.auctionId);
     }
 
     let successMessage = `Stall ${stallNo_final} added successfully to ${floorName}, ${sectionName}`;

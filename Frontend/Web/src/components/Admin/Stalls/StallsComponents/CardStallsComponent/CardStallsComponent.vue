@@ -20,7 +20,7 @@
           </template>
         </v-img>
 
-        <!-- Floating Price Type Badge -->
+        <!-- Floating Price Type Badge (Top Right) -->
         <v-chip
           v-if="stall.priceType && stall.priceType !== 'Fixed Price'"
           :color="getPriceTypeColor(stall.priceType)"
@@ -29,6 +29,17 @@
           class="floating-badge"
         >
           {{ stall.priceType }}
+        </v-chip>
+
+        <!-- Availability Status Badge (Bottom Right) -->
+        <v-chip
+          :color="getAvailabilityColor(stall.availabilityStatus)"
+          size="small"
+          variant="elevated"
+          class="availability-badge"
+        >
+          <v-icon size="x-small" class="me-1">{{ getAvailabilityIcon(stall.availabilityStatus) }}</v-icon>
+          {{ stall.availabilityStatus || 'Available' }}
         </v-chip>
       </div>
 
@@ -114,7 +125,7 @@
             class="action-btn"
           >
             <v-icon left size="small" class="me-2">mdi-ticket-percent</v-icon>
-            MANAGE RAFFLE
+            VIEW PARTICIPANTS
           </v-btn>
 
           <!-- Auction Management Button -->

@@ -68,7 +68,7 @@ export const getStallsByFilter = async (req, res) => {
         s.status,
         s.is_available as isAvailable,
         s.description,
-        s.stall_image,
+        si.image_url as stall_image,
         sec.section_id,
         sec.section_name,
         f.floor_id,
@@ -81,6 +81,7 @@ export const getStallsByFilter = async (req, res) => {
       INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
       INNER JOIN branch_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       ${whereClause}
       ORDER BY s.created_at DESC`,
       queryParams

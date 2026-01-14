@@ -1,114 +1,172 @@
-import { computed, reactive, watch, ref } from 'vue'
+import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
 
 export default {
-  setup(props, { emit }) {
-    const model = computed({
-      get: () => props.modelValue,
-      set: (v) => emit('update:modelValue', v),
-    })
-
-    /** Step control */
-    const step = ref(1)
-
-    /** Form state */
-    const form = reactive({
-      // page 1
-      lastName: 'Dela Cruz',
-      firstName: 'Juan',
-      middleName: 'Perez',
-      suffix: 'Jr.',
-      birthdate: '1990-10-05',
-      gender: 'Male',
-      phone: '09123456789',
-      email: 'juan.delacruz@email.com',
-      vendorId: '123456',
-      address: 'Block 6 Lot 15 Maharlika Village Barangay Rosario Naga City',
-      spouseLast: 'Dela Cruz',
-      spouseFirst: 'Jessa',
-      spouseMiddle: 'Caceres',
-      childLast: 'Dela Cruz',
-      childFirst: 'Pedro',
-      childMiddle: 'Caceres',
-
-      // page 2
-      businessName: "Juan's Street Foods",
-      businessType: 'Street Foods',
-      productsSold: 'Street Foods',
-      vendStart: '09:00',
-      vendEnd: '13:00',
-      businessAddress: 'Panganiban Naga City',
-
-      // files
-      files: {
-        clearance: null,
-        votersId: null,
-        cedula: null,
-        picture: null,
-        association: null,
-        healthcard: null,
+  name: 'AddVendorDialog',
+  components: {
+    ToastNotification
+  },
+  data() {
+    return {
+      activeTab: 0,
+      formValid: false,
+      saving: false,
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
       },
-    })
+      
+      // Form fields
+      form: {
+        lastName: '',
+        firstName: '',
+        middleName: '',
+        suffix: '',
+        phone: '',
+        email: '',
+        birthdate: '',
+        gender: '',
+        address: '',
+        vendorId: '',
 
-    function importSampleData() {
-      // already seeded above to match your mock; this function can pull from OCR/CSV in the future
+        // Spouse Info
+        spouseFullName: '',
+        spouseAge: null,
+        spouseBirthdate: '',
+        spouseEducation: '',
+        spouseContact: '',
+        spouseOccupation: '',
+
+        // Child Info
+        childFullName: '',
+        childAge: null,
+        childBirthdate: '',
+
+        // Business Info
+        businessName: '',
+        businessType: '',
+        businessDescription: '',
+        vendStart: '',
+        vendEnd: '',
+
+        // Location Info
+        locationName: '',
+
+        assignedCollector: '',
+      },
+      
+      // Options
+      genderOptions: ['Male', 'Female', 'Other'],
+      collectors: ['John Smith', 'Jane Garcia', 'Marco Reyes', 'Ava Santos'],
+      
+      // Validation rules
+      emailRules: [
+        v => !!v || 'Email is required',
+        v => /.+@.+\..+/.test(v) || 'Email must be valid',
+      ],
     }
+  },
+  
+  computed: {
+    visibleModel() {
+      return this.isVisible !== undefined ? this.isVisible : this.modelValue
+    },
+  },
 
-    function goNext() {
-      // simple front-end validation for required fields on page 1
-      const required = [
-        'lastName',
-        'firstName',
-        'birthdate',
-        'gender',
-        'phone',
-        'email',
-        'vendorId',
-        'address',
-      ]
-      const missing = required.filter((k) => !String(form[k] || '').trim())
-      if (missing.length) {
-        // Emit error message to parent component to handle with proper popup
-        emit('show-error', 'Please fill out all required personal fields.')
+  watch: {
+    visibleModel(newVal) {
+      if (!newVal) {
+        this.resetForm()
+      }
+    },
+  },
+
+  methods: {
+    closeDialog() {
+      this.$emit('update:modelValue', false)
+      if (this.isVisible !== undefined) {
+        this.$emit('close')
+      }
+    },
+
+    resetForm() {
+      this.$refs.vendorForm?.reset()
+      this.activeTab = 0
+      this.formValid = false
+    },
+
+    save() {
+      if (!this.$refs.vendorForm.validate()) {
+        this.errorMessage = 'Please fill out all required fields'
+        this.showError = true
         return
       }
-      step.value = 2
-    }
 
-    function submit() {
-      // front-end only: emit a compact object back to parent to add to table
-      const newRow = {
-        id: form.vendorId,
-        name: `${form.firstName} ${form.lastName}`,
-        business: form.businessName,
-        collector: 'John Smith', // default; parent can change or show another input
-        status: 'Active',
-        raw: JSON.parse(JSON.stringify(form)), // keep whole payload if parent needs it
+      this.saving = true
+
+      // Simulate API call
+      setTimeout(() => {
+        const payload = {
+          // Vendor personal info
+          firstName: this.form.firstName,
+          lastName: this.form.lastName,
+          middleName: this.form.middleName,
+          suffix: this.form.suffix,
+          contactNumber: this.form.phone,
+          email: this.form.email,
+          birthdate: this.form.birthdate,
+          gender: this.form.gender,
+          address: this.form.address,
+          vendorIdentifier: this.form.vendorId,
+          status: 'Active',
+
+          // Spouse info
+          spouseFullName: this.form.spouseFullName,
+          spouseAge: this.form.spouseAge,
+          spouseBirthdate: this.form.spouseBirthdate,
+          spouseEducation: this.form.spouseEducation,
+          spouseContact: this.form.spouseContact,
+          spouseOccupation: this.form.spouseOccupation,
+
+          // Child info
+          childFullName: this.form.childFullName,
+          childAge: this.form.childAge,
+          childBirthdate: this.form.childBirthdate,
+
+          // Business info
+          businessName: this.form.businessName,
+          businessType: this.form.businessType,
+          businessDescription: this.form.businessDescription,
+          vendingTimeStart: this.form.vendStart,
+          vendingTimeEnd: this.form.vendEnd,
+
+          // Location info
+          locationName: this.form.locationName,
+        }
+
+        this.$emit('save', payload)
+        this.saving = false
+        this.showToast('✅ Vendor added successfully!', 'success')
+        this.$emit('update:modelValue', false)
+        if (this.isVisible !== undefined) {
+          this.$emit('close')
+        }
+      }, 500)
+    },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message: message,
+        type: type
       }
-      emit('save', newRow)
-      model.value = false
-    }
-
-    function cancel() {
-      model.value = false
-      step.value = 1
-    }
-
-    watch(model, (v) => {
-      if (!v) step.value = 1
-    })
-
-    return {
-      model,
-      step,
-      form,
-      importSampleData,
-      goNext,
-      submit,
-      cancel
     }
   },
+
   props: {
     modelValue: { type: Boolean, default: false },
+    isVisible: { type: Boolean, required: false },
   },
-  emits: ['update:modelValue', 'save']
+
+  emits: ['update:modelValue', 'save', 'close'],
 }

@@ -51,9 +51,9 @@
           </v-tooltip>
         </v-list-item>
 
-        <!-- More Section - Show only for branch managers -->
+        <!-- More Section - Show for Business Managers and Business Owners (not System Admin or Employees) -->
         <v-list-item
-          v-if="isExpanded && !isAdmin && !isEmployee"
+          v-if="isExpanded && !isEmployee && !isSystemAdministrator"
           class="sidebar-item more-item"
           :class="{ active: showMoreItems }"
           @click="toggleMoreItems"
@@ -74,12 +74,13 @@
 
         <!-- Employee-specific items - Show stalls for employees with stalls permission -->
         <v-list-item
-          v-if="isEmployee && userPermissions.includes('stalls')"
+          v-if="isEmployee && hasStallsPermission"
           class="sidebar-item"
           :class="{ 
             active: isActiveRoute('/app/stalls'),
             'has-submenu': true,
             'submenu-expanded': showStallsSubMenu,
+            collapsed: !isExpanded,
           }"
           @click="setActiveItem(9, '/app/stalls', true)"
         >
@@ -87,7 +88,7 @@
             <template v-slot:activator="{ props }">
               <div class="item-container" v-bind="props">
                 <v-icon 
-                  class="sidebar-icon mr-3"
+                  class="sidebar-icon"
                   :color="isActiveRoute('/app/stalls') ? 'white' : 'dark'"
                 >
                   mdi-store
@@ -95,63 +96,19 @@
                 <span v-if="isExpanded" class="sidebar-text">
                   Stalls
                 </span>
-                <!-- Submenu indicator for Stalls - Only show if there are raffle/auction stalls -->
-                <v-icon
-                  v-if="
-                    isExpanded && 
-                    (availableStallTypes.hasRaffles || availableStallTypes.hasAuctions)
-                  "
-                  class="submenu-arrow ml-auto"
-                  small
-                  :class="{ 'rotate-180': showStallsSubMenu }"
-                  :color="isActiveRoute('/app/stalls') ? 'white' : 'dark'"
-                >
-                  mdi-chevron-down
-                </v-icon>
               </div>
             </template>
           </v-tooltip>
         </v-list-item>
 
-        <!-- Submenu items for Stalls (Employee version) -->
-        <div
-          v-if="isEmployee && userPermissions.includes('stalls') && showStallsSubMenu && isExpanded"
-          class="stalls-submenu"
-        >
-          <v-list-item
-            v-for="subItem in filteredStallSubItems"
-            :key="subItem.id"
-            class="sidebar-item sub-sub-item"
-            :class="{ active: isActiveRoute(subItem.route) }"
-            @click="setActiveItem(subItem.id, subItem.route)"
-          >
-            <div class="item-container">
-              <v-icon
-                class="sidebar-icon submenu-icon mr-3"
-                small
-                :color="isActiveRoute(subItem.route) ? 'white' : 'dark'"
-              >
-                {{ subItem.icon }}
-              </v-icon>
-              <span class="sidebar-text submenu-text">
-                {{ subItem.name }}
-              </span>
-            </div>
-          </v-list-item>
-        </div>
-
-        <!-- Additional Items (when More is expanded) - Show only for branch managers -->
-        <div v-if="isExpanded && showMoreItems && !isAdmin && !isEmployee" class="more-items">
+        <!-- Additional Items (when More is expanded) - Show for Business Managers and Business Owners -->
+        <div v-if="isExpanded && showMoreItems && !isEmployee && !isSystemAdministrator" class="more-items">
           <div v-for="item in filteredMoreItems" :key="item.id">
-            <!-- Regular menu item or item with submenu -->
+            <!-- Regular menu item -->
             <v-list-item
               class="sidebar-item sub-item"
-              :class="{
-                active: isActiveRoute(item.route),
-                'has-submenu': item.hasSubMenu && item.id === 9,
-                'submenu-expanded': item.hasSubMenu && item.id === 9 && showStallsSubMenu,
-              }"
-              @click="setActiveItem(item.id, item.route, item.hasSubMenu)"
+              :class="{ active: isActiveRoute(item.route) }"
+              @click="setActiveItem(item.id, item.route)"
             >
               <div class="item-container">
                 <v-icon 
@@ -163,49 +120,8 @@
                 <span class="sidebar-text">
                   {{ item.name }}
                 </span>
-                <!-- Submenu indicator for Stalls - Only show if there are raffle/auction stalls -->
-                <v-icon
-                  v-if="
-                    item.hasSubMenu &&
-                    item.id === 9 &&
-                    (availableStallTypes.hasRaffles || availableStallTypes.hasAuctions)
-                  "
-                  class="submenu-arrow ml-auto"
-                  small
-                  :class="{ 'rotate-180': showStallsSubMenu }"
-                  :color="isActiveRoute(item.route) ? 'white' : 'dark'"
-                >
-                  mdi-chevron-down
-                </v-icon>
               </div>
             </v-list-item>
-
-            <!-- Submenu items for Stalls -->
-            <div
-              v-if="item.hasSubMenu && item.id === 9 && showStallsSubMenu"
-              class="stalls-submenu"
-            >
-              <v-list-item
-                v-for="subItem in filteredStallSubItems"
-                :key="subItem.id"
-                class="sidebar-item sub-sub-item"
-                :class="{ active: isActiveRoute(subItem.route) }"
-                @click="setActiveItem(subItem.id, subItem.route)"
-              >
-                <div class="item-container">
-                  <v-icon
-                    class="sidebar-icon submenu-icon mr-3"
-                    small
-                    :color="isActiveRoute(subItem.route) ? 'white' : 'dark'"
-                  >
-                    {{ subItem.icon }}
-                  </v-icon>
-                  <span class="sidebar-text submenu-text">
-                    {{ subItem.name }}
-                  </span>
-                </div>
-              </v-list-item>
-            </div>
           </div>
         </div>
       </v-list>

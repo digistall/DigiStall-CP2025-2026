@@ -7,6 +7,10 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "./Settings/components/ThemeComponents/ThemeContext";
+import ApiService from "../../../services/ApiService";
+import UserStorageService from "../../../services/UserStorageService";
+import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
 
 // nav bar and sidebar components
 import Header from "../StallComponents/header";
@@ -15,7 +19,7 @@ import Sidebar from "../StallComponents/Sidebar";
 
 // screen components
 import DashboardScreen from "./Dashboard/DashboardScreen";
-import ReportsScreen from "./Report/ReportsScreen";
+import ComplaintScreen from "./Report/ComplaintScreen";
 import RaffleScreen from "./Raffle/RaffleScreen";
 import AuctionScreen from "./Auction/AuctionScreen";
 import SettingsScreen from "./Settings/SettingsScreen";
@@ -27,11 +31,52 @@ import PaymentScreen from "./Payment/PaymentScreen";
 const { width, height } = Dimensions.get("window");
 
 const StallHome = ({ navigation }) => {
+  // Get theme from context
+  const { theme, isDarkMode } = useTheme();
+  
   // Single source of truth for current screen
   const [currentScreen, setCurrentScreen] = useState("stall");
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showProfileDirectly, setShowProfileDirectly] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Prevent multiple clicks
+    if (isLoggingOut) {
+      console.log('⏳ Logout already in progress, ignoring...');
+      return;
+    }
+    
+    // Close sidebar first
+    setSidebarVisible(false);
+    
+    // Show logout loading screen
+    setIsLoggingOut(true);
+    
+    try {
+      // Get user data before clearing
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const userId = userData?.user?.applicant_id || userData?.user?.id;
+      
+      // Call logout API to update last_logout in database
+      if (token) {
+        await ApiService.mobileLogout(token, userId);
+        console.log('✅ Logout API called - last_logout updated');
+      }
+      
+      // Add small delay to show the animation (1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Clear local storage
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      await UserStorageService.clearUserData();
+    } finally {
+      setIsLoggingOut(false);
+    }
+    
     navigation.navigate("LoginScreen");
   };
 
@@ -44,7 +89,10 @@ const StallHome = ({ navigation }) => {
   };
 
   const handleProfilePress = () => {
-    console.log("Profile pressed - show account options");
+    console.log("Profile pressed - navigating to settings/profile");
+    setShowProfileDirectly(true);
+    setCurrentScreen("settings");
+    setSidebarVisible(false);
   };
 
   // Handle navigation from sidebar
@@ -56,6 +104,11 @@ const StallHome = ({ navigation }) => {
       return;
     }
 
+    // Reset profile flag when navigating to settings via menu (not profile)
+    if (itemId === "settings") {
+      setShowProfileDirectly(false);
+    }
+
     setCurrentScreen(itemId);
     setSidebarVisible(false);
   };
@@ -63,6 +116,10 @@ const StallHome = ({ navigation }) => {
   // Handle navigation from bottom navbar
   const handleNavigation = (screen) => {
     console.log(`Bottom nav - Navigating to: ${screen}`);
+    // Reset profile flag when navigating via bottom navbar
+    if (screen === "settings") {
+      setShowProfileDirectly(false);
+    }
     setCurrentScreen(screen);
   };
 
@@ -71,7 +128,7 @@ const StallHome = ({ navigation }) => {
     const titles = {
       dashboard: "Dashboard",
       stall: "Stall Management",
-      reports: "Reports",
+      reports: "Complaints",
       settings: "Settings",
       notifications: "Notifications",
       documents: "Documents",
@@ -100,6 +157,7 @@ const StallHome = ({ navigation }) => {
     "notifications",
     "stall",
     "documents",
+    "reports",
   ];
 
   // Determine if need to wrap in ScrollView
@@ -113,9 +171,9 @@ const StallHome = ({ navigation }) => {
       case "stall":
         return <TabbedStallScreen />;
       case "reports":
-        return <ReportsScreen />;
+        return <ComplaintScreen />;
       case "settings":
-        return <SettingsScreen />;
+        return <SettingsScreen initialShowProfile={showProfileDirectly} />;
       case "notifications":
         return <NotificationsScreen />;
       case "documents":
@@ -129,26 +187,26 @@ const StallHome = ({ navigation }) => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top", "left", "right"]}>
         <StatusBar
-          barStyle="dark-content"
-          backgroundColor="#ffffff"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+          backgroundColor={theme.colors.surface}
           translucent={false}
         />
 
-        <Header onMenuPress={handleMenuPress} title={getPageTitle()} />
+        <Header onMenuPress={handleMenuPress} title={getPageTitle()} theme={theme} isDarkMode={isDarkMode} />
 
         {/* Main Content */}
         {needsScrollView ? (
           <ScrollView
-            style={styles.scrollView}
+            style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
             {renderCurrentScreen()}
           </ScrollView>
         ) : (
-          <View style={styles.contentView}>{renderCurrentScreen()}</View>
+          <View style={[styles.contentView, { backgroundColor: theme.colors.background }]}>{renderCurrentScreen()}</View>
         )}
 
         {/* Bottom Navigation Component */}
@@ -157,6 +215,8 @@ const StallHome = ({ navigation }) => {
           onStallPress={() => handleNavigation("stall")}
           onDocumentsPress={() => handleNavigation("documents")}
           onPaymentPress={() => handleNavigation("payment")}
+          theme={theme}
+          isDarkMode={isDarkMode}
         />
 
         {/* Sidebar Component */}
@@ -166,6 +226,15 @@ const StallHome = ({ navigation }) => {
           onProfilePress={handleProfilePress}
           onMenuItemPress={handleMenuItemPress}
           activeMenuItem={currentScreen}
+          theme={theme}
+          isDarkMode={isDarkMode}
+        />
+
+        {/* Logout Loading Screen */}
+        <LogoutLoadingScreen 
+          visible={isLoggingOut}
+          message="Logging out..."
+          subMessage="Please wait while we securely log you out"
         />
       </SafeAreaView>
     </SafeAreaProvider>

@@ -88,12 +88,16 @@
   align-items: center;
   width: 100%;
   flex-direction: row;
+  padding: 8px 0;
+  min-height: 40px;
+  position: relative; /* Added for absolute positioning of submenu arrow */
 }
 
 .sidebar-item.collapsed .item-container {
   justify-content: center;
   width: 48px;
   height: 48px;
+  padding: 0;
 }
 
 .sidebar-item:hover {
@@ -113,12 +117,17 @@
   margin-right: 16px !important;
   margin-left: 8px !important;
   min-width: 24px !important;
+  width: 24px !important;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-item.collapsed .sidebar-icon {
   margin: 0 !important;
   min-width: 24px !important;
+  width: 24px !important;
 }
 
 .sidebar-text {
@@ -128,6 +137,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 0 0 auto; /* Prevent text from growing */
 }
 
 .sidebar-item.active .sidebar-text {
@@ -168,6 +178,7 @@
   align-items: center;
   width: 100%;
   flex-direction: row;
+  position: relative;
 }
 
 .sub-item .sidebar-icon {
@@ -184,26 +195,90 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 0 0 auto;
 }
 
 .sub-item.active .sidebar-text {
   color: white;
 }
 
-/* Stalls Submenu Styles */
-.has-submenu {
-  position: relative;
+/* Stalls Submenu Styles - FIXED ICON ALIGNMENT */
+/* When sidebar is collapsed (not hovered) */
+.sidebar-item.collapsed.has-submenu {
+  margin: 4px 12px;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 56px;
+  padding: 0 !important;
 }
 
+.sidebar-item.collapsed.has-submenu .item-container {
+  justify-content: center !important;
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+}
+
+.sidebar-item.collapsed.has-submenu .sidebar-icon {
+  margin: 0 !important;
+  min-width: 24px !important;
+  width: 24px !important;
+}
+
+/* When sidebar is expanded (hovered) */
+.has-submenu .item-container {
+  display: flex !important;
+  align-items: center !important;
+  width: 100%;
+  padding: 8px 0;
+  min-height: 48px;
+  position: relative !important;
+}
+
+/* Icon positioning - same as regular items */
+.has-submenu .sidebar-icon {
+  margin-right: 16px !important;
+  margin-left: 8px !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Text next to icon - doesn't grow */
+.has-submenu .sidebar-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 0 auto !important; /* Fixed: prevent text from growing */
+}
+
+/* Submenu arrow - positioned absolutely so it doesn't affect layout */
 .submenu-arrow {
-  margin-left: auto !important;
-  margin-right: 8px !important;
+  position: absolute !important;
+  right: 8px !important;
+  margin: 0 !important;
   min-width: 20px !important;
+  width: 20px !important;
+  transition: transform 0.3s ease;
 }
 
 .submenu-arrow .v-icon {
   font-size: 18px !important;
-  transition: transform 0.2s ease;
+}
+
+.submenu-arrow.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.submenu-expanded .submenu-arrow {
+  transform: rotate(180deg);
 }
 
 .stalls-submenu {
@@ -254,10 +329,6 @@
 
 .sub-sub-item.active .submenu-text {
   color: white;
-}
-
-.submenu-expanded .submenu-arrow .v-icon {
-  transform: rotate(180deg);
 }
 
 .rotate-180 {

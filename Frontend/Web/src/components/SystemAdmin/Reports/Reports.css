@@ -1,0 +1,22 @@
+/* Reports Page - Page-Level Styling Only */
+*{
+  font-family: 'Poppins', sans-serif;
+}
+
+.v-main {
+  padding-left: 0 !important;
+}
+
+/* Page Header */
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #002181;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #666;
+  font-weight: 400;
+}

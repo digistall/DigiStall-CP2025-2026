@@ -32,19 +32,19 @@ export default {
       this.$emit('stall-edit', stall)
     },
 
-    // NEW: Handle raffle management
+    // Handle raffle management
     handleRaffleManagement(stall) {
       console.log('Manage raffle stall:', stall)
       this.$emit('stall-raffle-management', stall)
     },
 
-    // NEW: Handle auction management
+    // Handle auction management
     handleAuctionManagement(stall) {
       console.log('Manage auction stall:', stall)
       this.$emit('stall-auction-management', stall)
     },
 
-    // NEW: Get color for price type badge
+    // Get color for price type badge
     getPriceTypeColor(priceType) {
       switch (priceType) {
         case 'Raffle':
@@ -54,6 +54,34 @@ export default {
         case 'Fixed Price':
         default:
           return 'primary'
+      }
+    },
+
+    // Get color for availability status badge
+    getAvailabilityColor(status) {
+      switch (status) {
+        case 'Available':
+          return 'success'
+        case 'Occupied':
+          return 'error'
+        case 'Unavailable':
+          return 'grey'
+        default:
+          return 'success'
+      }
+    },
+
+    // Get icon for availability status badge
+    getAvailabilityIcon(status) {
+      switch (status) {
+        case 'Available':
+          return 'mdi-check-circle'
+        case 'Occupied':
+          return 'mdi-account-check'
+        case 'Unavailable':
+          return 'mdi-close-circle'
+        default:
+          return 'mdi-check-circle'
       }
     },
 

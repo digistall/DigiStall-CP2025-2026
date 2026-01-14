@@ -19,6 +19,24 @@ export default {
         { title: 'With Sections', value: 'with_sections' },
         { title: 'Without Sections', value: 'without_sections' },
       ],
+      // Edit dialog state
+      editDialog: false,
+      editType: '', // 'floor' or 'section'
+      editItem: null,
+      editForm: {
+        name: '',
+        description: '',
+      },
+      // Delete confirmation dialog
+      deleteDialog: false,
+      deleteType: '',
+      deleteItem: null,
+      // Snackbar
+      snackbar: {
+        show: false,
+        message: '',
+        color: 'success',
+      },
     }
   },
   computed: {
@@ -94,17 +112,15 @@ export default {
         // Check if we have a token (try multiple possible key names)
         // Get the authentication token (stored in sessionStorage as 'authToken')
         const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken')
-        console.log('Token exists:', !!token)
-
         if (token) {
-          console.log('Token preview:', token.substring(0, 20) + '...')
+          console.log('Token authentication available')
         } else {
           console.warn('No authentication token found!')
         }
 
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
         const apiBaseUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`
-        const url = `${apiBaseUrl}/branch-manager/floors-with-sections`
+        const url = `${apiBaseUrl}/branches/floors-with-sections`
         console.log('🌐 Making request to:', url)
 
         const headers = {
@@ -198,7 +214,7 @@ export default {
         }
 
         // Load floors first
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
         const floorsResponse = await fetch(`${apiBaseUrl}/floors`, {
           method: 'GET',
           headers: {
@@ -327,6 +343,158 @@ export default {
     forceRefresh() {
       this.floors = []
       this.loadFloorsAndSections()
+    },
+
+    // ========== CRUD OPERATIONS ==========
+    
+    // Get API base URL
+    getApiBaseUrl() {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`
+    },
+
+    // Get auth headers
+    getAuthHeaders() {
+      const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken')
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    },
+
+    // Open edit dialog for floor
+    editFloor(floor) {
+      this.editType = 'floor'
+      this.editItem = floor
+      this.editForm = {
+        name: floor.name,
+        description: floor.description || '',
+      }
+      this.editDialog = true
+    },
+
+    // Open edit dialog for section
+    editSection(section, floor) {
+      this.editType = 'section'
+      this.editItem = { ...section, floor_id: floor.id }
+      this.editForm = {
+        name: section.name,
+        description: section.description || '',
+      }
+      this.editDialog = true
+    },
+
+    // Save edit
+    async saveEdit() {
+      try {
+        const apiBaseUrl = this.getApiBaseUrl()
+        const headers = this.getAuthHeaders()
+        
+        if (this.editType === 'floor') {
+          const response = await fetch(`${apiBaseUrl}/branches/floors/${this.editItem.id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+              floor_name: this.editForm.name,
+              description: this.editForm.description,
+            }),
+          })
+          
+          const result = await response.json()
+          if (result.success) {
+            this.showSnackbar('Floor updated successfully!', 'success')
+            this.loadFloorsAndSections()
+          } else {
+            throw new Error(result.message || 'Failed to update floor')
+          }
+        } else if (this.editType === 'section') {
+          const response = await fetch(`${apiBaseUrl}/branches/sections/${this.editItem.id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+              section_name: this.editForm.name,
+              description: this.editForm.description,
+            }),
+          })
+          
+          const result = await response.json()
+          if (result.success) {
+            this.showSnackbar('Section updated successfully!', 'success')
+            this.loadFloorsAndSections()
+          } else {
+            throw new Error(result.message || 'Failed to update section')
+          }
+        }
+        
+        this.editDialog = false
+      } catch (error) {
+        console.error('Error saving edit:', error)
+        this.showSnackbar(error.message || 'Failed to save changes', 'error')
+      }
+    },
+
+    // Open delete confirmation for floor
+    confirmDeleteFloor(floor) {
+      this.deleteType = 'floor'
+      this.deleteItem = floor
+      this.deleteDialog = true
+    },
+
+    // Open delete confirmation for section
+    confirmDeleteSection(section, floor) {
+      this.deleteType = 'section'
+      this.deleteItem = { ...section, floor_id: floor.id }
+      this.deleteDialog = true
+    },
+
+    // Delete item
+    async deleteItem_() {
+      try {
+        const apiBaseUrl = this.getApiBaseUrl()
+        const headers = this.getAuthHeaders()
+        
+        if (this.deleteType === 'floor') {
+          const response = await fetch(`${apiBaseUrl}/branches/floors/${this.deleteItem.id}`, {
+            method: 'DELETE',
+            headers,
+          })
+          
+          const result = await response.json()
+          if (result.success) {
+            this.showSnackbar('Floor deleted successfully!', 'success')
+            this.loadFloorsAndSections()
+          } else {
+            throw new Error(result.message || 'Failed to delete floor')
+          }
+        } else if (this.deleteType === 'section') {
+          const response = await fetch(`${apiBaseUrl}/branches/sections/${this.deleteItem.id}`, {
+            method: 'DELETE',
+            headers,
+          })
+          
+          const result = await response.json()
+          if (result.success) {
+            this.showSnackbar('Section deleted successfully!', 'success')
+            this.loadFloorsAndSections()
+          } else {
+            throw new Error(result.message || 'Failed to delete section')
+          }
+        }
+        
+        this.deleteDialog = false
+      } catch (error) {
+        console.error('Error deleting item:', error)
+        this.showSnackbar(error.message || 'Failed to delete', 'error')
+      }
+    },
+
+    // Show snackbar notification
+    showSnackbar(message, color = 'success') {
+      this.snackbar = {
+        show: true,
+        message,
+        color,
+      }
     },
   },
 }

@@ -18,12 +18,23 @@ export default {
   data() {
     return {
       formValid: false,
+      accountType: 'web', // 'web' or 'mobile'
+      mobileRole: null, // 'inspector' or 'collector'
       employeeForm: {
         firstName: "",
         lastName: "",
         email: "",
         phoneNumber: "",
+        address: "",
+        assignedLocation: null,
       },
+      // Available locations for collectors
+      availableLocations: [
+        { name: 'Panganiban', value: 'Panganiban' },
+        { name: 'Naga City Market', value: 'Naga City Market' },
+        { name: 'Triangulo', value: 'Triangulo' },
+        { name: 'Concepcion Pequeña', value: 'Concepcion Pequeña' },
+      ],
       rules: {
         required: (value) => !!value || "This field is required",
         email: (value) => {
@@ -37,6 +48,32 @@ export default {
       },
     };
   },
+  computed: {
+    isMobileStaff() {
+      if (!this.employee) return false;
+      return this.employee.employee_type === 'mobile' || this.accountType === 'mobile';
+    },
+    canSave() {
+      if (!this.formValid) return false;
+      if (this.isEditMode) return true;
+      if (this.accountType === 'mobile') {
+        if (this.mobileRole === null) return false;
+        // Collector requires assigned location
+        if (this.mobileRole === 'collector' && !this.employeeForm.assignedLocation) return false;
+        return true;
+      }
+      return true;
+    },
+    getSaveButtonText() {
+      if (this.isEditMode) return "Update Employee";
+      if (this.accountType === 'mobile') {
+        if (this.mobileRole === 'inspector') return "Create Inspector";
+        if (this.mobileRole === 'collector') return "Create Collector";
+        return "Create Mobile Staff";
+      }
+      return "Create Employee";
+    }
+  },
   watch: {
     employee: {
       handler(newEmployee) {
@@ -45,28 +82,68 @@ export default {
             firstName: newEmployee.first_name || "",
             lastName: newEmployee.last_name || "",
             email: newEmployee.email || "",
-            phoneNumber: newEmployee.phone_number || "",
+            phoneNumber: newEmployee.phone_number || newEmployee.contact_no || "",
+            address: newEmployee.address || "",
+            assignedLocation: newEmployee.assigned_location || newEmployee.location || null,
           };
+          // Set account type and mobile role based on employee data
+          if (newEmployee.employee_type === 'mobile') {
+            this.accountType = 'mobile';
+            this.mobileRole = newEmployee.mobile_role || null;
+          } else {
+            this.accountType = 'web';
+            this.mobileRole = null;
+          }
         } else if (!this.isEditMode) {
-          this.employeeForm = {
-            firstName: "",
-            lastName: "",
-            email: "",
-            phoneNumber: "",
-          };
+          this.resetForm();
         }
       },
       immediate: true,
     },
+    modelValue(newVal) {
+      if (!newVal) {
+        // Reset when dialog closes
+        this.resetForm();
+      }
+    }
   },
   methods: {
+    resetForm() {
+      this.employeeForm = {
+        firstName: "",
+        lastName: "",
+        email: "",
+        phoneNumber: "",
+        address: "",
+        assignedLocation: null,
+      };
+      this.accountType = 'web';
+      this.mobileRole = null;
+    },
+
+    selectAccountType(type) {
+      this.accountType = type;
+      if (type === 'web') {
+        this.mobileRole = null;
+      }
+    },
+
+    selectMobileRole(role) {
+      this.mobileRole = role;
+    },
+
     isPermissionSelected(permission) {
       return this.selectedPermissions && this.selectedPermissions.includes(permission);
     },
 
     handleSave() {
-      if (this.formValid) {
-        this.$emit("save", this.employeeForm);
+      if (this.canSave) {
+        const formData = {
+          ...this.employeeForm,
+          accountType: this.accountType,
+          mobileRole: this.mobileRole,
+        };
+        this.$emit("save", formData);
       }
     },
 

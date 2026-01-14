@@ -16,11 +16,12 @@ import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
 import AboutApp from "../Settings/components/AboutComponents/AboutApp";
 import PrivacyModal from "../Settings/components/PrivacyComponents/PrivacyModal";
 import UserStorageService from "../../../../services/UserStorageService";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
 
 const { width } = Dimensions.get("window");
 
-const SettingsScreen = ({ user }) => {
-  const [showProfile, setShowProfile] = useState(false);
+const SettingsScreen = ({ user, initialShowProfile = false }) => {
+  const [showProfile, setShowProfile] = useState(initialShowProfile);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -54,34 +55,27 @@ const SettingsScreen = ({ user }) => {
     console.log("Using user:", testUser);
   }, [user, userData]);
 
-  // Helper function to get user initials
-  const getUserInitials = (name) => {
-    if (!name) return "GU";
-    return name
-      .split(" ")
-      .map(word => word.charAt(0))
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-  };
-
-  // Get real user name from stored data
+  // Get real user name from stored data using safe utilities
   const getUserDisplayName = () => {
-    if (userData && userData.user && userData.user.full_name) {
-      return userData.user.full_name;
+    if (userData && userData.user) {
+      return getSafeUserName(userData.user, "Guest");
     }
     return testUser?.fullName || "Guest";
   };
 
-  // Get user email/username for subtitle
+  // Get user email/username for subtitle using safe utilities
   const getUserSubtitle = () => {
     if (userData && userData.user) {
-      const user = userData.user;
-      return user.email || user.username || "View and edit profile";
+      return getSafeContactInfo(userData.user, "View and edit profile");
     }
     return testUser?.stallNumber
       ? `Stall: ${testUser.stallNumber}`
       : "View and edit profile";
+  };
+
+  // Get safe user initials
+  const getDisplayInitials = (name) => {
+    return getUserInitials(name, "GU");
   };
 
   // Profile handlers
@@ -146,7 +140,7 @@ const SettingsScreen = ({ user }) => {
           >
             <View style={themedStyles.avatarContainer}>
               <Text style={themedStyles.avatarText}>
-                {getUserInitials(getUserDisplayName())}
+                {getDisplayInitials(getUserDisplayName())}
               </Text>
             </View>
             <View style={themedStyles.profileInfo}>

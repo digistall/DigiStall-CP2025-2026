@@ -1,3 +1,55 @@
-.v-card-title {
-  background: #f5f5f7;
+/* Add Vendor Modal Styles */
+.toolbar-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Tab Styling */
+.v-tabs {
+  background-color: #f5f5f5;
+}
+
+.v-tab {
+  text-transform: none;
+  font-weight: 500;
+}
+
+.v-tab--active {
+  background-color: rgba(25, 118, 210, 0.1);
+}
+
+/* Form Styling */
+.v-form {
+  width: 100%;
+}
+
+.v-tabs-items {
+  background-color: transparent;
+}
+
+.v-tab-item {
+  padding: 0;
+}
+
+/* Input Field Styling */
+.v-text-field,
+.v-select,
+.v-textarea {
+  margin-bottom: 8px;
+}
+
+.v-text-field .v-input__prepend-inner,
+.v-select .v-input__prepend-inner,
+.v-textarea .v-input__prepend-inner {
+  margin-right: 8px;
+}
+
+/* Dialog Actions */
+.v-card-actions {
+  gap: 12px;
+}
+
+/* Snackbar Styling */
+.v-snackbar {
+  padding: 16px;
 }

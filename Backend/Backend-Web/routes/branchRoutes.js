@@ -14,8 +14,12 @@ import {
   getAreas,
   getFloors,
   createFloor,
+  updateFloor,
+  deleteFloor,
   getSections,
   createSection,
+  updateSection,
+  deleteSection,
   getFloorsWithSections,
   // Merged area functions
   getAreasByCity,
@@ -49,10 +53,14 @@ router.post('/branch-managers', authMiddleware.authorizeRole('admin'), assignMan
 // Floor routes
 router.get('/floors', getFloors)                    // GET /api/branches/floors - Get floors for branch manager
 router.post('/floors', createFloor)                 // POST /api/branches/floors - Create new floor
+router.put('/floors/:floorId', updateFloor)         // PUT /api/branches/floors/:floorId - Update floor
+router.delete('/floors/:floorId', deleteFloor)      // DELETE /api/branches/floors/:floorId - Delete floor
 
 // Section routes  
 router.get('/sections', getSections)                // GET /api/branches/sections - Get sections for branch manager
 router.post('/sections', createSection)             // POST /api/branches/sections - Create new section
+router.put('/sections/:sectionId', updateSection)   // PUT /api/branches/sections/:sectionId - Update section
+router.delete('/sections/:sectionId', deleteSection) // DELETE /api/branches/sections/:sectionId - Delete section
 
 // Floor-Section combined routes
 router.get('/floors-with-sections', getFloorsWithSections)  // GET /api/branches/floors-with-sections - Get floors with nested sections

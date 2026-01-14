@@ -1,4 +1,34 @@
 import { createConnection } from '../../../config/database.js';
+import { encryptData, decryptData } from '../../../services/encryptionService.js';
+
+// Helper function to check if data is already encrypted
+const isEncrypted = (value) => {
+  if (!value || typeof value !== 'string') return false;
+  const parts = value.split(':');
+  return parts.length === 3 && parts.every(part => part.length > 0);
+};
+
+// Helper function to ensure data is encrypted (encrypt if plain text)
+const ensureEncrypted = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  // If already encrypted, return as-is
+  if (isEncrypted(value)) return value;
+  // Otherwise encrypt it
+  return encryptData(value);
+};
+
+// Helper function to decrypt data safely for display
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (isEncrypted(value)) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 // Generate username with format: 25-XXXXX (year-5digits) - MATCHES FRONTEND
 const generateUsername = () => {
@@ -42,6 +72,7 @@ export const updateApplicantStatus = async (req, res) => {
     const { status, decline_reason, declined_at, username, password } = req.body;
 
     console.log('📊 Updating applicant status:', { id, status, decline_reason, declined_at, username, password });
+    console.log('🔍 DEBUG - Received ID type:', typeof id, 'Value:', id);
 
     // Validate status - matches database enum values
     const validStatuses = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Cancelled'];
@@ -54,31 +85,66 @@ export const updateApplicantStatus = async (req, res) => {
 
     connection = await createConnection();
 
-    // First, get the applicant information and their application
+    // Debug: Check what applicant IDs exist
+    const [existingApplicants] = await connection.execute(
+      `SELECT applicant_id, applicant_full_name FROM applicant ORDER BY applicant_id LIMIT 20`
+    );
+    console.log('🔍 DEBUG - Existing applicants in DB:', existingApplicants.map(a => ({ id: a.applicant_id, name: a.applicant_full_name })));
+
+    // First, get the applicant information and their application WITH stall info
     const [applicantData] = await connection.execute(
       `SELECT 
         a.applicant_id,
         a.applicant_full_name,
+        a.applicant_contact_number,
+        a.applicant_address,
         oi.email_address,
+        bi.nature_of_business,
         app.application_id,
-        app.application_status
+        app.application_status,
+        app.stall_id,
+        s.rental_price,
+        s.stall_no,
+        sec.section_id,
+        f.floor_id,
+        b.branch_id
       FROM applicant a
       LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
+      LEFT JOIN business_information bi ON a.applicant_id = bi.applicant_id
       LEFT JOIN application app ON a.applicant_id = app.applicant_id
+      LEFT JOIN stall s ON app.stall_id = s.stall_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON sec.floor_id = f.floor_id
+      LEFT JOIN branch b ON f.branch_id = b.branch_id
       WHERE a.applicant_id = ?
       ORDER BY app.application_date DESC
       LIMIT 1`,
       [id]
     );
 
+    console.log('🔍 DEBUG - Query result for ID', id, ':', applicantData);
+
     if (applicantData.length === 0) {
+      console.log('❌ DEBUG - Applicant not found with ID:', id);
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
       });
     }
 
-    const applicant = applicantData[0];
+    const applicantRaw = applicantData[0];
+    
+    // Create applicant object with both encrypted (for DB insert) and decrypted (for logging) values
+    const applicant = {
+      ...applicantRaw,
+      // Decrypted values for logging/display
+      decrypted_name: decryptSafe(applicantRaw.applicant_full_name),
+      // Encrypted values for stallholder insert (ensure all PII is encrypted)
+      encrypted_name: ensureEncrypted(applicantRaw.applicant_full_name),
+      encrypted_contact: ensureEncrypted(applicantRaw.applicant_contact_number),
+      encrypted_address: ensureEncrypted(applicantRaw.applicant_address),
+      encrypted_email: ensureEncrypted(applicantRaw.email_address)
+    };
     
     if (!applicant.application_id) {
       return res.status(404).json({
@@ -191,18 +257,132 @@ export const updateApplicantStatus = async (req, res) => {
             error: credError.message
           });
         }
+
+        // ============================================
+        // CREATE STALLHOLDER RECORD
+        // ============================================
+        try {
+          console.log('🏪 Creating stallholder record...');
+
+          // Check if stallholder already exists for this applicant
+          const [existingStallholder] = await connection.execute(
+            'SELECT stallholder_id FROM stallholder WHERE applicant_id = ?',
+            [applicant.applicant_id]
+          );
+
+          // Calculate contract dates (1 year contract starting today)
+          const contractStartDate = new Date();
+          const contractEndDate = new Date();
+          contractEndDate.setFullYear(contractEndDate.getFullYear() + 1);
+
+          const formatDate = (date) => date.toISOString().split('T')[0];
+
+          if (existingStallholder.length > 0) {
+            console.log('⚠️ Stallholder already exists, updating with encrypted data...');
+            
+            // Update existing stallholder with new stall assignment (using ENCRYPTED values)
+            await connection.execute(
+              `UPDATE stallholder SET 
+                stall_id = ?,
+                branch_id = ?,
+                stallholder_name = ?,
+                contact_number = ?,
+                email = ?,
+                address = ?,
+                business_type = ?,
+                contract_start_date = ?,
+                contract_end_date = ?,
+                contract_status = 'Active',
+                lease_amount = ?,
+                monthly_rent = ?,
+                payment_status = 'pending',
+                updated_at = NOW()
+              WHERE applicant_id = ?`,
+              [
+                applicant.stall_id,
+                applicant.branch_id,
+                applicant.encrypted_name,           // Use encrypted name
+                applicant.encrypted_contact,        // Use encrypted contact
+                applicant.encrypted_email,          // Use encrypted email
+                applicant.encrypted_address,        // Use encrypted address
+                applicant.nature_of_business || 'General',
+                formatDate(contractStartDate),
+                formatDate(contractEndDate),
+                applicant.rental_price || 0,
+                applicant.rental_price || 0,
+                applicant.applicant_id
+              ]
+            );
+            console.log('✅ Stallholder record updated with encrypted data');
+          } else {
+            console.log('🔐 Creating new stallholder record with encrypted data...');
+            
+            // Create new stallholder record (using ENCRYPTED values)
+            await connection.execute(
+              `INSERT INTO stallholder (
+                applicant_id,
+                stallholder_name,
+                contact_number,
+                email,
+                address,
+                business_type,
+                branch_id,
+                stall_id,
+                contract_start_date,
+                contract_end_date,
+                contract_status,
+                lease_amount,
+                monthly_rent,
+                payment_status,
+                compliance_status,
+                date_created
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
+              [
+                applicant.applicant_id,
+                applicant.encrypted_name,           // Use encrypted name
+                applicant.encrypted_contact,        // Use encrypted contact
+                applicant.encrypted_email,          // Use encrypted email
+                applicant.encrypted_address,        // Use encrypted address
+                applicant.nature_of_business || 'General',
+                applicant.branch_id,
+                applicant.stall_id,
+                formatDate(contractStartDate),
+                formatDate(contractEndDate),
+                applicant.rental_price || 0,
+                applicant.rental_price || 0
+              ]
+            );
+            console.log('✅ New stallholder record created with encrypted data');
+          }
+
+          // Update stall status to Occupied
+          await connection.execute(
+            `UPDATE stall SET status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
+            [applicant.stall_id]
+          );
+          console.log('✅ Stall status updated to Occupied');
+
+        } catch (stallholderError) {
+          console.error('❌ Error creating stallholder:', stallholderError);
+          await connection.rollback();
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to create stallholder record',
+            error: stallholderError.message
+          });
+        }
       }
 
       // Commit the transaction
       await connection.commit();
 
-      console.log(`✅ Application for ${applicant.applicant_full_name} status updated to: ${status}`);
+      console.log(`✅ Application for ${applicant.decrypted_name} status updated to: ${status}`);
 
       const responseData = {
         applicant_id: id,
         application_id: applicant.application_id,
-        full_name: applicant.applicant_full_name,
-        email: applicant.email_address,
+        full_name: applicant.decrypted_name,  // Use decrypted name for response
+        email: decryptSafe(applicant.email_address),  // Decrypt email for response
         new_status: status,
         updated_at: new Date().toISOString()
       };
@@ -212,12 +392,15 @@ export const updateApplicantStatus = async (req, res) => {
         responseData.credentials_created = true;
         responseData.mobile_username = finalUsername;
         responseData.mobile_password = finalPassword; // Return the actual password for email
+        responseData.stallholder_created = true;
+        responseData.stall_id = applicant.stall_id;
+        responseData.stall_no = applicant.stall_no;
       }
 
       res.json({
         success: true,
         message: credentialsCreated 
-          ? 'Applicant approved successfully! Mobile app credentials created and stored in database.' 
+          ? 'Applicant approved successfully! Stallholder record created and mobile app credentials stored.' 
           : 'Applicant status updated successfully',
         data: responseData
       });

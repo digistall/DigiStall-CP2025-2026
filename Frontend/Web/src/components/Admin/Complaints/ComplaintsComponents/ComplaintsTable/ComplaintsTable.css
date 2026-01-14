@@ -44,8 +44,12 @@
   transition: background-color 0.2s ease;
 }
 
-.complaints-table tbody tr:hover {
-  background: #f8f9fa;
+.complaints-row-clickable {
+  cursor: pointer;
+}
+
+.complaints-row-clickable:hover {
+  background: #f0f7ff !important;
 }
 
 .complaints-table tbody tr:last-child {

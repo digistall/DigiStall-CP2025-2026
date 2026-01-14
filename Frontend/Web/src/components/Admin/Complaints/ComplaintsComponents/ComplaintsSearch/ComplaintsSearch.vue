@@ -59,24 +59,31 @@
                     </button>
                     <button
                       class="status-btn"
-                      :class="{ active: activeFilter === 'active' }"
-                      @click="setFilter('active')"
-                    >
-                      Active
-                    </button>
-                    <button
-                      class="status-btn"
-                      :class="{ active: activeFilter === 'incomplete' }"
-                      @click="setFilter('incomplete')"
-                    >
-                      Incomplete
-                    </button>
-                    <button
-                      class="status-btn"
                       :class="{ active: activeFilter === 'pending' }"
                       @click="setFilter('pending')"
                     >
                       Pending
+                    </button>
+                    <button
+                      class="status-btn"
+                      :class="{ active: activeFilter === 'in-progress' }"
+                      @click="setFilter('in-progress')"
+                    >
+                      In Progress
+                    </button>
+                    <button
+                      class="status-btn resolved"
+                      :class="{ active: activeFilter === 'resolved' }"
+                      @click="setFilter('resolved')"
+                    >
+                      Resolved
+                    </button>
+                    <button
+                      class="status-btn rejected"
+                      :class="{ active: activeFilter === 'rejected' }"
+                      @click="setFilter('rejected')"
+                    >
+                      Rejected
                     </button>
                   </div>
                 </div>
