@@ -431,12 +431,15 @@ const PaymentController = {
         
         // Backend-level decryption for payment data
         const decryptedPayments = payments.map(payment => {
-          // Decrypt stallholder_name
-          if (payment.stallholder_name && typeof payment.stallholder_name === 'string' && payment.stallholder_name.includes(':')) {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
             try {
-              payment.stallholder_name = decryptData(payment.stallholder_name);
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
             } catch (error) {
-              console.error(`Failed to decrypt stallholder_name for payment ID ${payment.id}:`, error.message);
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
             }
           }
           
@@ -476,12 +479,15 @@ const PaymentController = {
         
         // Backend-level decryption for payment data
         const decryptedPayments = payments.map(payment => {
-          // Decrypt stallholder_name
-          if (payment.stallholder_name && typeof payment.stallholder_name === 'string' && payment.stallholder_name.includes(':')) {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
             try {
-              payment.stallholder_name = decryptData(payment.stallholder_name);
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
             } catch (error) {
-              console.error(`Failed to decrypt stallholder_name for payment ID ${payment.id}:`, error.message);
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
             }
           }
           
@@ -540,10 +546,27 @@ const PaymentController = {
         const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
+        // Backend-level decryption for online payment data
+        const decryptedPayments = payments.map(payment => {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+            try {
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          return payment;
+        });
+        
         return res.status(200).json({
           success: true,
           message: 'Online payments retrieved successfully',
-          data: payments
+          data: decryptedPayments
         });
       } else if (branchFilter.length === 0) {
         // No access
@@ -558,10 +581,27 @@ const PaymentController = {
         const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
+        // Backend-level decryption for online payment data
+        const decryptedPayments = payments.map(payment => {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+            try {
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          return payment;
+        });
+        
         return res.status(200).json({
           success: true,
           message: 'Online payments retrieved successfully',
-          data: payments
+          data: decryptedPayments
         });
       }
       
