@@ -1,57 +1,60 @@
-import express from 'express';
-import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
+import express from "express";
 import {
   createVendor,
   getAllVendors,
   getVendorById,
   updateVendor,
-  deleteVendor
-} from '../controllers/vendors/vendorController.js';
+  deleteVendor,
+} from "../controllers/vendors/vendorController.js";
 
 const router = express.Router();
 
 /**
  * Vendor Management Routes
- * All routes for vendor CRUD operations
+ * Routes for managing Vendor accounts
+ * Note: Authentication is applied at the mount point in server.js
  */
-
-// ========================================
-// PROTECTED ROUTES (Authentication required)
-// ========================================
 
 /**
  * @route   POST /api/vendors
- * @desc    Create a new vendor
- * @access  Protected
+ * @desc    Create new vendor account
+ * @access  Business Manager
+ * @body    { firstName, lastName, middleName?, phone?, email?, birthdate?, gender?, address?, businessName?, businessType?, businessDescription?, vendorIdentifier?, collectorId? }
  */
-router.post('/', enhancedAuthMiddleware.authenticateToken, createVendor);
+router.post("/", createVendor);
 
 /**
  * @route   GET /api/vendors
  * @desc    Get all vendors
- * @access  Protected
+ * @access  Business Manager
+ * @query   branchId? - Filter by branch
+ * @query   collectorId? - Filter by collector
  */
-router.get('/', enhancedAuthMiddleware.authenticateToken, getAllVendors);
+router.get("/", getAllVendors);
 
 /**
  * @route   GET /api/vendors/:id
  * @desc    Get vendor by ID
- * @access  Protected
+ * @access  Business Manager
+ * @params  id - Vendor ID
  */
-router.get('/:id', enhancedAuthMiddleware.authenticateToken, getVendorById);
+router.get("/:id", getVendorById);
 
 /**
  * @route   PUT /api/vendors/:id
- * @desc    Update vendor by ID
- * @access  Protected
+ * @desc    Update vendor information
+ * @access  Business Manager
+ * @params  id - Vendor ID
+ * @body    { firstName?, lastName?, middleName?, phone?, email?, birthdate?, gender?, address?, businessName?, businessType?, businessDescription?, vendorIdentifier?, collectorId?, status? }
  */
-router.put('/:id', enhancedAuthMiddleware.authenticateToken, updateVendor);
+router.put("/:id", updateVendor);
 
 /**
  * @route   DELETE /api/vendors/:id
- * @desc    Delete vendor by ID
- * @access  Protected
+ * @desc    Delete/deactivate a vendor
+ * @access  Business Manager
+ * @params  id - Vendor ID
  */
-router.delete('/:id', enhancedAuthMiddleware.authenticateToken, deleteVendor);
+router.delete("/:id", deleteVendor);
 
 export default router;

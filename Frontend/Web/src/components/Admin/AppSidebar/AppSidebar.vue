@@ -96,19 +96,63 @@
                 <span v-if="isExpanded" class="sidebar-text">
                   Stalls
                 </span>
+                <!-- Submenu indicator for Stalls - Only show if there are raffle/auction stalls -->
+                <v-icon
+                  v-if="
+                    isExpanded && 
+                    (availableStallTypes.hasRaffles || availableStallTypes.hasAuctions)
+                  "
+                  class="submenu-arrow ml-auto"
+                  small
+                  :class="{ 'rotate-180': showStallsSubMenu }"
+                  :color="isActiveRoute('/app/stalls') ? 'white' : 'dark'"
+                >
+                  mdi-chevron-down
+                </v-icon>
               </div>
             </template>
           </v-tooltip>
         </v-list-item>
 
+        <!-- Submenu items for Stalls (Employee version) -->
+        <div
+          v-if="isEmployee && hasStallsPermission && showStallsSubMenu && isExpanded"
+          class="stalls-submenu"
+        >
+          <v-list-item
+            v-for="subItem in filteredStallSubItems"
+            :key="subItem.id"
+            class="sidebar-item sub-sub-item"
+            :class="{ active: isActiveRoute(subItem.route) }"
+            @click="setActiveItem(subItem.id, subItem.route)"
+          >
+            <div class="item-container">
+              <v-icon
+                class="sidebar-icon submenu-icon mr-3"
+                small
+                :color="isActiveRoute(subItem.route) ? 'white' : 'dark'"
+              >
+                {{ subItem.icon }}
+              </v-icon>
+              <span class="sidebar-text submenu-text">
+                {{ subItem.name }}
+              </span>
+            </div>
+          </v-list-item>
+        </div>
+
         <!-- Additional Items (when More is expanded) - Show for Business Managers and Business Owners -->
         <div v-if="isExpanded && showMoreItems && !isEmployee && !isSystemAdministrator" class="more-items">
           <div v-for="item in filteredMoreItems" :key="item.id">
-            <!-- Regular menu item -->
+            <!-- Regular menu item or item with submenu -->
             <v-list-item
               class="sidebar-item sub-item"
-              :class="{ active: isActiveRoute(item.route) }"
-              @click="setActiveItem(item.id, item.route)"
+              :class="{
+                active: isActiveRoute(item.route),
+                'has-submenu': item.hasSubMenu && item.id === 9,
+                'submenu-expanded': item.hasSubMenu && item.id === 9 && showStallsSubMenu,
+              }"
+              @click="setActiveItem(item.id, item.route, item.hasSubMenu)"
             >
               <div class="item-container">
                 <v-icon 
@@ -120,8 +164,49 @@
                 <span class="sidebar-text">
                   {{ item.name }}
                 </span>
+                <!-- Submenu indicator for Stalls - Only show if there are raffle/auction stalls -->
+                <v-icon
+                  v-if="
+                    item.hasSubMenu &&
+                    item.id === 9 &&
+                    (availableStallTypes.hasRaffles || availableStallTypes.hasAuctions)
+                  "
+                  class="submenu-arrow ml-auto"
+                  small
+                  :class="{ 'rotate-180': showStallsSubMenu }"
+                  :color="isActiveRoute(item.route) ? 'white' : 'dark'"
+                >
+                  mdi-chevron-down
+                </v-icon>
               </div>
             </v-list-item>
+
+            <!-- Submenu items for Stalls -->
+            <div
+              v-if="item.hasSubMenu && item.id === 9 && showStallsSubMenu"
+              class="stalls-submenu"
+            >
+              <v-list-item
+                v-for="subItem in filteredStallSubItems"
+                :key="subItem.id"
+                class="sidebar-item sub-sub-item"
+                :class="{ active: isActiveRoute(subItem.route) }"
+                @click="setActiveItem(subItem.id, subItem.route)"
+              >
+                <div class="item-container">
+                  <v-icon
+                    class="sidebar-icon submenu-icon mr-3"
+                    small
+                    :color="isActiveRoute(subItem.route) ? 'white' : 'dark'"
+                  >
+                    {{ subItem.icon }}
+                  </v-icon>
+                  <span class="sidebar-text submenu-text">
+                    {{ subItem.name }}
+                  </span>
+                </div>
+              </v-list-item>
+            </div>
           </div>
         </div>
       </v-list>

@@ -1,6 +1,5 @@
 import { createConnection } from "../../config/database.js";
 import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../config/multerApplicantDocuments.js";
-import { encryptData, decryptData } from "../../services/encryptionService.js";
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -9,37 +8,6 @@ const toNull = (value) => {
     return null;
   }
   return value;
-};
-
-// Helper function to encrypt sensitive data if not null
-const encryptIfNotNull = (value) => {
-  if (value === undefined || value === null || value === '' || 
-      (typeof value === 'string' && value.trim() === '')) {
-    return null;
-  }
-  try {
-    return encryptData(value);
-  } catch (error) {
-    console.error('⚠️ Encryption failed, storing as plain text:', error.message);
-    return value;
-  }
-};
-
-// Helper function to decrypt data safely
-const decryptSafe = (value) => {
-  if (value === undefined || value === null || value === '') {
-    return value;
-  }
-  try {
-    // Check if it looks like encrypted data (contains colons for iv:authTag:data format)
-    if (typeof value === 'string' && value.includes(':')) {
-      return decryptData(value);
-    }
-    return value; // Return as-is if not encrypted
-  } catch (error) {
-    console.error('⚠️ Decryption failed, returning as-is:', error.message);
-    return value;
-  }
 };
 
 export const applicantController = {
@@ -129,37 +97,33 @@ export const applicantController = {
         });
       }
 
-      console.log("🔐 Encrypting sensitive data before storage...");
-      
-      // Prepare all applicant parameters with toNull conversion AND encryption for sensitive PII fields
+      // Prepare all applicant parameters with toNull conversion
       const applicantParams = [
-        // Personal Information (6 parameters) - ENCRYPT sensitive PII fields
-        encryptIfNotNull(applicant_full_name),            // Encrypted: full name
-        encryptIfNotNull(applicant_contact_number),       // Encrypted: phone
-        encryptIfNotNull(applicant_address),              // Encrypted: address
-        toNull(applicant_birthdate),                       // Not encrypted: date format
-        toNull(applicant_civil_status),                    // Not encrypted: ENUM value
-        toNull(applicant_educational_attainment),          // Not encrypted: category
-        // Business Information (5 parameters) - Not sensitive
+        // Personal Information (6 parameters)
+        toNull(applicant_full_name),
+        toNull(applicant_contact_number),
+        toNull(applicant_address),
+        toNull(applicant_birthdate),
+        toNull(applicant_civil_status),
+        toNull(applicant_educational_attainment),
+        // Business Information (5 parameters)
         toNull(nature_of_business),
         toNull(capitalization),
         toNull(source_of_capital),
         toNull(previous_business_experience),
         toNull(relative_stall_owner),
-        // Spouse Information (5 parameters) - ENCRYPT sensitive PII fields
-        encryptIfNotNull(spouse_full_name),               // Encrypted: full name
-        toNull(spouse_birthdate),                          // Not encrypted: date format
-        toNull(spouse_educational_attainment),             // Not encrypted: category
-        encryptIfNotNull(spouse_contact_number),          // Encrypted: phone
-        toNull(spouse_occupation),                         // Not encrypted: category
+        // Spouse Information (5 parameters)
+        toNull(spouse_full_name),
+        toNull(spouse_birthdate),
+        toNull(spouse_educational_attainment),
+        toNull(spouse_contact_number),
+        toNull(spouse_occupation),
         // Other Information (4 parameters)
-        toNull(signature_of_applicant),                    // Not encrypted: file path
-        toNull(house_sketch_location),                     // Not encrypted: file path
-        toNull(valid_id),                                  // Not encrypted: file path
-        encryptIfNotNull(email_address),                  // Encrypted: email
+        toNull(signature_of_applicant),
+        toNull(house_sketch_location),
+        toNull(valid_id),
+        toNull(email_address),
       ];
-
-      console.log("✅ Sensitive data encrypted successfully");
 
       console.log("🔍 DEBUG: Parameters AFTER toNull (checking for undefined):");
       applicantParams.forEach((param, index) => {
@@ -480,33 +444,15 @@ export const applicantController = {
         });
       }
 
-      console.log("🔐 Encrypting sensitive data before storage...");
-
-      // Encrypt sensitive PII fields before storage
       const params = [
-        encryptIfNotNull(applicant_full_name),            // Encrypted: full name
-        encryptIfNotNull(applicant_contact_number),       // Encrypted: phone
-        encryptIfNotNull(applicant_address),              // Encrypted: address
-        toNull(applicant_birthdate),                       // Not encrypted: date format
-        toNull(applicant_civil_status),                    // Not encrypted: ENUM value
-        toNull(applicant_educational_attainment),          // Not encrypted: category
-        toNull(nature_of_business),
-        toNull(capitalization),
-        toNull(source_of_capital),
-        toNull(previous_business_experience),
-        toNull(relative_stall_owner),
-        encryptIfNotNull(spouse_full_name),               // Encrypted: full name
-        toNull(spouse_birthdate),                          // Not encrypted: date format
-        toNull(spouse_educational_attainment),             // Not encrypted: category
-        encryptIfNotNull(spouse_contact_number),          // Encrypted: phone
-        toNull(spouse_occupation),                         // Not encrypted: category
-        toNull(signature_of_applicant),
-        toNull(house_sketch_location),
-        toNull(valid_id),
-        encryptIfNotNull(email_address),                  // Encrypted: email
+        toNull(applicant_full_name), toNull(applicant_contact_number), toNull(applicant_address),
+        toNull(applicant_birthdate), toNull(applicant_civil_status), toNull(applicant_educational_attainment),
+        toNull(nature_of_business), toNull(capitalization), toNull(source_of_capital),
+        toNull(previous_business_experience), toNull(relative_stall_owner),
+        toNull(spouse_full_name), toNull(spouse_birthdate), toNull(spouse_educational_attainment),
+        toNull(spouse_contact_number), toNull(spouse_occupation),
+        toNull(signature_of_applicant), toNull(house_sketch_location), toNull(valid_id), toNull(email_address),
       ];
-
-      console.log("✅ Sensitive data encrypted successfully");
 
       const [[result]] = await connection.execute(
         `CALL createApplicantComplete(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -545,22 +491,10 @@ export const applicantController = {
     try {
       connection = await createConnection();
       const [[applicants]] = await connection.execute("CALL getApplicantComplete(NULL)");
-      
-      // Decrypt sensitive fields for each applicant
-      const decryptedApplicants = (applicants || []).map(applicant => ({
-        ...applicant,
-        applicant_full_name: decryptSafe(applicant.applicant_full_name),
-        applicant_contact_number: decryptSafe(applicant.applicant_contact_number),
-        applicant_address: decryptSafe(applicant.applicant_address),
-        email_address: decryptSafe(applicant.email_address),
-        spouse_full_name: decryptSafe(applicant.spouse_full_name),
-        spouse_contact_number: decryptSafe(applicant.spouse_contact_number),
-      }));
-      
       res.json({
         success: true,
-        data: decryptedApplicants,
-        count: decryptedApplicants.length,
+        data: applicants || [],
+        count: applicants ? applicants.length : 0,
       });
     } catch (error) {
       console.error("❌ Error in getAllApplicants:", error);
@@ -589,24 +523,10 @@ export const applicantController = {
       }
 
       const applicant = applicants[0];
-      
-      // Decrypt sensitive fields
-      const decryptedFullName = decryptSafe(applicant.applicant_full_name);
-      const decryptedContact = decryptSafe(applicant.applicant_contact_number);
-      const decryptedAddress = decryptSafe(applicant.applicant_address);
-      const decryptedEmail = decryptSafe(applicant.email_address);
-      const decryptedSpouseName = decryptSafe(applicant.spouse_full_name);
-      const decryptedSpouseContact = decryptSafe(applicant.spouse_contact_number);
-      
       res.json({
         success: true,
         data: {
-          applicant: {
-            ...applicant,
-            applicant_full_name: decryptedFullName,
-            applicant_contact_number: decryptedContact,
-            applicant_address: decryptedAddress,
-          },
+          applicant,
           business_information: applicant.nature_of_business ? {
             nature_of_business: applicant.nature_of_business,
             capitalization: applicant.capitalization,
@@ -614,15 +534,15 @@ export const applicantController = {
             previous_business_experience: applicant.previous_business_experience,
             relative_stall_owner: applicant.relative_stall_owner,
           } : null,
-          spouse: decryptedSpouseName ? {
-            spouse_full_name: decryptedSpouseName,
+          spouse: applicant.spouse_full_name ? {
+            spouse_full_name: applicant.spouse_full_name,
             spouse_birthdate: applicant.spouse_birthdate,
             spouse_educational_attainment: applicant.spouse_educational_attainment,
-            spouse_contact_number: decryptedSpouseContact,
+            spouse_contact_number: applicant.spouse_contact_number,
             spouse_occupation: applicant.spouse_occupation,
           } : null,
           other_information: {
-            email_address: decryptedEmail,
+            email_address: applicant.email_address,
             signature_of_applicant: applicant.signature_of_applicant,
             house_sketch_location: applicant.house_sketch_location,
             valid_id: applicant.valid_id,
@@ -656,36 +576,19 @@ export const applicantController = {
         signature_of_applicant, house_sketch_location, valid_id, email_address,
       } = req.body;
 
-      console.log("🔐 Encrypting sensitive data before update...");
-
       await connection.execute(
         `CALL updateApplicantComplete(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
-          encryptIfNotNull(applicant_full_name),            // Encrypted: full name
-          encryptIfNotNull(applicant_contact_number),       // Encrypted: phone
-          encryptIfNotNull(applicant_address),              // Encrypted: address
-          toNull(applicant_birthdate),                       // Not encrypted: date format
-          toNull(applicant_civil_status),                    // Not encrypted: ENUM value
-          toNull(applicant_educational_attainment),          // Not encrypted: category
-          toNull(nature_of_business),
-          toNull(capitalization),
-          toNull(source_of_capital),
-          toNull(previous_business_experience),
-          toNull(relative_stall_owner),
-          encryptIfNotNull(spouse_full_name),               // Encrypted: full name
-          toNull(spouse_birthdate),                          // Not encrypted: date format
-          toNull(spouse_educational_attainment),             // Not encrypted: category
-          encryptIfNotNull(spouse_contact_number),          // Encrypted: phone
-          toNull(spouse_occupation),                         // Not encrypted: category
-          toNull(signature_of_applicant),
-          toNull(house_sketch_location),
-          toNull(valid_id),
-          encryptIfNotNull(email_address),                  // Encrypted: email
+          toNull(applicant_full_name), toNull(applicant_contact_number), toNull(applicant_address),
+          toNull(applicant_birthdate), toNull(applicant_civil_status), toNull(applicant_educational_attainment),
+          toNull(nature_of_business), toNull(capitalization), toNull(source_of_capital),
+          toNull(previous_business_experience), toNull(relative_stall_owner),
+          toNull(spouse_full_name), toNull(spouse_birthdate), toNull(spouse_educational_attainment),
+          toNull(spouse_contact_number), toNull(spouse_occupation),
+          toNull(signature_of_applicant), toNull(house_sketch_location), toNull(valid_id), toNull(email_address),
         ]
       );
-
-      console.log("✅ Applicant updated with encrypted data");
 
       res.json({
         success: true,

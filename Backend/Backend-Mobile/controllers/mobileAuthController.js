@@ -1,7 +1,6 @@
 import { createConnection } from '../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { decryptApplicantData, decryptStallholderData, decryptSpouseData } from '../services/mysqlDecryptionService.js'
 
 // ===== MOBILE LOGIN =====
 export const mobileLogin = async (req, res) => {
@@ -21,12 +20,34 @@ export const mobileLogin = async (req, res) => {
       });
     }
     
-    // ===== Get mobile user from credential table using stored procedure =====
+    // ===== DIRECT SQL - Get mobile user from credential table =====
     console.log('🔍 Querying mobile user with username:', username);
     let users = [];
     
-    const [spResult] = await connection.execute('CALL sp_getMobileUserByUsername(?)', [username]);
-    users = spResult[0] || [];
+    try {
+      // Try stored procedure first
+      const [spResult] = await connection.execute('CALL getMobileUserByUsername(?)', [username]);
+      users = spResult[0] || [];
+    } catch (spError) {
+      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
+      // Fallback to direct SQL with COLLATE to fix collation mismatch
+      const [rows] = await connection.execute(`
+        SELECT 
+          c.registrationid,
+          c.user_name,
+          c.password_hash,
+          a.applicant_id,
+          CONCAT(a.applicant_first_name, ' ', IFNULL(a.applicant_middle_name, ''), ' ', a.applicant_last_name) AS applicant_full_name,
+          a.applicant_contact_number,
+          o.email_address AS applicant_email
+        FROM credential c
+        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+        LEFT JOIN other_info o ON a.applicant_id = o.applicant_id
+        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
+        LIMIT 1
+      `, [username]);
+      users = rows;
+    }
     
     console.log('📋 Stored procedure returned:', users.length, 'users');
     if (users.length > 0) {
@@ -80,62 +101,89 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Password verified for:', username);
 
-    // ===== FETCH COMPLETE USER DATA USING STORED PROCEDURES =====
+    // ===== FETCH COMPLETE USER DATA - WITH DIRECT SQL FALLBACKS =====
     const applicantId = user.applicant_id;
 
-    // Decrypt user/applicant data if encrypted
-    let decryptedUser = await decryptApplicantData(user);
-    console.log('🔓 User decrypted:', decryptedUser.applicant_full_name);
+    // Helper function to run SP or direct SQL
+    const executeQuery = async (spCall, directSql, params) => {
+      try {
+        const [result] = await connection.execute(spCall, params);
+        return result[0] || [];
+      } catch (err) {
+        console.warn(`⚠️ SP failed, using direct SQL`);
+        try {
+          const [rows] = await connection.execute(directSql, params);
+          return rows;
+        } catch (directErr) {
+          console.warn(`⚠️ Direct SQL also failed:`, directErr.message);
+          return [];
+        }
+      }
+    };
 
     // Get spouse information
-    const [spouseResult] = await connection.execute('CALL sp_getSpouseByApplicantId(?)', [applicantId]);
-    let spouseData = spouseResult[0] || [];
-    // Decrypt spouse data if found
-    if (spouseData.length > 0) {
-      spouseData[0] = await decryptSpouseData(spouseData[0]);
-    }
+    const spouseData = await executeQuery(
+      'CALL sp_getSpouseByApplicantId(?)',
+      'SELECT * FROM spouse WHERE applicant_id = ?',
+      [applicantId]
+    );
     console.log('👫 Spouse data:', spouseData.length > 0 ? 'Found' : 'Not found');
 
     // Get business information
-    const [businessResult] = await connection.execute('CALL sp_getBusinessInfoByApplicantId(?)', [applicantId]);
-    const businessData = businessResult[0] || [];
+    const businessData = await executeQuery(
+      'CALL sp_getBusinessInfoByApplicantId(?)',
+      'SELECT * FROM business_info WHERE applicant_id = ?',
+      [applicantId]
+    );
     console.log('💼 Business data:', businessData.length > 0 ? 'Found' : 'Not found');
 
     // Get other information
-    const [otherResult] = await connection.execute('CALL sp_getOtherInfoByApplicantId(?)', [applicantId]);
-    const otherData = otherResult[0] || [];
+    const otherData = await executeQuery(
+      'CALL sp_getOtherInfoByApplicantId(?)',
+      'SELECT * FROM other_info WHERE applicant_id = ?',
+      [applicantId]
+    );
     console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
 
-    // Get application status
-    const [applicationResult] = await connection.execute('CALL sp_getLatestApplicationByApplicantId(?)', [applicantId]);
-    const applicationData = applicationResult[0] || [];
+    // Get application status with fallback
+    const applicationData = await executeQuery(
+      'CALL sp_getLatestApplicationByApplicantId(?)',
+      `SELECT a.*, s.stall_number, s.stall_name, b.branch_name 
+       FROM application a 
+       LEFT JOIN stall s ON a.stall_id = s.stall_id 
+       LEFT JOIN branch b ON s.branch_id = b.branch_id 
+       WHERE a.applicant_id = ? 
+       ORDER BY a.created_at DESC LIMIT 1`,
+      [applicantId]
+    );
     console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
 
-    // Get stallholder information (if approved)
-    const [stallholderResult] = await connection.execute('CALL sp_getStallholderByApplicantId(?)', [applicantId]);
-    let stallholderData = stallholderResult[0] || [];
-    // Decrypt stallholder data if found
-    if (stallholderData.length > 0) {
-      stallholderData[0] = await decryptStallholderData(stallholderData[0]);
-    }
+    // Get stallholder information (if approved) with fallback
+    const stallholderData = await executeQuery(
+      'CALL sp_getStallholderByApplicantId(?)',
+      'SELECT * FROM stallholder WHERE applicant_id = ?',
+      [applicantId]
+    );
     console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
 
-    // Get applicant full details
-    const [applicantResult] = await connection.execute('CALL sp_getApplicantById(?)', [applicantId]);
-    let applicantData = applicantResult[0] || [];
-    // Decrypt applicant data if found
-    if (applicantData.length > 0) {
-      applicantData[0] = await decryptApplicantData(applicantData[0]);
-    }
+    // Get applicant full details with fallback
+    const applicantData = await executeQuery(
+      'CALL sp_getApplicantById(?)',
+      `SELECT a.*, c.user_name, c.applicant_email 
+       FROM applicant a 
+       LEFT JOIN credential c ON a.applicant_id = c.applicant_id 
+       WHERE a.applicant_id = ?`,
+      [applicantId]
+    );
     
     // Generate JWT token
     const token = jwt.sign(
       {
-        userId: decryptedUser.applicant_id,
-        username: decryptedUser.user_name,
-        email: decryptedUser.applicant_email,
+        userId: user.applicant_id,
+        username: user.user_name,
+        email: user.applicant_email,
         userType: 'mobile_user',
-        registrationId: decryptedUser.registrationid,
+        registrationId: user.registrationid,
         stallholderId: stallholderData.length > 0 ? stallholderData[0].stallholder_id : null
       },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -144,21 +192,21 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Login successful for:', username);
     
-    // Build comprehensive response with decrypted data
+    // Build comprehensive response
     const responseData = {
       user: {
-        id: decryptedUser.applicant_id,
-        applicant_id: decryptedUser.applicant_id,
-        username: decryptedUser.user_name,
-        email: decryptedUser.applicant_email || (otherData.length > 0 ? otherData[0].email_address : null),
-        full_name: decryptedUser.applicant_full_name,
-        fullName: decryptedUser.applicant_full_name,
-        contactNumber: decryptedUser.applicant_contact_number,
+        id: user.applicant_id,
+        applicant_id: user.applicant_id,
+        username: user.user_name,
+        email: user.applicant_email || (otherData.length > 0 ? otherData[0].email_address : null),
+        full_name: user.applicant_full_name,
+        fullName: user.applicant_full_name,
+        contactNumber: user.applicant_contact_number,
         address: applicantData.length > 0 ? applicantData[0].applicant_address : null,
         birthdate: applicantData.length > 0 ? applicantData[0].applicant_birthdate : null,
         civil_status: applicantData.length > 0 ? applicantData[0].applicant_civil_status : null,
         educational_attainment: applicantData.length > 0 ? applicantData[0].applicant_educational_attainment : null,
-        registrationId: decryptedUser.registrationid,
+        registrationId: user.registrationid,
         userType: 'mobile_user'
       },
       spouse: spouseData.length > 0 ? {
