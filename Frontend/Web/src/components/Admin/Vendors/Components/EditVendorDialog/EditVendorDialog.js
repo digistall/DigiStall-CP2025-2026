@@ -11,14 +11,7 @@ export default {
       },
     })
 
-    // Replace step with activeTab for tabs navigation
-    const activeTab = ref(0)
-    const formValid = ref(false)
-    const genderOptions = ['Male', 'Female', 'Other']
-    const emailRules = [
-      (v) => !!v || 'Email is required',
-      (v) => /.+@.+\..+/.test(v) || 'Email must be valid',
-    ]
+    const step = ref(1)
 
     // initialize form from props.data (keep File objects)
     const form = reactive(makeInitialForm(props.data))
@@ -26,7 +19,7 @@ export default {
       () => props.data,
       (val) => {
         Object.assign(form, makeInitialForm(val))
-        activeTab.value = 0
+        step.value = 1
       },
       { deep: true },
     )
@@ -122,6 +115,15 @@ export default {
       return f
     }
 
+    function goNext() {
+      // very light check
+      if (!form.firstName || !form.lastName || !form.vendorId) {
+        emit('show-error', 'Please complete required fields.')
+        return
+      }
+      step.value = 2
+    }
+
     function submit() {
       // return complete payload with all relations
       const payload = {
@@ -167,16 +169,14 @@ export default {
 
     function cancel() {
       visible.value = false
-      activeTab.value = 0
+      step.value = 1
     }
 
     return {
       model: visible,
-      activeTab,
-      formValid,
-      genderOptions,
-      emailRules,
+      step,
       form,
+      goNext,
       submit,
       cancel,
     }

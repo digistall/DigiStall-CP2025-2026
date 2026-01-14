@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar } from "react-native";
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { mockUser } from "../mockUser";
 import EditProfileModal from "../EditComponents/editProfile";
 import UserStorageService from "../../../../../../../services/UserStorageService";
 import { useTheme } from "../../../../Settings/components/ThemeComponents/ThemeContext";
+import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../../../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 
@@ -88,33 +90,33 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
       };
       
       return {
-        // Personal Information
-        fullName: user.full_name || user.fullName || "Not specified",
-        education: user.educational_attainment || "Not specified",
+        // Personal Information - using safe display utilities
+        fullName: getSafeDisplayValue(user.full_name || user.fullName, "Not specified"),
+        education: getSafeDisplayValue(user.educational_attainment, "Not specified"),
         birthDate: formatDate(user.birthdate),
-        civilStatus: user.civil_status || "Single",
-        contactNumber: user.contact_number || user.contactNumber || "Not specified",
-        mailingAddress: user.address || "Not specified",
+        civilStatus: getSafeDisplayValue(user.civil_status, "Single"),
+        contactNumber: getSafeDisplayValue(user.contact_number || user.contactNumber, "Not specified"),
+        mailingAddress: getSafeDisplayValue(user.address, "Not specified"),
 
         // Spouse Information (from spouse table) - only if spouse exists
         hasSpouse: !!spouse,
-        spouseName: spouse?.full_name || "Not specified",
+        spouseName: getSafeDisplayValue(spouse?.full_name, "Not specified"),
         spouseBirthDate: formatDate(spouse?.birthdate),
-        spouseEducation: spouse?.educational_attainment || "Not specified",
-        occupation: spouse?.occupation || "Not specified",
-        spouseContact: spouse?.contact_number || "Not specified",
+        spouseEducation: getSafeDisplayValue(spouse?.educational_attainment, "Not specified"),
+        occupation: getSafeDisplayValue(spouse?.occupation, "Not specified"),
+        spouseContact: getSafeDisplayValue(spouse?.contact_number, "Not specified"),
 
         // Business Information (from business_information table)
         hasBusiness: !!business,
-        businessNature: business?.nature_of_business || "Not specified",
+        businessNature: getSafeDisplayValue(business?.nature_of_business, "Not specified"),
         businessCapitalization: business?.capitalization ? Number(business.capitalization) : null,
-        sourceOfCapital: business?.source_of_capital || "Not specified",
-        previousBusiness: business?.previous_business_experience || business?.previous_experience || "None",
-        applicantRelative: business?.relative_stall_owner || "None",
+        sourceOfCapital: getSafeDisplayValue(business?.source_of_capital, "Not specified"),
+        previousBusiness: getSafeDisplayValue(business?.previous_business_experience || business?.previous_experience, "None"),
+        applicantRelative: getSafeDisplayValue(business?.relative_stall_owner, "None"),
 
         // Other Information (from other_information table)
         hasOtherInfo: !!otherInfo,
-        emailAddress: otherInfo?.email_address || user.email || "Not specified",
+        emailAddress: getSafeDisplayValue(otherInfo?.email_address || user.email, "Not specified"),
         signature: (otherInfo?.signature_of_applicant || otherInfo?.signature) ? "✓ Uploaded" : "Not uploaded",
         houseSketch: (otherInfo?.house_sketch_location || otherInfo?.house_sketch) ? "✓ Uploaded" : "Not uploaded",
         validId: otherInfo?.valid_id ? "✓ Uploaded" : "Not uploaded",
@@ -186,66 +188,120 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
   // Create themed styles
   const styles = createThemedStyles(theme);
 
+  // Get section icon
+  const getSectionIcon = (title) => {
+    switch (title) {
+      case "Account Information":
+        return <Ionicons name="person-circle-outline" size={22} color={theme.colors.primary} />;
+      case "Personal Information":
+        return <MaterialCommunityIcons name="card-account-details-outline" size={22} color={theme.colors.primary} />;
+      case "Spouse Information":
+        return <Ionicons name="heart-outline" size={22} color={theme.colors.primary} />;
+      case "Business Information":
+        return <Ionicons name="briefcase-outline" size={22} color={theme.colors.primary} />;
+      case "Other Information":
+        return <Ionicons name="document-text-outline" size={22} color={theme.colors.primary} />;
+      case "Stallholder Information":
+        return <MaterialCommunityIcons name="store-outline" size={22} color={theme.colors.primary} />;
+      default:
+        return <Ionicons name="information-circle-outline" size={22} color={theme.colors.primary} />;
+    }
+  };
+
   const InfoSection = ({ title, children }) => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionContent}>{children}</View>
+      <View style={styles.sectionHeader}>
+        {getSectionIcon(title)}
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      <View style={styles.sectionContent}>
+        {React.Children.map(children, (child, index) => {
+          const isLast = index === React.Children.count(children) - 1;
+          return React.cloneElement(child, { isLast });
+        })}
+      </View>
     </View>
   );
 
-  const InfoRow = ({ label, value }) => (
-    <View style={styles.infoRow}>
-      <Text style={styles.label}>{label}:</Text>
+  const InfoRow = ({ label, value, isLast }) => (
+    <View style={[styles.infoRow, isLast && styles.infoRowLast]}>
+      <Text style={styles.label}>{label}</Text>
       <Text style={styles.value}>{value || "Not provided"}</Text>
     </View>
   );
 
+  // Get gradient colors based on theme
+  const getGradientColors = () => {
+    if (theme.isDark) {
+      return ['#1a237e', '#0d47a1', '#1565c0'];
+    }
+    return ['#1a237e', '#283593', '#3949ab'];
+  };
+
   return (
     <>
+      <StatusBar barStyle="light-content" backgroundColor="#1a237e" />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Back Button */}
-        <TouchableOpacity style={styles.backButton} onPress={onGoBack}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-
-        {/* Edit Button */}
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => setIsEditModalVisible(true)}
+        {/* Header with Gradient */}
+        <LinearGradient
+          colors={getGradientColors()}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
         >
-          <Ionicons name="create-outline" size={24} color="#fff" />
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
+          {/* Navigation Buttons */}
+          <View style={styles.navigationRow}>
+            <TouchableOpacity style={styles.backButton} onPress={onGoBack}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
 
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {profileData.fullName
-                .split(" ")
-                .map((name) => name[0])
-                .join("")
-                .substring(0, 2)}
-            </Text>
+            <Text style={styles.headerTitle}>Settings</Text>
+
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setIsEditModalVisible(true)}
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+              <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.profileName}>{profileData.fullName}</Text>
-          <Text style={styles.profileEmail}>{profileData.emailAddress}</Text>
-        </View>
 
-        <InfoSection title="Account Information">
-          <InfoRow label="Username" value={profileData.username} />
-          <InfoRow label="Registration ID" value={profileData.registrationId} />
-          <InfoRow label="Applicant ID" value={profileData.applicantId} />
-        </InfoSection>
+          {/* Profile Avatar & Info */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>
+                  {profileData.fullName
+                    .split(" ")
+                    .map((name) => name[0])
+                    .join("")
+                    .substring(0, 2)}
+                </Text>
+              </View>
+              <View style={styles.onlineIndicator} />
+            </View>
+            <Text style={styles.profileName}>{profileData.fullName}</Text>
+            <Text style={styles.profileEmail}>{profileData.emailAddress}</Text>
+          </View>
+        </LinearGradient>
 
-        <InfoSection title="Personal Information">
-          <InfoRow label="Full Name" value={profileData.fullName} />
-          <InfoRow label="Birth Date" value={profileData.birthDate} />
-          <InfoRow label="Civil Status" value={profileData.civilStatus} />
-          <InfoRow label="Education" value={profileData.education} />
-          <InfoRow label="Contact Number" value={profileData.contactNumber} />
-          <InfoRow label="Mailing Address" value={profileData.mailingAddress} />
-        </InfoSection>
+        {/* Content Area */}
+        <View style={styles.contentArea}>
+          <InfoSection title="Account Information">
+            <InfoRow label="Username" value={profileData.username} />
+            <InfoRow label="Registration ID" value={profileData.registrationId} />
+            <InfoRow label="Applicant ID" value={profileData.applicantId} />
+          </InfoSection>
+
+          <InfoSection title="Personal Information">
+            <InfoRow label="Full Name" value={profileData.fullName} />
+            <InfoRow label="Birth Date" value={profileData.birthDate} />
+            <InfoRow label="Civil Status" value={profileData.civilStatus} />
+            <InfoRow label="Education" value={profileData.education} />
+            <InfoRow label="Contact Number" value={profileData.contactNumber} />
+            <InfoRow label="Mailing Address" value={profileData.mailingAddress} />
+          </InfoSection>
 
         {/* Show Spouse Information if married or spouse data exists */}
         {(profileData.hasSpouse || profileData.civilStatus === "Married") && (
@@ -303,15 +359,32 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
           </InfoSection>
         )}
 
-        <View style={styles.footer}>
-          <Text style={[
-            styles.footerText, 
-            { color: profileData.applicationStatus === 'Approved' ? '#28a745' : 
-                     profileData.applicationStatus === 'Rejected' ? '#dc3545' : '#f59e0b' }
-          ]}>
-            Application Status: {profileData.applicationStatus}
-          </Text>
+          {/* Application Status Card */}
+          <View style={styles.statusCard}>
+            <View style={styles.statusIconContainer}>
+              <Ionicons 
+                name={profileData.applicationStatus === 'Approved' ? 'checkmark-circle' : 
+                      profileData.applicationStatus === 'Rejected' ? 'close-circle' : 'time'}
+                size={28}
+                color={profileData.applicationStatus === 'Approved' ? '#28a745' : 
+                       profileData.applicationStatus === 'Rejected' ? '#dc3545' : '#f59e0b'}
+              />
+            </View>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusLabel}>Application Status</Text>
+              <Text style={[
+                styles.statusValue, 
+                { color: profileData.applicationStatus === 'Approved' ? '#28a745' : 
+                         profileData.applicationStatus === 'Rejected' ? '#dc3545' : '#f59e0b' }
+              ]}>
+                {profileData.applicationStatus}
+              </Text>
+            </View>
+          </View>
         </View>
+
+        {/* Bottom Spacing */}
+        <View style={{ height: 30 }} />
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -331,126 +404,204 @@ const createThemedStyles = (theme) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  headerGradient: {
+    paddingTop: height * 0.02,
+    paddingBottom: height * 0.04,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  navigationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: width * 0.04,
+    marginBottom: height * 0.02,
+  },
+  headerTitle: {
+    fontSize: width * 0.05,
+    fontWeight: "600",
+    color: "#fff",
+  },
   backButton: {
-    position: "absolute",
-    top: height * 0.02,
-    left: width * 0.02,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    zIndex: 1,
   },
   backButtonText: {
     color: "#fff",
-    fontSize: width * 0.04,
-    marginLeft: 4,
+    fontSize: width * 0.038,
+    marginLeft: 6,
     fontWeight: "500",
   },
   editButton: {
-    position: "absolute",
-    top: height * 0.02,
-    right: width * 0.02,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    zIndex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   editButtonText: {
     color: "#fff",
-    fontSize: width * 0.04,
-    marginLeft: 4,
+    fontSize: width * 0.038,
+    marginLeft: 6,
     fontWeight: "500",
   },
-  header: {
-    backgroundColor: theme.colors.surface,
+  profileSection: {
     alignItems: "center",
-    paddingVertical: height * 0.04,
     paddingHorizontal: width * 0.06,
+    paddingBottom: height * 0.01,
   },
-  avatarContainer: {
-    width: width * 0.2,
-    height: width * 0.2,
-    borderRadius: width * 0.1,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
+  avatarWrapper: {
+    position: "relative",
     marginBottom: height * 0.015,
   },
+  avatarContainer: {
+    width: width * 0.24,
+    height: width * 0.24,
+    borderRadius: width * 0.12,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   avatarText: {
-    fontSize: width * 0.08,
+    fontSize: width * 0.09,
     fontWeight: "bold",
-    color: "white",
+    color: "#1a237e",
+  },
+  onlineIndicator: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#4caf50",
+    borderWidth: 3,
+    borderColor: "#fff",
   },
   profileName: {
     fontSize: width * 0.06,
     fontWeight: "bold",
-    color: theme.colors.text,
+    color: "#fff",
     textAlign: "center",
-    marginBottom: height * 0.005,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   profileEmail: {
-    fontSize: width * 0.04,
-    color: theme.colors.textSecondary,
+    fontSize: width * 0.038,
+    color: "rgba(255, 255, 255, 0.85)",
     textAlign: "center",
+  },
+  contentArea: {
+    paddingHorizontal: width * 0.04,
+    paddingTop: height * 0.025,
+    paddingBottom: height * 0.01,
   },
   section: {
     backgroundColor: theme.colors.card,
-    marginHorizontal: width * 0.04,
-    marginTop: height * 0.02,
-    borderRadius: 12,
+    marginBottom: height * 0.018,
+    borderRadius: 18,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 5,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: width * 0.045,
+    paddingVertical: height * 0.018,
+    borderBottomWidth: 1.5,
+    borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(26, 35, 126, 0.08)',
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(26, 35, 126, 0.04)',
   },
   sectionTitle: {
-    fontSize: width * 0.05,
-    fontWeight: "bold",
+    fontSize: width * 0.042,
+    fontWeight: "700",
     color: theme.colors.text,
-    padding: width * 0.04,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginLeft: 12,
+    letterSpacing: 0.3,
   },
   sectionContent: {
-    padding: width * 0.04,
+    paddingHorizontal: width * 0.045,
+    paddingVertical: height * 0.012,
   },
   infoRow: {
     flexDirection: "row",
-    marginBottom: height * 0.015,
-    alignItems: "flex-start",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: height * 0.014,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
   },
   label: {
-    fontSize: width * 0.04,
-    fontWeight: "600",
-    color: theme.colors.text,
-    width: "40%",
-    marginRight: width * 0.02,
-  },
-  value: {
-    fontSize: width * 0.04,
+    fontSize: width * 0.038,
+    fontWeight: "500",
     color: theme.colors.textSecondary,
     flex: 1,
+  },
+  value: {
+    fontSize: width * 0.038,
+    fontWeight: "600",
+    color: theme.colors.text,
+    flex: 1.2,
     textAlign: "right",
   },
-  footer: {
+  statusCard: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: height * 0.03,
-    paddingHorizontal: width * 0.06,
+    backgroundColor: theme.colors.card,
+    marginBottom: height * 0.018,
+    padding: width * 0.045,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
   },
-  footerText: {
+  statusIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(26, 35, 126, 0.06)',
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  statusTextContainer: {
+    flex: 1,
+  },
+  statusLabel: {
     fontSize: width * 0.035,
     color: theme.colors.textSecondary,
-    fontStyle: "italic",
+    marginBottom: 4,
+  },
+  statusValue: {
+    fontSize: width * 0.045,
+    fontWeight: "700",
   },
 });
 
