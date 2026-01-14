@@ -209,7 +209,8 @@ const AuctionScreen = () => {
         {/* Loading State */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading auction stalls...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading auction stalls...</Text>
           </View>
         ) : (
           <>
@@ -239,18 +240,19 @@ const AuctionScreen = () => {
                 <Text
                   style={[
                     styles.resultsText,
-                    { color: theme.colors.textSecondary },
+                    { color: theme.colors.text },
                   ]}
                 >
                   {filteredAndSortedStalls.length}{" "}
                   {filteredAndSortedStalls.length === 1 ? "stall" : "stalls"}{" "}
                   available for auction
                 </Text>
-                <View style={styles.refreshIndicator}>
+                <View style={[styles.liveIndicator, { backgroundColor: theme.colors.primaryLight }]}>
+                  <View style={styles.liveDot} />
                   <Text
-                    style={[styles.liveText, { color: theme.colors.primary }]}
+                    style={[styles.liveText, { color: theme.colors.success }]}
                   >
-                    Auto-refreshes for updates
+                    Live Updates
                   </Text>
                 </View>
               </View>
@@ -274,9 +276,9 @@ const AuctionScreen = () => {
                 ))
               ) : (
                 <View style={styles.noResults}>
-                  <Text style={styles.noResultsText}>No stalls found</Text>
-                  <Text style={styles.noResultsSubtext}>
-                    Try adjusting your search or filter criteria
+                  <Text style={[styles.noResultsText, { color: theme.colors.text }]}>No Auction Stalls Found</Text>
+                  <Text style={[styles.noResultsSubtext, { color: theme.colors.textSecondary }]}>
+                    Try adjusting your search or filter criteria, or check back later for new auction listings.
                   </Text>
                 </View>
               )}
@@ -298,12 +300,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 50,
+    paddingVertical: 60,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     color: '#6B7280',
+    textAlign: 'center',
   },
   titleHeader: {
     paddingHorizontal: width * 0.04,
@@ -316,7 +319,10 @@ const styles = StyleSheet.create({
   },
   resultsHeader: {
     paddingHorizontal: width * 0.04,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    marginHorizontal: width * 0.04,
+    marginTop: 12,
+    borderRadius: 12,
   },
   resultsContent: {
     flexDirection: "row",
@@ -324,17 +330,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resultsText: {
-    fontSize: width * 0.035,
+    fontSize: width * 0.038,
+    fontWeight: '700',
+    flex: 1,
   },
-  refreshIndicator: {
+  liveIndicator: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22c55e',
+    marginRight: 6,
   },
   liveText: {
-    fontSize: width * 0.032,
-    fontWeight: "500",
-    fontStyle: "italic",
-    opacity: 0.8,
+    fontSize: width * 0.028,
+    fontWeight: "600",
   },
   scrollView: {
     flex: 1,
@@ -342,20 +359,23 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     paddingHorizontal: width * 0.04,
     paddingTop: 15,
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   noResults: {
     alignItems: "center",
-    paddingVertical: 40,
+    paddingVertical: 60,
+    paddingHorizontal: 32,
   },
   noResultsText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: 'center',
   },
   noResultsSubtext: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: "center",
+    lineHeight: 24,
   },
 });
 

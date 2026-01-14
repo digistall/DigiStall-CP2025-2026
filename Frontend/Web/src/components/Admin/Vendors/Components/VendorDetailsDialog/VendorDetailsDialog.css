@@ -1,3 +1,102 @@
+/* Details Header with Gradient */
+.details-header {
+  background: linear-gradient(135deg, #002181 0%, #0047ab 100%) !important;
+  color: white !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  color: white;
+}
+
+.header-title {
+  color: white !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  margin-left: 8px !important;
+  letter-spacing: 0.5px;
+}
+
+.close-btn {
+  background-color: #ef4444 !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  margin: 0 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.close-btn:hover {
+  background-color: #dc2626 !important;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Tabs Styling */
+.detail-tabs {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detail-tabs .v-tab {
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.detail-tabs .v-tab--selected {
+  color: rgb(0, 33, 129) !important;
+}
+
+/* Info Section Styles */
+.info-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* Card Styling */
+.v-card {
+  border-radius: 12px !important;
+}
+
+.v-card-text {
+  background-color: #fafafa !important;
+}
+
+/* Button Styling */
+.v-card-actions {
+  background-color: #fafafa !important;
+  border-top: 1px solid #e5e7eb !important;
+}
+
+/* Old styles removed/updated */
 .label {
   font-size: 0.85rem;
   color: rgba(0, 0, 0, 0.6);
