@@ -1,0 +1,385 @@
+.auction-participants-modal {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Header Styles - Amber/Gold theme for auctions */
+.modal-header.auction-header {
+  background: linear-gradient(135deg, #f57c00 0%, #ff8f00 50%, #ffa000 100%);
+  padding: 20px 24px;
+  color: white;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin: 4px 0 0 0;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Info Cards */
+.info-cards-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+  background: #fafafa;
+}
+
+.info-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #424242;
+}
+
+.info-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-row .label {
+  color: #757575;
+  font-size: 0.85rem;
+}
+
+.info-row .value {
+  font-weight: 500;
+  color: #212121;
+}
+
+.info-row .value.price {
+  color: #f57c00;
+  font-weight: 600;
+}
+
+.info-row .value.highlight {
+  color: #f57c00;
+  font-weight: 600;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  padding: 40px;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-text {
+  color: #757575;
+  font-size: 0.95rem;
+}
+
+/* Error Alert */
+.error-alert {
+  margin: 16px;
+}
+
+.error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.error-title {
+  font-weight: 600;
+}
+
+.error-message {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+/* Participants Content */
+.participants-content {
+  padding: 0 24px 24px;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-icon {
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #424242;
+  margin: 0 0 8px 0;
+}
+
+.empty-subtitle {
+  font-size: 0.9rem;
+  color: #757575;
+  max-width: 400px;
+  margin: 0;
+}
+
+/* Participants Table */
+.participants-table-container {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.participants-table {
+  width: 100%;
+}
+
+.participants-table thead {
+  background: #fafafa;
+}
+
+.participants-table th {
+  font-weight: 600 !important;
+  color: #424242 !important;
+  font-size: 0.85rem !important;
+  padding: 12px 16px !important;
+  border-bottom: 2px solid #e0e0e0 !important;
+}
+
+.participants-table td {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.participants-table tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* Winner Row Styling */
+.participants-table tr.winner-row {
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+}
+
+.participants-table tr.winner-row:hover {
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.08) 100%);
+}
+
+/* Highest Bidder Row Styling */
+.participants-table tr.highest-row {
+  background: linear-gradient(90deg, rgba(255, 143, 0, 0.1) 0%, rgba(255, 143, 0, 0.05) 100%);
+}
+
+.participants-table tr.highest-row:hover {
+  background: linear-gradient(90deg, rgba(255, 143, 0, 0.15) 0%, rgba(255, 143, 0, 0.08) 100%);
+}
+
+/* Participant Info */
+.participant-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.participant-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f57c00 0%, #ff8f00 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.participant-avatar.highest-avatar {
+  background: linear-gradient(135deg, #ff8f00 0%, #ffc107 100%);
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+}
+
+.avatar-text {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.participant-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.participant-name {
+  font-weight: 500;
+  color: #212121;
+  display: flex;
+  align-items: center;
+}
+
+.participant-email {
+  font-size: 0.8rem;
+  color: #757575;
+}
+
+/* Contact Info */
+.contact-info {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #616161;
+}
+
+/* Bid Amount */
+.bid-amount {
+  font-weight: 600;
+  color: #424242;
+  font-size: 0.95rem;
+}
+
+.bid-amount.highest-bid {
+  color: #f57c00;
+  font-size: 1rem;
+}
+
+/* Time Info */
+.time-info {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #616161;
+}
+
+/* Action Footer */
+.action-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  background: #fafafa;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 16px;
+}
+
+.select-winner-btn {
+  text-transform: none;
+  font-weight: 600;
+  padding: 12px 32px;
+  border-radius: 8px;
+}
+
+.action-hint {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #757575;
+  text-align: center;
+}
+
+/* Winner Selected Message */
+.winner-selected-message {
+  margin-top: 16px;
+}
+
+.winner-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.winner-title {
+  font-weight: 600;
+}
+
+.winner-text {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .info-cards-container {
+    grid-template-columns: 1fr;
+  }
+
+  .header-title {
+    font-size: 1.25rem;
+  }
+
+  .participants-table th,
+  .participants-table td {
+    padding: 8px 12px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .participant-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .avatar-text {
+    font-size: 0.75rem;
+  }
+}

@@ -63,24 +63,8 @@ export default {
           icon: 'mdi-store',
           name: 'Stalls',
           route: '/app/stalls',
-          hasSubMenu: true,
+          hasSubMenu: false,
           roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
-          subItems: [
-            {
-              id: 91,
-              icon: 'mdi-ticket-percent',
-              name: 'Raffles',
-              route: '/app/stalls/raffles',
-              type: 'raffle',
-            },
-            {
-              id: 92,
-              icon: 'mdi-gavel',
-              name: 'Auctions',
-              route: '/app/stalls/auctions',
-              type: 'auction',
-            },
-          ],
         },
         {
           id: 13,

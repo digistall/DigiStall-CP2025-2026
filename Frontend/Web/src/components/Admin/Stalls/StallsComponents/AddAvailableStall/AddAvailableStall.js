@@ -792,18 +792,12 @@ export default {
       console.log('Price type changed from', oldValue, 'to', newValue)
     },
 
-    // Location is now a free text field, so no need for automatic price type setting
-    // You can remove this watcher or modify it based on your needs
+    // Location is now a free text field
+    // REMOVED automatic price type override - user should explicitly select price type
+    // This was causing Auction selections to be reset to Fixed Price
     'newStall.location'(newLocation) {
-      // Optional: Set default price type based on location text
-      if (
-        newLocation.toLowerCase().includes('auction') ||
-        newLocation.toLowerCase().includes('satellite')
-      ) {
-        this.newStall.priceType = 'Auction'
-      } else {
-        this.newStall.priceType = 'Fixed Price'
-      }
+      // Only log location change, don't modify priceType
+      console.log('📍 Location changed to:', newLocation)
     },
 
     // Watch for image file changes (deprecated - now using images array)

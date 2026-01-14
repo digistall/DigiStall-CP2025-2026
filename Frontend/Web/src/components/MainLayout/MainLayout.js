@@ -58,7 +58,7 @@ export default {
         },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
       },
-      // Define all possible menu routes including "more items" (6-10) and submenu items (91-92)
+      // Define all possible menu routes including "more items" (6-10)
       allMenuRoutes: {
         1: '/app/dashboard',
         2: '/app/payment',
@@ -71,9 +71,6 @@ export default {
         9: '/app/stalls', // Stalls
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
-        // Submenu items for Stalls
-        91: '/app/stalls/raffles', // Raffles submenu
-        92: '/app/stalls/auctions', // Auctions submenu
       },
     }
   },
