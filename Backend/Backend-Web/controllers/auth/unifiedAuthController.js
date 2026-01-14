@@ -251,11 +251,21 @@ export const login = async (req, res) => {
     let decryptedLastName = user.last_name;
     let decryptedEmail = user.email;
     
+    console.log('🔍 [DECRYPT DEBUG] Before decryption:');
+    console.log(`  firstName: ${user.first_name ? user.first_name.substring(0, 50) : 'NULL'}`);
+    console.log(`  lastName: ${user.last_name ? user.last_name.substring(0, 50) : 'NULL'}`);
+    console.log(`  email: ${user.email ? user.email.substring(0, 50) : 'NULL'}`);
+    
     if (userType.toLowerCase() !== 'business_employee') {
       decryptedFirstName = decryptSafe(user.first_name);
       decryptedLastName = decryptSafe(user.last_name);
       decryptedEmail = decryptSafe(user.email);
     }
+    
+    console.log('🔓 [DECRYPT DEBUG] After decryption:');
+    console.log(`  firstName: ${decryptedFirstName || 'NULL'}`);
+    console.log(`  lastName: ${decryptedLastName || 'NULL'}`);
+    console.log(`  email: ${decryptedEmail || 'NULL'}`);
     
     // Create JWT token
     const tokenPayload = {
