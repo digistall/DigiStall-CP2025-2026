@@ -1,403 +1,245 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Image,
+import React, { useState } from "react";
+import {
+  View,
   ScrollView,
-  Modal,
+  StatusBar,
+  StyleSheet,
   Dimensions,
-  AppState,
-  PanResponder,
-} from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import UserStorageService from '../../services/UserStorageService';
-import ApiService from '../../services/ApiService';
-import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
-import { getSafeStaffName, getSafeDisplayValue } from '../../services/DataDisplayUtils';
+} from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import ApiService from "../../services/ApiService";
+import UserStorageService from "../../services/UserStorageService";
+import LogoutLoadingScreen from "../../components/Common/LogoutLoadingScreen";
 
-const { width } = Dimensions.get('window');
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
-const HEARTBEAT_INTERVAL = 60 * 1000; // 1 minute
+// nav bar and sidebar components
+import Header from "./CollectorComponents/header";
+import Navbar from "./CollectorComponents/navbar";
+import Sidebar from "./CollectorComponents/Sidebar";
 
-const CollectorHome = () => {
-  const navigation = useNavigation();
-  const [userData, setUserData] = useState(null);
+// screen components
+import DashboardScreen from "./CollectorScreen/Dashboard/DashboardScreen";
+import PaymentScreen from "./CollectorScreen/Payment/PaymentScreen";
+import VendorScreen from "./CollectorScreen/Vendor/VendorScreen";
+import NotificationsScreen from "./CollectorScreen/Notifications/NotificationsScreen";
+import SettingsScreen from "./CollectorScreen/Settings/SettingsScreen";
+
+const { width, height } = Dimensions.get("window");
+
+// Default theme (can be replaced with theme context later)
+const defaultTheme = {
+  colors: {
+    background: "#f8fafc",
+    surface: "#ffffff",
+    text: "#1f2937",
+    textSecondary: "#6b7280",
+    border: "#e5e7eb",
+    primary: "#3b82f6",
+  },
+};
+
+const CollectorHome = ({ navigation }) => {
+  // Theme (can be connected to theme context later)
+  const theme = defaultTheme;
+  const isDarkMode = false;
+
+  // Single source of truth for current screen
+  const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [activeScreen, setActiveScreen] = useState('home');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
-  // Activity tracking for auto-logout
-  const lastActivityRef = useRef(Date.now());
-  const heartbeatIntervalRef = useRef(null);
-  const appStateRef = useRef(AppState.currentState);
-  
-  // Record user activity
-  const recordActivity = useCallback(() => {
-    lastActivityRef.current = Date.now();
-  }, []);
-  
-  // PanResponder to track touch activity
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => {
-        recordActivity();
-        return false;
-      },
-      onMoveShouldSetPanResponder: () => {
-        recordActivity();
-        return false;
-      },
-    })
-  ).current;
-  
-  // Send heartbeat to server
-  const sendHeartbeat = useCallback(async () => {
-    try {
-      const data = await UserStorageService.getUserData();
-      const token = await UserStorageService.getAuthToken();
-      const staffId = data?.staff?.collector_id || data?.staff?.staffId;
-      
-      if (token && staffId) {
-        await ApiService.staffHeartbeat(token, staffId, 'collector');
-      }
-    } catch (error) {
-      // Silent fail for heartbeat
-    }
-  }, []);
-  
-  // Auto-logout due to inactivity
-  const performAutoLogout = useCallback(async () => {
-    if (isLoggingOut) return;
-    
-    console.log('⏰ Auto-logout triggered due to inactivity');
-    setIsLoggingOut(true);
-    
-    try {
-      const data = await UserStorageService.getUserData();
-      const token = await UserStorageService.getAuthToken();
-      const staffId = data?.staff?.collector_id || data?.staff?.staffId;
-      
-      console.log('🔍 Auto-logout data - token:', token ? 'EXISTS' : 'MISSING', 'staffId:', staffId);
-      
-      if (token && staffId) {
-        const result = await ApiService.staffAutoLogout(token, staffId, 'collector');
-        console.log('✅ Auto-logout API result:', result);
-      } else {
-        console.log('⚠️ Missing token or staffId for auto-logout');
-      }
-      
-      await UserStorageService.clearUserData();
-    } catch (error) {
-      console.error('Auto-logout error:', error);
-      await UserStorageService.clearUserData();
-    } finally {
-      setIsLoggingOut(false);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'LoginScreen', params: { reason: 'inactivity' } }],
-      });
-    }
-  }, [isLoggingOut, navigation]);
-
-  useEffect(() => {
-    loadUserData();
-    
-    // Send initial heartbeat
-    sendHeartbeat();
-    
-    // Set up heartbeat interval (check every minute)
-    heartbeatIntervalRef.current = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastActivityRef.current;
-      
-      if (timeSinceActivity < INACTIVITY_TIMEOUT) {
-        sendHeartbeat();
-      } else {
-        console.log('⏰ Inactivity detected:', Math.round(timeSinceActivity / 1000), 'seconds');
-        performAutoLogout();
-      }
-    }, HEARTBEAT_INTERVAL);
-    
-    // Handle app state changes
-    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        const timeSinceActivity = Date.now() - lastActivityRef.current;
-        if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-          performAutoLogout();
-        } else {
-          recordActivity();
-          sendHeartbeat();
-        }
-      }
-      appStateRef.current = nextAppState;
-    });
-    
-    return () => {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-      }
-      appStateSubscription.remove();
-    };
-  }, [sendHeartbeat, performAutoLogout, recordActivity]);
-
-  const loadUserData = async () => {
-    try {
-      const data = await UserStorageService.getUserData();
-      setUserData(data);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
 
   const handleLogout = async () => {
     // Prevent multiple clicks
     if (isLoggingOut) {
-      console.log('⏳ Logout already in progress, ignoring...');
+      console.log("⏳ Logout already in progress, ignoring...");
       return;
     }
-    
-    // CRITICAL: Clear heartbeat interval FIRST to prevent last_login updates after logout
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-      console.log('✅ Heartbeat interval cleared before logout');
-    }
-    
+
     // Close sidebar first
     setSidebarVisible(false);
-    
+
     // Show logout loading screen
     setIsLoggingOut(true);
-    
+
     try {
       // Get user data before clearing
       const userData = await UserStorageService.getUserData();
       const token = userData?.token;
       const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
-      const staffType = 'collector';
-      
+      const staffType = "collector";
+
       // Call staff logout API to update last_logout in database
       if (token && staffId) {
         await ApiService.staffLogout(token, staffId, staffType);
-        console.log('✅ Staff logout API called - last_logout updated');
+        console.log("✅ Staff logout API called - last_logout updated");
       }
-      
+
       // Add small delay to show the animation (1.5 seconds)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // Clear local storage
       await UserStorageService.clearUserData();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'LoginScreen' }],
-      });
     } catch (error) {
-      console.error('Error during logout:', error);
-      // Still navigate to login even on error
+      console.error("Error during logout:", error);
       await UserStorageService.clearUserData();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'LoginScreen' }],
-      });
     } finally {
       setIsLoggingOut(false);
     }
+
+    navigation.navigate("LoginScreen");
   };
 
-  const navigateToScreen = (screen) => {
-    setActiveScreen(screen);
+  const handleMenuPress = () => {
+    setSidebarVisible(true);
+  };
+
+  const handleSidebarClose = () => {
     setSidebarVisible(false);
   };
 
-  const renderSidebar = () => (
-    <Modal
-      visible={sidebarVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setSidebarVisible(false)}
-    >
-      <View style={styles.sidebarOverlay}>
-        <View style={styles.sidebar}>
-          {/* Profile Section */}
-          <View style={styles.sidebarHeader}>
-            <View style={styles.avatarContainer}>
-              <Ionicons name="person-circle" size={80} color="#4A90D9" />
-            </View>
-            <Text style={styles.sidebarName}>
-              {getSafeStaffName(userData, 'Collector')}
-            </Text>
-            <Text style={styles.sidebarRole}>Collector</Text>
-            <Text style={styles.sidebarBranch}>{getSafeDisplayValue(userData?.staff?.branch_name, '')}</Text>
-          </View>
+  const handleProfilePress = () => {
+    console.log("Profile pressed - show account options");
+  };
 
-          {/* Menu Items */}
-          <ScrollView style={styles.sidebarMenu}>
-            <TouchableOpacity 
-              style={[styles.menuItem, activeScreen === 'home' && styles.menuItemActive]}
-              onPress={() => navigateToScreen('home')}
-            >
-              <Ionicons name="home-outline" size={24} color={activeScreen === 'home' ? '#4A90D9' : '#666'} />
-              <Text style={[styles.menuItemText, activeScreen === 'home' && styles.menuItemTextActive]}>Home</Text>
-            </TouchableOpacity>
+  // Handle navigation from sidebar
+  const handleMenuItemPress = (itemId) => {
+    console.log(`Navigating to: ${itemId}`);
 
-            <TouchableOpacity 
-              style={[styles.menuItem, activeScreen === 'profile' && styles.menuItemActive]}
-              onPress={() => navigateToScreen('profile')}
-            >
-              <Ionicons name="person-outline" size={24} color={activeScreen === 'profile' ? '#4A90D9' : '#666'} />
-              <Text style={[styles.menuItemText, activeScreen === 'profile' && styles.menuItemTextActive]}>Profile</Text>
-            </TouchableOpacity>
+    if (itemId === "logout") {
+      handleLogout();
+      return;
+    }
 
-            <TouchableOpacity 
-              style={[styles.menuItem, activeScreen === 'settings' && styles.menuItemActive]}
-              onPress={() => navigateToScreen('settings')}
-            >
-              <Ionicons name="settings-outline" size={24} color={activeScreen === 'settings' ? '#4A90D9' : '#666'} />
-              <Text style={[styles.menuItemText, activeScreen === 'settings' && styles.menuItemTextActive]}>Settings</Text>
-            </TouchableOpacity>
-          </ScrollView>
+    setCurrentScreen(itemId);
+    setSidebarVisible(false);
+  };
 
-          {/* Logout Button */}
-          <TouchableOpacity style={styles.logoutMenuItem} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#dc3545" />
-            <Text style={styles.logoutMenuText}>Logout</Text>
-          </TouchableOpacity>
+  // Handle navigation from bottom navbar
+  const handleNavigation = (screen) => {
+    console.log(`Bottom nav - Navigating to: ${screen}`);
+    setCurrentScreen(screen);
+  };
 
-          {/* Close Button */}
-          <TouchableOpacity 
-            style={styles.closeSidebar}
-            onPress={() => setSidebarVisible(false)}
-          >
-            <Ionicons name="close" size={30} color="#333" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
+  // Get page title for header
+  const getPageTitle = () => {
+    const titles = {
+      dashboard: "Dashboard",
+      payment: "Payment",
+      vendor: "Vendor Management",
+      notifications: "Notifications",
+      settings: "Settings",
+    };
+    return titles[currentScreen] || "Dashboard";
+  };
 
-  const renderHomeContent = () => (
-    <View style={styles.content}>
-      <View style={styles.welcomeCard}>
-        <Ionicons name="cash-outline" size={60} color="#4A90D9" />
-        <Text style={styles.welcomeTitle}>Welcome, Collector!</Text>
-        <Text style={styles.welcomeSubtitle}>
-          {userData?.staff?.first_name} {userData?.staff?.last_name}
-        </Text>
-        <Text style={styles.branchText}>{userData?.staff?.branch_name}</Text>
-      </View>
+  // Determine which tab should be active in navbar
+  const getActiveNavTab = () => {
+    // Only show active state for screens that are actually in the navbar
+    if (currentScreen === "dashboard") {
+      return "Dashboard";
+    }
+    if (currentScreen === "payment") {
+      return "Payment";
+    }
+    if (currentScreen === "vendor") {
+      return "Vendor";
+    }
+    return null;
+  };
 
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Collector Dashboard</Text>
-        <Text style={styles.infoText}>
-          This is your collector dashboard. Features will be added soon.
-        </Text>
-      </View>
-    </View>
-  );
+  // Screens that have their own scrollable components
+  const screensWithOwnScrolling = [
+    "dashboard",
+    "payment",
+    "vendor",
+    "notifications",
+  ];
 
-  const renderProfileContent = () => (
-    <View style={styles.content}>
-      <View style={styles.profileCard}>
-        <View style={styles.profileHeader}>
-          <Ionicons name="person-circle" size={100} color="#4A90D9" />
-          <Text style={styles.profileName}>
-            {userData?.staff?.first_name} {userData?.staff?.last_name}
-          </Text>
-          <Text style={styles.profileRole}>Collector</Text>
-        </View>
+  // Determine if need to wrap in ScrollView
+  const needsScrollView = !screensWithOwnScrolling.includes(currentScreen);
 
-        <View style={styles.profileInfo}>
-          <View style={styles.profileRow}>
-            <Ionicons name="mail-outline" size={20} color="#666" />
-            <Text style={styles.profileLabel}>Email:</Text>
-            <Text style={styles.profileValue}>{userData?.staff?.email || 'N/A'}</Text>
-          </View>
-          <View style={styles.profileRow}>
-            <Ionicons name="call-outline" size={20} color="#666" />
-            <Text style={styles.profileLabel}>Phone:</Text>
-            <Text style={styles.profileValue}>{userData?.staff?.contact_no || 'N/A'}</Text>
-          </View>
-          <View style={styles.profileRow}>
-            <Ionicons name="business-outline" size={20} color="#666" />
-            <Text style={styles.profileLabel}>Branch:</Text>
-            <Text style={styles.profileValue}>{userData?.staff?.branch_name || 'N/A'}</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderSettingsContent = () => (
-    <View style={styles.content}>
-      <View style={styles.settingsCard}>
-        <Text style={styles.settingsTitle}>Settings</Text>
-        
-        <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="notifications-outline" size={24} color="#666" />
-          <Text style={styles.settingsItemText}>Notifications</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="lock-closed-outline" size={24} color="#666" />
-          <Text style={styles.settingsItemText}>Change Password</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="help-circle-outline" size={24} color="#666" />
-          <Text style={styles.settingsItemText}>Help & Support</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingsItem}>
-          <Ionicons name="information-circle-outline" size={24} color="#666" />
-          <Text style={styles.settingsItemText}>About</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderContent = () => {
-    switch (activeScreen) {
-      case 'profile':
-        return renderProfileContent();
-      case 'settings':
-        return renderSettingsContent();
+  // Render current screen
+  const renderCurrentScreen = () => {
+    switch (currentScreen) {
+      case "dashboard":
+        return <DashboardScreen />;
+      case "payment":
+        return <PaymentScreen />;
+      case "vendor":
+        return <VendorScreen />;
+      case "notifications":
+        return <NotificationsScreen />;
+      case "settings":
+        return <SettingsScreen />;
       default:
-        return renderHomeContent();
+        return <DashboardScreen />;
     }
   };
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => { setSidebarVisible(true); recordActivity(); }}>
-            <Ionicons name="menu" size={28} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {activeScreen === 'home' ? 'Collector Home' : 
-             activeScreen === 'profile' ? 'My Profile' : 'Settings'}
-          </Text>
-          <View style={{ width: 28 }} />
-        </View>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        edges={["top", "left", "right"]}
+      >
+        <StatusBar
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+          backgroundColor={theme.colors.surface}
+          translucent={false}
+        />
+
+        <Header
+          onMenuPress={handleMenuPress}
+          title={getPageTitle()}
+          theme={theme}
+          isDarkMode={isDarkMode}
+        />
 
         {/* Main Content */}
-        <ScrollView style={styles.scrollContent}>
-          {renderContent()}
-        </ScrollView>
+        {needsScrollView ? (
+          <ScrollView
+            style={[
+              styles.scrollView,
+              { backgroundColor: theme.colors.background },
+            ]}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {renderCurrentScreen()}
+          </ScrollView>
+        ) : (
+          <View
+            style={[
+              styles.contentView,
+              { backgroundColor: theme.colors.background },
+            ]}
+          >
+            {renderCurrentScreen()}
+          </View>
+        )}
 
-        {/* Sidebar */}
-        {renderSidebar()}
+        {/* Bottom Navigation Component */}
+        <Navbar
+          activeTab={getActiveNavTab()}
+          onDashboardPress={() => handleNavigation("dashboard")}
+          onPaymentPress={() => handleNavigation("payment")}
+          onVendorPress={() => handleNavigation("vendor")}
+          theme={theme}
+          isDarkMode={isDarkMode}
+        />
+
+        {/* Sidebar Component */}
+        <Sidebar
+          isVisible={sidebarVisible}
+          onClose={handleSidebarClose}
+          onProfilePress={handleProfilePress}
+          onMenuItemPress={handleMenuItemPress}
+          activeMenuItem={currentScreen}
+          theme={theme}
+          isDarkMode={isDarkMode}
+        />
 
         {/* Logout Loading Screen */}
-        <LogoutLoadingScreen 
+        <LogoutLoadingScreen
           visible={isLoggingOut}
           message="Logging out..."
           subMessage="Please wait while we securely log you out"
@@ -410,235 +252,16 @@ const CollectorHome = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f8fafc",
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  welcomeCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 30,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-  },
-  welcomeSubtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 8,
-  },
-  branchText: {
-    fontSize: 14,
-    color: '#4A90D9',
-    marginTop: 4,
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  // Sidebar Styles
-  sidebarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  sidebar: {
-    width: width * 0.75,
-    height: '100%',
-    backgroundColor: '#fff',
-    paddingTop: 50,
-  },
-  sidebarHeader: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  avatarContainer: {
-    marginBottom: 10,
-  },
-  sidebarName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  sidebarRole: {
-    fontSize: 14,
-    color: '#4A90D9',
-    marginTop: 4,
-  },
-  sidebarBranch: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  sidebarMenu: {
-    flex: 1,
-    paddingTop: 10,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-  },
-  menuItemActive: {
-    backgroundColor: '#f0f8ff',
-    borderLeftWidth: 3,
-    borderLeftColor: '#4A90D9',
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#666',
-    marginLeft: 15,
-  },
-  menuItemTextActive: {
-    color: '#4A90D9',
-    fontWeight: '600',
-  },
-  logoutMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  logoutMenuText: {
-    fontSize: 16,
-    color: '#dc3545',
-    marginLeft: 15,
-    fontWeight: '600',
-  },
-  closeSidebar: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    padding: 10,
-  },
-  // Profile Styles
-  profileCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  profileHeader: {
-    alignItems: 'center',
     paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    flexGrow: 1,
   },
-  profileName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 10,
-  },
-  profileRole: {
-    fontSize: 16,
-    color: '#4A90D9',
-    marginTop: 4,
-  },
-  profileInfo: {
-    paddingTop: 20,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  profileLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 10,
-    width: 60,
-  },
-  profileValue: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  // Settings Styles
-  settingsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  settingsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-  },
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  settingsItemText: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 15,
+  contentView: {
     flex: 1,
   },
 });
