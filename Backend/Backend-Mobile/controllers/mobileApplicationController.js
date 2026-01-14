@@ -394,11 +394,17 @@ export const joinRaffle = async (req, res) => {
     connection = await createConnection();
     console.log('✅ Database connection established');
     
-    const { applicantId, stallId } = req.body;
+    const { applicantId, stallId: rawStallId } = req.body;
+
+    // Handle stallId being passed as an object (from mobile app) or as a number
+    const stallId = typeof rawStallId === 'object' && rawStallId !== null 
+      ? (rawStallId.id || rawStallId.stall_id || rawStallId.stallId)
+      : rawStallId;
 
     console.log('🎰 Extracted values:');
     console.log('   - applicantId:', applicantId, '(type:', typeof applicantId, ')');
-    console.log('   - stallId:', stallId, '(type:', typeof stallId, ')');
+    console.log('   - rawStallId:', rawStallId, '(type:', typeof rawStallId, ')');
+    console.log('   - stallId (normalized):', stallId, '(type:', typeof stallId, ')');
 
     // Validation
     if (!applicantId || !stallId) {
