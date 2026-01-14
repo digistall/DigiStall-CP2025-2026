@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
 import emailService from '../../services/emailService.js';
+import { decryptData } from '../../services/encryptionService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,11 +59,43 @@ const StallholderController = {
         rows = result[0] || [];
       }
       
-      console.log(`✅ Found ${rows.length} stallholders`);
+      // Backend-level decryption for stallholder data
+      const decryptedRows = rows.map(stallholder => {
+        // Decrypt stallholder name
+        if (stallholder.stallholder_name && typeof stallholder.stallholder_name === 'string' && stallholder.stallholder_name.includes(':')) {
+          try {
+            stallholder.stallholder_name = decryptData(stallholder.stallholder_name);
+          } catch (error) {
+            console.error(`Failed to decrypt stallholder_name for ID ${stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt stallholder contact if exists
+        if (stallholder.stallholder_contact && typeof stallholder.stallholder_contact === 'string' && stallholder.stallholder_contact.includes(':')) {
+          try {
+            stallholder.stallholder_contact = decryptData(stallholder.stallholder_contact);
+          } catch (error) {
+            console.error(`Failed to decrypt stallholder_contact for ID ${stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt stallholder address if exists
+        if (stallholder.stallholder_address && typeof stallholder.stallholder_address === 'string' && stallholder.stallholder_address.includes(':')) {
+          try {
+            stallholder.stallholder_address = decryptData(stallholder.stallholder_address);
+          } catch (error) {
+            console.error(`Failed to decrypt stallholder_address for ID ${stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        return stallholder;
+      });
+      
+      console.log(`✅ Found ${decryptedRows.length} stallholders`);
       res.json({
         success: true,
-        data: rows,
-        total: rows.length
+        data: decryptedRows,
+        total: decryptedRows.length,
       });
     } catch (error) {
       console.error('❌ Error fetching stallholders:', error);
@@ -97,9 +130,66 @@ const StallholderController = {
         });
       }
       
+      // Backend-level decryption for stallholder details
+      const stallholder = rows[0][0];
+      
+      // Decrypt stallholder name
+      if (stallholder.stallholder_name && typeof stallholder.stallholder_name === 'string' && stallholder.stallholder_name.includes(':')) {
+        try {
+          stallholder.stallholder_name = decryptData(stallholder.stallholder_name);
+        } catch (error) {
+          console.error(`Failed to decrypt stallholder_name for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt contact number
+      if (stallholder.stallholder_contact && typeof stallholder.stallholder_contact === 'string' && stallholder.stallholder_contact.includes(':')) {
+        try {
+          stallholder.stallholder_contact = decryptData(stallholder.stallholder_contact);
+        } catch (error) {
+          console.error(`Failed to decrypt stallholder_contact for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt contact_number (alternative field name)
+      if (stallholder.contact_number && typeof stallholder.contact_number === 'string' && stallholder.contact_number.includes(':')) {
+        try {
+          stallholder.contact_number = decryptData(stallholder.contact_number);
+        } catch (error) {
+          console.error(`Failed to decrypt contact_number for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt email
+      if (stallholder.email && typeof stallholder.email === 'string' && stallholder.email.includes(':')) {
+        try {
+          stallholder.email = decryptData(stallholder.email);
+        } catch (error) {
+          console.error(`Failed to decrypt email for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt address
+      if (stallholder.stallholder_address && typeof stallholder.stallholder_address === 'string' && stallholder.stallholder_address.includes(':')) {
+        try {
+          stallholder.stallholder_address = decryptData(stallholder.stallholder_address);
+        } catch (error) {
+          console.error(`Failed to decrypt stallholder_address for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt address (alternative field name)
+      if (stallholder.address && typeof stallholder.address === 'string' && stallholder.address.includes(':')) {
+        try {
+          stallholder.address = decryptData(stallholder.address);
+        } catch (error) {
+          console.error(`Failed to decrypt address for ID ${id}:`, error.message);
+        }
+      }
+      
       res.json({
         success: true,
-        data: rows[0][0]
+        data: stallholder
       });
     } catch (error) {
       console.error('Error fetching stallholder:', error);

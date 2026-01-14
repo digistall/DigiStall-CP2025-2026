@@ -1,4 +1,34 @@
 import { createConnection } from '../../../config/database.js';
+import { encryptData, decryptData } from '../../../services/encryptionService.js';
+
+// Helper function to check if data is already encrypted
+const isEncrypted = (value) => {
+  if (!value || typeof value !== 'string') return false;
+  const parts = value.split(':');
+  return parts.length === 3 && parts.every(part => part.length > 0);
+};
+
+// Helper function to ensure data is encrypted (encrypt if plain text)
+const ensureEncrypted = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  // If already encrypted, return as-is
+  if (isEncrypted(value)) return value;
+  // Otherwise encrypt it
+  return encryptData(value);
+};
+
+// Helper function to decrypt data safely for display
+const decryptSafe = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  try {
+    if (isEncrypted(value)) {
+      return decryptData(value);
+    }
+    return value;
+  } catch (error) {
+    return value;
+  }
+};
 
 // Generate username with format: 25-XXXXX (year-5digits) - MATCHES FRONTEND
 const generateUsername = () => {
@@ -102,7 +132,19 @@ export const updateApplicantStatus = async (req, res) => {
       });
     }
 
-    const applicant = applicantData[0];
+    const applicantRaw = applicantData[0];
+    
+    // Create applicant object with both encrypted (for DB insert) and decrypted (for logging) values
+    const applicant = {
+      ...applicantRaw,
+      // Decrypted values for logging/display
+      decrypted_name: decryptSafe(applicantRaw.applicant_full_name),
+      // Encrypted values for stallholder insert (ensure all PII is encrypted)
+      encrypted_name: ensureEncrypted(applicantRaw.applicant_full_name),
+      encrypted_contact: ensureEncrypted(applicantRaw.applicant_contact_number),
+      encrypted_address: ensureEncrypted(applicantRaw.applicant_address),
+      encrypted_email: ensureEncrypted(applicantRaw.email_address)
+    };
     
     if (!applicant.application_id) {
       return res.status(404).json({
@@ -236,9 +278,9 @@ export const updateApplicantStatus = async (req, res) => {
           const formatDate = (date) => date.toISOString().split('T')[0];
 
           if (existingStallholder.length > 0) {
-            console.log('⚠️ Stallholder already exists, updating...');
+            console.log('⚠️ Stallholder already exists, updating with encrypted data...');
             
-            // Update existing stallholder with new stall assignment
+            // Update existing stallholder with new stall assignment (using ENCRYPTED values)
             await connection.execute(
               `UPDATE stallholder SET 
                 stall_id = ?,
@@ -259,10 +301,10 @@ export const updateApplicantStatus = async (req, res) => {
               [
                 applicant.stall_id,
                 applicant.branch_id,
-                applicant.applicant_full_name,
-                applicant.applicant_contact_number,
-                applicant.email_address,
-                applicant.applicant_address,
+                applicant.encrypted_name,           // Use encrypted name
+                applicant.encrypted_contact,        // Use encrypted contact
+                applicant.encrypted_email,          // Use encrypted email
+                applicant.encrypted_address,        // Use encrypted address
                 applicant.nature_of_business || 'General',
                 formatDate(contractStartDate),
                 formatDate(contractEndDate),
@@ -271,9 +313,11 @@ export const updateApplicantStatus = async (req, res) => {
                 applicant.applicant_id
               ]
             );
-            console.log('✅ Stallholder record updated');
+            console.log('✅ Stallholder record updated with encrypted data');
           } else {
-            // Create new stallholder record
+            console.log('🔐 Creating new stallholder record with encrypted data...');
+            
+            // Create new stallholder record (using ENCRYPTED values)
             await connection.execute(
               `INSERT INTO stallholder (
                 applicant_id,
@@ -295,10 +339,10 @@ export const updateApplicantStatus = async (req, res) => {
               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
               [
                 applicant.applicant_id,
-                applicant.applicant_full_name,
-                applicant.applicant_contact_number,
-                applicant.email_address,
-                applicant.applicant_address,
+                applicant.encrypted_name,           // Use encrypted name
+                applicant.encrypted_contact,        // Use encrypted contact
+                applicant.encrypted_email,          // Use encrypted email
+                applicant.encrypted_address,        // Use encrypted address
                 applicant.nature_of_business || 'General',
                 applicant.branch_id,
                 applicant.stall_id,
@@ -308,7 +352,7 @@ export const updateApplicantStatus = async (req, res) => {
                 applicant.rental_price || 0
               ]
             );
-            console.log('✅ New stallholder record created');
+            console.log('✅ New stallholder record created with encrypted data');
           }
 
           // Update stall status to Occupied
@@ -332,13 +376,13 @@ export const updateApplicantStatus = async (req, res) => {
       // Commit the transaction
       await connection.commit();
 
-      console.log(`✅ Application for ${applicant.applicant_full_name} status updated to: ${status}`);
+      console.log(`✅ Application for ${applicant.decrypted_name} status updated to: ${status}`);
 
       const responseData = {
         applicant_id: id,
         application_id: applicant.application_id,
-        full_name: applicant.applicant_full_name,
-        email: applicant.email_address,
+        full_name: applicant.decrypted_name,  // Use decrypted name for response
+        email: decryptSafe(applicant.email_address),  // Decrypt email for response
         new_status: status,
         updated_at: new Date().toISOString()
       };
