@@ -1,4 +1,4 @@
-﻿﻿<template>
+﻿<template>
   <v-dialog v-model="visibleModel" max-width="1200px" persistent scrollable>
     <v-card>
       <!-- Header -->

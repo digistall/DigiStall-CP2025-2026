@@ -62,8 +62,7 @@ app.use('/api/mobile/stallholder', stallholderRoutes);
 app.use('/api/mobile/inspector', inspectorRoutes);
 
 // ===== HEALTH CHECK =====
-// Support both /api/health and /api/mobile/health for compatibility
-const healthCheckHandler = async (req, res) => {
+app.get('/api/mobile/health', async (req, res) => {
   try {
     const connection = await createConnection();
     await connection.execute('SELECT 1');
@@ -93,10 +92,7 @@ const healthCheckHandler = async (req, res) => {
       }
     });
   }
-};
-
-app.get('/api/health', healthCheckHandler);
-app.get('/api/mobile/health', healthCheckHandler);
+});
 
 // ===== ROOT ENDPOINT =====
 app.get('/', (req, res) => {

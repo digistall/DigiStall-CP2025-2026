@@ -3,10 +3,6 @@ import ComplianceSearch from './ComplianceComponents/ComplianceSearch/Compliance
 import ViewCompliance from './ComplianceComponents/ViewCompliance/ViewCompliance.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 import apiClient from '../../../services/apiClient'
-import axios from 'axios'
-
-// API Base URL for direct axios calls
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 export default {
   name: "Compliance",
@@ -26,6 +22,9 @@ export default {
       isLoading: false,
       error: null,
     }
+  },
+  mounted() {
+    this.initializeCompliance()
   },
   mounted() {
     this.initializeCompliance()

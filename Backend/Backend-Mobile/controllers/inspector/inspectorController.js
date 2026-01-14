@@ -23,9 +23,9 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
     
     connection = await createConnection();
     
-    // Call the decrypted stored procedure
+    // Call the stored procedure
     const [results] = await connection.execute(
-      'CALL getStallholdersByBranchDecrypted(?)',
+      'CALL getStallholdersByBranch(?)',
       [branchId]
     );
     

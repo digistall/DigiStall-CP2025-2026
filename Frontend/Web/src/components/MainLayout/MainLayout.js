@@ -58,7 +58,7 @@ export default {
         },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
       },
-      // Define all possible menu routes including "more items" (6-10)
+      // Define all possible menu routes including "more items" (6-10) and submenu items (91-92)
       allMenuRoutes: {
         1: '/app/dashboard',
         2: '/app/payment',
@@ -71,6 +71,9 @@ export default {
         9: '/app/stalls', // Stalls
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
+        // Submenu items for Stalls
+        91: '/app/stalls/raffles', // Raffles submenu
+        92: '/app/stalls/auctions', // Auctions submenu
       },
     }
   },
@@ -146,9 +149,9 @@ export default {
         if (hasPermission('stallholders')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.stallholders, id: menuId++ })
         }
-        if (hasPermission('stalls')) {
-          this.menuItems.push({ ...this.businessEmployeeMenuItems.stalls, id: menuId++ })
-        }
+        // NOTE: Stalls menu is handled separately in AppSidebar.vue for business employees
+        // because it needs special submenu handling (Raffles/Auctions)
+        // Do NOT add stalls to menuItems here for business employees
         // NOTE: Collectors and Inspectors are now managed through Employee Management page
 
         // If no permissions, show only dashboard

@@ -32,19 +32,19 @@ export default {
       this.$emit('stall-edit', stall)
     },
 
-    // Handle raffle management
+    // NEW: Handle raffle management
     handleRaffleManagement(stall) {
       console.log('Manage raffle stall:', stall)
       this.$emit('stall-raffle-management', stall)
     },
 
-    // Handle auction management
+    // NEW: Handle auction management
     handleAuctionManagement(stall) {
       console.log('Manage auction stall:', stall)
       this.$emit('stall-auction-management', stall)
     },
 
-    // Get color for price type badge
+    // NEW: Get color for price type badge
     getPriceTypeColor(priceType) {
       switch (priceType) {
         case 'Raffle':
