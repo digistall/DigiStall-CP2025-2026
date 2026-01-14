@@ -239,6 +239,8 @@ Welcome to the Naga Stall Management System! Your employee account has been succ
 Username: ${username}
 Password: ${password}
 
+🌐 Login Portal: http://localhost:5173/employee/login
+
 📋 IMPORTANT INSTRUCTIONS:
 ✅ Please change your password after your first login
 ✅ Keep your credentials secure and confidential
@@ -356,6 +358,8 @@ Your password has been reset by your manager in the Naga Stall Management System
 
 🔐 YOUR NEW PASSWORD:
 Password: ${newPassword}
+
+🌐 Login Portal: http://localhost:5173/employee/login
 
 📋 IMPORTANT INSTRUCTIONS:
 ✅ Please change your password immediately after logging in

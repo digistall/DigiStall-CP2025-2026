@@ -1,7 +1,6 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { createConnection } from '../../config/database.js'
-import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB } from '../../services/mysqlDecryptionService.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
 export const mobileLogin = async (req, res) => {
@@ -19,14 +18,42 @@ export const mobileLogin = async (req, res) => {
       })
     }
 
-    // Step 1: Get applicant credentials and basic info using stored procedure
+    // Step 1: Get applicant credentials and basic info - DIRECT SQL with COLLATE fix
     console.log('🔍 Looking up user:', username)
     
-    const [credentialResultRows] = await connection.execute(
-      'CALL sp_getCredentialWithApplicant(?)',
-      [username]
-    );
-    const credentialRows = credentialResultRows[0] || [];
+    let credentialRows = [];
+    try {
+      const [credentialResultRows] = await connection.execute(
+        'CALL sp_getCredentialWithApplicant(?)',
+        [username]
+      );
+      credentialRows = credentialResultRows[0] || [];
+    } catch (spError) {
+      console.warn('⚠️ Stored procedure failed, using direct SQL:', spError.message);
+      // Fallback to direct SQL with COLLATE to fix collation mismatch
+      // NOTE: The applicant table uses applicant_full_name (not separate first/middle/last name columns)
+      const [directRows] = await connection.execute(`
+        SELECT 
+          c.registrationid,
+          c.applicant_id,
+          c.user_name,
+          c.password_hash,
+          c.is_active,
+          a.applicant_full_name,
+          a.applicant_contact_number,
+          a.applicant_address,
+          a.applicant_birthdate,
+          a.applicant_civil_status,
+          a.applicant_educational_attainment,
+          a.applicant_email
+        FROM credential c
+        INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+        WHERE c.user_name COLLATE utf8mb4_general_ci = ? COLLATE utf8mb4_general_ci
+          AND c.is_active = 1
+        LIMIT 1
+      `, [username]);
+      credentialRows = directRows;
+    }
 
     console.log('📋 Credential rows found:', credentialRows.length)
     console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
@@ -40,35 +67,31 @@ export const mobileLogin = async (req, res) => {
     }
 
     const userCredentials = credentialRows[0]
-    
-    // Decrypt user credentials if encrypted
-    const decryptedCredentials = await decryptApplicantData(userCredentials)
-    
-    console.log('👤 Found user:', decryptedCredentials.applicant_full_name)
+    console.log('👤 Found user:', userCredentials.applicant_full_name)
     console.log('🔍 User credentials structure:', {
-      registrationid: decryptedCredentials.registrationid,
-      applicant_id: decryptedCredentials.applicant_id,
-      user_name: decryptedCredentials.user_name,
-      has_password_hash: !!decryptedCredentials.password_hash,
-      password_hash_preview: decryptedCredentials.password_hash?.substring(0, 15) + '...',
-      applicant_full_name: decryptedCredentials.applicant_full_name,
-      is_active: decryptedCredentials.is_active
+      registrationid: userCredentials.registrationid,
+      applicant_id: userCredentials.applicant_id,
+      user_name: userCredentials.user_name,
+      has_password_hash: !!userCredentials.password_hash,
+      password_hash_preview: userCredentials.password_hash?.substring(0, 15) + '...',
+      applicant_full_name: userCredentials.applicant_full_name,
+      is_active: userCredentials.is_active
     })
 
     // Verify password
     console.log('🔐 Verifying password...')
-    console.log('🔍 Password hash format:', decryptedCredentials.password_hash?.substring(0, 10) + '...')
+    console.log('🔍 Password hash format:', userCredentials.password_hash?.substring(0, 10) + '...')
     
     let isPasswordValid = false
     
     try {
       // First try bcrypt comparison (for properly hashed passwords)
-      if (decryptedCredentials.password_hash?.startsWith('$2b$') || decryptedCredentials.password_hash?.startsWith('$2a$')) {
-        isPasswordValid = await bcrypt.compare(password, decryptedCredentials.password_hash)
+      if (userCredentials.password_hash?.startsWith('$2b$') || userCredentials.password_hash?.startsWith('$2a$')) {
+        isPasswordValid = await bcrypt.compare(password, userCredentials.password_hash)
         console.log('🔑 BCrypt comparison result:', isPasswordValid)
       } else {
         // Fallback for legacy plain text passwords (temporary fix)
-        isPasswordValid = password === decryptedCredentials.password_hash
+        isPasswordValid = password === userCredentials.password_hash
         console.log('⚠️ Using plain text password comparison for user:', username)
         console.log('🔑 Plain text comparison result:', isPasswordValid)
       }
@@ -90,7 +113,7 @@ export const mobileLogin = async (req, res) => {
     // Step 2: Get areas where this applicant has applied (to fetch relevant stalls)
     const [appliedAreas] = await connection.execute(
       'CALL getAppliedAreasByApplicant(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
 
     // If no applications yet, get all available areas
@@ -105,7 +128,7 @@ export const mobileLogin = async (req, res) => {
     // Step 3: Get applicant's current applications with detailed info
     const [myApplications] = await connection.execute(
       'CALL getApplicantApplicationsDetailed(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
 
     // Step 4: Count applications per branch (for 2-application limit)
@@ -118,7 +141,7 @@ export const mobileLogin = async (req, res) => {
     // Step 5: Get available stalls in the areas where applicant applied (or all areas if no applications)
     const [availableStalls] = await connection.execute(
       'CALL getAvailableStallsByApplicant(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
     
     // Filter by target areas if specific areas are applied
@@ -139,39 +162,30 @@ export const mobileLogin = async (req, res) => {
     // Step 7: Get additional applicant information (spouse, business, other info)
     const otherInfoResultRaw = await connection.execute(
       'CALL getApplicantAdditionalInfo(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
     // Stored procedure returns [[rows], metadata] structure
     // connection.execute returns [[[actual_data], procedure_metadata], query_metadata]
     // We need to extract: [0] = [[actual_data], proc_metadata], [0][0] = [actual_data], [0][0][0] = actual_data object
     const additionalInfoRows = otherInfoResultRaw[0] // This gives [[actual_data], proc_metadata]
-    let additionalInfo = additionalInfoRows && additionalInfoRows.length > 0 && additionalInfoRows[0] && additionalInfoRows[0].length > 0 
+    const additionalInfo = additionalInfoRows && additionalInfoRows.length > 0 && additionalInfoRows[0] && additionalInfoRows[0].length > 0 
       ? additionalInfoRows[0][0] 
       : {}
-    
-    // Decrypt spouse data if present
-    if (additionalInfo && additionalInfo.spouse_full_name) {
-      additionalInfo = await decryptSpouseData(additionalInfo)
-    }
     console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
     // Step 7b: Get stallholder information if user is a stallholder using stored procedure
     const [stallholderRows] = await connection.execute(
       'CALL sp_getFullStallholderInfo(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
     
-    let stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
-    // Decrypt stallholder data if present
-    if (stallholderInfo) {
-      stallholderInfo = await decryptStallholderData(stallholderInfo)
-    }
+    const stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
     console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
     // Step 7c: Get application status using stored procedure
     const [applicationRows] = await connection.execute(
       'CALL sp_getLatestApplicationInfo(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
     
     const applicationInfo = applicationRows[0]?.length > 0 ? applicationRows[0][0] : null
@@ -180,26 +194,24 @@ export const mobileLogin = async (req, res) => {
     // Step 8: Update last login using stored procedure
     await connection.execute(
       'CALL updateCredentialLastLogin(?)',
-      [decryptedCredentials.applicant_id]
+      [userCredentials.applicant_id]
     )
 
-    // Step 9: Prepare React.js-friendly response with complete user data (using decrypted data)
+    // Step 9: Prepare React.js-friendly response with complete user data
     const responseData = {
       // User profile for React state
       user: {
-        applicant_id: decryptedCredentials.applicant_id,
-        registration_id: decryptedCredentials.registrationid,
-        username: decryptedCredentials.user_name,
-        full_name: stallholderInfo?.stallholder_name || decryptedCredentials.applicant_full_name,
-        stallholder_name: stallholderInfo?.stallholder_name || null,
-        contact_number: stallholderInfo?.stallholder_contact || decryptedCredentials.applicant_contact_number,
-        address: decryptedCredentials.applicant_address,
-        birthdate: decryptedCredentials.applicant_birthdate,
-        civil_status: decryptedCredentials.applicant_civil_status,
-        educational_attainment: decryptedCredentials.applicant_educational_attainment,
-        email: stallholderInfo?.stallholder_email || additionalInfo.email_address || null,
-        stall_number: stallholderInfo?.stall_no || null,
-        created_date: decryptedCredentials.created_date,
+        applicant_id: userCredentials.applicant_id,
+        registration_id: userCredentials.registrationid,
+        username: userCredentials.user_name,
+        full_name: userCredentials.applicant_full_name,
+        contact_number: userCredentials.applicant_contact_number,
+        address: userCredentials.applicant_address,
+        birthdate: userCredentials.applicant_birthdate,
+        civil_status: userCredentials.applicant_civil_status,
+        educational_attainment: userCredentials.applicant_educational_attainment,
+        email: additionalInfo.email_address || null,
+        created_date: userCredentials.created_date,
         last_login: new Date().toISOString()
       },
 
@@ -255,7 +267,6 @@ export const mobileLogin = async (req, res) => {
         branch_name: stallholderInfo.branch_name,
         stall_id: stallholderInfo.stall_id,
         stall_no: stallholderInfo.stall_no,
-        stall_number: stallholderInfo.stall_no, // Alias for frontend
         stall_location: stallholderInfo.stall_location,
         size: stallholderInfo.size,
         contract_start_date: stallholderInfo.contract_start_date,
@@ -323,11 +334,11 @@ export const mobileLogin = async (req, res) => {
     // Generate JWT token for authentication
     const token = jwt.sign(
       {
-        userId: decryptedCredentials.applicant_id,
-        applicantId: decryptedCredentials.applicant_id,
-        username: decryptedCredentials.user_name,
+        userId: userCredentials.applicant_id,
+        applicantId: userCredentials.applicant_id,
+        username: userCredentials.user_name,
         userType: 'stallholder',
-        registrationId: decryptedCredentials.registrationid,
+        registrationId: userCredentials.registrationid,
         stallholderId: stallholderInfo?.stallholder_id || null,
         isStallholder: !!stallholderInfo
       },
@@ -335,7 +346,7 @@ export const mobileLogin = async (req, res) => {
       { expiresIn: '7d' } // Token valid for 7 days
     );
     
-    console.log('🔐 JWT token generated for user:', decryptedCredentials.user_name);
+    console.log('🔐 JWT token generated for user:', userCredentials.user_name);
 
     res.json({
       success: true,

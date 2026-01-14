@@ -1,8 +1,6 @@
 import { createConnection } from '../../../config/database.js';
-import encryptionService from '../../../services/encryptionService.js';
 
 // Store credentials for mobile app access
-// Uses stored procedures: sp_getApplicantById, sp_checkUsernameExists, sp_createCredential
 export const storeCredentials = async (req, res) => {
   let connection;
   try {
@@ -25,27 +23,26 @@ export const storeCredentials = async (req, res) => {
 
     connection = await createConnection();
 
-    // Check if applicant exists using stored procedure
+    // Check if applicant exists
     const [applicantRows] = await connection.execute(
-      'CALL sp_getApplicantById(?)',
+      'SELECT applicant_id FROM applicant WHERE applicant_id = ?',
       [applicant_id]
     );
 
-    const applicantData = applicantRows[0];
-    if (!applicantData || applicantData.length === 0) {
+    if (applicantRows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Applicant not found'
       });
     }
 
-    // Check if username already exists using stored procedure
+    // Check if username already exists
     const [existingCredential] = await connection.execute(
-      'CALL sp_checkUsernameExists(?)',
+      'SELECT registrationid FROM credential WHERE user_name = ?',
       [username]
     );
 
-    if (existingCredential[0] && existingCredential[0].length > 0) {
+    if (existingCredential.length > 0) {
       return res.status(409).json({
         success: false,
         message: 'Username already exists in mobile app credentials'
@@ -56,13 +53,13 @@ export const storeCredentials = async (req, res) => {
     const bcrypt = await import('bcrypt');
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Store credentials using stored procedure
+    // Store credentials
     const [result] = await connection.execute(
-      'CALL sp_createCredential(?, ?, ?)',
+      `INSERT INTO credential (
+        applicant_id, user_name, password_hash, created_date, is_active
+      ) VALUES (?, ?, ?, NOW(), 1)`,
       [applicant_id, username, passwordHash]
     );
-
-    const credentialId = result[0]?.[0]?.credential_id;
 
     console.log(`✅ Credentials stored for mobile app access: ${username}`);
 
@@ -70,7 +67,7 @@ export const storeCredentials = async (req, res) => {
       success: true,
       message: 'Credentials stored for mobile app access',
       data: {
-        registration_id: credentialId,
+        registration_id: result.insertId,
         applicant_id: applicant_id,
         username: username,
         created_at: new Date().toISOString(),
@@ -91,26 +88,31 @@ export const storeCredentials = async (req, res) => {
 };
 
 // Get all credentials (for admin purposes)
-// Uses stored procedure: sp_getAllCredentials
 export const getAllCredentials = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
 
-    // Get all credentials using stored procedure
-    const [results] = await connection.execute('CALL sp_getAllCredentials()');
-    
-    const credentials = results[0] || [];
-    
-    // Decrypt sensitive fields
-    const decryptedCredentials = credentials.map(cred => 
-      encryptionService.decryptObjectFields(cred, 'applicant')
-    );
+    const [credentials] = await connection.execute(`
+      SELECT 
+        c.registrationid,
+        c.applicant_id,
+        c.user_name,
+        c.created_date,
+        c.last_login,
+        c.is_active,
+        a.applicant_full_name,
+        oi.email_address
+      FROM credential c
+      INNER JOIN applicant a ON c.applicant_id = a.applicant_id
+      LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
+      ORDER BY c.created_date DESC
+    `);
 
     res.json({
       success: true,
-      data: decryptedCredentials,
-      count: decryptedCredentials.length
+      data: credentials,
+      count: credentials.length
     });
 
   } catch (error) {
