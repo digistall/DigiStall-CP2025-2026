@@ -70,7 +70,34 @@ const StallholderController = {
           }
         }
         
-        // Decrypt stallholder contact if exists
+        // Decrypt contact_number
+        if (stallholder.contact_number && typeof stallholder.contact_number === 'string' && stallholder.contact_number.includes(':')) {
+          try {
+            stallholder.contact_number = decryptData(stallholder.contact_number);
+          } catch (error) {
+            console.error(`Failed to decrypt contact_number for ID ${stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt email
+        if (stallholder.email && typeof stallholder.email === 'string' && stallholder.email.includes(':')) {
+          try {
+            stallholder.email = decryptData(stallholder.email);
+          } catch (error) {
+            console.error(`Failed to decrypt email for ID ${stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt address
+        if (stallholder.address && typeof stallholder.address === 'string' && stallholder.address.includes(':')) {
+          try {
+            stallholder.address = decryptData(stallholder.address);
+          } catch (error) {
+            console.error(`Failed to decrypt address for ID ${stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Also handle legacy field names for backwards compatibility
         if (stallholder.stallholder_contact && typeof stallholder.stallholder_contact === 'string' && stallholder.stallholder_contact.includes(':')) {
           try {
             stallholder.stallholder_contact = decryptData(stallholder.stallholder_contact);
@@ -79,7 +106,6 @@ const StallholderController = {
           }
         }
         
-        // Decrypt stallholder address if exists
         if (stallholder.stallholder_address && typeof stallholder.stallholder_address === 'string' && stallholder.stallholder_address.includes(':')) {
           try {
             stallholder.stallholder_address = decryptData(stallholder.stallholder_address);
