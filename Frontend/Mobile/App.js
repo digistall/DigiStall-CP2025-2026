@@ -8,8 +8,6 @@ import StallHome from "./screens/StallHolder/StallScreen/StallHome";
 import VendorHome from "./screens/Vendor/VendorHome";
 import InspectorHome from "./screens/Inspector/InspectorHome";
 import CollectorHome from "./screens/Collector/CollectorHome";
-import UserStorageService from './services/UserStorageService';
-import ApiService from './services/ApiService';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,6 +19,8 @@ export default function App() {
     // On app start, check for stored JWT and verify it
     const checkAuth = async () => {
       try {
+        const UserStorageService = (await import('./services/UserStorageService')).default;
+        const ApiService = (await import('./services/ApiService')).default;
         const token = await UserStorageService.getAuthToken();
         if (token) {
           const result = await ApiService.verifyToken(token);

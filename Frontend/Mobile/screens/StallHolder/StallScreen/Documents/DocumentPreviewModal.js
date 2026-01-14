@@ -205,7 +205,7 @@ const DocumentPreviewModal = ({
                   </View>
                 )}
 
-                {/* Status - supports both 'status' and 'verification_status' fields */}
+                {/* Status */}
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>
                     Status
@@ -213,11 +213,11 @@ const DocumentPreviewModal = ({
                   <View
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: getStatusColor(document?.verification_status || document?.status || 'pending') },
+                      { backgroundColor: getStatusColor(document?.verification_status || 'pending') },
                     ]}
                   >
                     <Text style={styles.statusText}>
-                      {getStatusIcon(document?.verification_status || document?.status || 'pending')}
+                      {getStatusIcon(document?.verification_status || 'pending')}
                     </Text>
                   </View>
                 </View>
@@ -303,17 +303,12 @@ const DocumentPreviewModal = ({
               >
                 <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
-              
-              {/* Only show Replace button if document is not verified */}
-              {(document?.verification_status !== 'verified' && document?.status !== 'verified') && (
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleReplace}
-                >
-                  <Text style={styles.buttonText}>Replace</Text>
-                </TouchableOpacity>
-              )}
-              
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: theme.colors.primary }]}
+                onPress={handleReplace}
+              >
+                <Text style={styles.buttonText}>Replace</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.closeActionButton]}
                 onPress={onClose}
