@@ -9,6 +9,7 @@ import { getStallById } from './stallComponents/getStallById.js'
 import { getStallsByFilter } from './stallComponents/getStallsByFilter.js'
 import { updateStall } from './stallComponents/updateStall.js'
 import { deleteStall } from './stallComponents/deleteStall.js'
+import { getLiveStallInfo, startLiveSession } from './stallComponents/getLiveStallInfo.js'
 
 // Import landing page components (Public)
 import { getBranches } from './stallComponents/landingPageComponents/getBranches/getBranches.js'
@@ -27,7 +28,6 @@ import { getLandingPageFilterOptions } from './stallComponents/landingPageCompon
 import { createRaffle } from './stallComponents/raffleComponents/createRaffle.js'
 import { joinRaffle } from './stallComponents/raffleComponents/joinRaffle.js'
 import { getActiveRaffles, getRaffleDetails } from './stallComponents/raffleComponents/getRaffles.js'
-import { getRaffleParticipantsByStall } from './stallComponents/raffleComponents/getRaffleParticipantsByStall.js'
 import { extendRaffleTimer, cancelRaffle } from './stallComponents/raffleComponents/manageRaffle.js'
 import { selectRaffleWinner, autoSelectWinnerForExpiredRaffles } from './stallComponents/raffleComponents/selectWinner.js'
 
@@ -48,6 +48,8 @@ export {
   getStallsByFilter,
   updateStall,
   deleteStall,
+  getLiveStallInfo,
+  startLiveSession,
   
   // Landing page functions (Public)
   getBranches,
@@ -67,7 +69,6 @@ export {
   joinRaffle,
   getActiveRaffles,
   getRaffleDetails,
-  getRaffleParticipantsByStall,
   extendRaffleTimer,
   cancelRaffle,
   selectRaffleWinner,

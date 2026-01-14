@@ -105,13 +105,9 @@
             </div>
 
             <div class="table-cell login-col">
-              <div v-if="isEmployeeOnline(employee)">
+              <div v-if="employee.last_login">
                 <div class="login-date">{{ formatDate(employee.last_login) }}</div>
                 <div class="login-time">{{ formatTime(employee.last_login) }}</div>
-              </div>
-              <div v-else-if="employee.last_logout">
-                <div class="login-date">{{ formatDate(employee.last_logout) }}</div>
-                <div class="login-time">{{ formatTime(employee.last_logout) }}</div>
               </div>
               <span v-else class="text-grey">Never</span>
             </div>

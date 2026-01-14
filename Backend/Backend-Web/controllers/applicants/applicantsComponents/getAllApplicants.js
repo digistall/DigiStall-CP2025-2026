@@ -1,12 +1,12 @@
 import { createConnection } from '../../../config/database.js'
 
-// Get all applicants - using decrypted procedure
+// Get all applicants
 export const getAllApplicants = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
 
-    const [applicants] = await connection.execute('CALL getAllApplicantsDecrypted()');
+    const [applicants] = await connection.execute('CALL getAllApplicants()');
 
     res.json({
       success: true,

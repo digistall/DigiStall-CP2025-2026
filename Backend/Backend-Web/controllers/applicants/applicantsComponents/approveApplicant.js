@@ -1,34 +1,4 @@
 import { createConnection } from '../../../config/database.js';
-import { decryptData, encryptData } from '../../../services/encryptionService.js';
-
-// Helper function to decrypt data safely (handles both encrypted and plain text)
-const decryptSafe = (value) => {
-  if (value === undefined || value === null || value === '') return value;
-  try {
-    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
-      return decryptData(value);
-    }
-    return value;
-  } catch (error) {
-    return value;
-  }
-};
-
-// Helper function to check if data is already encrypted
-const isEncrypted = (value) => {
-  if (!value || typeof value !== 'string') return false;
-  const parts = value.split(':');
-  return parts.length === 3 && parts.every(part => part.length > 0);
-};
-
-// Helper function to ensure data is encrypted (encrypt if plain text)
-const ensureEncrypted = (value) => {
-  if (value === undefined || value === null || value === '') return value;
-  // If already encrypted, return as-is
-  if (isEncrypted(value)) return value;
-  // Otherwise encrypt it
-  return encryptData(value);
-};
 
 // Approve applicant and store credentials for mobile app access
 // Also creates stallholder record and assigns stall ownership
@@ -89,28 +59,7 @@ export const approveApplicant = async (req, res) => {
       });
     }
 
-    // Decrypt applicant data before using
-    const applicantRaw = applicantRows[0];
-    
-    // Keep both encrypted and decrypted versions
-    // Decrypted for display/logging, encrypted for database insert
-    const applicant = {
-      applicant_id: applicantRaw.applicant_id,
-      // Decrypted values for logging
-      applicant_full_name: decryptSafe(applicantRaw.applicant_full_name),
-      applicant_contact_number: decryptSafe(applicantRaw.applicant_contact_number),
-      applicant_address: decryptSafe(applicantRaw.applicant_address),
-      email_address: decryptSafe(applicantRaw.email_address),
-      business_name: applicantRaw.business_name,
-      business_type: applicantRaw.business_type,
-      // Encrypted values for stallholder insert (ensure they're encrypted)
-      encrypted_name: ensureEncrypted(applicantRaw.applicant_full_name),
-      encrypted_contact: ensureEncrypted(applicantRaw.applicant_contact_number),
-      encrypted_address: ensureEncrypted(applicantRaw.applicant_address),
-      encrypted_email: ensureEncrypted(applicantRaw.email_address)
-    };
-    
-    console.log(`📋 Decrypted applicant:`, { name: applicant.applicant_full_name, email: applicant.email_address });
+    const applicant = applicantRows[0];
 
     // Check if username already exists in credential table
     const [existingCredential] = await connection.execute(
@@ -178,13 +127,11 @@ export const approveApplicant = async (req, res) => {
     );
     console.log(`✅ Application ${application.application_id} status updated to Approved`);
 
-    // 3. Create stallholder record with ENCRYPTED data
+    // 3. Create stallholder record
     const contractStartDate = new Date();
     const contractEndDate = new Date();
     contractEndDate.setFullYear(contractEndDate.getFullYear() + 1); // 1 year contract
 
-    console.log(`🔐 Inserting stallholder with encrypted data...`);
-    
     const [stallholderResult] = await connection.execute(
       `INSERT INTO stallholder (
         applicant_id,
@@ -207,10 +154,10 @@ export const approveApplicant = async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
       [
         applicant.applicant_id,
-        applicant.encrypted_name,           // Use encrypted name
-        applicant.encrypted_contact,        // Use encrypted contact
-        applicant.encrypted_email,          // Use encrypted email
-        applicant.encrypted_address,        // Use encrypted address
+        applicant.applicant_full_name,
+        applicant.applicant_contact_number,
+        applicant.email_address,
+        applicant.applicant_address,
         applicant.business_name || 'Not specified',
         applicant.business_type || 'Not specified',
         application.branch_id,
@@ -234,14 +181,14 @@ export const approveApplicant = async (req, res) => {
     );
     console.log(`✅ Stall ${application.stall_id} marked as occupied`);
 
-    // 5. Reject any other pending applications for the same stall
+    // 5. Decline any other pending applications for the same stall
     await connection.execute(
       `UPDATE application 
-       SET application_status = 'Rejected', updated_at = NOW()
+       SET application_status = 'Declined', updated_at = NOW()
        WHERE stall_id = ? AND application_id != ? AND application_status = 'Pending'`,
       [application.stall_id, application.application_id]
     );
-    console.log(`✅ Other pending applications for stall ${application.stall_id} rejected`);
+    console.log(`✅ Other pending applications for stall ${application.stall_id} declined`);
 
     await connection.commit();
 

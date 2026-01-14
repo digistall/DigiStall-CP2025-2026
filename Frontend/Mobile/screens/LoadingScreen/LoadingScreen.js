@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getSafeDisplayValue } from '../../services/DataDisplayUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,9 +26,6 @@ const LoadingScreen = ({
     nextScreen = 'StallHome',
     loadingDuration = 3000
   } = params;
-
-  // Use safe display value to prevent showing encrypted data
-  const displayName = getSafeDisplayValue(userName, 'User');
 
   // Animation values
   const logoScale = useRef(new Animated.Value(0.3)).current;
@@ -209,7 +205,7 @@ const LoadingScreen = ({
 
             {/* Welcome Text */}
             <Text style={styles.welcomeTitle}>Welcome!</Text>
-            <Text style={styles.welcomeName}>{displayName}</Text>
+            <Text style={styles.welcomeName}>{userName}</Text>
             
             {/* User Info Card */}
             <View style={styles.infoCard}>
