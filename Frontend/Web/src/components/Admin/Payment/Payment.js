@@ -1,5 +1,6 @@
 import PaymentTypeSelector from './Components/PaymentTypeSelector/PaymentTypeSelector.vue'
 import StallPayments from './Components/StallPayments/StallPayments.vue'
+import DailyPayments from './Components/DailyPayments/DailyPayments.vue'
 import PenaltyPayments from './Components/PenaltyPayments/PenaltyPayments.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 
@@ -8,14 +9,15 @@ export default {
   components: {
     PaymentTypeSelector,
     StallPayments,
+    DailyPayments,
     PenaltyPayments,
-    LoadingOverlay
+    LoadingOverlay,
   },
   data() {
     return {
       pageTitle: 'Payment',
       selectedPaymentType: 'stall', // Default to stall applicants
-      loading: false
+      loading: false,
     }
   },
   mounted() {
@@ -73,6 +75,6 @@ export default {
     // Handle loading state from child components
     handleLoading(isLoading) {
       this.loading = isLoading
-    }
-  }
+    },
+  },
 }

@@ -132,9 +132,13 @@ BEGIN
             END as availability_status,
             sh.stallholder_id,
             -- DECRYPTED stallholder_name
-            CASE WHEN sh.is_encrypted = 1 AND v_key IS NOT NULL THEN 
-                CAST(AES_DECRYPT(sh.encrypted_name, v_key) AS CHAR(255))
-            ELSE sh.stallholder_name END as stallholder_name,
+            CASE 
+                WHEN sh.is_encrypted = 1 AND v_key IS NOT NULL AND sh.encrypted_name IS NOT NULL THEN 
+                    CAST(AES_DECRYPT(sh.encrypted_name, v_key) AS CHAR(255))
+                WHEN v_key IS NOT NULL AND sh.stallholder_name IS NOT NULL AND sh.stallholder_name LIKE '%:%:%' THEN 
+                    CAST(AES_DECRYPT(sh.stallholder_name, v_key) AS CHAR(255))
+                ELSE sh.stallholder_name 
+            END as stallholder_name,
             sh.payment_status as stallholder_payment_status,
             sh.contract_start_date,
             (SELECT MAX(p.payment_date) FROM payments p 
@@ -275,9 +279,14 @@ BEGIN
                     END
             END as availability_status,
             sh.stallholder_id,
-            CASE WHEN sh.is_encrypted = 1 AND v_key IS NOT NULL THEN 
-                CAST(AES_DECRYPT(sh.encrypted_name, v_key) AS CHAR(255))
-            ELSE sh.stallholder_name END as stallholder_name,
+            -- DECRYPTED stallholder_name
+            CASE 
+                WHEN sh.is_encrypted = 1 AND v_key IS NOT NULL AND sh.encrypted_name IS NOT NULL THEN 
+                    CAST(AES_DECRYPT(sh.encrypted_name, v_key) AS CHAR(255))
+                WHEN v_key IS NOT NULL AND sh.stallholder_name IS NOT NULL AND sh.stallholder_name LIKE '%:%:%' THEN 
+                    CAST(AES_DECRYPT(sh.stallholder_name, v_key) AS CHAR(255))
+                ELSE sh.stallholder_name 
+            END as stallholder_name,
             sh.payment_status as stallholder_payment_status,
             sh.contract_start_date,
             (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = sh.stallholder_id AND p.payment_type COLLATE utf8mb4_general_ci = 'rental' AND p.payment_status COLLATE utf8mb4_general_ci = 'completed') as last_payment_date,
@@ -341,9 +350,14 @@ BEGIN
                     END
             END as availability_status,
             sh.stallholder_id,
-            CASE WHEN sh.is_encrypted = 1 AND v_key IS NOT NULL THEN 
-                CAST(AES_DECRYPT(sh.encrypted_name, v_key) AS CHAR(255))
-            ELSE sh.stallholder_name END as stallholder_name,
+            -- DECRYPTED stallholder_name
+            CASE 
+                WHEN sh.is_encrypted = 1 AND v_key IS NOT NULL AND sh.encrypted_name IS NOT NULL THEN 
+                    CAST(AES_DECRYPT(sh.encrypted_name, v_key) AS CHAR(255))
+                WHEN v_key IS NOT NULL AND sh.stallholder_name IS NOT NULL AND sh.stallholder_name LIKE '%:%:%' THEN 
+                    CAST(AES_DECRYPT(sh.stallholder_name, v_key) AS CHAR(255))
+                ELSE sh.stallholder_name 
+            END as stallholder_name,
             sh.payment_status as stallholder_payment_status,
             sh.contract_start_date,
             (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = sh.stallholder_id AND p.payment_type COLLATE utf8mb4_general_ci = 'rental' AND p.payment_status COLLATE utf8mb4_general_ci = 'completed') as last_payment_date,

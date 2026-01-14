@@ -925,7 +925,9 @@ export default {
       console.log('========================')
     },
 
-    // NEW: Handle raffle management - opens modal with participants
+
+
+    // Handle raffle management - opens modal with participants
     handleRaffleManagement(stall) {
       console.log('🎰 Opening raffle participants modal for stall:', stall)
       this.selectedRaffleStall = stall
@@ -951,14 +953,14 @@ export default {
       this.fetchStalls()
     },
 
-    // NEW: Handle auction management
+    // Handle auction management
     handleAuctionManagement(stall) {
-      console.log('Navigate to auction management for stall:', stall)
-      // Navigate to the auctions page with a specific stall focus
-      this.$router.push({
-        path: '/stalls/auctions',
-        query: { stallId: stall.id, stallNumber: stall.stallNumber },
-      })
+      console.log('🔨 Auction management for stall:', stall)
+      this.toast = {
+        show: true,
+        message: 'Auction management coming soon',
+        type: 'info'
+      }
     },
 
     // Error handling utilities
