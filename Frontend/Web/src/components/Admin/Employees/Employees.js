@@ -2,8 +2,6 @@ import EmployeeSearch from "./Components/EmployeeSearch/EmployeeSearch.vue";
 import EmployeeTable from "./Components/EmployeeTable/EmployeeTable.vue";
 import AddEmployee from "./Components/AddEmployee/AddEmployee.vue";
 import ManagePermissions from "./Components/ManagePermissions/ManagePermissions.vue";
-import FireEmployeeDialog from "./Components/FireEmployeeDialog/FireEmployeeDialog.vue";
-import ResetPasswordDialog from "./Components/ResetPasswordDialog/ResetPasswordDialog.vue";
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue';
@@ -21,8 +19,6 @@ export default {
     EmployeeTable,
     AddEmployee,
     ManagePermissions,
-    FireEmployeeDialog,
-    ResetPasswordDialog,
     ToastNotification,
     ActivityLogDialog,
     LoadingOverlay,
@@ -49,22 +45,11 @@ export default {
       employeeDialog: false,
       permissionsDialog: false,
       activityLogDialog: false,
-      fireEmployeeDialog: false,
-      resetPasswordDialog: false,
-      credentialsDialog: false,
       isEditMode: false,
 
       // Selected employee and permissions
       selectedEmployee: null,
       selectedPermissions: [],
-      
-      // Generated credentials
-      generatedCredentials: {
-        username: '',
-        password: '',
-        role: '',
-        employeeName: ''
-      },
 
       // Filter options
       statusOptions: [
@@ -663,16 +648,7 @@ export default {
           
           console.log(`✅ ${roleName} created with credentials:`, credentials.username);
 
-          // Store credentials for display
-          this.generatedCredentials = {
-            username: credentials.username,
-            password: credentials.password,
-            role: `Mobile ${roleName}`,
-            employeeName: `${employeeData.firstName} ${employeeData.lastName}`
-          };
-
           // Send credentials email
-          let emailSent = false;
           try {
             const employeeName = `${employeeData.firstName} ${employeeData.lastName}`;
             const emailResult = await sendEmployeeCredentialsEmail(
@@ -684,22 +660,19 @@ export default {
             );
             
             if (emailResult.success) {
-              emailSent = true;
               this.showToast(
-                `✅ ${roleName} created! Credentials sent to ${employeeData.email}`,
+                `✅ ${roleName} created! Mobile app credentials sent to ${employeeData.email}`,
                 "success"
+              );
+            } else {
+              this.showToast(
+                `⚠️ ${roleName} created! Username: ${credentials.username}, Password: ${credentials.password}. (Email failed)`,
+                "warning"
               );
             }
           } catch (emailError) {
-            console.warn('Email sending failed:', emailError);
-          }
-
-          // Always show credentials dialog
-          this.credentialsDialog = true;
-          
-          if (!emailSent) {
             this.showToast(
-              `⚠️ Email delivery failed. Please copy credentials from the dialog.`,
+              `⚠️ ${roleName} created! Username: ${credentials.username}, Password: ${credentials.password}. Send manually.`,
               "warning"
             );
           }
@@ -795,32 +768,13 @@ export default {
       const newStatus = employee.status === "active" ? "inactive" : "active";
 
       try {
-        const currentUser = JSON.parse(
-          sessionStorage.getItem("currentUser") ||
-          sessionStorage.getItem("user") ||
-          "{}"
-        );
+        const currentUser = JSON.parse(sessionStorage.getItem("user") || "{}");
 
         // Get the branch manager ID from various possible sources
-        let branchManagerId =
+        const branchManagerId =
           currentUser.branchManagerId ||
-          currentUser.id ||
-          sessionStorage.getItem("branchManagerId");
-
-        if (!branchManagerId) {
-          const tokenRaw = sessionStorage.getItem("authToken");
-          if (tokenRaw) {
-            try {
-              const base64Url = tokenRaw.split('.')[1];
-              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-              const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-              }).join(''));
-              const decoded = JSON.parse(jsonPayload);
-              branchManagerId = decoded.userId || decoded.branchManagerId || branchManagerId;
-            } catch (e) {}
-          }
-        }
+          sessionStorage.getItem("branchManagerId") ||
+          currentUser.id;
 
         if (!branchManagerId) {
           throw new Error("Unable to identify the branch manager. Please login again.");
@@ -866,51 +820,22 @@ export default {
     },
 
     async resetEmployeePassword(employee) {
-      // Open confirmation dialog instead of browser confirm
-      this.selectedEmployee = employee;
-      this.resetPasswordDialog = true;
-    },
+      if (
+        !confirm(
+          `Reset password for ${employee.first_name} ${employee.last_name}? A new password will be generated and sent to their email.`
+        )
+      ) {
+        return;
+      }
 
-    closeResetPasswordDialog() {
-      this.resetPasswordDialog = false;
-      this.selectedEmployee = null;
-    },
-
-    async confirmResetPassword() {
-      if (!this.selectedEmployee) return;
-
-      this.saving = true;
       try {
-        // Prefer consistent key used elsewhere: currentUser; fallback to user
-        const currentUser = JSON.parse(
-          sessionStorage.getItem("currentUser") ||
-          sessionStorage.getItem("user") ||
-          "{}"
-        );
+        const currentUser = JSON.parse(sessionStorage.getItem("user") || "{}");
 
-        // Try multiple sources for branch manager ID
-        let branchManagerId =
+        // Get the branch manager ID from various possible sources
+        const branchManagerId =
           currentUser.branchManagerId ||
-          currentUser.id ||
-          sessionStorage.getItem("branchManagerId");
-
-        // Fallback: decode JWT to get userId/branchManagerId
-        if (!branchManagerId) {
-          const tokenRaw = sessionStorage.getItem("authToken");
-          if (tokenRaw) {
-            try {
-              const base64Url = tokenRaw.split('.')[1];
-              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-              const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-              }).join(''));
-              const decoded = JSON.parse(jsonPayload);
-              branchManagerId = decoded.userId || decoded.branchManagerId || branchManagerId;
-            } catch (e) {
-              // ignore decode errors; will be handled by check below
-            }
-          }
-        }
+          sessionStorage.getItem("branchManagerId") ||
+          currentUser.id;
 
         if (!branchManagerId) {
           throw new Error("Unable to identify the branch manager. Please login again.");
@@ -922,82 +847,48 @@ export default {
           throw new Error("Authentication required. Please login again.");
         }
 
-        // Generate new password client-side (fallback only). Server will generate final value.
-        const clientGeneratedPassword = generateEmployeePassword();
+        // Generate new password
+        const newPassword = generateEmployeePassword();
 
-        let response, data;
+        const response = await fetch(
+          `${this.apiBaseUrl}/employees/${employee.employee_id}/reset-password`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              resetBy: parseInt(branchManagerId),
+              newPassword: newPassword,
+            }),
+          }
+        );
 
-        // Check if this is a mobile staff member (inspector/collector)
-        if (this.selectedEmployee.employee_type === 'mobile') {
-          // Use mobile staff reset password endpoint
-          const staffType = this.selectedEmployee.mobile_role; // 'inspector' or 'collector'
-          const staffId = this.selectedEmployee.inspector_id || this.selectedEmployee.collector_id;
+        const data = await response.json();
 
-          console.log(`🔄 Resetting password for ${staffType} ID: ${staffId}`);
-
-          response = await fetch(
-            `${this.apiBaseUrl}/mobile-staff/reset-password`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                staffType: staffType,
-                staffId: staffId,
-                // Server generates password if not provided
-              }),
-            }
-          );
-        } else {
-          // Web employee - use existing endpoint
-          response = await fetch(
-            `${this.apiBaseUrl}/employees/${this.selectedEmployee.employee_id}/reset-password`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                resetBy: parseInt(branchManagerId),
-                // newPassword omitted: server generates authoritative temporary password
-              }),
-            }
-          );
-        }
-
-        data = await response.json();
-
-        if (response.ok && data.success) {
-          // Extract password from response (different field names for different endpoints)
-          const newPassword = data?.data?.temporaryPassword || data?.data?.newPassword || clientGeneratedPassword;
-          
+        if (data.success) {
           // Send password reset email
           console.log("📧 Sending password reset email...");
           const emailResult = await sendEmployeePasswordResetEmail(
-            this.selectedEmployee.email,
-            `${this.selectedEmployee.first_name} ${this.selectedEmployee.last_name}`,
+            employee.email,
+            `${employee.first_name} ${employee.last_name}`,
             newPassword
           );
 
           if (emailResult.success) {
             this.showToast(
-              `✅ Password reset successfully! A notification with the new password has been sent to ${this.selectedEmployee.email}`,
+              `✅ Password reset successfully! New password: ${newPassword}. Reset notification sent to ${employee.email}`,
               "success"
             );
           } else {
             this.showToast(
-              `⚠️ Password reset but email delivery failed. Please share the new password manually with the employee.`,
+              `⚠️ Password reset! New password: ${newPassword}. Warning: Email failed to send - ${emailResult.message}`,
               "warning"
             );
           }
-
-          this.closeResetPasswordDialog();
         } else {
-          const message = data?.message || `HTTP ${response.status}: ${response.statusText}`;
-          throw new Error(message);
+          throw new Error(data.message);
         }
       } catch (error) {
         console.error("Error resetting password:", error);
@@ -1005,19 +896,18 @@ export default {
           `❌ Failed to reset password: ${error.message}`,
           "error"
         );
-      } finally {
-        this.saving = false;
       }
     },
 
     async fireEmployee(employee) {
-      this.selectedEmployee = employee;
-      this.fireEmployeeDialog = true;
-    },
+      const reason = prompt(
+        `Are you sure you want to FIRE ${employee.first_name} ${employee.last_name}?\n\nThis action will permanently remove the employee account.\n\nPlease enter the reason for termination:`
+      );
 
-    async confirmFireEmployee({ employee, reason }) {
-      this.saving = true;
-      
+      if (!reason) {
+        return; // User cancelled
+      }
+
       try {
         const token = sessionStorage.getItem("authToken");
         if (!token) {
@@ -1062,10 +952,7 @@ export default {
             `✅ ${employee.first_name} ${employee.last_name} has been terminated successfully.`,
             "success"
           );
-          this.closeFireEmployeeDialog();
-          
-          // Clear cache and refresh employee list
-          dataCacheService.clear();
+          // Refresh employee list
           await this.fetchEmployees();
         } else {
           throw new Error(data.message || "Failed to terminate employee");
@@ -1076,26 +963,7 @@ export default {
           `❌ Failed to terminate employee: ${error.message}`,
           "error"
         );
-      } finally {
-        this.saving = false;
       }
-    },
-
-    closeFireEmployeeDialog() {
-      this.fireEmployeeDialog = false;
-      this.selectedEmployee = null;
-    },
-
-    closeCredentialsDialog() {
-      this.credentialsDialog = false;
-    },
-
-    copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        this.showToast('✅ Copied to clipboard!', 'success');
-      }).catch(() => {
-        this.showToast('❌ Failed to copy', 'error');
-      });
     },
 
     // Toast notification helper

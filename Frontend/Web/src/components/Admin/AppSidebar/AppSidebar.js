@@ -63,7 +63,24 @@ export default {
           icon: 'mdi-store',
           name: 'Stalls',
           route: '/app/stalls',
+          hasSubMenu: true,
           roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+          subItems: [
+            {
+              id: 91,
+              icon: 'mdi-ticket-percent',
+              name: 'Raffles',
+              route: '/app/stalls/raffles',
+              type: 'raffle',
+            },
+            {
+              id: 92,
+              icon: 'mdi-gavel',
+              name: 'Auctions',
+              route: '/app/stalls/auctions',
+              type: 'auction',
+            },
+          ],
         },
         {
           id: 13,
@@ -447,6 +464,23 @@ export default {
 
     setActiveItem(itemId, route, hasSubMenu = false) {
       console.log('🔧 Sidebar setActiveItem called:', { itemId, route, hasSubMenu })
+
+      // Handle stalls menu item with submenu
+      if (itemId === 9 && hasSubMenu) {
+        console.log('🔧 Handling stalls submenu for ID 9')
+        // Only toggle submenu if there are raffle/auction stalls available
+        if (this.availableStallTypes.hasRaffles || this.availableStallTypes.hasAuctions) {
+          this.toggleStallsSubMenu()
+        }
+        // Always navigate to main stalls page
+        if (route && this.$route.path !== route) {
+          console.log('🔧 Navigating to stalls route:', route)
+          this.$router.push(route).catch((err) => {
+            console.log('Navigation handled:', err.message)
+          })
+        }
+        return
+      }
 
       // Navigate to the route for regular items
       if (route && this.$route.path !== route) {

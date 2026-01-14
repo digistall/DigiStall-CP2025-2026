@@ -321,58 +321,25 @@ export async function getStallholderDocumentBlobById(req, res) {
   try {
     const { document_id } = req.params
     
-    if (!document_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Document ID is required'
-      })
-    }
-
-    console.log(`📥 Fetching document blob for ID: ${document_id}`)
-    
     connection = await createConnection()
     
-    let documents = []
+    // Use stored procedure to get document by ID
+    const [rows] = await connection.execute(
+      'CALL sp_getStallholderDocumentBlobById(?)',
+      [document_id]
+    )
+    const documents = rows[0]
     
-    // Try stored procedure first, fallback to raw query
-    try {
-      const [rows] = await connection.execute(
-        'CALL sp_getStallholderDocumentBlobById(?)',
-        [document_id]
-      )
-      documents = rows[0]
-    } catch (spError) {
-      console.log('⚠️ Stored procedure not found, using raw query:', spError.message)
-      // Fallback to raw query if stored procedure doesn't exist
-      const [rows] = await connection.execute(
-        `SELECT document_data, original_filename 
-         FROM stallholder_documents 
-         WHERE document_id = ? 
-           AND document_data IS NOT NULL`,
-        [document_id]
-      )
-      documents = rows
-    }
-    
-    if (!documents || documents.length === 0) {
-      console.log(`⚠️ Document not found for ID: ${document_id}`)
+    if (documents.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Document not found or no blob data available'
+        message: 'Document not found'
       })
     }
     
     const doc = documents[0]
     
-    if (!doc.document_data) {
-      console.log(`⚠️ Document ${document_id} has no blob data`)
-      return res.status(404).json({
-        success: false,
-        message: 'Document blob data not found'
-      })
-    }
-    
-    // Detect mime type from filename extension
+    // Detect mime type
     const extension = doc.original_filename?.split('.').pop()?.toLowerCase()
     let mimeType = 'application/octet-stream'
     if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg'
@@ -380,11 +347,9 @@ export async function getStallholderDocumentBlobById(req, res) {
     else if (extension === 'gif') mimeType = 'image/gif'
     else if (extension === 'pdf') mimeType = 'application/pdf'
     
-    console.log(`✅ Sending document blob: ${doc.original_filename} (${mimeType}, ${doc.document_data.length} bytes)`)
-    
     res.set({
       'Content-Type': mimeType,
-      'Content-Disposition': `inline; filename="${doc.original_filename || 'document'}"`,
+      'Content-Disposition': `inline; filename="${doc.original_filename}"`,
       'Cache-Control': 'public, max-age=3600'
     })
     res.send(doc.document_data)
@@ -594,106 +559,11 @@ export async function updateStallholderDocumentVerificationStatus(req, res) {
   }
 }
 
-// =============================================
-// GET STALLHOLDER DOCUMENT BY ID AS BASE64 JSON
-// (React Native compatible - returns JSON with base64 data)
-// =============================================
-export async function getStallholderDocumentBlobByIdBase64(req, res) {
-  let connection
-  
-  try {
-    const { document_id } = req.params
-    
-    if (!document_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Document ID is required'
-      })
-    }
-
-    console.log(`📥 Fetching document blob as base64 for ID: ${document_id}`)
-    
-    connection = await createConnection()
-    
-    let documents = []
-    
-    // Try stored procedure first, fallback to raw query
-    try {
-      const [rows] = await connection.execute(
-        'CALL sp_getStallholderDocumentBlobById(?)',
-        [document_id]
-      )
-      documents = rows[0]
-    } catch (spError) {
-      console.log('⚠️ Stored procedure not found, using raw query:', spError.message)
-      // Fallback to raw query if stored procedure doesn't exist
-      const [rows] = await connection.execute(
-        `SELECT document_data, original_filename 
-         FROM stallholder_documents 
-         WHERE document_id = ? 
-           AND document_data IS NOT NULL`,
-        [document_id]
-      )
-      documents = rows
-    }
-    
-    if (!documents || documents.length === 0) {
-      console.log(`⚠️ Document not found for ID: ${document_id}`)
-      return res.status(404).json({
-        success: false,
-        message: 'Document not found or no blob data available'
-      })
-    }
-    
-    const doc = documents[0]
-    
-    if (!doc.document_data) {
-      console.log(`⚠️ Document ${document_id} has no blob data`)
-      return res.status(404).json({
-        success: false,
-        message: 'Document blob data not found'
-      })
-    }
-    
-    // Detect mime type from filename extension
-    const extension = doc.original_filename?.split('.').pop()?.toLowerCase()
-    let mimeType = 'application/octet-stream'
-    if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg'
-    else if (extension === 'png') mimeType = 'image/png'
-    else if (extension === 'gif') mimeType = 'image/gif'
-    else if (extension === 'pdf') mimeType = 'application/pdf'
-    
-    // Convert buffer to base64 string
-    const base64Data = doc.document_data.toString('base64')
-    const dataUri = `data:${mimeType};base64,${base64Data}`
-    
-    console.log(`✅ Sending document as base64 JSON: ${doc.original_filename} (${mimeType}, ${base64Data.length} chars)`)
-    
-    res.status(200).json({
-      success: true,
-      data: dataUri,
-      mimeType: mimeType,
-      fileName: doc.original_filename || 'document'
-    })
-    
-  } catch (error) {
-    console.error('❌ Error getting stallholder document blob by ID as base64:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error retrieving document',
-      error: error.message
-    })
-  } finally {
-    if (connection) await connection.end()
-  }
-}
-
 export default {
   uploadStallholderDocumentBlob,
   uploadStallholderDocumentSubmissionBlob,
   getStallholderDocumentBlob,
   getStallholderDocumentBlobById,
-  getStallholderDocumentBlobByIdBase64,
   getStallholderDocumentSubmissionBlob,
   getStallholderDocuments,
   deleteStallholderDocumentBlob,

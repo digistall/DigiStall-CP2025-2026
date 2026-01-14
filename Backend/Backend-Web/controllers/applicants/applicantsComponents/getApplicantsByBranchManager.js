@@ -1,40 +1,11 @@
 import { createConnection } from '../../../config/database.js'
 import { getBranchFilter } from '../../../middleware/rolePermissions.js'
-import { decryptData } from '../../../services/encryptionService.js'
-
-// Helper function to decrypt data safely (handles both encrypted and plain text)
-const decryptSafe = (value) => {
-  if (value === undefined || value === null || value === '') {
-    return value;
-  }
-  try {
-    // Check if it looks like encrypted data (contains colons for iv:authTag:data format)
-    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
-      return decryptData(value);
-    }
-    return value; // Return as-is if not encrypted
-  } catch (error) {
-    console.log('⚠️ Decryption skipped (not encrypted or different format):', value.substring(0, 20) + '...');
-    return value;
-  }
-};
-
-// Helper function to get decryption key
-const getDecryptionKey = async (connection) => {
-  const [keyResult] = await connection.execute(
-    "SELECT encryption_key FROM encryption_keys WHERE key_name = 'user_data_key' AND is_active = 1 LIMIT 1"
-  );
-  return keyResult[0]?.encryption_key || null;
-};
 
 // Get applicants for stalls managed by a specific branch manager OR by employees in their assigned branch
 export const getApplicantsByBranchManager = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
-    
-    // Get decryption key for encrypted data
-    const encryptionKey = await getDecryptionKey(connection);
 
     console.log("🔍 Request user info:", req.user);
 
@@ -140,22 +111,12 @@ export const getApplicantsByBranchManager = async (req, res) => {
         });
       }
 
-      // First, get the branches managed by this branch manager with decryption
+      // First, get the branches managed by this branch manager
       const [branchManagerInfo] = await connection.execute(
         `SELECT 
           bm.business_manager_id,
-          CONCAT(
-            CASE WHEN bm.is_encrypted = 1 AND ? IS NOT NULL THEN 
-              CAST(AES_DECRYPT(bm.encrypted_first_name, ?) AS CHAR(100))
-            ELSE bm.first_name END, 
-            ' ', 
-            CASE WHEN bm.is_encrypted = 1 AND ? IS NOT NULL THEN 
-              CAST(AES_DECRYPT(bm.encrypted_last_name, ?) AS CHAR(100))
-            ELSE bm.last_name END
-          ) as manager_name,
-          CASE WHEN bm.is_encrypted = 1 AND ? IS NOT NULL THEN 
-            CAST(AES_DECRYPT(bm.encrypted_email, ?) AS CHAR(255))
-          ELSE bm.email END as manager_email,
+          CONCAT(bm.first_name, ' ', bm.last_name) as manager_name,
+          bm.email as manager_email,
           b.branch_id,
           b.branch_name,
           b.area,
@@ -163,7 +124,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         FROM business_manager bm
         INNER JOIN branch b ON bm.branch_id = b.branch_id
         WHERE bm.business_manager_id = ?`,
-        [encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey, branch_manager_id]
+        [branch_manager_id]
       );
 
       if (branchManagerInfo.length === 0) {
@@ -176,19 +137,13 @@ export const getApplicantsByBranchManager = async (req, res) => {
       managerData = branchManagerInfo[0];
     }
 
-    // Build query with multi-branch support and decryption
+    // Build query with multi-branch support
     let query = `
       SELECT DISTINCT
         a.applicant_id,
-        CASE WHEN a.is_encrypted = 1 AND ? IS NOT NULL THEN 
-          CAST(AES_DECRYPT(a.encrypted_full_name, ?) AS CHAR(255))
-        ELSE a.applicant_full_name END as applicant_full_name,
-        CASE WHEN a.is_encrypted = 1 AND ? IS NOT NULL THEN 
-          CAST(AES_DECRYPT(a.encrypted_contact, ?) AS CHAR(50))
-        ELSE a.applicant_contact_number END as applicant_contact_number,
-        CASE WHEN a.is_encrypted = 1 AND ? IS NOT NULL THEN 
-          CAST(AES_DECRYPT(a.encrypted_address, ?) AS CHAR(500))
-        ELSE a.applicant_address END as applicant_address,
+        a.applicant_full_name,
+        a.applicant_contact_number,
+        a.applicant_address,
         a.applicant_birthdate,
         a.applicant_civil_status,
         a.applicant_educational_attainment,
@@ -238,8 +193,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
       LEFT JOIN spouse sp ON a.applicant_id = sp.applicant_id
     `;
 
-    // Add encryption key params (6 params for 3 decryption calls - key appears twice each)
-    let params = [encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey];
+    let params = [];
 
     // Apply branch filter
     if (branchFilter === null) {
@@ -249,11 +203,11 @@ export const getApplicantsByBranchManager = async (req, res) => {
       // Filter by accessible branches
       const placeholders = branchFilter.map(() => '?').join(',');
       query += ` WHERE b.branch_id IN (${placeholders})`;
-      params = [...params, ...branchFilter];
+      params = [...branchFilter];
     }
 
     if (application_status) {
-      query += " AND LOWER(app.application_status) = LOWER(?)";
+      query += " AND app.application_status = ?";
       params.push(application_status);
     }
 
@@ -273,7 +227,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
-    query += " ORDER BY FIELD(app.application_status, 'pending', 'Pending', 'approved', 'Approved', 'rejected', 'Rejected'), app.application_date DESC";
+    query += " ORDER BY app.application_date DESC";
 
     const [rows] = await connection.execute(query, params);
 
@@ -281,23 +235,15 @@ export const getApplicantsByBranchManager = async (req, res) => {
     const applicantsMap = new Map();
 
     rows.forEach(row => {
-      // Decrypt sensitive fields using our encryption service
-      const decryptedFullName = decryptSafe(row.applicant_full_name);
-      const decryptedContactNumber = decryptSafe(row.applicant_contact_number);
-      const decryptedAddress = decryptSafe(row.applicant_address);
-      const decryptedEmail = decryptSafe(row.email_address);
-      const decryptedSpouseName = decryptSafe(row.spouse_full_name);
-      const decryptedSpouseContact = decryptSafe(row.spouse_contact_number);
-
       if (!applicantsMap.has(row.applicant_id)) {
         applicantsMap.set(row.applicant_id, {
           applicant_id: row.applicant_id,
-          first_name: decryptedFullName ? decryptedFullName.split(' ')[0] : 'N/A',
-          last_name: decryptedFullName ? decryptedFullName.split(' ').slice(1).join(' ') : 'N/A',
-          full_name: decryptedFullName || 'N/A',
-          email: decryptedEmail || 'N/A',
-          contact_number: decryptedContactNumber || 'N/A',
-          address: decryptedAddress || 'N/A',
+          first_name: row.applicant_full_name ? row.applicant_full_name.split(' ')[0] : 'N/A',
+          last_name: row.applicant_full_name ? row.applicant_full_name.split(' ').slice(1).join(' ') : 'N/A',
+          full_name: row.applicant_full_name || 'N/A',
+          email: row.email_address || 'N/A',
+          contact_number: row.applicant_contact_number || 'N/A',
+          address: row.applicant_address || 'N/A',
           business_type: row.nature_of_business || 'N/A',
           business_name: row.nature_of_business || 'N/A',
           business_description: row.nature_of_business || 'N/A',
@@ -310,12 +256,12 @@ export const getApplicantsByBranchManager = async (req, res) => {
           applied_date: row.application_date,
           created_at: row.created_at,
           updated_at: row.updated_at,
-          // Add spouse information (with decrypted values)
-          spouse: decryptedSpouseName ? {
-            spouse_full_name: decryptedSpouseName,
+          // Add spouse information
+          spouse: row.spouse_full_name ? {
+            spouse_full_name: row.spouse_full_name,
             spouse_birthdate: row.spouse_birthdate,
             spouse_educational_attainment: row.spouse_educational_attainment,
-            spouse_contact_number: decryptedSpouseContact,
+            spouse_contact_number: row.spouse_contact_number,
             spouse_occupation: row.spouse_occupation
           } : null,
           // Add business information
@@ -326,9 +272,9 @@ export const getApplicantsByBranchManager = async (req, res) => {
             previous_business_experience: row.previous_business_experience,
             relative_stall_owner: row.relative_stall_owner
           } : null,
-          // Add other information (with decrypted email)
-          other_information: decryptedEmail ? {
-            email_address: decryptedEmail
+          // Add other information
+          other_information: row.email_address ? {
+            email_address: row.email_address
           } : null,
           applications: []
         });

@@ -13,7 +13,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../services/UserStorageService";
-import { getSafeStaffName, getSafeStaffContact, getUserInitials } from "../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 
@@ -79,22 +78,36 @@ const Sidebar = ({
     }
   }, [isVisible]);
 
-  // Helper function to get inspector name using safe utilities
+  // Helper function to get inspector name
   const getInspectorName = () => {
     if (!userData) return null;
-    return getSafeStaffName(userData, "Inspector");
+    // Check staff object (for new staff login structure)
+    if (userData.staff) {
+      return userData.staff.fullName || userData.staff.full_name || `${userData.staff.firstName} ${userData.staff.lastName}` || userData.staff.username;
+    }
+    // Fallback to old structure
+    return userData.user?.full_name || userData.inspector?.inspector_name || userData.user?.username || userData.inspector?.username;
   };
 
-  // Helper function to get inspector email/contact using safe utilities
+  // Helper function to get inspector email/contact
   const getInspectorContact = () => {
     if (!userData) return '';
-    return getSafeStaffContact(userData, '');
+    // Check staff object (for new staff login structure)
+    if (userData.staff) {
+      return userData.staff.email || userData.staff.contactNumber || userData.staff.contact_number || userData.staff.username || '';
+    }
+    // Fallback to old structure
+    return userData.user?.email || userData.inspector?.email || userData.user?.contact_number || userData.inspector?.contact_number || userData.user?.username || userData.inspector?.username || '';
   };
 
-  // Helper function to get user initials using safe utilities
-  const getDisplayInitials = (fullName) => {
+  // Helper function to get user initials
+  const getUserInitials = (fullName) => {
     if (!fullName) return "I";
-    return getUserInitials(fullName, "I");
+    const names = fullName.split(' ');
+    if (names.length >= 2) {
+      return (names[0][0] + names[1][0]).toUpperCase();
+    }
+    return fullName[0].toUpperCase();
   };
 
   const menuItems = [
@@ -158,7 +171,7 @@ const Sidebar = ({
                   <View style={baseStyles.profileImageContainer}>
                     <View style={[baseStyles.profileImage, { backgroundColor: '#f59e0b' }]}>
                       <Text style={baseStyles.profileInitials}>
-                        {userData ? getDisplayInitials(getInspectorName() || "Inspector") : "I"}
+                        {userData ? getUserInitials(getInspectorName() || "Inspector") : "I"}
                       </Text>
                     </View>
                     <View style={baseStyles.statusIndicator} />

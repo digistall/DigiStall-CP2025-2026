@@ -26,11 +26,10 @@ export const getCurrentUser = async (req, res) => {
 
     if (user.role === 'admin') {
       console.log('🔍 Fetching admin data for ID:', user.userId);
-      const [adminResult] = await connection.execute(
-        'CALL sp_getAdminById(?)',
+      const [admins] = await connection.execute(
+        'SELECT admin_id, admin_username, email, first_name, last_name, contact_number, status, created_at FROM admin WHERE admin_id = ?',
         [user.userId]
       );
-      const admins = adminResult[0] || [];
 
       if (admins.length === 0) {
         console.log('❌ Admin not found in database');
@@ -71,11 +70,25 @@ export const getCurrentUser = async (req, res) => {
 
     } else if (user.role === 'branch_manager') {
       console.log('🔍 Fetching branch manager data for ID:', user.branchManagerId || user.userId);
-      const [managerResult] = await connection.execute(
-        'CALL sp_getBranchManagerForCurrentUser(?)',
+      const [managers] = await connection.execute(
+        `SELECT 
+          bm.branch_manager_id,
+          bm.manager_username,
+          bm.first_name,
+          bm.last_name,
+          bm.email,
+          bm.contact_number,
+          bm.status,
+          bm.created_at,
+          b.branch_id,
+          b.branch_name,
+          b.area,
+          b.location
+        FROM branch_manager bm
+        INNER JOIN branch b ON bm.branch_id = b.branch_id
+        WHERE bm.branch_manager_id = ?`,
         [user.branchManagerId || user.userId]
       );
-      const managers = managerResult[0] || [];
 
       if (managers.length === 0) {
         console.log('❌ Branch manager not found in database');

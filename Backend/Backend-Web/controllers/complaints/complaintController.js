@@ -4,20 +4,6 @@
 
 import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
-import { decryptData } from '../../services/encryptionService.js';
-
-// Helper function to decrypt data safely (handles both encrypted and plain text)
-const decryptSafe = (value) => {
-  if (value === undefined || value === null || value === '') return value;
-  try {
-    if (typeof value === 'string' && value.includes(':') && value.split(':').length === 3) {
-      return decryptData(value);
-    }
-    return value;
-  } catch (error) {
-    return value;
-  }
-};
 
 /**
  * Get all complaints with optional filters
@@ -47,7 +33,7 @@ export const getAllComplaints = async (req, res) => {
       // System administrator - see all complaints
       console.log('🔍 getAllComplaints - System admin viewing all branches');
       const [records] = await connection.execute(
-        'CALL getAllComplaintsDecrypted(?, ?, ?)',
+        'CALL getAllComplaints(?, ?, ?)',
         [null, statusParam, searchParam]
       );
       complaints = records[0];
@@ -59,7 +45,7 @@ export const getAllComplaints = async (req, res) => {
       // Single branch (business manager or owner with one branch)
       console.log(`🔍 getAllComplaints - Fetching for branch: ${branchFilter[0]}`);
       const [records] = await connection.execute(
-        'CALL getAllComplaintsDecrypted(?, ?, ?)',
+        'CALL getAllComplaints(?, ?, ?)',
         [branchFilter[0], statusParam, searchParam]
       );
       complaints = records[0];
@@ -70,7 +56,7 @@ export const getAllComplaints = async (req, res) => {
       const allRecords = [];
       for (const branchId of branchFilter) {
         const [records] = await connection.execute(
-          'CALL getAllComplaintsDecrypted(?, ?, ?)',
+          'CALL getAllComplaints(?, ?, ?)',
           [branchId, statusParam, searchParam]
         );
         allRecords.push(...records[0]);
