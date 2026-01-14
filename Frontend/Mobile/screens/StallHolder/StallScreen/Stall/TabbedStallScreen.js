@@ -59,15 +59,15 @@ const TabbedStallScreen = () => {
   const tabs = [
     { 
       id: 'Fixed Price', 
-      label: 'Fixed Price', 
+      label: 'Fixed Price',
     },
     { 
       id: 'Auction', 
-      label: 'Auction', 
+      label: 'Auction',
     },
     { 
       id: 'Raffle', 
-      label: 'Raffle', 
+      label: 'Raffle',
     },
   ];
 
@@ -402,15 +402,8 @@ const TabbedStallScreen = () => {
               activeTab === tab.id && [styles.activeTab, { backgroundColor: theme.colors.primary }]
             ]}
             onPress={() => handleTabPress(tab.id)}
+            activeOpacity={0.7}
           >
-            <Image 
-              source={tab.icon} 
-              style={[
-                styles.tabIcon,
-                activeTab === tab.id && styles.activeTabIcon
-              ]}
-              resizeMode="contain"
-            />
             <Text style={[
               styles.tabText,
               { color: theme.colors.textSecondary },
@@ -418,6 +411,7 @@ const TabbedStallScreen = () => {
             ]}>
               {tab.label}
             </Text>
+            {activeTab === tab.id && <View style={styles.activeIndicator} />}
           </TouchableOpacity>
         ))}
       </View>
@@ -453,6 +447,9 @@ const TabbedStallScreen = () => {
                 <Text style={[styles.resultsText, { color: theme.colors.text }]}>
                   {filteredStalls.length} {activeTab} stall{filteredStalls.length !== 1 ? 's' : ''} found
                 </Text>
+                <Text style={[styles.resultsSubtext, { color: theme.colors.textSecondary }]}>
+                  Tap on a stall to view details
+                </Text>
               </View>
               
               <View style={styles.stallsGrid}>
@@ -475,18 +472,25 @@ const TabbedStallScreen = () => {
             </>
           ) : (
             <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
-              <Image 
-                source={require('../../../../assets/Home-Image/StallIcon.png')} 
-                style={[styles.emptyIcon, { tintColor: theme.colors.textSecondary }]}
-                resizeMode="contain"
-              />
               <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No {activeTab} Stalls Found</Text>
               <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
                 {searchText || selectedFilter !== 'ALL' 
-                  ? 'Try adjusting your search or filter criteria'
-                  : `No ${activeTab} stalls are currently available in your area`
+                  ? 'Try adjusting your search or filter criteria to find more stalls'
+                  : `No ${activeTab} stalls are currently available in your area. Check back later for new listings.`
                 }
               </Text>
+              {(searchText || selectedFilter !== 'ALL') && (
+                <TouchableOpacity 
+                  style={[styles.clearFiltersButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={() => {
+                    setSearchText('');
+                    setSelectedFilter('ALL');
+                    setSelectedSort('default');
+                  }}
+                >
+                  <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </ScrollView>
@@ -516,43 +520,55 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 12,
+    paddingTop: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
+    gap: 8,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,
-    marginHorizontal: 4,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#f8f9fa',
+    position: 'relative',
+    minHeight: 50,
   },
   activeTab: {
     backgroundColor: '#007bff',
-  },
-  activeTabIcon: {
-    tintColor: '#ffffff',
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#6b7280',
     textAlign: 'center',
   },
   activeTabText: {
     color: '#ffffff',
+    fontWeight: '700',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    width: 20,
+    height: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   loadingText: {
     marginTop: 16,
@@ -567,7 +583,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: containerPadding,
   },
-  // Grid wrapper for tablet layout
   stallsGrid: {
     flexDirection: isTablet ? 'row' : 'column',
     flexWrap: 'wrap',
@@ -576,13 +591,18 @@ const styles = StyleSheet.create({
   },
   resultsHeader: {
     paddingVertical: 12,
+    paddingHorizontal: 4,
     marginBottom: 12,
-    backgroundColor: 'transparent',
   },
   resultsText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#374151',
+    marginBottom: 4,
+  },
+  resultsSubtext: {
+    fontSize: 13,
+    color: '#6b7280',
   },
   emptyContainer: {
     flex: 1,
@@ -591,24 +611,31 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     paddingHorizontal: 32,
   },
-  emptyIcon: {
-    width: 48,
-    height: 48,
-    marginBottom: 16,
-    tintColor: '#9ca3af',
-  },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#374151',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 20,
+  },
+  clearFiltersButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    marginTop: 8,
+  },
+  clearFiltersText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

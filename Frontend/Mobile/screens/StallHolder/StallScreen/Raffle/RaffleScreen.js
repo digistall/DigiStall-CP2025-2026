@@ -7,6 +7,8 @@ import {
   Text,
   RefreshControl,
   Alert,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import RaffleCard from './Components/RaffleCard';
 import SearchFilterBar from './Components/SearchFilter/SearchFilterBar';
@@ -165,14 +167,25 @@ const RaffleScreen = () => {
     return (
       <View style={styles.emptyState}>
         <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
-          {hasFilters ? 'No raffles found' : 'No raffle stalls available'}
+          {hasFilters ? 'No Raffles Found' : 'No Raffle Stalls Available'}
         </Text>
         <Text style={[styles.emptyStateText, { color: theme.colors.textSecondary }]}>
           {hasFilters 
-            ? 'Try adjusting your search or filters to find more results'
+            ? 'Try adjusting your search or filters to find more raffle opportunities'
             : 'Raffle stalls are only visible in areas where you have submitted applications. Submit your first application to see raffle stalls in that area.'
           }
         </Text>
+        {hasFilters && (
+          <TouchableOpacity 
+            style={[styles.clearFiltersButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => {
+              setSearchQuery('');
+              setSelectedFilters([]);
+            }}
+          >
+            <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -192,6 +205,7 @@ const RaffleScreen = () => {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading raffles...</Text>
       </View>
     );
@@ -232,7 +246,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: 24,
     flexGrow: 1,
   },
   headerStyle: {
@@ -243,11 +257,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
+    paddingVertical: 60,
   },
   loadingText: {
+    marginTop: 16,
     fontSize: 16,
     color: '#64748b',
     fontWeight: '500',
+    textAlign: 'center',
   },
   emptyState: {
     flex: 1,
@@ -260,15 +277,28 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '400',
+    marginBottom: 20,
+  },
+  clearFiltersButton: {
+    backgroundColor: '#1e40af',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    marginTop: 8,
+  },
+  clearFiltersText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

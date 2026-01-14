@@ -218,7 +218,7 @@ const StallDetailsModal = ({
             {applying ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={styles.applyButtonText}>📝 APPLY NOW!</Text>
+              <Text style={styles.applyButtonText}>APPLY NOW!</Text>
             )}
           </TouchableOpacity>
         );
@@ -232,7 +232,7 @@ const StallDetailsModal = ({
             {applying ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={styles.applyButtonText}>🎟️ JOIN RAFFLE</Text>
+              <Text style={styles.applyButtonText}>JOIN RAFFLE</Text>
             )}
           </TouchableOpacity>
         );
@@ -378,7 +378,6 @@ const StallDetailsModal = ({
               {/* Details Grid */}
               <View style={styles.detailsGrid}>
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailIcon}>🏢</Text>
                   <View style={styles.detailContent}>
                     <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Floor & Section</Text>
                     <Text style={[styles.detailValue, { color: colors.text }]}>{stall.floor || stall.floorSection}</Text>
@@ -386,7 +385,6 @@ const StallDetailsModal = ({
                 </View>
 
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailIcon}>📐</Text>
                   <View style={styles.detailContent}>
                     <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Dimensions</Text>
                     <Text style={[styles.detailValue, { color: colors.text }]}>{stall.size || stall.dimensions}</Text>
@@ -394,7 +392,6 @@ const StallDetailsModal = ({
                 </View>
 
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailIcon}>📍</Text>
                   <View style={styles.detailContent}>
                     <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Location</Text>
                     <Text style={[styles.detailValue, { color: colors.text }]}>{stall.branch?.name || stall.location}</Text>
@@ -403,7 +400,6 @@ const StallDetailsModal = ({
 
                 {stall.branch?.area && (
                   <View style={styles.detailItem}>
-                    <Text style={styles.detailIcon}>🗺️</Text>
                     <View style={styles.detailContent}>
                       <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Area</Text>
                       <Text style={[styles.detailValue, { color: colors.text }]}>{stall.branch.area}</Text>
