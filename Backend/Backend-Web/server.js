@@ -34,6 +34,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
 import { getComplianceEvidenceImage } from './controllers/compliances/complianceController.js';
 const app = express();
 const PORT = process.env.WEB_PORT || 3001;
@@ -81,6 +82,10 @@ app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes
 app.use('/api/subscriptions', subscriptionRoutes); // Has its own auth middleware
 app.use('/api/mobile-staff', enhancedAuthMiddleware.authenticateToken, mobileStaffRoutes); // Mobile staff (inspectors/collectors)
 console.log('📱 Mobile staff routes registered at /api/mobile-staff');
+
+// Vendor routes (for vendor management)
+app.use('/api/vendors', vendorRoutes);
+console.log('🏪 Vendor routes registered at /api/vendors');
 
 // Activity log routes (for monitoring staff activities)
 app.use('/api/activity-logs', staffActivityLogRoutes);
@@ -143,6 +148,7 @@ app.get('/', (req, res) => {
       branches: '/api/branches',
       employees: '/api/employees',
       stallholders: '/api/stallholders',
+      vendors: '/api/vendors',
       compliances: '/api/compliances',
       complaints: '/api/complaints',
       payments: '/api/payments',
@@ -172,6 +178,7 @@ app.use('*', (req, res) => {
       '/api/compliances',
       '/api/complaints',
       '/api/payments',
+      '/api/vendors',
       '/api/subscriptions',
       '/api/health'
     ]
