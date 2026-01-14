@@ -35,6 +35,7 @@ import { selectRaffleWinner, autoSelectWinnerForExpiredRaffles } from './stallCo
 import { createAuction } from './stallComponents/auctionComponents/createAuction.js'
 import { placeBid } from './stallComponents/auctionComponents/placeBid.js'
 import { getActiveAuctions, getAuctionDetails } from './stallComponents/auctionComponents/getAuctions.js'
+import { getAuctionBiddersByStall } from './stallComponents/auctionComponents/getAuctionBidders.js'
 import { extendAuctionTimer, cancelAuction } from './stallComponents/auctionComponents/manageAuction.js'
 import { selectAuctionWinner, autoSelectWinnerForExpiredAuctions } from './stallComponents/auctionComponents/selectWinner.js'
 
@@ -79,6 +80,7 @@ export {
   placeBid,
   getActiveAuctions,
   getAuctionDetails,
+  getAuctionBiddersByStall,
   extendAuctionTimer,
   cancelAuction,
   selectAuctionWinner,

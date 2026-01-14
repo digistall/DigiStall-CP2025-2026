@@ -124,11 +124,10 @@
             @click.stop="handleRaffleManagement(stall)"
             class="action-btn"
           >
-            <v-icon left size="small" class="me-2">mdi-ticket-percent</v-icon>
-            MANAGE RAFFLE
+            VIEW PARTICIPANTS
           </v-btn>
 
-          <!-- Auction Management Button -->
+          <!-- Auction Participants Button -->
           <v-btn
             v-if="stall.priceType === 'Auction'"
             color="primary"
@@ -137,8 +136,7 @@
             @click.stop="handleAuctionManagement(stall)"
             class="action-btn"
           >
-            <v-icon left size="small" class="me-2">mdi-gavel</v-icon>
-            MANAGE AUCTION
+            VIEW PARTICIPANTS
           </v-btn>
         </div>
       </v-card-actions>

@@ -2,6 +2,8 @@ import CardStallsComponent from '../Stalls/StallsComponents/CardStallsComponent/
 import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFilter.vue'
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
+import RaffleParticipantsModal from './RaffleComponents/RaffleParticipantsModal/RaffleParticipantsModal.vue'
+import AuctionParticipantsModal from './AuctionComponents/AuctionParticipantsModal/AuctionParticipantsModal.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
@@ -14,6 +16,8 @@ export default {
     SearchFilter,
     AddChoiceModal,
     EditStall,
+    RaffleParticipantsModal,
+    AuctionParticipantsModal,
     ToastNotification,
     LoadingOverlay,
   },
@@ -27,6 +31,12 @@ export default {
       displayStalls: [],
       loading: false,
       error: null,
+      // Raffle participants modal
+      showRaffleParticipantsModal: false,
+      selectedRaffleStall: null,
+      // Auction participants modal
+      showAuctionParticipantsModal: false,
+      selectedAuctionStall: null,
       // API configuration
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
       // Current user info
@@ -919,24 +929,66 @@ export default {
       console.log('========================')
     },
 
-    // NEW: Handle raffle management
+    // NEW: Handle raffle management - open participants modal
     handleRaffleManagement(stall) {
-      console.log('Navigate to raffle management for stall:', stall)
-      // Navigate to the raffles page with a specific stall focus
-      this.$router.push({
-        path: '/stalls/raffles',
-        query: { stallId: stall.id, stallNumber: stall.stallNumber },
-      })
+      console.log('🎰 Opening raffle participants modal for stall:', stall)
+      this.selectedRaffleStall = stall
+      this.showRaffleParticipantsModal = true
     },
 
-    // NEW: Handle auction management
+    // Close raffle participants modal
+    closeRaffleParticipantsModal() {
+      console.log('🎰 Closing raffle participants modal')
+      this.showRaffleParticipantsModal = false
+      this.selectedRaffleStall = null
+    },
+
+    // Handle raffle winner selected
+    handleRaffleWinnerSelected(winnerData) {
+      console.log('🏅 Raffle winner selected:', winnerData)
+      this.toast = {
+        show: true,
+        message: `Winner selected: ${winnerData?.winner_name || 'Unknown'}`,
+        type: 'success'
+      }
+      // Refresh stalls to update any status changes
+      this.fetchStalls(true)
+    },
+
+    // Handle show message from raffle modal
+    handleShowMessage(messageData) {
+      console.log('📢 Show message from raffle modal:', messageData)
+      this.toast = {
+        show: true,
+        message: messageData.text || messageData.message || 'Action completed',
+        type: messageData.type || 'info'
+      }
+    },
+
+    // NEW: Handle auction management - open auction participants modal
     handleAuctionManagement(stall) {
-      console.log('Navigate to auction management for stall:', stall)
-      // Navigate to the auctions page with a specific stall focus
-      this.$router.push({
-        path: '/stalls/auctions',
-        query: { stallId: stall.id, stallNumber: stall.stallNumber },
-      })
+      console.log('🏺 Opening auction participants modal for stall:', stall)
+      this.selectedAuctionStall = stall
+      this.showAuctionParticipantsModal = true
+    },
+
+    // Close auction participants modal
+    closeAuctionParticipantsModal() {
+      console.log('🏺 Closing auction participants modal')
+      this.showAuctionParticipantsModal = false
+      this.selectedAuctionStall = null
+    },
+
+    // Handle auction winner selected
+    handleAuctionWinnerSelected(winnerData) {
+      console.log('🏆 Auction winner confirmed:', winnerData)
+      this.toast = {
+        show: true,
+        message: `Winner confirmed: ${winnerData?.winner_name || 'Highest bidder'}`,
+        type: 'success'
+      }
+      // Refresh stalls to update any status changes
+      this.fetchStalls(true)
     },
 
     // Error handling utilities
