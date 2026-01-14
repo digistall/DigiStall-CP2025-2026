@@ -497,11 +497,28 @@ export const joinRaffle = async (req, res) => {
     if (!raffleRows || raffleRows.length === 0) {
       console.log('🆕 Creating new raffle for stall:', stallId);
       
+      // Get the business manager for this branch (required for raffle creation)
+      const branchId = stall.branch_id;
+      console.log('🔍 Looking for business manager for branch:', branchId);
+      
+      const [managerRows] = await connection.execute(
+        `SELECT business_manager_id FROM business_manager 
+         WHERE branch_id = ? AND status = 'Active' 
+         ORDER BY business_manager_id LIMIT 1`,
+        [branchId]
+      );
+      
+      // Use the branch's business manager, or default to 1 if none found (system-created raffle)
+      const businessManagerId = managerRows && managerRows.length > 0 
+        ? managerRows[0].business_manager_id 
+        : 1;
+      console.log('📊 Using business_manager_id:', businessManagerId);
+      
       try {
         const [newRaffleResult] = await connection.execute(
-          `INSERT INTO raffle (stall_id, raffle_status, total_participants, created_at)
-           VALUES (?, 'Active', 0, NOW())`,
-          [stallId]
+          `INSERT INTO raffle (stall_id, raffle_status, total_participants, created_by_business_manager, created_at)
+           VALUES (?, 'Active', 0, ?, NOW())`,
+          [stallId, businessManagerId]
         );
         raffleId = newRaffleResult.insertId;
         console.log('✅ New raffle created with ID:', raffleId);
