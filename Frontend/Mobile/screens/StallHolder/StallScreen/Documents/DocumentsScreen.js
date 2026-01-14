@@ -244,8 +244,15 @@ const DocumentsScreen = () => {
         copyToCacheDirectory: true,
       });
 
-      if (result.type === 'success') {
-        await performUpload(result, documentTypeId, stallholderId);
+      console.log('📄 Document picker result:', JSON.stringify(result, null, 2));
+
+      // Updated for expo-document-picker v13+ API
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedFile = result.assets[0];
+        console.log('📄 Selected file:', selectedFile);
+        await performUpload(selectedFile, documentTypeId, stallholderId);
+      } else {
+        console.log('📄 Document selection cancelled');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to select document');
@@ -330,8 +337,10 @@ const DocumentsScreen = () => {
       setPreviewLoading(true);
 
       // Set initial document data from the list (includes metadata)
+      // Map 'status' to 'verification_status' for the modal
       setDocumentBlobData({
         ...document,
+        verification_status: document.status || document.verification_status || 'pending',
         file_name: document.file_name || document.original_filename || document.document_name || 'Document',
         mime_type: document.mime_type || 'image/jpeg',
       });
@@ -345,6 +354,7 @@ const DocumentsScreen = () => {
         if (response.success) {
           setDocumentBlobData({
             ...document,
+            verification_status: document.status || document.verification_status || 'pending',
             document_data: response.data, // Contains data:image/...;base64,...
             mime_type: response.mimeType || document.mime_type || 'image/jpeg',
             file_name: document.file_name || document.original_filename || document.document_name || 'Document',
@@ -524,20 +534,23 @@ const DocumentsScreen = () => {
         </View>
       )}
 
-      <TouchableOpacity
-        style={[
-          styles.uploadButton,
-          doc.status === 'not_uploaded' 
-            ? styles.uploadButtonPrimary 
-            : styles.uploadButtonSecondary
-        ]}
-        onPress={() => handleUpload(doc.document_type_id, doc.document_name, stallholderId)}
-        disabled={uploading}
-      >
-        <Text style={styles.uploadButtonText}>
-          {doc.status === 'not_uploaded' ? 'Upload' : 'Replace'}
-        </Text>
-      </TouchableOpacity>
+      {/* Show Upload/Replace button only if not verified */}
+      {doc.status !== 'verified' && (
+        <TouchableOpacity
+          style={[
+            styles.uploadButton,
+            doc.status === 'not_uploaded' 
+              ? styles.uploadButtonPrimary 
+              : styles.uploadButtonSecondary
+          ]}
+          onPress={() => handleUpload(doc.document_type_id, doc.document_name, stallholderId)}
+          disabled={uploading}
+        >
+          <Text style={styles.uploadButtonText}>
+            {doc.status === 'not_uploaded' ? 'Upload' : 'Replace'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {doc.status !== 'not_uploaded' && (
         <TouchableOpacity

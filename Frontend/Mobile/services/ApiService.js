@@ -1166,34 +1166,107 @@ class ApiService {
 
       console.log(`📥 Fetching document BLOB ${documentId}...`);
 
-      const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/id/${documentId}`, {
+      // Try the new base64 JSON endpoint first (if deployed), otherwise fallback to binary endpoint
+      let response;
+      let useBase64Endpoint = true;
+      
+      try {
+        response = await fetch(`${server}/api/mobile/stallholder/documents/blob/base64/${documentId}`, {
+          method: 'GET',
+          headers: {
+            ...API_CONFIG.HEADERS,
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        // If we get a 404, the endpoint doesn't exist yet, try the old endpoint
+        if (response.status === 404) {
+          useBase64Endpoint = false;
+        }
+      } catch (e) {
+        useBase64Endpoint = false;
+      }
+      
+      if (useBase64Endpoint && response.ok) {
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to fetch document');
+        }
+
+        console.log('✅ Document BLOB retrieved successfully via base64 endpoint');
+        return {
+          success: true,
+          data: result.data,
+          mimeType: result.mimeType,
+          fileName: result.fileName
+        };
+      }
+      
+      // Fallback: Try to fetch binary and use ArrayBuffer approach for React Native
+      console.log('📥 Using fallback binary endpoint...');
+      response = await fetch(`${server}/api/mobile/stallholder/documents/blob/id/${documentId}`, {
         method: 'GET',
         headers: {
-          ...API_CONFIG.HEADERS,
           'Authorization': `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch document');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to fetch document');
       }
 
-      // Get the blob data
-      const blob = await response.blob();
+      // Get content type
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
       
-      // Convert blob to base64
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          console.log('✅ Document BLOB retrieved successfully');
-          resolve({
-            success: true,
-            data: reader.result, // This will be the data:image/...;base64,... string
-            mimeType: response.headers.get('content-type'),
-          });
-        };
-        reader.readAsDataURL(blob);
-      });
+      // Use arrayBuffer and convert to base64 (React Native compatible)
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Convert to base64 using chunk method (React Native compatible)
+      const CHUNK_SIZE = 0x8000; // 32KB chunks
+      let binary = '';
+      for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
+        const chunk = uint8Array.subarray(i, i + CHUNK_SIZE);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      
+      // Use global btoa or polyfill
+      let base64Data;
+      if (typeof btoa !== 'undefined') {
+        base64Data = btoa(binary);
+      } else {
+        // Manual base64 encoding for React Native
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let result = '';
+        let i = 0;
+        while (i < binary.length) {
+          const a = binary.charCodeAt(i++);
+          const b = binary.charCodeAt(i++);
+          const c = binary.charCodeAt(i++);
+          result += chars[a >> 2];
+          result += chars[((a & 3) << 4) | (b >> 4)];
+          result += chars[((b & 15) << 2) | (c >> 6)];
+          result += chars[c & 63];
+        }
+        const padding = binary.length % 3;
+        if (padding === 1) {
+          result = result.slice(0, -2) + '==';
+        } else if (padding === 2) {
+          result = result.slice(0, -1) + '=';
+        }
+        base64Data = result;
+      }
+      
+      const dataUri = `data:${contentType};base64,${base64Data}`;
+
+      console.log('✅ Document BLOB retrieved successfully via binary endpoint');
+      return {
+        success: true,
+        data: dataUri,
+        mimeType: contentType,
+      };
     } catch (error) {
       console.error('❌ Get Stallholder Document BLOB API Error:', error);
       return {

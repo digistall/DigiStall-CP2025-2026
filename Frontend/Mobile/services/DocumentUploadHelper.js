@@ -84,8 +84,15 @@ class DocumentUploadHelper {
       const fileName =
         file.name || file.fileName || `document_${Date.now()}.jpg`;
       
-      // Get MIME type - ImagePicker sometimes returns just "image" instead of "image/jpeg"
-      let mimeType = file.type || file.mimeType;
+      // Get MIME type - expo-document-picker v13+ uses 'mimeType', ImagePicker uses 'type'
+      let mimeType = file.mimeType || file.type;
+      
+      console.log('📄 Processing file:', {
+        uri,
+        fileName,
+        rawMimeType: mimeType,
+        fileObject: JSON.stringify(file, null, 2)
+      });
       
       // Fix incomplete MIME types from ImagePicker
       if (!mimeType || mimeType === 'image' || !mimeType.includes('/')) {
@@ -97,15 +104,22 @@ class DocumentUploadHelper {
       // Validate MIME type is complete
       const validMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf'];
       if (!validMimeTypes.includes(mimeType)) {
-        // Default to image/jpeg for camera/gallery images
-        mimeType = 'image/jpeg';
-        console.log(`📋 Defaulting to MIME type: ${mimeType}`);
+        // Try to derive from filename if not in valid list
+        const derivedMimeType = this.getMimeType(fileName);
+        if (validMimeTypes.includes(derivedMimeType)) {
+          mimeType = derivedMimeType;
+          console.log(`📋 Using derived MIME type from filename: ${mimeType}`);
+        } else {
+          // Default to image/jpeg for camera/gallery images
+          mimeType = 'image/jpeg';
+          console.log(`📋 Defaulting to MIME type: ${mimeType}`);
+        }
       }
 
       // Get file size
-      const fileSize = await this.getFileSize(uri);
+      const fileSize = file.size || await this.getFileSize(uri);
       console.log(`📁 File size: ${(fileSize / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`📋 MIME type: ${mimeType}`);
+      console.log(`📋 Final MIME type: ${mimeType}`);
       console.log(`📋 File name: ${fileName}`);
 
       // Validate size
