@@ -88,10 +88,74 @@ const PaymentController = {
       const stallholders = result[0] || [];
       console.log('📊 Stallholders found for branch', branchId + ':', stallholders.length);
       
+      // Debug: Log first stallholder BEFORE decryption
+      if (stallholders.length > 0) {
+        console.log('🔍 Sample stallholder BEFORE decryption:', JSON.stringify(stallholders[0], null, 2));
+      }
+      
+      // Backend-level decryption for stallholder data
+      const decryptedStallholders = stallholders.map(stallholder => {
+        // Decrypt name field (supports both 'name' and 'stallholder_name' keys)
+        const nameField = stallholder.name || stallholder.stallholder_name;
+        if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+          try {
+            const decrypted = decryptData(nameField);
+            if (stallholder.name) stallholder.name = decrypted;
+            if (stallholder.stallholder_name) stallholder.stallholder_name = decrypted;
+          } catch (error) {
+            console.error(`Failed to decrypt name for ID ${stallholder.id || stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt business_name field (supports both 'businessName' and 'business_name' keys)
+        const businessField = stallholder.businessName || stallholder.business_name;
+        if (businessField && typeof businessField === 'string' && businessField.includes(':')) {
+          try {
+            const decrypted = decryptData(businessField);
+            if (stallholder.businessName) stallholder.businessName = decrypted;
+            if (stallholder.business_name) stallholder.business_name = decrypted;
+          } catch (error) {
+            console.error(`Failed to decrypt business_name for ID ${stallholder.id || stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt contact field (supports both 'contact' and 'stallholder_contact' keys)
+        const contactField = stallholder.contact || stallholder.stallholder_contact || stallholder.contact_number;
+        if (contactField && typeof contactField === 'string' && contactField.includes(':')) {
+          try {
+            const decrypted = decryptData(contactField);
+            if (stallholder.contact) stallholder.contact = decrypted;
+            if (stallholder.stallholder_contact) stallholder.stallholder_contact = decrypted;
+            if (stallholder.contact_number) stallholder.contact_number = decrypted;
+          } catch (error) {
+            console.error(`Failed to decrypt contact for ID ${stallholder.id || stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        // Decrypt address field
+        const addressField = stallholder.stallholder_address || stallholder.address;
+        if (addressField && typeof addressField === 'string' && addressField.includes(':')) {
+          try {
+            const decrypted = decryptData(addressField);
+            if (stallholder.stallholder_address) stallholder.stallholder_address = decrypted;
+            if (stallholder.address) stallholder.address = decrypted;
+          } catch (error) {
+            console.error(`Failed to decrypt address for ID ${stallholder.id || stallholder.stallholder_id}:`, error.message);
+          }
+        }
+        
+        return stallholder;
+      });
+      
+      // Debug: Log first stallholder AFTER decryption
+      if (decryptedStallholders.length > 0) {
+        console.log('✅ Sample stallholder AFTER decryption:', JSON.stringify(decryptedStallholders[0], null, 2));
+      }
+      
       res.status(200).json({
         success: true,
         message: 'Stallholders retrieved successfully',
-        data: stallholders
+        data: decryptedStallholders
       });
       
     } catch (error) {
@@ -148,10 +212,62 @@ const PaymentController = {
       
       console.log('📊 Stallholder details found:', result[0][0]);
       
+      // Backend-level decryption for stallholder details
+      const stallholder = result[0][0];
+      
+      // Decrypt name (supports both 'name' and 'stallholder_name')
+      const nameField = stallholder.name || stallholder.stallholder_name;
+      if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+        try {
+          const decrypted = decryptData(nameField);
+          if (stallholder.name) stallholder.name = decrypted;
+          if (stallholder.stallholder_name) stallholder.stallholder_name = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt name for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
+      // Decrypt business_name (supports both 'businessName' and 'business_name')
+      const businessField = stallholder.businessName || stallholder.business_name;
+      if (businessField && typeof businessField === 'string' && businessField.includes(':')) {
+        try {
+          const decrypted = decryptData(businessField);
+          if (stallholder.businessName) stallholder.businessName = decrypted;
+          if (stallholder.business_name) stallholder.business_name = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt business_name for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
+      // Decrypt contact (supports multiple field names)
+      const contactField = stallholder.contact || stallholder.stallholder_contact || stallholder.contact_number;
+      if (contactField && typeof contactField === 'string' && contactField.includes(':')) {
+        try {
+          const decrypted = decryptData(contactField);
+          if (stallholder.contact) stallholder.contact = decrypted;
+          if (stallholder.stallholder_contact) stallholder.stallholder_contact = decrypted;
+          if (stallholder.contact_number) stallholder.contact_number = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt contact for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
+      // Decrypt address
+      const addressField = stallholder.stallholder_address || stallholder.address;
+      if (addressField && typeof addressField === 'string' && addressField.includes(':')) {
+        try {
+          const decrypted = decryptData(addressField);
+          if (stallholder.stallholder_address) stallholder.stallholder_address = decrypted;
+          if (stallholder.address) stallholder.address = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt address for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
       res.status(200).json({
         success: true,
         message: 'Stallholder details retrieved successfully',
-        data: result[0][0]
+        data: stallholder
       });
       
     } catch (error) {
@@ -313,10 +429,40 @@ const PaymentController = {
         const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
+        // Backend-level decryption for payment data
+        const decryptedPayments = payments.map(payment => {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+            try {
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          // Decrypt collected_by / collector_name / collectedBy
+          const collectorField = payment.collected_by || payment.collector_name || payment.collectedBy;
+          if (collectorField && typeof collectorField === 'string' && collectorField.includes(':')) {
+            try {
+              const decrypted = decryptData(collectorField);
+              if (payment.collected_by) payment.collected_by = decrypted;
+              if (payment.collector_name) payment.collector_name = decrypted;
+              if (payment.collectedBy) payment.collectedBy = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt collector for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          return payment;
+        });
+        
         return res.status(200).json({
           success: true,
           message: 'Onsite payments retrieved successfully',
-          data: payments
+          data: decryptedPayments
         });
       } else if (branchFilter.length === 0) {
         // No branches accessible
@@ -331,10 +477,40 @@ const PaymentController = {
         const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
+        // Backend-level decryption for payment data
+        const decryptedPayments = payments.map(payment => {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+            try {
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          // Decrypt collected_by / collector_name / collectedBy
+          const collectorField = payment.collected_by || payment.collector_name || payment.collectedBy;
+          if (collectorField && typeof collectorField === 'string' && collectorField.includes(':')) {
+            try {
+              const decrypted = decryptData(collectorField);
+              if (payment.collected_by) payment.collected_by = decrypted;
+              if (payment.collector_name) payment.collector_name = decrypted;
+              if (payment.collectedBy) payment.collectedBy = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt collector for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          return payment;
+        });
+        
         return res.status(200).json({
           success: true,
           message: 'Onsite payments retrieved successfully',
-          data: payments
+          data: decryptedPayments
         });
       }
       
@@ -370,10 +546,27 @@ const PaymentController = {
         const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
         const payments = result[0] || [];
         
+        // Backend-level decryption for online payment data
+        const decryptedPayments = payments.map(payment => {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+            try {
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          return payment;
+        });
+        
         return res.status(200).json({
           success: true,
           message: 'Online payments retrieved successfully',
-          data: payments
+          data: decryptedPayments
         });
       } else if (branchFilter.length === 0) {
         // No access
@@ -388,10 +581,27 @@ const PaymentController = {
         const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
         const payments = result[0] || [];
         
+        // Backend-level decryption for online payment data
+        const decryptedPayments = payments.map(payment => {
+          // Decrypt stallholder_name or stallholderName
+          const nameField = payment.stallholder_name || payment.stallholderName;
+          if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+            try {
+              const decrypted = decryptData(nameField);
+              if (payment.stallholder_name) payment.stallholder_name = decrypted;
+              if (payment.stallholderName) payment.stallholderName = decrypted;
+            } catch (error) {
+              console.error(`Failed to decrypt stallholder name for payment ID ${payment.id}:`, error.message);
+            }
+          }
+          
+          return payment;
+        });
+        
         return res.status(200).json({
           success: true,
           message: 'Online payments retrieved successfully',
-          data: payments
+          data: decryptedPayments
         });
       }
       
