@@ -39,7 +39,7 @@
         </div>
 
         <!-- Quick Links -->
-        <div class="footer-links animate-on-scroll animate-delay-1">
+        <div class="footer-links footer-links-quick animate-on-scroll animate-delay-1">
           <h4 class="footer-title">Quick Links</h4>
           <ul class="link-list">
             <li><a href="#stalls"><i class="mdi mdi-chevron-right"></i> Home</a></li>
@@ -49,19 +49,8 @@
           </ul>
         </div>
 
-        <!-- Services -->
-        <div class="footer-links animate-on-scroll animate-delay-2">
-          <h4 class="footer-title">Our Services</h4>
-          <ul class="link-list">
-            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Stall Management</a></li>
-            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Vendor Portal</a></li>
-            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Compliance Tracking</a></li>
-            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Analytics Dashboard</a></li>
-          </ul>
-        </div>
-
-        <!-- Contact Info -->
-        <div class="footer-contact animate-on-scroll animate-delay-3">
+        <!-- Contact Info (moved to middle) -->
+        <div class="footer-contact animate-on-scroll animate-delay-2">
           <h4 class="footer-title">Contact Us</h4>
           <div class="contact-list">
             <div class="contact-item">
@@ -90,6 +79,17 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Services (moved to right) -->
+        <div class="footer-links footer-links-services animate-on-scroll animate-delay-3">
+          <h4 class="footer-title">Our Services</h4>
+          <ul class="link-list">
+            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Stall Management</a></li>
+            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Vendor Portal</a></li>
+            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Compliance Tracking</a></li>
+            <li><a href="#"><i class="mdi mdi-chevron-right"></i> Analytics Dashboard</a></li>
+          </ul>
         </div>
       </div>
     </div>
@@ -230,7 +230,8 @@ export default {
 
 /* Footer Links */
 .footer-links {
-  /* empty for layout */
+  display: flex;
+  flex-direction: column;
 }
 
 .footer-title {
@@ -408,19 +409,27 @@ export default {
   }
 }
 
+/* Tablet View */
 @media (max-width: 768px) {
+  .footer-wave {
+    height: 60px;
+  }
+
   .footer-main {
-    padding: 100px 16px 40px;
+    padding: 80px 20px 30px;
   }
 
   .footer-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 30px;
-    text-align: center;
+    text-align: left;
   }
 
   .footer-brand {
-    grid-column: span 1;
+    grid-column: span 2;
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .brand-logo {
@@ -441,81 +450,107 @@ export default {
   }
 
   .brand-description {
-    max-width: 350px;
-    margin: 0 auto 20px;
-    font-size: 0.85rem;
+    display: none; /* Hide description on mobile to save space */
   }
 
   .social-links {
     justify-content: center;
+    gap: 12px;
   }
 
   .social-link {
     width: 38px;
     height: 38px;
-    font-size: 16px;
+  }
+
+  .social-link i {
+    font-size: 18px;
   }
 
   .footer-title {
-    font-size: 1rem;
-    margin-bottom: 16px;
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
   }
 
   .footer-title::after {
-    left: 50%;
-    transform: translateX(-50%);
+    display: none; /* Remove underline on mobile */
   }
 
   .link-list {
-    align-items: center;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 8px;
   }
 
-  .link-list a {
+  .link-list li a {
     font-size: 0.85rem;
   }
 
   .contact-list {
-    align-items: center;
-    gap: 14px;
+    gap: 10px;
   }
 
   .contact-item {
-    justify-content: center;
     text-align: left;
   }
 
   .contact-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
 
   .contact-icon i {
     font-size: 16px;
   }
 
-  .contact-details {
-    font-size: 0.85rem;
+  .contact-details span,
+  .contact-details a {
+    font-size: 0.8rem;
+  }
+
+  .footer-bottom {
+    padding: 16px 20px;
   }
 
   .footer-bottom-container {
     flex-direction: column;
     text-align: center;
-    gap: 12px;
+    gap: 10px;
   }
 
   .copyright {
     font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .footer-legal {
+    gap: 10px;
+  }
+
+  .footer-legal a {
+    font-size: 0.8rem;
   }
 }
 
+/* Mobile View */
 @media (max-width: 480px) {
+  .footer-wave {
+    height: 50px;
+  }
+
   .footer-main {
-    padding: 80px 14px 30px;
+    padding: 70px 16px 20px;
   }
 
   .footer-container {
-    gap: 24px;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .footer-brand {
+    grid-column: span 1;
+    padding-bottom: 15px;
   }
 
   .logo-img {
@@ -524,36 +559,88 @@ export default {
   }
 
   .brand-name {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
 
-  .brand-description {
-    font-size: 0.8rem;
-    max-width: 280px;
+  .brand-tagline {
+    font-size: 0.6rem;
+  }
+
+  .social-links {
+    gap: 10px;
+    margin-top: 12px;
   }
 
   .social-link {
-    width: 34px;
-    height: 34px;
-    font-size: 14px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .social-link i {
+    font-size: 16px;
+  }
+
+  /* Compact link sections */
+  .footer-links,
+  .footer-contact {
+    padding: 12px 0;
   }
 
   .footer-title {
     font-size: 0.9rem;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
   }
 
-  .link-list a {
+  .link-list {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .link-list li a {
     font-size: 0.8rem;
+  }
+
+  /* Compact contact items */
+  .contact-list {
+    gap: 8px;
+  }
+
+  .contact-item {
+    justify-content: center;
+    gap: 10px;
   }
 
   .contact-icon {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .contact-icon i {
+    font-size: 14px;
   }
 
   .contact-details {
-    font-size: 0.8rem;
+    gap: 2px;
+  }
+
+  .contact-details span,
+  .contact-details a {
+    font-size: 0.75rem;
+  }
+
+  /* Compact bottom section */
+  .footer-bottom {
+    padding: 14px 16px;
+  }
+
+  .footer-bottom-container {
+    gap: 8px;
+  }
+
+  .copyright {
+    font-size: 0.75rem;
+    line-height: 1.4;
   }
 
   .footer-legal {
@@ -566,19 +653,27 @@ export default {
     font-size: 0.75rem;
   }
 
-  .copyright {
-    font-size: 0.75rem;
+  .footer-legal .separator {
+    display: none;
   }
 }
 
-/* Extra small devices */
+/* Extra Small Mobile View */
 @media (max-width: 360px) {
+  .footer-wave {
+    height: 40px;
+  }
+
   .footer-main {
-    padding: 70px 12px 24px;
+    padding: 60px 12px 16px;
   }
 
   .footer-container {
-    gap: 20px;
+    gap: 16px;
+  }
+
+  .footer-brand {
+    padding-bottom: 12px;
   }
 
   .logo-img {
@@ -587,41 +682,86 @@ export default {
   }
 
   .brand-name {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
 
   .brand-tagline {
-    font-size: 0.6rem;
+    font-size: 0.58rem;
   }
 
-  .brand-description {
-    font-size: 0.75rem;
-    max-width: 240px;
+  .social-links {
+    gap: 8px;
+    margin-top: 10px;
   }
 
   .social-link {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .social-link i {
+    font-size: 14px;
+  }
+
+  .footer-links,
+  .footer-contact {
+    padding: 10px 0;
   }
 
   .footer-title {
     font-size: 0.85rem;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
   }
 
-  .link-list a {
+  .link-list {
+    gap: 5px;
+  }
+
+  .link-list li a {
     font-size: 0.75rem;
   }
 
-  .contact-details {
-    font-size: 0.75rem;
+  .contact-list {
+    gap: 6px;
   }
 
-  .footer-legal a {
+  .contact-item {
+    gap: 8px;
+  }
+
+  .contact-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .contact-icon i {
+    font-size: 13px;
+  }
+
+  .contact-details span,
+  .contact-details a {
     font-size: 0.7rem;
   }
 
+  .footer-bottom {
+    padding: 12px 12px;
+  }
+
+  .footer-bottom-container {
+    gap: 6px;
+  }
+
   .copyright {
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+
+  .footer-legal {
+    gap: 6px;
+  }
+
+  .footer-legal a {
     font-size: 0.7rem;
   }
 }

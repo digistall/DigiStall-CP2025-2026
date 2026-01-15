@@ -46,7 +46,8 @@ export const getFilteredStalls = async (req, res) => {
       INNER JOIN branch b ON f.branch_id = b.branch_id
       LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
       LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
-      WHERE s.status = 'Active' AND s.is_available = 1
+      LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
+      WHERE s.status = 'Active' AND s.is_available = 1 AND sh.stallholder_id IS NULL
     `;
 
     const queryParams = [];
