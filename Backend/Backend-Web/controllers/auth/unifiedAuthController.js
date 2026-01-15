@@ -288,15 +288,17 @@ export const login = async (req, res) => {
       };
       const staffType = staffTypeMap[userType.toLowerCase()] || userType.toLowerCase();
       const staffName = `${user.first_name} ${user.last_name}`;
+      const branchId = user.branch_id || null;
       const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
       const userAgent = req.headers['user-agent'] || 'unknown';
       
       await connection.execute(
-        'CALL sp_logStaffActivityLogin(?, ?, ?, ?, ?, ?)',
+        'CALL sp_logStaffActivityLogin(?, ?, ?, ?, ?, ?, ?)',
         [
           staffType,
           user[userIdField],
           staffName,
+          branchId,
           `${staffName} logged in via web`,
           ipAddress,
           userAgent

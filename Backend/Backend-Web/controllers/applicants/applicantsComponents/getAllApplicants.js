@@ -6,7 +6,7 @@ export const getAllApplicants = async (req, res) => {
   try {
     connection = await createConnection();
 
-    const [applicants] = await connection.execute('CALL getAllApplicants()');
+    const [applicants] = await connection.execute('CALL getAllApplicantsDecrypted()');
 
     res.json({
       success: true,

@@ -40,7 +40,7 @@ const StallholderController = {
       if (branchFilter === null) {
         // System administrator - see all stallholders using stored procedure
         console.log('✅ System admin - fetching all stallholders');
-        const [result] = await connection.execute('CALL sp_getAllStallholdersAll()');
+        const [result] = await connection.execute('CALL sp_getAllStallholdersAllDecrypted()');
         rows = result[0] || [];
       } else if (branchFilter.length === 0) {
         // No branches accessible
@@ -54,7 +54,7 @@ const StallholderController = {
         // Filter by accessible branches using stored procedure
         console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute('CALL sp_getAllStallholdersByBranches(?)', [branchIdsString]);
+        const [result] = await connection.execute('CALL sp_getAllStallholdersByBranchesDecrypted(?)', [branchIdsString]);
         rows = result[0] || [];
       }
       
