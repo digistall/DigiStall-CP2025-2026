@@ -1,27 +1,25 @@
 import { createConnection } from '../../config/database.js';
-import bcrypt from 'bcryptjs';
+import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../services/encryptionService.js';
+import { generateSecurePassword } from '../../utils/passwordGenerator.js';
 
 /**
  * Mobile Staff Controller
  * Handles creation and management of Inspector and Collector accounts
- * These accounts are used for mobile app login only
+ * These accounts are used for mobile app login (now using EMAIL)
  */
 
-// Generate unique username for mobile staff
-const generateMobileUsername = (role, id) => {
-    const prefix = role === 'inspector' ? 'INS' : 'COL';
-    const randomDigits = Math.floor(1000 + Math.random() * 9000);
-    return `${prefix}${randomDigits}`;
-};
-
-// Generate secure password
-const generateSecurePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let password = '';
-    for (let i = 0; i < 10; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
+// Helper to encrypt if value is not null
+const encryptIfNotNull = (value) => {
+    if (value === undefined || value === null || value === '' || 
+        (typeof value === 'string' && value.trim() === '')) {
+        return null;
     }
-    return password;
+    try {
+        return encryptData(value);
+    } catch (error) {
+        console.error('⚠️ Encryption failed:', error.message);
+        return value;
+    }
 };
 
 /**
@@ -50,31 +48,38 @@ export async function createInspector(req, res) {
 
         connection = await createConnection();
 
-        // Check if email already exists using stored procedure
+        // Check if email already exists (encrypt email for comparison)
+        const encryptedEmailCheck = encryptIfNotNull(email);
         const [existingResult] = await connection.execute(
-            'CALL sp_checkInspectorEmailExists(?)',
-            [email]
+            'SELECT inspector_id FROM inspector WHERE email = ? OR email = ?',
+            [email, encryptedEmailCheck]
         );
 
-        if (existingResult[0] && existingResult[0].length > 0) {
+        if (existingResult && existingResult.length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'An inspector with this email already exists'
             });
         }
 
-        // Generate credentials
-        const username = generateMobileUsername('inspector');
-        const password = generateSecurePassword();
-        const hashedPassword = await bcrypt.hash(password, 12);
+        // Generate credentials (password only, email is login)
+        const password = generateSecurePassword(12);
+        // Encrypt password with AES-256-GCM (not hash - so we can email it)
+        const encryptedPassword = encryptData(password);
 
-        console.log(`📱 Creating inspector: ${firstName} ${lastName} (${username})`);
+        // Encrypt sensitive PII fields
+        const encryptedFirstName = encryptIfNotNull(firstName);
+        const encryptedLastName = encryptIfNotNull(lastName);
+        const encryptedEmail = encryptIfNotNull(email);
+        const encryptedPhone = encryptIfNotNull(phoneNumber);
 
-        // Create inspector using stored procedure with encryption
-        // Stored procedure signature: (username, first_name, last_name, email, password_hash, contact_no)
+        console.log(`📱 Creating inspector: ${firstName} ${lastName}`);
+        console.log('🔐 Encrypting inspector data (including password)...');
+
+        // Create inspector using stored procedure with encrypted data (email is login)
         const [insertResult] = await connection.execute(
-            'CALL sp_createInspectorDirect(?, ?, ?, ?, ?, ?)',
-            [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
+            'CALL createInspector(?, ?, ?, ?, ?)',
+            [encryptedPassword, encryptedFirstName, encryptedLastName, encryptedEmail, encryptedPhone]
         );
 
         const inspectorId = insertResult[0]?.[0]?.inspector_id;
@@ -103,8 +108,8 @@ export async function createInspector(req, res) {
             data: {
                 inspectorId,
                 credentials: {
-                    username,
-                    password
+                    email: email,  // User logs in with email
+                    password: password  // Plain password to send to user
                 },
                 branchId
             }
@@ -204,31 +209,38 @@ export async function createCollector(req, res) {
             `);
         }
 
-        // Check if email already exists using stored procedure
+        // Check if email already exists (check both plain and encrypted)
+        const encryptedEmailCheck = encryptIfNotNull(email);
         const [existingResult] = await connection.execute(
-            'CALL sp_checkCollectorEmailExists(?)',
-            [email]
+            'SELECT collector_id FROM collector WHERE email = ? OR email = ?',
+            [email, encryptedEmailCheck]
         );
 
-        if (existingResult[0] && existingResult[0].length > 0) {
+        if (existingResult && existingResult.length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'A collector with this email already exists'
             });
         }
 
-        // Generate credentials
-        const username = generateMobileUsername('collector');
-        const password = generateSecurePassword();
-        const hashedPassword = await bcrypt.hash(password, 12);
+        // Generate credentials (password only, email is login)
+        const password = generateSecurePassword(12);
+        // Encrypt password with AES-256-GCM (not hash - so we can email it)
+        const encryptedPassword = encryptData(password);
 
-        console.log(`📱 Creating collector: ${firstName} ${lastName} (${username})`);
+        // Encrypt sensitive PII fields
+        const encryptedFirstName = encryptIfNotNull(firstName);
+        const encryptedLastName = encryptIfNotNull(lastName);
+        const encryptedEmail = encryptIfNotNull(email);
+        const encryptedPhone = encryptIfNotNull(phoneNumber);
 
-        // Create collector using stored procedure with encryption
-        // Stored procedure signature: (username, first_name, last_name, email, password_hash, contact_no)
+        console.log(`📱 Creating collector: ${firstName} ${lastName}`);
+        console.log('🔐 Encrypting collector data (including password)...');
+
+        // Create collector using stored procedure with encrypted data (email is login)
         const [insertResult] = await connection.execute(
-            'CALL sp_createCollectorDirect(?, ?, ?, ?, ?, ?)',
-            [username, firstName, lastName, email, hashedPassword, phoneNumber || null]
+            'CALL createCollector(?, ?, ?, ?, ?)',
+            [encryptedPassword, encryptedFirstName, encryptedLastName, encryptedEmail, encryptedPhone]
         );
 
         const collectorId = insertResult[0]?.[0]?.collector_id;
@@ -253,8 +265,8 @@ export async function createCollector(req, res) {
             data: {
                 collectorId,
                 credentials: {
-                    username,
-                    password
+                    email: email,  // User logs in with email
+                    password: password  // Plain password to send to user
                 },
                 branchId
             }
@@ -290,21 +302,24 @@ export async function getInspectorsByBranch(req, res) {
         let inspectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided using decrypted stored procedure
+            // Filter by branch if branchId is provided
             const [result] = await connection.execute(
-                'CALL sp_getInspectorsByBranchDecrypted(?)',
+                'CALL getInspectorsByBranch(?)',
                 [branchId]
             );
             inspectors = result[0] || [];
         } else {
-            // Return all inspectors if no branchId (for admin view) using decrypted stored procedure
-            const [result] = await connection.execute('CALL sp_getInspectorsAllDecrypted()');
+            // Return all inspectors if no branchId (for admin view)
+            const [result] = await connection.execute('CALL getAllInspectors()');
             inspectors = result[0] || [];
         }
 
+        // Decrypt sensitive fields in Node.js
+        const decryptedInspectors = decryptInspectors(inspectors);
+
         res.json({
             success: true,
-            data: inspectors
+            data: decryptedInspectors
         });
     } catch (error) {
         console.error('❌ Error fetching inspectors:', error);
@@ -334,10 +349,12 @@ export async function getCollectorsByBranch(req, res) {
         // Set session timezone to Philippine time for correct timestamp conversion
         await connection.execute(`SET time_zone = '+08:00'`);
 
-        // Check if table exists first using stored procedure
-        const [tableResult] = await connection.execute('CALL sp_checkCollectorTableExists()');
+        // Check if table exists first
+        const [tableResult] = await connection.execute(
+            `SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'collector'`
+        );
 
-        if (!tableResult[0] || tableResult[0].length === 0) {
+        if (!tableResult[0] || tableResult[0].count === 0) {
             // Collector table does not exist yet
             return res.json({
                 success: true,
@@ -349,21 +366,24 @@ export async function getCollectorsByBranch(req, res) {
         let collectors;
 
         if (branchId) {
-            // Filter by branch if branchId is provided using decrypted stored procedure
+            // Filter by branch if branchId is provided
             const [result] = await connection.execute(
-                'CALL sp_getCollectorsByBranchDecrypted(?)',
+                'CALL getCollectorsByBranch(?)',
                 [branchId]
             );
             collectors = result[0] || [];
         } else {
-            // Return all collectors if no branchId (for admin view) using decrypted stored procedure
-            const [result] = await connection.execute('CALL sp_getCollectorsAllDecrypted()');
+            // Return all collectors if no branchId (for admin view)
+            const [result] = await connection.execute('CALL getAllCollectors()');
             collectors = result[0] || [];
         }
 
+        // Decrypt sensitive fields in Node.js
+        const decryptedCollectors = decryptCollectors(collectors);
+
         res.json({
             success: true,
-            data: collectors
+            data: decryptedCollectors
         });
     } catch (error) {
         console.error('❌ Error fetching collectors:', error);

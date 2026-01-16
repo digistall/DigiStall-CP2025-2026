@@ -12,15 +12,14 @@ export const getLandingPageStats = async (req, res) => {
   try {
     connection = await createConnection();
     
-    // Use stored procedure instead of multiple direct SQL queries
-    const [rows] = await connection.execute('CALL sp_getLandingPageStats()');
+    // Use stored procedure
+    const [rows] = await connection.execute('CALL getLandingPageStats()');
     const statsResult = rows[0][0]; // First row of first result set
     
     const stats = {
-      total_stallholders: statsResult?.total_stallholders || 0,
-      total_stalls: statsResult?.total_stalls || 0,
+      total_branches: statsResult?.total_branches || 0,
       available_stalls: statsResult?.available_stalls || 0,
-      occupied_stalls: statsResult?.occupied_stalls || 0
+      total_stallholders: statsResult?.total_stallholders || 0
     };
     
     console.log('📊 Landing page stats fetched:', stats);
@@ -28,10 +27,12 @@ export const getLandingPageStats = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        totalStallholders: stats.total_stallholders,
-        totalStalls: stats.total_stalls,
+        totalBranches: stats.total_branches,
         availableStalls: stats.available_stalls,
-        occupiedStalls: stats.occupied_stalls
+        totalStallholders: stats.total_stallholders,
+        // For backwards compatibility
+        totalStalls: stats.available_stalls,
+        occupiedStalls: 0
       }
     });
     

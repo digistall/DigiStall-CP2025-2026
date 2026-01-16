@@ -51,6 +51,9 @@ export default {
       
       // Flag to track when we're in the middle of updating a stall
       isUpdatingStall: false,
+      
+      // Key to force CardStallsComponent re-render when stalls data changes
+      stallsUpdateKey: 0,
 
       // Raffle Participants Modal
       showRaffleParticipantsModal: false,
@@ -132,8 +135,16 @@ export default {
             this.$refs.searchFilter.clearAllFilters()
           }
           
-          // Update display
+          // Update display with new array reference
           this.displayStalls = [...this.stallsData]
+          
+          // Increment key to force CardStallsComponent re-render
+          this.stallsUpdateKey++
+          
+          // Force Vue to update the view
+          this.$forceUpdate()
+          
+          console.log('🔑 stallsUpdateKey after add:', this.stallsUpdateKey)
           
           // Close modal if it's open
           this.closeAddStallModal()
@@ -428,7 +439,7 @@ export default {
       const transformed = {
         // Basic stall info - ensure ID is consistent
         id: Number(extractedId),
-        stallNumber: stall.stall_no || stall.stallNumber,
+        stallNumber: stall.stall_number || stall.stall_no || stall.stallNumber,
         price: this.formatPrice(stall.rental_price || stall.price || 0),
         location: stall.stall_location || stall.location,
         size: stall.size,
@@ -652,21 +663,34 @@ export default {
           const transformedStall = this.transformStallData(updatedStallData)
           console.log('✨ Transformed stall:', transformedStall)
           
-          // Update stallsData
-          this.stallsData.splice(stallIndex, 1, transformedStall)
+          // Update stallsData using Vue 3 reactive approach
+          this.stallsData[stallIndex] = transformedStall
+          
+          // Force re-render by creating a new array reference
+          this.stallsData = [...this.stallsData]
           
           // Clear all filters to show all stalls including the updated one
           if (this.$refs.searchFilter) {
             this.$refs.searchFilter.clearAllFilters()
           }
           
-          // Show all stalls after clearing filters
+          // Show all stalls after clearing filters with new array reference
           this.displayStalls = [...this.stallsData]
+          
+          // Increment key to force CardStallsComponent re-render
+          this.stallsUpdateKey++
+          
+          // Force Vue to update the view
+          this.$forceUpdate()
           
           // Invalidate cache since stall was updated
           dataCacheService.invalidatePattern('stalls');
           
           console.log('✅ Stall updated successfully - using real-time updates')
+          console.log('📊 Updated stallsData length:', this.stallsData.length)
+          console.log('📊 Updated displayStalls length:', this.displayStalls.length)
+          console.log('🔍 Updated stall data:', this.displayStalls.find(s => s.stall_id === transformedStall.stall_id))
+          console.log('🔑 stallsUpdateKey:', this.stallsUpdateKey)
         } else {
           console.warn('⚠️ Stall not found for update, refetching all stalls...')
           await this.fetchStalls()
@@ -688,24 +712,42 @@ export default {
 
     async handleStallDeleted(stallId) {
       try {
-        console.log('Processing stall deletion for ID:', stallId)
+        console.log('🗑️ Processing stall deletion for ID:', stallId)
 
         // Invalidate cache since stall was deleted
         dataCacheService.invalidatePattern('stalls');
 
-        // Remove from local data
-        const index = this.stallsData.findIndex((s) => s.id === stallId)
+        // Remove from local data - check both stall_id and id (transformed data uses stall_id)
+        const index = this.stallsData.findIndex((s) => 
+          Number(s.stall_id) === Number(stallId) || Number(s.id) === Number(stallId)
+        )
+        
         if (index > -1) {
           const deletedStall = this.stallsData[index]
+          console.log('🗑️ Found stall to delete:', deletedStall.stallNumber || deletedStall.stall_no)
+          
+          // Remove from stallsData
           this.stallsData.splice(index, 1)
+          
+          // Create new array reference for reactivity
+          this.stallsData = [...this.stallsData]
           this.displayStalls = [...this.stallsData]
+          
+          // Increment key to force CardStallsComponent re-render
+          this.stallsUpdateKey++
+          
+          // Force Vue to update the view
+          this.$forceUpdate()
 
-          console.log(`Stall "${deletedStall.stallNumber}" removed from local data`)
+          console.log(`✅ Stall "${deletedStall.stallNumber || deletedStall.stall_no}" removed from local data`)
+          console.log('🔑 stallsUpdateKey after delete:', this.stallsUpdateKey)
+          console.log('📊 Remaining stalls:', this.stallsData.length)
         } else {
-          console.warn('Stall not found in local data for deletion')
+          console.warn('⚠️ Stall not found in local data for deletion, refetching...')
+          await this.fetchStalls()
         }
       } catch (error) {
-        console.error('Error handling stall deletion:', error)
+        console.error('❌ Error handling stall deletion:', error)
         this.showMessage('Error removing stall from display', 'error', 'delete', 'stall')
       }
     },

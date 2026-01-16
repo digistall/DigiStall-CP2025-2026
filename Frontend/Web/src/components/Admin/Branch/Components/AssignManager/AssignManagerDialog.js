@@ -1,4 +1,34 @@
 ﻿import axios from "axios";
+import emailjs from '@emailjs/browser';
+
+// EmailJS Configuration - reusing the same service as applicants
+const EMAILJS_SERVICE_ID = 'service_e2awvdk';
+const EMAILJS_APPROVE_TEMPLATE_ID = 'template_r6kxcnh';
+const EMAILJS_PUBLIC_KEY = 'sTpDE-Oq2-9XH_UZd';
+const SENDER_EMAIL = 'requiem121701@gmail.com';
+const SENDER_NAME = 'Naga Stall Management System';
+
+let isInitialized = false;
+
+// Initialize EmailJS
+const initializeEmailJS = () => {
+  if (!isInitialized) {
+    try {
+      emailjs.init({
+        publicKey: EMAILJS_PUBLIC_KEY,
+        blockHeadless: false,
+        blockList: { list: [] },
+        limitRate: { id: 'app', throttle: 5000 }
+      });
+      isInitialized = true;
+      console.log('✅ EmailJS initialized successfully for branch managers');
+    } catch (error) {
+      console.error('❌ EmailJS initialization failed:', error);
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+      isInitialized = true;
+    }
+  }
+};
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -28,8 +58,6 @@ export default {
       formData: {
         first_name: "",
         last_name: "",
-        manager_username: "",
-        manager_password: "",
         email: "",
         contact_number: "",
         status: "Active",
@@ -72,8 +100,6 @@ export default {
       this.formData = {
         first_name: "",
         last_name: "",
-        manager_username: "",
-        manager_password: "",
         email: "",
         contact_number: "",
         status: "Active",
@@ -125,7 +151,7 @@ export default {
         }
 
         const response = await axios.post(
-          `${API_BASE_URL_WITH_API}/branches/branch-managers`,
+          `${API_BASE_URL_WITH_API}/branches/managers`,
           payload,
           {
             headers: {
@@ -139,14 +165,63 @@ export default {
         console.log("✅ Server response:", response.data);
 
         if (response.data && response.data.success) {
+          // Get credentials from response
+          const credentials = response.data.data?.credentials || {};
+          const managerName = `${this.formData.first_name} ${this.formData.last_name}`;
+          
+          // Send email with credentials using EmailJS
+          try {
+            initializeEmailJS();
+            
+            const templateParams = {
+              from_name: SENDER_NAME,
+              from_email: SENDER_EMAIL,
+              to_email: this.formData.email,
+              to_name: managerName,
+              subject: '[Naga Stall Management] Welcome - Branch Manager Access',
+              message: `Hello ${managerName},
+
+Welcome to Naga Stall Management System!
+
+You have been assigned as the Branch Manager for: ${this.branch.branch_name}
+
+Your login credentials are:
+Username (Email): ${credentials.username || this.formData.email}
+Password: ${credentials.password || '[Contact Administrator]'}
+
+Login URL: http://localhost:3000/manager/login
+
+Please keep these credentials secure and change your password after first login.
+
+For any assistance, please contact the System Administrator.
+
+Best regards,
+Naga Stall Management Team`,
+              reply_to: SENDER_EMAIL,
+              stall_username: credentials.username || this.formData.email,
+              stall_password: credentials.password || '[Contact Administrator]'
+            };
+
+            const emailResult = await emailjs.send(
+              EMAILJS_SERVICE_ID,
+              EMAILJS_APPROVE_TEMPLATE_ID,
+              templateParams,
+              { publicKey: EMAILJS_PUBLIC_KEY }
+            );
+
+            console.log('✅ Welcome email sent successfully to:', this.formData.email);
+            this.successMessage = `Manager assigned successfully! Credentials sent to ${this.formData.email}`;
+          } catch (emailError) {
+            console.error('⚠️ Email sending failed:', emailError);
+            this.successMessage = response.data.message + ' (Email notification failed - please share credentials manually)';
+          }
+
           // Update branch with manager info
           const updatedBranch = {
             ...this.branch,
-            manager_name: `${this.formData.first_name} ${this.formData.last_name}`,
+            manager_name: managerName,
             manager_assigned: true,
           };
-
-          this.successMessage = response.data.message || "Manager assigned successfully!";
 
           // Emit success event
           this.$emit("manager-assigned", updatedBranch);
@@ -154,7 +229,7 @@ export default {
           // Close dialog after a brief delay to show success message
           setTimeout(() => {
             this.closeDialog();
-          }, 1500);
+          }, 2000);
         } else {
           throw new Error(response.data?.message || "Unexpected response format");
         }

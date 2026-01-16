@@ -6,10 +6,24 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
 import emailService from '../../services/emailService.js';
-import { decryptData } from '../../services/encryptionService.js';
+import { decryptData, decryptStallholders, encryptData } from '../../services/encryptionService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Helper to encrypt if value is not null
+const encryptIfNotNull = (value) => {
+    if (value === undefined || value === null || value === '' || 
+        (typeof value === 'string' && value.trim() === '')) {
+        return null;
+    }
+    try {
+        return encryptData(value);
+    } catch (error) {
+        console.error('⚠️ Encryption failed:', error.message);
+        return value;
+    }
+};
 
 /**
  * Stallholder Controller
@@ -39,9 +53,9 @@ const StallholderController = {
       let rows;
       
       if (branchFilter === null) {
-        // System administrator - see all stallholders using decrypted stored procedure
+        // System administrator - see all stallholders
         console.log('✅ System admin - fetching all stallholders');
-        const [result] = await connection.execute('CALL sp_getAllStallholdersAllDecrypted()');
+        const [result] = await connection.execute('CALL getAllStallholders()');
         rows = result[0] || [];
       } else if (branchFilter.length === 0) {
         // No branches accessible
@@ -52,70 +66,22 @@ const StallholderController = {
           total: 0
         });
       } else {
-        // Filter by accessible branches using decrypted stored procedure
+        // Filter by accessible branches
         console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
-        const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute('CALL sp_getAllStallholdersByBranchesDecrypted(?)', [branchIdsString]);
-        rows = result[0] || [];
+        const placeholders = branchFilter.map(() => '?').join(',');
+        const [result] = await connection.execute(
+          `SELECT s.*, st.stall_number, st.stall_name, b.branch_name 
+           FROM stallholder s 
+           LEFT JOIN stall st ON s.stall_id = st.stall_id 
+           LEFT JOIN branch b ON st.branch_id = b.branch_id 
+           WHERE st.branch_id IN (${placeholders})`,
+          branchFilter
+        );
+        rows = result || [];
       }
       
-      // Backend-level decryption for stallholder data
-      const decryptedRows = rows.map(stallholder => {
-        // Decrypt stallholder name
-        if (stallholder.stallholder_name && typeof stallholder.stallholder_name === 'string' && stallholder.stallholder_name.includes(':')) {
-          try {
-            stallholder.stallholder_name = decryptData(stallholder.stallholder_name);
-          } catch (error) {
-            console.error(`Failed to decrypt stallholder_name for ID ${stallholder.stallholder_id}:`, error.message);
-          }
-        }
-        
-        // Decrypt contact_number
-        if (stallholder.contact_number && typeof stallholder.contact_number === 'string' && stallholder.contact_number.includes(':')) {
-          try {
-            stallholder.contact_number = decryptData(stallholder.contact_number);
-          } catch (error) {
-            console.error(`Failed to decrypt contact_number for ID ${stallholder.stallholder_id}:`, error.message);
-          }
-        }
-        
-        // Decrypt email
-        if (stallholder.email && typeof stallholder.email === 'string' && stallholder.email.includes(':')) {
-          try {
-            stallholder.email = decryptData(stallholder.email);
-          } catch (error) {
-            console.error(`Failed to decrypt email for ID ${stallholder.stallholder_id}:`, error.message);
-          }
-        }
-        
-        // Decrypt address
-        if (stallholder.address && typeof stallholder.address === 'string' && stallholder.address.includes(':')) {
-          try {
-            stallholder.address = decryptData(stallholder.address);
-          } catch (error) {
-            console.error(`Failed to decrypt address for ID ${stallholder.stallholder_id}:`, error.message);
-          }
-        }
-        
-        // Also handle legacy field names for backwards compatibility
-        if (stallholder.stallholder_contact && typeof stallholder.stallholder_contact === 'string' && stallholder.stallholder_contact.includes(':')) {
-          try {
-            stallholder.stallholder_contact = decryptData(stallholder.stallholder_contact);
-          } catch (error) {
-            console.error(`Failed to decrypt stallholder_contact for ID ${stallholder.stallholder_id}:`, error.message);
-          }
-        }
-        
-        if (stallholder.stallholder_address && typeof stallholder.stallholder_address === 'string' && stallholder.stallholder_address.includes(':')) {
-          try {
-            stallholder.stallholder_address = decryptData(stallholder.stallholder_address);
-          } catch (error) {
-            console.error(`Failed to decrypt stallholder_address for ID ${stallholder.stallholder_id}:`, error.message);
-          }
-        }
-        
-        return stallholder;
-      });
+      // Decrypt all sensitive fields using the decryptStallholders helper
+      const decryptedRows = decryptStallholders(rows);
       
       console.log(`✅ Found ${decryptedRows.length} stallholders`);
       res.json({
@@ -157,12 +123,15 @@ const StallholderController = {
       }
       
       // Backend-level decryption for stallholder details
-      const stallholder = rows[0][0];
+      const rawStallholder = rows[0][0];
       
-      // Decrypt stallholder name
-      if (stallholder.stallholder_name && typeof stallholder.stallholder_name === 'string' && stallholder.stallholder_name.includes(':')) {
+      // Decrypt all sensitive fields
+      const stallholder = decryptStallholders([rawStallholder])[0];
+      
+      // Decrypt legacy field names too
+      if (rawStallholder.stallholder_name && typeof rawStallholder.stallholder_name === 'string' && rawStallholder.stallholder_name.includes(':')) {
         try {
-          stallholder.stallholder_name = decryptData(stallholder.stallholder_name);
+          stallholder.stallholder_name = decryptData(rawStallholder.stallholder_name);
         } catch (error) {
           console.error(`Failed to decrypt stallholder_name for ID ${id}:`, error.message);
         }

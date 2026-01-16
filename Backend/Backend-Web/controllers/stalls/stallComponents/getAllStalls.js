@@ -18,16 +18,61 @@ export const getAllStalls = async (req, res) => {
 
     connection = await createConnection();
 
-    // Call decrypted stored procedure - it handles ALL authorization
-    const [result] = await connection.execute(
-      `CALL sp_getAllStalls_complete_decrypted(?, ?, ?)`,
-      [userId, userType, branchId]
+    // Direct query instead of broken stored procedure
+    const [stalls] = await connection.execute(
+      `SELECT 
+        s.stall_id,
+        s.stall_number,
+        s.stall_name,
+        s.stall_type,
+        s.stall_size,
+        s.stall_location,
+        s.size,
+        s.area_sqm,
+        s.floor_id,
+        s.section_id,
+        s.monthly_rent,
+        s.rental_price,
+        s.status,
+        s.branch_id,
+        s.stallholder_id,
+        s.floor_level,
+        s.section,
+        s.description,
+        s.price_type,
+        s.is_available,
+        s.base_rate,
+        s.rate_per_sqm,
+        s.created_at,
+        s.updated_at,
+        b.branch_name,
+        b.location as branch_location,
+        f.floor_name,
+        f.floor_number,
+        sec.section_name,
+        si.image_id as primary_image_id,
+        CASE 
+          WHEN sh.first_name IS NOT NULL THEN CONCAT(sh.first_name, ' ', sh.last_name)
+          ELSE NULL
+        END as stallholder_name
+      FROM stall s
+      LEFT JOIN branch b ON s.branch_id = b.branch_id
+      LEFT JOIN floor f ON s.floor_id = f.floor_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN stallholder sh ON s.stallholder_id = sh.stallholder_id
+      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
+      WHERE s.branch_id = ?
+      ORDER BY s.created_at DESC`,
+      [branchId]
     );
 
-    const stalls = result[0] || [];
-
-    // Backend-level decryption for stallholder names (in case stored procedure decryption fails)
+    // Backend-level decryption for stallholder names
     const decryptedStalls = stalls.map(stall => {
+      // Add image URL if image exists
+      if (stall.primary_image_id) {
+        stall.stall_image = `/api/stalls/images/blob/id/${stall.primary_image_id}`;
+      }
+      
       if (stall.stallholder_name && typeof stall.stallholder_name === 'string' && stall.stallholder_name.includes(':')) {
         try {
           stall.stallholder_name = decryptData(stall.stallholder_name);
@@ -38,16 +83,7 @@ export const getAllStalls = async (req, res) => {
       return stall;
     });
 
-    // Debug: Log first few stalls to check decryption
-    console.log('🔍 DEBUG: Sample stalls after decryption:');
-    decryptedStalls.slice(0, 3).forEach(s => {
-      console.log({
-        stall_no: s.stall_no,
-        stallholder_id: s.stallholder_id,
-        stallholder_name: s.stallholder_name,
-        availability_status: s.availability_status
-      });
-    });
+    console.log(`✅ Retrieved ${decryptedStalls.length} stalls for branch ${branchId}`);
 
     res.json({
       success: true,
@@ -57,7 +93,7 @@ export const getAllStalls = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(" Get all stalls error:", error);
+    console.error("❌ Get all stalls error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to retrieve stalls",

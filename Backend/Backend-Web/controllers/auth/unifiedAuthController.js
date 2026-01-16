@@ -1,10 +1,9 @@
 // ===== UNIFIED AUTHENTICATION CONTROLLER =====
-// Single clean authentication system for all user types
+// Email-based login with AES-256-GCM encrypted passwords
 
 import { createConnection } from '../../config/database.js'
-import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { decryptData } from '../../services/encryptionService.js'
+import { decryptData, encryptData } from '../../services/encryptionService.js'
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {
@@ -34,140 +33,165 @@ const getPhilippineTime = () => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
-// ===== UNIFIED LOGIN ENDPOINT =====
+// ===== UNIFIED LOGIN ENDPOINT WITH AUTO-DETECTION =====
+// Email-based login - auto-detects user type
 export const login = async (req, res) => {
   let connection;
   
   try {
     connection = await createConnection();
     
-    const { username, password, userType } = req.body;
+    // DEBUG: Check which database we're connected to
+    const [dbCheck] = await connection.execute('SELECT DATABASE() as db, @@hostname as host');
+    console.log('🔌 Connected to database:', dbCheck[0]);
     
-    console.log('🔐 Unified Login Attempt:', { 
-      hasUsername: !!username,
+    // DEBUG: Check if table exists
+    const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'system_administrator'");
+    console.log('📊 Table exists:', tableCheck);
+    
+    // DEBUG: Check table structure
+    const [structureCheck] = await connection.execute('DESCRIBE system_administrator');
+    console.log('📋 Table structure:', structureCheck.map(col => col.Field));
+    
+    // DEBUG: Check if admin exists with direct query
+    const [directCheck] = await connection.execute('SELECT system_admin_id, email, status FROM system_administrator LIMIT 1');
+    console.log('📋 Direct admin check:', directCheck);
+    
+    // DEBUG: Count total rows
+    const [countCheck] = await connection.execute('SELECT COUNT(*) as total FROM system_administrator');
+    console.log('📊 Total admins in table:', countCheck[0]);
+    
+    const { email, password } = req.body;
+    
+    console.log('🔐 Email Login Attempt (Auto-Detection):', { 
+      hasEmail: !!email,
       hasPassword: !!password,
-      hasUserType: !!userType,
-      userType,
       passwordLength: password?.length,
       timestamp: new Date().toISOString() 
     });
     
     // Validate required fields
-    if (!username || !password || !userType) {
-      console.log('❌ Missing required fields:', { username: !!username, password: !!password, userType: !!userType });
+    if (!email || !password) {
+      console.log('❌ Missing required fields:', { email: !!email, password: !!password });
       return res.status(400).json({
         success: false,
-        message: 'Username, password, and user type are required'
+        message: 'Email and password are required'
       });
     }
     
+    // DO NOT encrypt email - it's stored as plain text for searching
+    const searchEmail = email; // Use plain email to search
+    console.log('🔍 Searching for user with email:', email);
+    
+    // Try each user type until we find a match
+    const userTypes = [
+      {
+        type: 'system_administrator',
+        procedure: 'getSystemAdminByEmail',
+        idField: 'system_admin_id',
+        passwordField: 'admin_password'
+      },
+      {
+        type: 'stall_business_owner',
+        procedure: 'getBusinessOwnerByEmail',
+        idField: 'business_owner_id',
+        passwordField: 'owner_password'
+      },
+      {
+        type: 'business_manager',
+        procedure: 'getBusinessManagerByEmail',
+        idField: 'business_manager_id',
+        passwordField: 'manager_password'
+      },
+      {
+        type: 'business_employee',
+        procedure: 'getBusinessEmployeeByEmail',
+        idField: 'business_employee_id',
+        passwordField: 'employee_password'
+      },
+      {
+        type: 'inspector',
+        procedure: 'getInspectorByEmail',
+        idField: 'inspector_id',
+        passwordField: 'password'
+      },
+      {
+        type: 'collector',
+        procedure: 'getCollectorByEmail',
+        idField: 'collector_id',
+        passwordField: 'password'
+      }
+    ];
+
     let user = null;
-    let tableName = '';
-    let userIdField = '';
-    let usernameField = '';
-    let passwordField = '';
-    
-    // Determine which table to query based on user type
-    switch (userType.toLowerCase()) {
-      case 'system_administrator':
-        tableName = 'system_administrator';
-        userIdField = 'system_admin_id';
-        usernameField = 'username';
-        passwordField = 'password_hash';
-        break;
-      case 'stall_business_owner':
-        tableName = 'stall_business_owner';
-        userIdField = 'business_owner_id';
-        usernameField = 'owner_username';
-        passwordField = 'owner_password_hash';
-        break;
-      case 'business_manager':
-        tableName = 'business_manager';
-        userIdField = 'business_manager_id';
-        usernameField = 'manager_username';
-        passwordField = 'manager_password_hash';
-        break;
-      case 'business_employee':
-        tableName = 'business_employee';
-        userIdField = 'business_employee_id';
-        usernameField = 'employee_username';
-        passwordField = 'employee_password_hash';
-        break;
-      default:
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid user type. Must be system_administrator, stall_business_owner, business_manager, or business_employee'
-        });
+    let detectedUserType = null;
+    let userConfig = null;
+
+    // Try each user type
+    for (const config of userTypes) {
+      try {
+        console.log(`🔍 Trying ${config.type}...`);
+        const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [searchEmail]);
+        console.log(`📊 Raw result for ${config.type}:`, JSON.stringify(userRows));
+        const users = userRows[0] || [];
+        console.log(`📊 Users array for ${config.type}:`, users.length, 'rows');
+        
+        if (users.length > 0) {
+          user = users[0];
+          detectedUserType = config.type;
+          userConfig = config;
+          console.log(`✅ Found user as ${config.type}`);
+          break;
+        }
+      } catch (error) {
+        console.log(`❌ Error checking ${config.type}:`, error.message);
+        // Continue to next user type
+      }
     }
-    
-    // Query the appropriate table using stored procedures
-    let userRows;
-    console.log('🔍 Database Query via Stored Procedure:', { 
-      table: tableName, 
-      usernameField, 
-      hasUsername: !!username 
-    });
-    
-    // Use specific stored procedure for each user type
-    switch (userType.toLowerCase()) {
-      case 'system_administrator':
-        [userRows] = await connection.execute('CALL sp_getSystemAdminByUsername(?)', [username]);
-        userRows = userRows[0] || [];
-        break;
-      case 'stall_business_owner':
-        [userRows] = await connection.execute('CALL sp_getBusinessOwnerByUsername(?)', [username]);
-        userRows = userRows[0] || [];
-        break;
-      case 'business_manager':
-        [userRows] = await connection.execute('CALL sp_getBusinessManagerByUsername(?)', [username]);
-        userRows = userRows[0] || [];
-        break;
-      case 'business_employee':
-        [userRows] = await connection.execute('CALL sp_getBusinessEmployeeByUsername(?)', [username]);
-        userRows = userRows[0] || [];
-        break;
-    }
-    
-    console.log('📊 Query Results:', { 
-      foundUsers: userRows.length
-    });
-    
-    if (userRows.length === 0) {
-      console.log(`❌ ${userType} not found or inactive`);
+
+    if (!user || !detectedUserType) {
+      console.log('❌ User not found with this email');
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or inactive account'
       });
     }
     
-    user = userRows[0];
-    
-    // Verify password using the correct password field
-    const passwordHash = user[passwordField];
+    // Decrypt the stored password and compare with provided password
+    const encryptedPassword = user[userConfig.passwordField];
     console.log('🔐 Password Verification:', { 
-      userFound: !!user,
-      hasPasswordHash: !!passwordHash,
-      passwordFieldUsed: passwordField
+      userType: detectedUserType,
+      hasEncryptedPassword: !!encryptedPassword
     });
     
-    const isPasswordValid = await bcrypt.compare(password, passwordHash);
-    console.log('🔓 Password Check Result:', { isPasswordValid });
-    
-    if (!isPasswordValid) {
-      console.log(`❌ Invalid password for ${userType}`);
-      return res.status(401).json({
+    try {
+      const decryptedStoredPassword = decryptData(encryptedPassword);
+      const isPasswordValid = password === decryptedStoredPassword;
+      
+      console.log('🔓 Password comparison:', { isPasswordValid });
+      
+      if (!isPasswordValid) {
+        console.log(`❌ Invalid password for ${detectedUserType}`);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+    } catch (decryptError) {
+      console.error('❌ Error decrypting password:', decryptError.message);
+      return res.status(500).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Authentication error'
       });
     }
     
     // Get additional user information based on type
     let additionalUserInfo = {};
     
-    if (userType.toLowerCase() === 'business_manager' || userType.toLowerCase() === 'business_employee') {
+    if (detectedUserType === 'business_manager' || detectedUserType === 'business_employee') {
       // Get branch information using stored procedure
       const [branchResult] = await connection.execute(
-        'CALL sp_getBranchById(?)',
+        'CALL getBranchById(?)',
         [user.branch_id]
       );
       const branchRows = branchResult[0] || [];
@@ -178,7 +202,7 @@ export const login = async (req, res) => {
       }
       
       // Get employee permissions if user is business employee
-      if (userType.toLowerCase() === 'business_employee') {
+      if (detectedUserType === 'business_employee') {
         // Re-fetch employee data with decryption using stored procedure
         const [empResult] = await connection.execute(
           'CALL getBusinessEmployeeById(?)',
@@ -242,9 +266,6 @@ export const login = async (req, res) => {
       }
     }
     
-    // Get the username from the correct field
-    const userUsername = user[usernameField];
-    
     // For business_employee, data is already decrypted from getBusinessEmployeeById stored procedure
     // For other user types, decrypt if needed
     let decryptedFirstName = user.first_name;
@@ -256,7 +277,7 @@ export const login = async (req, res) => {
     console.log(`  lastName: ${user.last_name ? user.last_name.substring(0, 50) : 'NULL'}`);
     console.log(`  email: ${user.email ? user.email.substring(0, 50) : 'NULL'}`);
     
-    if (userType.toLowerCase() !== 'business_employee') {
+    if (detectedUserType !== 'business_employee') {
       decryptedFirstName = decryptSafe(user.first_name);
       decryptedLastName = decryptSafe(user.last_name);
       decryptedEmail = decryptSafe(user.email);
@@ -269,9 +290,8 @@ export const login = async (req, res) => {
     
     // Create JWT token
     const tokenPayload = {
-      userId: user[userIdField],
-      userType: userType.toLowerCase(),
-      username: userUsername,
+      userId: user[userConfig.idField],
+      userType: detectedUserType,
       email: decryptedEmail || null,
       firstName: decryptedFirstName || null,
       lastName: decryptedLastName || null,
@@ -288,87 +308,48 @@ export const login = async (req, res) => {
     
     // Prepare user data for response (exclude password)
     const userData = {
-      id: user[userIdField],
-      userType: userType.toLowerCase(),
-      username: userUsername,
+      id: user[userConfig.idField],
+      userType: detectedUserType,
       email: decryptedEmail || null,
       firstName: decryptedFirstName,
       lastName: decryptedLastName,
+      fullName: `${decryptedFirstName || ''} ${decryptedLastName || ''}`.trim(),
       branchId: user.branch_id || null,
       ...additionalUserInfo
     };
     
-    // Update last_login for the user using stored procedures
+    // Update last_login - try stored procedures, silent fail if not implemented
     try {
-      switch (userType.toLowerCase()) {
+      const phTime = getPhilippineTime();
+      switch (detectedUserType) {
         case 'system_administrator':
-          await connection.execute('CALL sp_updateSystemAdminLastLoginNow(?)', [user[userIdField]]);
+          await connection.execute('UPDATE system_administrator SET last_login = ? WHERE system_admin_id = ?', 
+            [phTime, user[userConfig.idField]]);
           break;
         case 'stall_business_owner':
-          await connection.execute('CALL sp_updateBusinessOwnerLastLoginNow(?)', [user[userIdField]]);
+          await connection.execute('UPDATE stall_business_owner SET last_login = ? WHERE business_owner_id = ?', 
+            [phTime, user[userConfig.idField]]);
           break;
         case 'business_manager':
-          await connection.execute('CALL sp_updateBusinessManagerLastLoginNow(?)', [user[userIdField]]);
+          await connection.execute('UPDATE business_manager SET last_login = ? WHERE business_manager_id = ?', 
+            [phTime, user[userConfig.idField]]);
           break;
         case 'business_employee':
-          await connection.execute('CALL sp_updateBusinessEmployeeLastLoginNow(?)', [user[userIdField]]);
-          // Also create/update employee session for online status tracking
-          try {
-            const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
-            const userAgent = req.headers['user-agent'] || 'unknown';
-            await connection.execute('CALL sp_createOrUpdateEmployeeSession(?, ?, ?, ?)', [
-              user[userIdField],
-              token.substring(0, 255), // session token (truncate if needed)
-              ipAddress,
-              userAgent
-            ]);
-            console.log(`✅ Employee session created/updated for: ${userUsername}`);
-          } catch (sessionError) {
-            console.error('⚠️ Failed to create employee session:', sessionError.message);
-          }
+          await connection.execute('UPDATE business_employee SET last_login = ? WHERE business_employee_id = ?', 
+            [phTime, user[userConfig.idField]]);
           break;
       }
-      console.log(`✅ Updated last_login for ${userType}: ${userUsername}`);
+      console.log(`✅ Updated last_login for ${detectedUserType}: ${decryptedEmail}`);
     } catch (updateError) {
       console.error('⚠️ Failed to update last_login:', updateError.message);
     }
     
-    // Log activity to staff_activity_log using stored procedure
-    try {
-      // Map userType to staff_type for activity log
-      const staffTypeMap = {
-        'system_administrator': 'system_administrator',
-        'stall_business_owner': 'business_owner',
-        'business_manager': 'business_manager',
-        'business_employee': 'business_employee'
-      };
-      const staffType = staffTypeMap[userType.toLowerCase()] || userType.toLowerCase();
-      const staffName = `${user.first_name} ${user.last_name}`;
-      const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      
-      await connection.execute(
-        'CALL sp_logStaffActivityLogin(?, ?, ?, ?, ?, ?)',
-        [
-          staffType,
-          user[userIdField],
-          staffName,
-          `${staffName} logged in via web`,
-          ipAddress,
-          userAgent
-        ]
-      );
-      console.log(`✅ Activity logged for ${userType}: ${userUsername}`);
-    } catch (logError) {
-      console.error('⚠️ Failed to log activity:', logError.message);
-    }
-    
-    console.log(`✅ ${userType} login successful:`, userUsername);
+    console.log(`✅ ${detectedUserType} login successful:`, decryptedEmail);
     console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     
     res.status(200).json({
       success: true,
-      message: `${userType} login successful`,
+      message: `${detectedUserType} login successful`,
       data: {
         user: userData,
         token: token

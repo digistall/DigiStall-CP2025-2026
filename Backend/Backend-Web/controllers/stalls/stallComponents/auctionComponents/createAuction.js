@@ -29,7 +29,7 @@ export const createAuction = async (req, res) => {
 
     // Verify stall belongs to this branch manager
     const [stallCheck] = await connection.execute(
-      `SELECT s.stall_id, s.stall_no, s.price_type, s.rental_price, b.branch_name, bm.branch_manager_id
+      `SELECT s.stall_id, s.stall_number, s.price_type, s.rental_price, b.branch_name, bm.branch_manager_id
        FROM stall s
        INNER JOIN section sec ON s.section_id = sec.section_id
        INNER JOIN floor f ON sec.floor_id = f.floor_id
@@ -86,15 +86,15 @@ export const createAuction = async (req, res) => {
       [durationHours, branchManagerId, stallId]
     );
 
-    console.log(`✅ Auction created with ID ${result.insertId} for stall ${stall.stall_no}`);
+    console.log(`✅ Auction created with ID ${result.insertId} for stall ${stall.stall_number}`);
 
     res.status(201).json({
       success: true,
-      message: `Auction created for stall ${stall.stall_no}. Timer will start when first bid is placed.`,
+      message: `Auction created for stall ${stall.stall_number}. Timer will start when first bid is placed.`,
       data: {
         auctionId: result.insertId,
         stallId: stallId,
-        stallNo: stall.stall_no,
+        stallNo: stall.stall_number,
         startingPrice: startingPrice,
         durationHours: durationHours,
         status: 'Waiting for Bidders',

@@ -140,7 +140,7 @@ export const addStall = async (req, res) => {
 
     // Check for duplicate stall number in section
     const [duplicateCheck] = await connection.execute(
-      `SELECT stall_id FROM stall WHERE stall_no = ? AND section_id = ?`,
+      `SELECT stall_id FROM stall WHERE stall_number = ? AND section_id = ?`,
       [stallNo_final, section_id_final]
     );
 
@@ -154,17 +154,24 @@ export const addStall = async (req, res) => {
     // Insert the stall with rental calculation fields
     const [insertResult] = await connection.execute(
       `INSERT INTO stall (
-        stall_no, 
+        stall_number,
+        stall_name,
+        stall_type,
+        stall_size,
         stall_location, 
         size, 
         area_sqm,
         floor_id, 
-        section_id, 
+        section_id,
+        monthly_rent,
         rental_price,
         base_rate,
         rate_per_sqm,
         price_type, 
-        status, 
+        status,
+        branch_id,
+        floor_level,
+        section,
         stamp, 
         description, 
         is_available,
@@ -173,19 +180,26 @@ export const addStall = async (req, res) => {
         raffle_auction_status,
         created_by_business_manager,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         stallNo_final,
+        `Stall ${stallNo_final}`,
+        priceType_final,
+        size,
         location_final,
         size,
         areaSqm_final || null,
         floor_id_final,
         section_id_final,
+        finalPrice / 2,
         finalPrice,
         baseRate_final || null,
         calculatedRatePerSqm,
         priceType_final,
-        isAvailable !== false ? "Active" : "Inactive",
+        isAvailable !== false ? "Available" : "Maintenance",
+        branchId,
+        floor_name,
+        section_name,
         "APPROVED",
         description || null,
         isAvailable !== false ? 1 : 0,
@@ -202,7 +216,10 @@ export const addStall = async (req, res) => {
     const [stallData] = await connection.execute(
       `SELECT 
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
+        s.stall_name,
+        s.stall_type,
+        s.stall_size,
         s.stall_location,
         s.size,
         s.area_sqm,
@@ -210,6 +227,7 @@ export const addStall = async (req, res) => {
         s.rate_per_sqm,
         s.floor_id,
         s.section_id,
+        s.monthly_rent,
         s.rental_price,
         s.price_type,
         s.status,

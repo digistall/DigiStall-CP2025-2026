@@ -20,9 +20,9 @@ export const deleteStall = async (req, res) => {
 
     connection = await createConnection();
 
-    // Get stall info (branch_id and stall_no) before deleting
+    // Get stall info (branch_id and stall_number) before deleting
     const [stallInfo] = await connection.execute(
-      `SELECT s.stall_no, f.branch_id 
+      `SELECT s.stall_number, f.branch_id 
        FROM stall s
        INNER JOIN floor f ON s.floor_id = f.floor_id
        WHERE s.stall_id = ?`,

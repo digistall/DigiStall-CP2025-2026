@@ -40,11 +40,24 @@
   overflow: hidden;
 }
 
+.stall-carousel {
+  border-radius: 8px 8px 0 0;
+}
+
 .stall-image {
   border-radius: 8px 8px 0 0;
   width: 100% !important;
   height: 200px !important;
   object-fit: cover !important;
+}
+
+.image-count-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .floating-badge {

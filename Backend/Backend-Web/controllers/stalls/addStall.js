@@ -348,7 +348,7 @@ export const addStall = async (req, res) => {
       rental_price: finalPrice,
       rate_per_sqm: calculatedRatePerSqm,
       price_type: priceType_final,
-      status: isAvailable !== false ? "Active" : "Inactive",
+      status: isAvailable !== false ? "Available" : "Maintenance",
       stamp: "APPROVED",
       description: description || null,
       stall_image: null, // Images now stored in BLOB storage (stall_images table), not in stall table

@@ -38,11 +38,13 @@
 
                 <!-- Floor -->
                 <v-select v-model="editForm.floor" label="Floor" :items="getFloorOptions()" :rules="rules.floor"
-                  required variant="outlined" prepend-inner-icon="mdi-stairs" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
+                  required variant="outlined" prepend-inner-icon="mdi-stairs" :readonly="isBusinessOwner" :disabled="isBusinessOwner"
+                  @update:model-value="handleFloorChange"></v-select>
 
                 <!-- Section -->
                 <v-select v-model="editForm.section" label="Section" :items="getSectionOptions()" :rules="rules.section"
-                  required variant="outlined" prepend-inner-icon="mdi-map-marker" :readonly="isBusinessOwner" :disabled="isBusinessOwner"></v-select>
+                  required variant="outlined" prepend-inner-icon="mdi-map-marker" :readonly="isBusinessOwner" :disabled="isBusinessOwner"
+                  @update:model-value="handleSectionChange"></v-select>
 
                 <!-- Area (Square Meters) - NEW FIELD (Optional) -->
                 <v-text-field v-model="editForm.areaSqm" label="NEW AREA OCCUPIED (sq.m)" :rules="rules.areaSqm"
