@@ -52,18 +52,18 @@ export async function createEmployee(req, res) {
         // Convert permissions array to JSON string
         const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
 
-        // Encrypt sensitive PII fields before storing
+        // Encrypt sensitive PII fields before storing (but NOT email - it's used for login)
         const encryptedFirstName = encryptIfNotNull(firstName);
         const encryptedLastName = encryptIfNotNull(lastName);
-        const encryptedEmail = encryptIfNotNull(email);
         const encryptedPhone = encryptIfNotNull(phoneNumber);
 
-        console.log('🔐 Encrypting employee data before storage (including password)...');
+        console.log('🔐 Encrypting employee data before storage (email stays plain for login)...');
 
-        // Call stored procedure with encrypted data (email is now login, password is encrypted)
+        // Call stored procedure with encrypted data (email is now login - stored plain, password is encrypted)
+        // 8 parameters: password, first_name, last_name, email, phone_number, branch_id, created_by, permissions
         const [[result]] = await connection.execute(
-            'CALL createBusinessEmployee(?, ?, ?, ?, ?, ?, ?)',
-            [encryptedPassword, encryptedFirstName, encryptedLastName, encryptedEmail, encryptedPhone, finalBranchId, finalCreatedBy, permissionsJson]
+            'CALL createBusinessEmployee(?, ?, ?, ?, ?, ?, ?, ?)',
+            [encryptedPassword, encryptedFirstName, encryptedLastName, email, encryptedPhone, finalBranchId, finalCreatedBy, permissionsJson]
         );
 
         res.status(201).json({
@@ -122,11 +122,27 @@ export async function getAllEmployees(req, res) {
         const decryptedEmployees = decryptEmployees(employees);
         
         // Parse permissions for each employee and alias business_employee_id as employee_id
-        const employeesWithPermissions = decryptedEmployees.map(emp => ({
-            ...emp,
-            employee_id: emp.business_employee_id, // Alias for frontend compatibility
-            permissions: emp.permissions ? JSON.parse(emp.permissions) : []
-        }));
+        const employeesWithPermissions = decryptedEmployees.map(emp => {
+            // Handle permissions - may already be an array (MySQL JSON type) or a string
+            let parsedPermissions = [];
+            if (emp.permissions) {
+                if (Array.isArray(emp.permissions)) {
+                    parsedPermissions = emp.permissions;
+                } else if (typeof emp.permissions === 'string') {
+                    try {
+                        parsedPermissions = JSON.parse(emp.permissions);
+                    } catch (e) {
+                        console.warn('Failed to parse permissions:', e.message);
+                        parsedPermissions = [];
+                    }
+                }
+            }
+            return {
+                ...emp,
+                employee_id: emp.business_employee_id, // Alias for frontend compatibility
+                permissions: parsedPermissions
+            };
+        });
         
         res.json({ 
             success: true, 

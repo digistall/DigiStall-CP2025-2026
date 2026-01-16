@@ -48,11 +48,10 @@ export async function createInspector(req, res) {
 
         connection = await createConnection();
 
-        // Check if email already exists (encrypt email for comparison)
-        const encryptedEmailCheck = encryptIfNotNull(email);
+        // Check if email already exists (email stored plain for login)
         const [existingResult] = await connection.execute(
-            'SELECT inspector_id FROM inspector WHERE email = ? OR email = ?',
-            [email, encryptedEmailCheck]
+            'SELECT inspector_id FROM inspector WHERE email = ?',
+            [email]
         );
 
         if (existingResult && existingResult.length > 0) {
@@ -67,19 +66,18 @@ export async function createInspector(req, res) {
         // Encrypt password with AES-256-GCM (not hash - so we can email it)
         const encryptedPassword = encryptData(password);
 
-        // Encrypt sensitive PII fields
+        // Encrypt sensitive PII fields (but NOT email - it's used for login)
         const encryptedFirstName = encryptIfNotNull(firstName);
         const encryptedLastName = encryptIfNotNull(lastName);
-        const encryptedEmail = encryptIfNotNull(email);
         const encryptedPhone = encryptIfNotNull(phoneNumber);
 
         console.log(`📱 Creating inspector: ${firstName} ${lastName}`);
-        console.log('🔐 Encrypting inspector data (including password)...');
+        console.log('🔐 Encrypting inspector data (email stays plain for login)...');
 
-        // Create inspector using stored procedure with encrypted data (email is login)
+        // Create inspector using stored procedure (email stored plain for login)
         const [insertResult] = await connection.execute(
             'CALL createInspector(?, ?, ?, ?, ?)',
-            [encryptedPassword, encryptedFirstName, encryptedLastName, encryptedEmail, encryptedPhone]
+            [encryptedPassword, encryptedFirstName, encryptedLastName, email, encryptedPhone]
         );
 
         const inspectorId = insertResult[0]?.[0]?.inspector_id;
@@ -209,11 +207,10 @@ export async function createCollector(req, res) {
             `);
         }
 
-        // Check if email already exists (check both plain and encrypted)
-        const encryptedEmailCheck = encryptIfNotNull(email);
+        // Check if email already exists (email stored plain for login)
         const [existingResult] = await connection.execute(
-            'SELECT collector_id FROM collector WHERE email = ? OR email = ?',
-            [email, encryptedEmailCheck]
+            'SELECT collector_id FROM collector WHERE email = ?',
+            [email]
         );
 
         if (existingResult && existingResult.length > 0) {
@@ -228,19 +225,18 @@ export async function createCollector(req, res) {
         // Encrypt password with AES-256-GCM (not hash - so we can email it)
         const encryptedPassword = encryptData(password);
 
-        // Encrypt sensitive PII fields
+        // Encrypt sensitive PII fields (but NOT email - it's used for login)
         const encryptedFirstName = encryptIfNotNull(firstName);
         const encryptedLastName = encryptIfNotNull(lastName);
-        const encryptedEmail = encryptIfNotNull(email);
         const encryptedPhone = encryptIfNotNull(phoneNumber);
 
         console.log(`📱 Creating collector: ${firstName} ${lastName}`);
-        console.log('🔐 Encrypting collector data (including password)...');
+        console.log('🔐 Encrypting collector data (email stays plain for login)...');
 
-        // Create collector using stored procedure with encrypted data (email is login)
+        // Create collector using stored procedure (email stored plain for login)
         const [insertResult] = await connection.execute(
             'CALL createCollector(?, ?, ?, ?, ?)',
-            [encryptedPassword, encryptedFirstName, encryptedLastName, encryptedEmail, encryptedPhone]
+            [encryptedPassword, encryptedFirstName, encryptedLastName, email, encryptedPhone]
         );
 
         const collectorId = insertResult[0]?.[0]?.collector_id;

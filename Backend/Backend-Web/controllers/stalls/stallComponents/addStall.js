@@ -81,7 +81,8 @@ export const addStall = async (req, res) => {
 
     connection = await createConnection();
 
-    // Authorization check
+    // Start transaction to ensure data persistence
+    await connection.beginTransaction();
     let businessManagerId = null;
     
     if (userType === "business_manager") {
@@ -252,6 +253,10 @@ export const addStall = async (req, res) => {
       [stallId]
     );
 
+    // Commit the transaction to persist data
+    await connection.commit();
+    console.log(`✅ Stall ${stallNo_final} committed to database successfully`);
+
     res.status(201).json({
       success: true,
       message: `Stall ${stallNo_final} created successfully in ${section_name} section on ${floor_name}`,
@@ -259,6 +264,15 @@ export const addStall = async (req, res) => {
     });
 
   } catch (error) {
+    // Rollback transaction on error
+    if (connection) {
+      try {
+        await connection.rollback();
+        console.log("🔄 Transaction rolled back due to error");
+      } catch (rollbackError) {
+        console.error("❌ Rollback error:", rollbackError);
+      }
+    }
     console.error("❌ Add stall error:", error);
     res.status(500).json({
       success: false,

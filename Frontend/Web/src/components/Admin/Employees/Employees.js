@@ -580,10 +580,12 @@ export default {
             
             try {
               const employeeName = `${employeeData.firstName} ${employeeData.lastName}`;
+              // Use email as username for login (email-based login system)
+              const loginEmail = backendCredentials.email;
               const emailResult = await sendEmployeeCredentialsEmail(
                 employeeData.email,
                 employeeName,
-                backendCredentials.username,
+                loginEmail,  // Email is the username for login
                 backendCredentials.password
               );
               
@@ -594,13 +596,13 @@ export default {
                 );
               } else {
                 this.showToast(
-                  `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. (Email failed)`,
+                  `⚠️ Employee created! Email/Username: ${loginEmail}, Password: ${backendCredentials.password}. (Email failed)`,
                   "warning"
                 );
               }
             } catch (emailError) {
               this.showToast(
-                `⚠️ Employee created! Username: ${backendCredentials.username}, Password: ${backendCredentials.password}. Please send manually.`,
+                `⚠️ Employee created! Email/Username: ${backendCredentials.email}, Password: ${backendCredentials.password}. Please send manually.`,
                 "warning"
               );
             }
@@ -660,12 +662,14 @@ export default {
         if (data.success) {
           const credentials = data.data.credentials;
           const roleName = mobileRole === 'inspector' ? 'Inspector' : 'Collector';
+          // Email is the login username for mobile staff too
+          const loginEmail = credentials.email;
           
-          console.log(`✅ ${roleName} created with credentials:`, credentials.username);
+          console.log(`✅ ${roleName} created with email/username:`, loginEmail);
 
           // Store credentials for display
           this.generatedCredentials = {
-            username: credentials.username,
+            username: loginEmail,  // Email is the username for login
             password: credentials.password,
             role: `Mobile ${roleName}`,
             employeeName: `${employeeData.firstName} ${employeeData.lastName}`
@@ -678,7 +682,7 @@ export default {
             const emailResult = await sendEmployeeCredentialsEmail(
               employeeData.email,
               employeeName,
-              credentials.username,
+              loginEmail,  // Email is the username for login
               credentials.password,
               `Mobile ${roleName}`
             );
@@ -694,12 +698,12 @@ export default {
             console.warn('Email sending failed:', emailError);
           }
 
-          // Always show credentials dialog
-          this.credentialsDialog = true;
+          // Don't show credentials dialog for mobile staff
+          // this.credentialsDialog = true;
           
           if (!emailSent) {
             this.showToast(
-              `⚠️ Email delivery failed. Please copy credentials from the dialog.`,
+              `⚠️ Email delivery failed. Please check the email logs for credentials.`,
               "warning"
             );
           }
