@@ -337,6 +337,22 @@ export const login = async (req, res) => {
         case 'business_employee':
           await connection.execute('UPDATE business_employee SET last_login = ? WHERE business_employee_id = ?', 
             [phTime, user[userConfig.idField]]);
+          // Also create employee session for online status tracking
+          try {
+            // First deactivate any existing sessions
+            await connection.execute(`
+              UPDATE employee_session SET is_active = 0, logout_time = ? 
+              WHERE employee_id = ? AND is_active = 1
+            `, [phTime, user[userConfig.idField]]);
+            // Create new session
+            await connection.execute(`
+              INSERT INTO employee_session (employee_id, session_token, login_time, last_heartbeat, is_active) 
+              VALUES (?, ?, ?, ?, 1)
+            `, [user[userConfig.idField], token, phTime, phTime]);
+            console.log(`✅ Created employee session for ID ${user[userConfig.idField]}`);
+          } catch (sessionError) {
+            console.warn('⚠️ Could not create employee session:', sessionError.message);
+          }
           break;
       }
       console.log(`✅ Updated last_login for ${detectedUserType}: ${decryptedEmail}`);

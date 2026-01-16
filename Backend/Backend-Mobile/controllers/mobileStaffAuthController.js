@@ -4,6 +4,22 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { decryptStaffData } from '../services/mysqlDecryptionService.js';
 
+// Get encryption key using same derivation as Web backend
+const getEncryptionKey = () => {
+    const envKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
+    // Use scryptSync with same salt as Web backend
+    return crypto.scryptSync(envKey, 'digistall-salt-v2', 32);
+};
+
+// Cache the key
+let cachedKey = null;
+const getKey = () => {
+    if (!cachedKey) {
+        cachedKey = getEncryptionKey();
+    }
+    return cachedKey;
+};
+
 // Decrypt AES-256-GCM encrypted data (format: iv:authTag:encrypted)
 const decryptAES256GCM = (encryptedData) => {
     if (!encryptedData || typeof encryptedData !== 'string' || !encryptedData.includes(':')) {
@@ -17,7 +33,7 @@ const decryptAES256GCM = (encryptedData) => {
     
     try {
         const [ivBase64, authTagBase64, encrypted] = parts;
-        const key = Buffer.from(process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123', 'utf8').slice(0, 32);
+        const key = getKey();  // Use properly derived key
         const iv = Buffer.from(ivBase64, 'base64');
         const authTag = Buffer.from(authTagBase64, 'base64');
         

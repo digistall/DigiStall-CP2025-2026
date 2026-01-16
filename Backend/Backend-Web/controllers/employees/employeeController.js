@@ -649,10 +649,10 @@ export async function getActiveSessions(req, res) {
             const [empRows] = await connection.execute(`
                 SELECT 
                     es.session_id,
-                    es.business_employee_id,
+                    es.employee_id as business_employee_id,
                     es.is_active,
                     es.login_time,
-                    es.last_activity,
+                    es.last_heartbeat as last_activity,
                     es.logout_time,
                     be.first_name,
                     be.last_name,
@@ -660,7 +660,7 @@ export async function getActiveSessions(req, res) {
                     be.email,
                     b.branch_name
                 FROM employee_session es
-                INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
+                INNER JOIN business_employee be ON es.employee_id = be.business_employee_id
                 LEFT JOIN branch b ON be.branch_id = b.branch_id
                 WHERE es.is_active = 1 
                    OR es.login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)

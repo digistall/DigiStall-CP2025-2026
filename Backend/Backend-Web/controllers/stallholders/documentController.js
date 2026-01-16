@@ -470,10 +470,11 @@ export const getAllDocumentTypes = async (req, res) => {
         document_type_id,
         document_name,
         description,
-        is_system_default,
-        created_at,
-        updated_at
+        is_required,
+        status,
+        created_at
       FROM document_types
+      WHERE status = 'Active'
       ORDER BY document_name ASC
     `);
 

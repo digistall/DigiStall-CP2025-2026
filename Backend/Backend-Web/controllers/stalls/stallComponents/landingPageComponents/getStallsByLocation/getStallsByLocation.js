@@ -20,22 +20,17 @@ export const getStallsByLocation = async (req, res) => {
       SELECT 
         s.*,
         s.stall_id as id,
-        si.image_url as stall_image,
+        si.image_id as stall_image_id,
         sec.section_name as section,
         f.floor_name as floor,
-        f.floor_number,
-        b.area,
-        b.location as branch_location,
-        bm.first_name as manager_first_name,
-        bm.last_name as manager_last_name
+        b.branch_name as branch
       FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON s.floor_id = f.floor_id
+      LEFT JOIN branch b ON f.branch_id = b.branch_id
       LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
-      WHERE b.location = ? AND s.status = 'Active' AND s.is_available = 1
-      ORDER BY s.stall_no, s.created_at DESC
+      WHERE b.location = ? AND s.status = 'Available' AND s.is_available = 1
+      ORDER BY s.stall_number, s.created_at DESC
     `,
       [location]
     );
