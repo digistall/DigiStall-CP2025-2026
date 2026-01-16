@@ -1,7 +1,60 @@
 import { createConnection } from '../config/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { decryptStaffData } from '../services/mysqlDecryptionService.js';
+
+// Decrypt AES-256-GCM encrypted data (format: iv:authTag:encrypted)
+const decryptAES256GCM = (encryptedData) => {
+    if (!encryptedData || typeof encryptedData !== 'string' || !encryptedData.includes(':')) {
+        return encryptedData;
+    }
+    
+    const parts = encryptedData.split(':');
+    if (parts.length !== 3) {
+        return encryptedData;
+    }
+    
+    try {
+        const [ivBase64, authTagBase64, encrypted] = parts;
+        const key = Buffer.from(process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123', 'utf8').slice(0, 32);
+        const iv = Buffer.from(ivBase64, 'base64');
+        const authTag = Buffer.from(authTagBase64, 'base64');
+        
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAuthTag(authTag);
+        
+        let decrypted = decipher.update(encrypted, 'base64', 'utf8');
+        decrypted += decipher.final('utf8');
+        
+        return decrypted;
+    } catch (error) {
+        console.error('❌ AES-256-GCM decryption error:', error.message);
+        return encryptedData;
+    }
+};
+
+// Decrypt all encrypted fields in staff data
+const decryptStaffFields = (staffData) => {
+    if (!staffData) return staffData;
+    
+    const result = { ...staffData };
+    
+    // Decrypt fields that might be encrypted
+    const fieldsToDecrypt = ['first_name', 'last_name', 'contact_no', 'middle_name'];
+    
+    for (const field of fieldsToDecrypt) {
+        if (result[field] && typeof result[field] === 'string' && result[field].includes(':')) {
+            const decrypted = decryptAES256GCM(result[field]);
+            if (decrypted !== result[field]) {
+                console.log(`🔓 Decrypted ${field}: ${decrypted}`);
+                result[field] = decrypted;
+            }
+        }
+    }
+    
+    return result;
+};
 
 /**
  * Mobile Staff Login Controller
@@ -101,10 +154,10 @@ export const mobileStaffLogin = async (req, res) => {
             
             if (inspectors && inspectors.length > 0) {
                 staffData = inspectors[0];
-                console.log('🔍 BEFORE decryptStaffData - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
-                // Decrypt staff data if encrypted
-                staffData = await decryptStaffData(staffData);
-                console.log('🔍 AFTER decryptStaffData - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
+                console.log('🔍 BEFORE decryption - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
+                // Decrypt staff data using our custom function
+                staffData = decryptStaffFields(staffData);
+                console.log('🔍 AFTER decryption - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 staffType = 'inspector';
                 console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
             }
@@ -123,8 +176,8 @@ export const mobileStaffLogin = async (req, res) => {
                 
                 if (collectors && collectors.length > 0) {
                     staffData = collectors[0];
-                    // Decrypt staff data if encrypted
-                    staffData = await decryptStaffData(staffData);
+                    // Decrypt staff data using our custom function
+                    staffData = decryptStaffFields(staffData);
                     staffType = 'collector';
                     console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
                 }
@@ -149,15 +202,21 @@ export const mobileStaffLogin = async (req, res) => {
         console.log('   - Stored password hash (first 20 chars):', storedPassword ? storedPassword.substring(0, 20) + '...' : 'NULL');
         console.log('   - Password length entered:', password.length);
         console.log('   - Is bcrypt hash:', storedPassword?.startsWith('$2b$') || storedPassword?.startsWith('$2a$'));
+        console.log('   - Is AES-GCM encrypted:', storedPassword?.includes(':') && storedPassword?.split(':').length === 3);
         
         try {
             // Try bcrypt comparison
             if (storedPassword && (storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2a$'))) {
                 isValidPassword = await bcrypt.compare(password, storedPassword);
                 console.log('   - Bcrypt comparison result:', isValidPassword);
+            } else if (storedPassword && storedPassword.includes(':') && storedPassword.split(':').length === 3) {
+                // Decrypt AES-256-GCM encrypted password and compare directly
+                const decryptedPassword = decryptAES256GCM(storedPassword);
+                console.log('   - Decrypted password (first 3 chars):', decryptedPassword ? decryptedPassword.substring(0, 3) + '***' : 'NULL');
+                isValidPassword = password === decryptedPassword;
+                console.log('   - AES-GCM decryption comparison result:', isValidPassword);
             } else if (storedPassword) {
                 // Fallback for SHA256 hashed passwords (legacy inspector)
-                const crypto = await import('crypto');
                 const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
                 isValidPassword = storedPassword === sha256Hash;
                 
@@ -165,6 +224,7 @@ export const mobileStaffLogin = async (req, res) => {
                 if (!isValidPassword) {
                     isValidPassword = password === storedPassword;
                 }
+                console.log('   - Legacy comparison result:', isValidPassword);
             }
         } catch (error) {
             console.error('❌ Password verification error:', error);
