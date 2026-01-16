@@ -20,10 +20,12 @@ services:
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-}
       DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
+      DB_SSL: ${DB_SSL:-true}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://68.183.154.125}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://68.183.154.125,http://localhost}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-DigiStall2025SecureKeyForEncryption123}
       # Upload directories (Docker-compatible paths)
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
@@ -50,8 +52,10 @@ services:
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-}
       DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
+      DB_SSL: ${DB_SSL:-true}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-DigiStall2025SecureKeyForEncryption123}
       # Upload directories (Docker-compatible paths)
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
