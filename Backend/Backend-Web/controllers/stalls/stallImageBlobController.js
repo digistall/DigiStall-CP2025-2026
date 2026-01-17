@@ -262,6 +262,15 @@ export async function getStallImageBlobById(req, res) {
     
     console.log(`📷 Fetching BLOB image by ID: ${image_id}`)
     
+    // Guard against undefined or invalid image_id
+    if (!image_id || image_id === 'undefined' || image_id === 'null') {
+      console.log('📷 Invalid image_id, returning 404')
+      return res.status(404).json({
+        success: false,
+        message: 'Image ID is required'
+      })
+    }
+    
     connection = await createConnection()
     
     // Direct query instead of broken stored procedure

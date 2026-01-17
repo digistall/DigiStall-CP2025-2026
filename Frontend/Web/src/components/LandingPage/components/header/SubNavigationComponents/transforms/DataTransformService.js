@@ -48,9 +48,15 @@ class DataTransformService {
 
     if (isAlreadyFormatted) {
       // Data is already properly formatted by backend
-      // Build full URL for htdocs images if needed
+      // Build full URL for BLOB images if needed
       const rawImage = stall.imageUrl || stall.stall_image
-      const imageUrl = rawImage ? this.buildImageUrl(rawImage) : this.getDefaultImage(stall.section)
+      let imageUrl = null;
+      if (rawImage && rawImage !== 'null' && rawImage !== '') {
+        imageUrl = this.buildImageUrl(rawImage);
+        console.log(`🖼️ Transformed image for ${stall.stallNumber}: ${rawImage} → ${imageUrl}`);
+      } else {
+        console.log(`⚠️ No image URL for ${stall.stallNumber}, rawImage:`, rawImage);
+      }
       return {
         ...stall,
         imageUrl: imageUrl,

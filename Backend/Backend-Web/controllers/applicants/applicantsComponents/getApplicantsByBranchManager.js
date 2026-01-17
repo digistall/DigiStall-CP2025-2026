@@ -140,22 +140,12 @@ export const getApplicantsByBranchManager = async (req, res) => {
         });
       }
 
-      // First, get the branches managed by this branch manager with decryption
+      // First, get the branches managed by this branch manager
       const [branchManagerInfo] = await connection.execute(
         `SELECT 
           bm.business_manager_id,
-          CONCAT(
-            CASE WHEN bm.is_encrypted = 1 AND ? IS NOT NULL THEN 
-              CAST(AES_DECRYPT(bm.encrypted_first_name, ?) AS CHAR(100))
-            ELSE bm.first_name END, 
-            ' ', 
-            CASE WHEN bm.is_encrypted = 1 AND ? IS NOT NULL THEN 
-              CAST(AES_DECRYPT(bm.encrypted_last_name, ?) AS CHAR(100))
-            ELSE bm.last_name END
-          ) as manager_name,
-          CASE WHEN bm.is_encrypted = 1 AND ? IS NOT NULL THEN 
-            CAST(AES_DECRYPT(bm.encrypted_email, ?) AS CHAR(255))
-          ELSE bm.email END as manager_email,
+          CONCAT(bm.first_name, ' ', bm.last_name) as manager_name,
+          bm.email as manager_email,
           b.branch_id,
           b.branch_name,
           b.area,
@@ -163,7 +153,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         FROM business_manager bm
         INNER JOIN branch b ON bm.branch_id = b.branch_id
         WHERE bm.business_manager_id = ?`,
-        [encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey, branch_manager_id]
+        [branch_manager_id]
       );
 
       if (branchManagerInfo.length === 0) {
@@ -176,22 +166,17 @@ export const getApplicantsByBranchManager = async (req, res) => {
       managerData = branchManagerInfo[0];
     }
 
-    // Build query with multi-branch support and decryption
+    // Build query with multi-branch support - data is already encrypted in app format
     let query = `
       SELECT DISTINCT
         a.applicant_id,
-        CASE WHEN a.is_encrypted = 1 AND ? IS NOT NULL THEN 
-          CAST(AES_DECRYPT(a.encrypted_full_name, ?) AS CHAR(255))
-        ELSE a.applicant_full_name END as applicant_full_name,
-        CASE WHEN a.is_encrypted = 1 AND ? IS NOT NULL THEN 
-          CAST(AES_DECRYPT(a.encrypted_contact, ?) AS CHAR(50))
-        ELSE a.applicant_contact_number END as applicant_contact_number,
-        CASE WHEN a.is_encrypted = 1 AND ? IS NOT NULL THEN 
-          CAST(AES_DECRYPT(a.encrypted_address, ?) AS CHAR(500))
-        ELSE a.applicant_address END as applicant_address,
+        a.applicant_full_name,
+        a.applicant_contact_number,
+        a.applicant_address,
         a.applicant_birthdate,
         a.applicant_civil_status,
         a.applicant_educational_attainment,
+        a.status as applicant_status,
         a.created_at,
         a.updated_at,
         -- Business information from separate table
@@ -214,7 +199,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         app.application_status as current_application_status,
         -- Stall details
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
         s.rental_price,
         s.price_type,
         s.stall_location,
@@ -238,8 +223,8 @@ export const getApplicantsByBranchManager = async (req, res) => {
       LEFT JOIN spouse sp ON a.applicant_id = sp.applicant_id
     `;
 
-    // Add encryption key params (6 params for 3 decryption calls - key appears twice each)
-    let params = [encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey, encryptionKey];
+    // No encryption params needed - data is encrypted in application format (iv:tag:data)
+    let params = [];
 
     // Apply branch filter
     if (branchFilter === null) {
@@ -267,7 +252,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         a.applicant_full_name LIKE ? OR 
         oi.email_address LIKE ? OR 
         bi.nature_of_business LIKE ? OR 
-        s.stall_no LIKE ?
+        s.stall_number LIKE ?
       )`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
@@ -341,7 +326,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         application_status: row.current_application_status,
         stall: {
           stall_id: row.stall_id,
-          stall_no: row.stall_no,
+          stall_no: row.stall_number,  // Map stall_number to stall_no for frontend compatibility
           rental_price: row.rental_price,
           price_type: row.price_type,
           stall_location: row.stall_location,

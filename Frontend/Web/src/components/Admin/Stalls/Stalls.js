@@ -513,9 +513,9 @@ export default {
         if (response.ok) {
           const result = await response.json()
           if (result.success && result.data?.images && result.data.images.length > 0) {
-            // Return primary image or first image
+            // Return primary image or first image - backend returns image_id, not id
             const primaryImage = result.data.images.find(img => img.is_primary)
-            const imageId = primaryImage ? primaryImage.id : result.data.images[0].id
+            const imageId = primaryImage ? primaryImage.image_id : result.data.images[0].image_id
             return `${baseUrl}/api/stalls/images/blob/id/${imageId}`
           }
         }
@@ -812,11 +812,19 @@ export default {
       // For business managers, check if floors and sections are available before allowing stall creation
       if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Checking floors and sections availability before opening stall modal...')
-        this.hasFloorsSections = await this.checkFloorsAndSections()
         
-        if (!this.hasFloorsSections) {
-          this.showMessage('Please set up floors and sections first before adding stalls.', 'primary')
-          return
+        // Show loading overlay while checking
+        this.loading = true
+        
+        try {
+          this.hasFloorsSections = await this.checkFloorsAndSections()
+          
+          if (!this.hasFloorsSections) {
+            this.showMessage('Please set up floors and sections first before adding stalls.', 'primary')
+            return
+          }
+        } finally {
+          this.loading = false
         }
       }
       this.showModal = true

@@ -11,7 +11,7 @@ export default {
     return {
       expandedDescriptions: {},
       stallImages: {}, // Store images for each stall { stallId: [images] }
-      loadingImages: {},
+      loadingImages: {}, // Track loading state for each stall { stallId: boolean }
     }
   },
   mounted() {
@@ -40,6 +40,12 @@ export default {
 
       for (const stall of this.stalls) {
         if (!this.stallImages[stall.id]) {
+          // Set loading state
+          this.loadingImages = {
+            ...this.loadingImages,
+            [stall.id]: true
+          }
+          
           try {
             const fetchUrl = `${apiUrl}/api/stalls/${stall.id}/images/blob`
             const response = await fetch(fetchUrl, {
@@ -60,10 +66,32 @@ export default {
                     is_primary: img.is_primary
                   }))
                 }
+              } else {
+                // No images found
+                this.stallImages = {
+                  ...this.stallImages,
+                  [stall.id]: []
+                }
+              }
+            } else {
+              // Request failed
+              this.stallImages = {
+                ...this.stallImages,
+                [stall.id]: []
               }
             }
           } catch (error) {
             console.error(`Error fetching images for stall ${stall.id}:`, error)
+            this.stallImages = {
+              ...this.stallImages,
+              [stall.id]: []
+            }
+          } finally {
+            // Clear loading state
+            this.loadingImages = {
+              ...this.loadingImages,
+              [stall.id]: false
+            }
           }
         }
       }

@@ -12,14 +12,18 @@ CREATE PROCEDURE sp_getAllStallsForLanding()
 BEGIN
     SELECT 
         s.stall_id as id,
-        s.stall_no as stallNumber,
+        s.stall_number as stallNumber,
         s.stall_location as location,
         s.size as dimensions,
         s.rental_price,
         s.price_type,
         s.status,
         s.description,
-        s.stall_image as imageUrl,
+        si.image_id as stall_image_id,
+        CASE 
+            WHEN si.image_id IS NOT NULL THEN CONCAT('/api/stalls/images/blob/id/', si.image_id)
+            ELSE NULL
+        END as imageUrl,
         s.is_available as isAvailable,
         sec.section_name as section,
         f.floor_name as floor,
@@ -33,8 +37,9 @@ BEGIN
     INNER JOIN section sec ON s.section_id = sec.section_id
     INNER JOIN floor f ON sec.floor_id = f.floor_id
     INNER JOIN branch b ON f.branch_id = b.branch_id
-    LEFT JOIN branch_manager bm ON b.branch_id = bm.branch_id
-    WHERE s.status = 'Active' AND s.is_available = 1
+    LEFT JOIN branch_manager bm ON b.business_manager_id = bm.branch_manager_id
+    LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
+    WHERE (s.status = 'Active' OR s.status = 'Available') AND s.is_available = 1
     ORDER BY s.created_at DESC;
 END//
 

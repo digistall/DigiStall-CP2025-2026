@@ -36,17 +36,18 @@ export const approveApplicant = async (req, res) => {
   let connection;
   try {
     const { id } = req.params;
-    const { username, password } = req.body;
+    // Password is auto-generated, username will be the email from other_information
+    const { password } = req.body;
 
     console.log(`🎯 Attempting to approve applicant ID: ${id}`);
-    console.log(`📝 Received credentials:`, { username, password: password ? '***' : 'undefined' });
+    console.log(`📝 Received password:`, password ? '***' : 'undefined');
 
-    // Validate required fields
-    if (!username || !password) {
-      console.log('❌ Missing credentials for approval');
+    // Validate required fields (username will be derived from email)
+    if (!password) {
+      console.log('❌ Missing password for approval');
       return res.status(400).json({
         success: false,
-        message: 'Username and password are required for approval'
+        message: 'Password is required for approval'
       });
     }
 
@@ -62,7 +63,7 @@ export const approveApplicant = async (req, res) => {
         a.applicant_full_name,
         a.applicant_contact_number,
         a.applicant_address,
-        COALESCE(oi.email_address, a.applicant_email) as email_address,
+        oi.email_address,
         bi.nature_of_business as business_name,
         bi.nature_of_business as business_type
       FROM applicant a
@@ -112,9 +113,19 @@ export const approveApplicant = async (req, res) => {
     
     console.log(`📋 Decrypted applicant:`, { name: applicant.applicant_full_name, email: applicant.email_address });
 
-    // Check if username already exists in credential table
+    // Use email as username
+    const username = applicant.email_address;
+    
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        message: 'Applicant email not found. Cannot create credentials.'
+      });
+    }
+
+    // Check if username (email) already exists in credential table
     const [existingCredential] = await connection.execute(
-      'SELECT registrationid FROM credential WHERE user_name = ?',
+      'SELECT credential_id FROM credential WHERE username = ?',
       [username]
     );
 
@@ -156,17 +167,29 @@ export const approveApplicant = async (req, res) => {
     const application = applicationRows[0];
     console.log(`📋 Found pending application:`, application);
 
-    // Hash the password
+    // Hash the password using bcrypt
     const bcrypt = await import('bcrypt');
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Encrypt the password for storage in applicant table (using same format as other encrypted data)
+    const encryptedPassword = encryptData(password);
 
     // 1. Store credentials in credential table for mobile app access
     await connection.execute(
       `INSERT INTO credential (
-        applicant_id, user_name, password_hash, created_date, is_active
-      ) VALUES (?, ?, ?, NOW(), 1)`,
+        applicant_id, username, password_hash, created_at
+      ) VALUES (?, ?, ?, NOW())`,
       [applicant.applicant_id, username, passwordHash]
     );
+    
+    // 1.5. Also update applicant table with username (email) and encrypted password
+    await connection.execute(
+      `UPDATE applicant 
+       SET applicant_username = ?, applicant_password = ?, status = 'approved', updated_at = NOW()
+       WHERE applicant_id = ?`,
+      [username, encryptedPassword, applicant.applicant_id]
+    );
+    console.log(`✅ Applicant username (email: ${username}) and encrypted password stored in applicant table`);
     console.log(`✅ Credentials stored for applicant ${applicant.applicant_id}`);
 
     // 2. Update application status to approved
@@ -179,46 +202,41 @@ export const approveApplicant = async (req, res) => {
     console.log(`✅ Application ${application.application_id} status updated to Approved`);
 
     // 3. Create stallholder record with ENCRYPTED data
-    const contractStartDate = new Date();
-    const contractEndDate = new Date();
-    contractEndDate.setFullYear(contractEndDate.getFullYear() + 1); // 1 year contract
+    // Parse full name into first and last name
+    const nameParts = applicant.applicant_full_name ? applicant.applicant_full_name.trim().split(' ') : ['Unknown'];
+    const firstName = nameParts[0] || 'Unknown';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    // Encrypt the name parts for storage
+    const encryptedFirstName = ensureEncrypted(firstName);
+    const encryptedLastName = ensureEncrypted(lastName);
 
     console.log(`🔐 Inserting stallholder with encrypted data...`);
     
     const [stallholderResult] = await connection.execute(
       `INSERT INTO stallholder (
-        applicant_id,
-        stallholder_name,
-        contact_number,
+        mobile_user_id,
+        first_name,
+        last_name,
         email,
+        contact_number,
         address,
-        business_name,
-        business_type,
-        branch_id,
         stall_id,
-        contract_start_date,
-        contract_end_date,
-        contract_status,
-        lease_amount,
-        monthly_rent,
+        branch_id,
         payment_status,
-        compliance_status,
-        date_created
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
+        status,
+        move_in_date,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', CURDATE(), NOW())`,
       [
         applicant.applicant_id,
-        applicant.encrypted_name,           // Use encrypted name
-        applicant.encrypted_contact,        // Use encrypted contact
+        encryptedFirstName,                 // Use encrypted first name
+        encryptedLastName,                  // Use encrypted last name
         applicant.encrypted_email,          // Use encrypted email
+        applicant.encrypted_contact,        // Use encrypted contact
         applicant.encrypted_address,        // Use encrypted address
-        applicant.business_name || 'Not specified',
-        applicant.business_type || 'Not specified',
-        application.branch_id,
         application.stall_id,
-        contractStartDate.toISOString().split('T')[0],
-        contractEndDate.toISOString().split('T')[0],
-        application.rental_price || 0,
-        application.rental_price || 0
+        application.branch_id
       ]
     );
 
@@ -258,8 +276,7 @@ export const approveApplicant = async (req, res) => {
         username: username,
         stall_id: application.stall_id,
         branch_id: application.branch_id,
-        contract_start: contractStartDate.toISOString().split('T')[0],
-        contract_end: contractEndDate.toISOString().split('T')[0],
+        move_in_date: new Date().toISOString().split('T')[0],
         approved_at: new Date().toISOString()
       }
     });
