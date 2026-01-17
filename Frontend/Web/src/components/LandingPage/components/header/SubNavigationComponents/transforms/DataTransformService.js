@@ -44,7 +44,7 @@ class DataTransformService {
   transformStallData(stall) {
     // If the stall data is already in frontend format (from new backend), use it as-is
     // Otherwise, transform from old backend format
-    const isAlreadyFormatted = stall.stallNumber && stall.branch && stall.branchLocation
+    const isAlreadyFormatted = stall.stallNumber && stall.branch
 
     if (isAlreadyFormatted) {
       // Data is already properly formatted by backend

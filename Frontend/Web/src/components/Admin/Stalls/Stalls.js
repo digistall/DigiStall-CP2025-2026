@@ -474,12 +474,8 @@ export default {
 
         // Image - Convert relative path to full URL
         // BLOB images use /api/stalls/images/blob/* format
-        image: stall.stall_image 
-          ? (stall.stall_image.startsWith('http') 
-              ? stall.stall_image 
-              : stall.stall_image.startsWith('/api/') 
-                ? `${this.apiBaseUrl.replace(/\/api$/, '')}${stall.stall_image}`
-                : `http://localhost${stall.stall_image}`)
+        image: stall.stall_image_id 
+          ? `${this.apiBaseUrl.replace(/\/api$/, '')}/api/stalls/images/blob/id/${stall.stall_image_id}`
           : this.getDefaultImage(stall.section_name),
 
         // Manager info
@@ -503,6 +499,31 @@ export default {
 
       console.log('🔄 Transformed stall ID:', transformed.id, 'type:', typeof transformed.id)
       return transformed
+    },
+
+    // Fetch stall image from BLOB API
+    async fetchStallImageFromBlob(stallId) {
+      if (!stallId) return null
+      
+      const baseUrl = this.apiBaseUrl.replace(/\/api$/, '')
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/stalls/public/${stallId}/images/blob`)
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data?.images && result.data.images.length > 0) {
+            // Return primary image or first image
+            const primaryImage = result.data.images.find(img => img.is_primary)
+            const imageId = primaryImage ? primaryImage.id : result.data.images[0].id
+            return `${baseUrl}/api/stalls/images/blob/id/${imageId}`
+          }
+        }
+      } catch (error) {
+        console.log(`Failed to fetch BLOB image for stall ${stallId}:`, error.message)
+      }
+      
+      return null
     },
 
     // Format price display
