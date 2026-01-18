@@ -302,14 +302,14 @@ export const mobileStaffLogin = async (req, res) => {
             
             // First, deactivate any old sessions for this staff
             await connection.execute(
-                `UPDATE staff_session SET is_active = 0 WHERE staff_id = ? AND staff_type = ?`,
+                `UPDATE staff_session SET is_active = 0 WHERE user_id = ? AND user_type = ?`,
                 [staffId, staffType]
             );
             
             // Insert new active session with CONVERT_TZ to ensure Philippine time
             // Using NOW() after SET time_zone should give Philippine time
             await connection.execute(
-                `INSERT INTO staff_session (staff_id, staff_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
+                `INSERT INTO staff_session (user_id, user_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
                  VALUES (?, ?, ?, ?, ?, NOW(), NOW(), 1)`,
                 [staffId, staffType, token, req.ip || req.connection?.remoteAddress || 'unknown', req.get('User-Agent') || 'Mobile App']
             );
@@ -320,7 +320,7 @@ export const mobileStaffLogin = async (req, res) => {
             try {
                 await connection.execute(`SET time_zone = '+08:00'`);
                 await connection.execute(
-                    `INSERT INTO staff_session (staff_id, staff_type, is_active, login_time, last_activity) 
+                    `INSERT INTO staff_session (user_id, user_type, is_active, login_time, last_activity) 
                      VALUES (?, ?, 1, NOW(), NOW())`,
                     [staffId, staffType]
                 );
@@ -421,7 +421,7 @@ export const mobileStaffLogout = async (req, res) => {
             await connection.execute(
                 `UPDATE staff_session 
                  SET is_active = 0, logout_time = NOW(), last_activity = NOW() 
-                 WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+                 WHERE user_id = ? AND user_type = ? AND is_active = 1`,
                 [staffId, staffType]
             );
             console.log(`✅ Staff session ended for ${staffType} ${staffId}`);
@@ -505,7 +505,7 @@ export const mobileStaffHeartbeat = async (req, res) => {
         // This prevents heartbeats that arrive after logout from updating last_login
         const [sessionCheck] = await connection.execute(
             `SELECT session_id FROM staff_session 
-             WHERE staff_id = ? AND staff_type = ? AND is_active = 1 
+             WHERE user_id = ? AND user_type = ? AND is_active = 1 
              LIMIT 1`,
             [staffId, staffType]
         );
@@ -535,7 +535,7 @@ export const mobileStaffHeartbeat = async (req, res) => {
         
         // Update staff session last_activity using direct SQL
         await connection.execute(
-            `UPDATE staff_session SET last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+            `UPDATE staff_session SET last_activity = NOW() WHERE user_id = ? AND user_type = ? AND is_active = 1`,
             [staffId, staffType]
         );
         

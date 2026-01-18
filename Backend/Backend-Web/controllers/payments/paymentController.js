@@ -474,7 +474,7 @@ const PaymentController = {
       } else {
         // Filter by accessible branches using stored procedure
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, null, null, null]);
         const payments = result[0] || [];
         
         // Backend-level decryption for payment data
@@ -578,7 +578,7 @@ const PaymentController = {
       } else {
         // Filter by accessible branches using stored procedure
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
+        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, null, null, null]);
         const payments = result[0] || [];
         
         // Backend-level decryption for online payment data
