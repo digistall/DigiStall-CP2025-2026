@@ -14,6 +14,13 @@ docker logs digistall-backend-mobile --tail 50
 
 docker-compose restart backend-mobile
 
+docker-compose stop backend-mobile && docker-compose start backend-mobile
+
 docker-compose up -d --build backend-mobile
 
-docker-compose down backend-mobile 
+docker-compose down backend-mobile
+
+# Force clear database procedure cache
+docker-compose stop backend-mobile && docker-compose start backend-mobile 
+
+ssh root@68.183.154.125 "docker logs digistall-backend-mobile --tail 50 --follow" ;& Start-Sleep -Seconds 3; Stop-Process -Name ssh

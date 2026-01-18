@@ -18,7 +18,7 @@ export const getAllStalls = async (req, res) => {
 
     connection = await createConnection();
 
-    // Direct query instead of broken stored procedure
+    // Direct query using actual stall table columns
     const [stalls] = await connection.execute(
       `SELECT 
         s.stall_id,
@@ -33,16 +33,21 @@ export const getAllStalls = async (req, res) => {
         s.section_id,
         s.monthly_rent,
         s.rental_price,
+        s.base_rate,
+        s.rate_per_sqm,
         s.status,
+        s.stamp,
+        s.description,
+        s.price_type,
+        s.is_available,
+        s.raffle_auction_deadline,
+        s.deadline_active,
+        s.raffle_auction_status,
         s.branch_id,
         s.stallholder_id,
         s.floor_level,
         s.section,
-        s.description,
-        s.price_type,
-        s.is_available,
-        s.base_rate,
-        s.rate_per_sqm,
+        s.amenities,
         s.created_at,
         s.updated_at,
         b.branch_name,
@@ -51,10 +56,7 @@ export const getAllStalls = async (req, res) => {
         f.floor_number,
         sec.section_name,
         si.image_id as primary_image_id,
-        CASE 
-          WHEN sh.first_name IS NOT NULL THEN CONCAT(sh.first_name, ' ', sh.last_name)
-          ELSE NULL
-        END as stallholder_name
+        sh.full_name as stallholder_name
       FROM stall s
       LEFT JOIN branch b ON s.branch_id = b.branch_id
       LEFT JOIN floor f ON s.floor_id = f.floor_id

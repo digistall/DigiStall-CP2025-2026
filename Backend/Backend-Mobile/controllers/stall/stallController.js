@@ -41,14 +41,14 @@ export const getAllStalls = async (req, res) => {
     const [stallsRows] = await connection.execute('CALL sp_getAvailableStallsForApplicant(?, ?)', [applicant_id, areaList])
     const availableStalls = stallsRows[0]
 
-    // Format stalls for mobile app
+    // Format stalls for mobile app - using correct column names from stored procedure
     const formattedStalls = availableStalls.map(stall => ({
       id: stall.stall_id,
-      stallNumber: stall.stall_no,
+      stallNumber: stall.stall_number,
       location: stall.stall_location,
-      size: stall.size,
-      price: stall.rental_price ? stall.rental_price.toLocaleString() : '0',
-      priceValue: stall.rental_price || 0,
+      size: stall.stall_size || stall.size,
+      price: stall.rental_price ? stall.rental_price.toLocaleString() : (stall.monthly_rent ? stall.monthly_rent.toLocaleString() : '0'),
+      priceValue: stall.rental_price || stall.monthly_rent || 0,
       priceType: stall.price_type,
       status: stall.application_status,
       description: stall.description || 'No description available',
@@ -62,14 +62,16 @@ export const getAllStalls = async (req, res) => {
         location: stall.location
       },
       
-      // Floor and section info
-      floor: stall.floor_name,
-      section: stall.section_name,
-      floorSection: `${stall.floor_name} / ${stall.section_name}`,
+      // Floor and section info - use floor_level/section from stall table if floor_name/section_name are null
+      floor: stall.floor_name || stall.floor_level || 'N/A',
+      section: stall.section_name || stall.section || 'N/A',
+      floorSection: `${stall.floor_name || stall.floor_level || 'N/A'} / ${stall.section_name || stall.section || 'N/A'}`,
       
-      // Application status
+      // Application status - now includes joined_raffle and joined_auction status
       canApply: stall.application_status === 'available',
-      isApplied: stall.application_status === 'applied'
+      isApplied: stall.application_status === 'applied',
+      hasJoinedRaffle: stall.application_status === 'joined_raffle',
+      hasJoinedAuction: stall.application_status === 'joined_auction'
     }))
 
     // Group stalls by price type for easier mobile app consumption
@@ -174,17 +176,24 @@ export const getStallsByType = async (req, res) => {
     const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
     const stalls = stallsRows[0]
 
-    // For each stall, fetch images from stall_images table
+    // For each stall, fetch images from stall_images table (images stored as BLOB)
     const stallsWithImages = await Promise.all(stalls.map(async (stall) => {
       const [imageRows] = await connection.execute(
-        'SELECT image_url, is_primary FROM stall_images WHERE stall_id = ? ORDER BY is_primary DESC, image_id ASC',
+        'SELECT image_id, image_name, is_primary FROM stall_images WHERE stall_id = ? ORDER BY is_primary DESC, image_id ASC',
         [stall.stall_id]
       )
       
+      // Map image IDs to API URLs for fetching BLOB data
+      const imagesWithUrls = imageRows.map(img => ({
+        ...img,
+        image_url: `/api/mobile/stalls/image/${img.image_id}`
+      }))
+      
       return {
         ...stall,
-        images: imageRows,
-        primary_image: imageRows.find(img => img.is_primary)?.image_url || imageRows[0]?.image_url || null
+        images: imagesWithUrls,
+        primary_image: imagesWithUrls.length > 0 ? imagesWithUrls[0].image_url : null,
+        primary_image_id: stall.primary_image_id || (imagesWithUrls.length > 0 ? imagesWithUrls[0].image_id : null)
       }
     }))
 
@@ -210,14 +219,16 @@ export const getStallsByType = async (req, res) => {
         location: stall.area
       },
       
-      // Floor and section info
-      floor: stall.floor_name,
-      section: stall.section_name,
-      floorSection: `${stall.floor_name} / ${stall.section_name}`,
+      // Floor and section info - use floor_level/section from stall table if floor_name/section_name are null
+      floor: stall.floor_name || stall.floor_level || 'N/A',
+      section: stall.section_name || stall.section || 'N/A',
+      floorSection: `${stall.floor_name || stall.floor_level || 'N/A'} / ${stall.section_name || stall.section || 'N/A'}`,
       
-      // Application status
+      // Application status - now includes joined_raffle and joined_auction status
       canApply: stall.application_status === 'available',
       isApplied: stall.application_status === 'applied',
+      hasJoinedRaffle: stall.application_status === 'joined_raffle',
+      hasJoinedAuction: stall.application_status === 'joined_auction',
       
       // Special fields for auction stalls
       ...(type === 'Auction' && {

@@ -70,11 +70,11 @@ const StallholderController = {
         console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
         const placeholders = branchFilter.map(() => '?').join(',');
         const [result] = await connection.execute(
-          `SELECT s.*, st.stall_number, st.stall_name, b.branch_name 
+          `SELECT s.*, st.stall_no, st.stall_location, b.branch_name 
            FROM stallholder s 
            LEFT JOIN stall st ON s.stall_id = st.stall_id 
-           LEFT JOIN branch b ON st.branch_id = b.branch_id 
-           WHERE st.branch_id IN (${placeholders})`,
+           LEFT JOIN branch b ON s.branch_id = b.branch_id 
+           WHERE s.branch_id IN (${placeholders})`,
           branchFilter
         );
         rows = result || [];

@@ -104,7 +104,9 @@ export const getBranchDocumentRequirements = async (req, res) => {
 export const createBranchDocumentRequirement = async (req, res) => {
   let connection;
   try {
-    const { document_type_id, is_required = 1, instructions } = req.body;
+    const { document_type_id, is_required, instructions } = req.body;
+    // Ensure is_required is always a valid integer (default to 1 if not provided or empty)
+    const isRequiredValue = (is_required === '' || is_required === null || is_required === undefined) ? 1 : parseInt(is_required, 10) || 1;
     let branch_id = req.user.branchId || req.user.branch_id;
     const userId = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
     const isBusinessOwner = req.user.role === 'stall_business_owner';
@@ -160,7 +162,7 @@ export const createBranchDocumentRequirement = async (req, res) => {
     for (const pair of branchManagerPairs) {
       const [rows] = await connection.execute(
         'CALL setBranchDocumentRequirement(?, ?, ?, ?, ?)',
-        [pair.branchId, document_type_id, is_required, instructions, pair.managerId]
+        [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
       );
       const result = rows[0][0]; // First row of first result set
       totalAffected += result.affected_rows || 0;
@@ -212,6 +214,8 @@ export const setBranchDocumentRequirement = async (req, res) => {
   try {
     const { documentTypeId } = req.params;
     const { is_required, instructions } = req.body;
+    // Ensure is_required is always a valid integer (default to 1 if not provided or empty)
+    const isRequiredValue = (is_required === '' || is_required === null || is_required === undefined) ? 1 : parseInt(is_required, 10) || 1;
     let branch_id = req.user.branchId || req.user.branch_id;
     const userId = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
     const isBusinessOwner = req.user.role === 'stall_business_owner';
@@ -257,7 +261,7 @@ export const setBranchDocumentRequirement = async (req, res) => {
     for (const pair of branchManagerPairs) {
       const [rows] = await connection.execute(
         'CALL setBranchDocumentRequirement(?, ?, ?, ?, ?)',
-        [pair.branchId, documentTypeId, is_required, instructions, pair.managerId]
+        [pair.branchId, documentTypeId, isRequiredValue, instructions || null, pair.managerId]
       );
       const result = rows[0][0]; // First row of first result set
       totalAffected += result.affected_rows || 0;
