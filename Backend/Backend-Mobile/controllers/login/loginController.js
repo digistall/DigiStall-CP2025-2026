@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { createConnection } from '../../config/database.js'
-import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB } from '../../services/mysqlDecryptionService.js'
+import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB, decryptAES256GCM, decryptObjectFields } from '../../services/mysqlDecryptionService.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
 export const mobileLogin = async (req, res) => {
@@ -41,18 +41,21 @@ export const mobileLogin = async (req, res) => {
 
     const userCredentials = credentialRows[0]
     
-    // Decrypt user credentials if encrypted
-    const decryptedCredentials = await decryptApplicantData(userCredentials)
+    // Decrypt user credentials if encrypted (first_name, last_name from applicant table)
+    const decryptedCredentials = decryptObjectFields(userCredentials, ['first_name', 'last_name', 'applicant_contact_number', 'applicant_address'])
     
-    console.log('👤 Found user:', decryptedCredentials.applicant_full_name)
+    // Build full name from decrypted first_name and last_name
+    const applicantFullName = `${decryptedCredentials.first_name || ''} ${decryptedCredentials.last_name || ''}`.trim() || 'User'
+    decryptedCredentials.applicant_full_name = applicantFullName
+    
+    console.log('👤 Found user:', applicantFullName)
     console.log('🔍 User credentials structure:', {
       registrationid: decryptedCredentials.registrationid,
       applicant_id: decryptedCredentials.applicant_id,
-      user_name: decryptedCredentials.user_name,
+      username: decryptedCredentials.username,
       has_password_hash: !!decryptedCredentials.password_hash,
       password_hash_preview: decryptedCredentials.password_hash?.substring(0, 15) + '...',
-      applicant_full_name: decryptedCredentials.applicant_full_name,
-      is_active: decryptedCredentials.is_active
+      applicant_full_name: applicantFullName
     })
 
     // Verify password
@@ -149,10 +152,8 @@ export const mobileLogin = async (req, res) => {
       ? additionalInfoRows[0][0] 
       : {}
     
-    // Decrypt spouse data if present
-    if (additionalInfo && additionalInfo.spouse_full_name) {
-      additionalInfo = await decryptSpouseData(additionalInfo)
-    }
+    // Decrypt additional info fields (spouse, email, etc.)
+    additionalInfo = decryptObjectFields(additionalInfo, ['email_address', 'spouse_full_name', 'spouse_contact_number'])
     console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
     // Step 7b: Get stallholder information if user is a stallholder using stored procedure
@@ -164,7 +165,13 @@ export const mobileLogin = async (req, res) => {
     let stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
     // Decrypt stallholder data if present
     if (stallholderInfo) {
-      stallholderInfo = await decryptStallholderData(stallholderInfo)
+      // Decrypt individual fields first
+      stallholderInfo = decryptObjectFields(stallholderInfo, ['first_name', 'last_name', 'stallholder_contact', 'stallholder_email', 'stallholder_address'])
+      // Build stallholder_name from decrypted first_name and last_name
+      const decryptedFirst = stallholderInfo.first_name || ''
+      const decryptedLast = stallholderInfo.last_name || ''
+      stallholderInfo.stallholder_name = `${decryptedFirst} ${decryptedLast}`.trim()
+      console.log('🔓 Built stallholder_name:', stallholderInfo.stallholder_name)
     }
     console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
@@ -184,26 +191,31 @@ export const mobileLogin = async (req, res) => {
     )
 
     // Step 9: Prepare React.js-friendly response with complete user data (using decrypted data)
+    // Helper function to decrypt any remaining encrypted values
+    const safeDecrypt = (value) => decryptAES256GCM(value) || value;
+    
+    // Build full name from stallholder info or applicant info
+    const fullName = stallholderInfo?.stallholder_name || decryptedCredentials.applicant_full_name || 'User'
+    
     const responseData = {
       // User profile for React state
       user: {
         applicant_id: decryptedCredentials.applicant_id,
-        registration_id: decryptedCredentials.registrationid,
-        username: decryptedCredentials.user_name,
-        full_name: stallholderInfo?.stallholder_name || decryptedCredentials.applicant_full_name,
+        username: decryptedCredentials.username, // This is the email
+        full_name: fullName,
         stallholder_name: stallholderInfo?.stallholder_name || null,
         contact_number: stallholderInfo?.stallholder_contact || decryptedCredentials.applicant_contact_number,
         address: decryptedCredentials.applicant_address,
         birthdate: decryptedCredentials.applicant_birthdate,
         civil_status: decryptedCredentials.applicant_civil_status,
         educational_attainment: decryptedCredentials.applicant_educational_attainment,
-        email: stallholderInfo?.stallholder_email || additionalInfo.email_address || null,
-        stall_number: stallholderInfo?.stall_no || null,
+        email: stallholderInfo?.stallholder_email || additionalInfo.email_address || decryptedCredentials.username,
+        stall_number: stallholderInfo?.stall_number || null,
         created_date: decryptedCredentials.created_date,
         last_login: new Date().toISOString()
       },
 
-      // Spouse information (separate object for frontend)
+      // Spouse information (separate object for frontend) - already decrypted above
       spouse: additionalInfo.spouse_full_name ? {
         spouse_id: null, // Not available in current query
         full_name: additionalInfo.spouse_full_name,
@@ -223,7 +235,7 @@ export const mobileLogin = async (req, res) => {
         relative_stall_owner: additionalInfo.relative_stall_owner
       } : null,
 
-      // Other information (separate object for frontend)
+      // Other information (separate object for frontend) - already decrypted above
       other_info: additionalInfo.email_address ? {
         other_info_id: null,
         email_address: additionalInfo.email_address,
@@ -237,7 +249,7 @@ export const mobileLogin = async (req, res) => {
         application_id: applicationInfo.application_id,
         stall_id: applicationInfo.stall_id,
         status: applicationInfo.status,
-        stall_no: applicationInfo.stall_no,
+        stall_number: applicationInfo.stall_number,
         rental_price: applicationInfo.rental_price,
         branch_name: applicationInfo.branch_name
       } : null,
@@ -245,25 +257,20 @@ export const mobileLogin = async (req, res) => {
       // Stallholder information (if user is a stallholder)
       stallholder: stallholderInfo ? {
         stallholder_id: stallholderInfo.stallholder_id,
-        stallholder_name: stallholderInfo.stallholder_name,
+        stallholder_name: stallholderInfo.stallholder_name, // Already built from decrypted first_name + last_name
         contact_number: stallholderInfo.stallholder_contact,
         email: stallholderInfo.stallholder_email,
         address: stallholderInfo.stallholder_address,
-        business_name: stallholderInfo.business_name,
-        business_type: stallholderInfo.business_type,
         branch_id: stallholderInfo.branch_id,
         branch_name: stallholderInfo.branch_name,
         stall_id: stallholderInfo.stall_id,
-        stall_no: stallholderInfo.stall_no,
-        stall_number: stallholderInfo.stall_no, // Alias for frontend
+        stall_number: stallholderInfo.stall_number,
         stall_location: stallholderInfo.stall_location,
         size: stallholderInfo.size,
         contract_start_date: stallholderInfo.contract_start_date,
-        contract_end_date: stallholderInfo.contract_end_date,
         contract_status: stallholderInfo.contract_status,
         monthly_rent: stallholderInfo.monthly_rent,
-        payment_status: stallholderInfo.payment_status,
-        compliance_status: stallholderInfo.compliance_status
+        payment_status: stallholderInfo.payment_status
       } : null,
 
       // Computed fields for easy access
@@ -271,7 +278,7 @@ export const mobileLogin = async (req, res) => {
       isApproved: applicationInfo?.status === 'Approved',
       applicationStatus: applicationInfo?.status || 'No Application',
 
-      // Legacy profile structure (for backward compatibility)
+      // Legacy profile structure (for backward compatibility) - already decrypted above
       profile: {
         other_info: {
           email_address: additionalInfo.email_address,
@@ -325,9 +332,9 @@ export const mobileLogin = async (req, res) => {
       {
         userId: decryptedCredentials.applicant_id,
         applicantId: decryptedCredentials.applicant_id,
-        username: decryptedCredentials.user_name,
+        username: decryptedCredentials.username, // email
+        fullName: fullName,
         userType: 'stallholder',
-        registrationId: decryptedCredentials.registrationid,
         stallholderId: stallholderInfo?.stallholder_id || null,
         isStallholder: !!stallholderInfo
       },
@@ -335,7 +342,7 @@ export const mobileLogin = async (req, res) => {
       { expiresIn: '7d' } // Token valid for 7 days
     );
     
-    console.log('🔐 JWT token generated for user:', decryptedCredentials.user_name);
+    console.log('🔐 JWT token generated for user:', fullName);
 
     res.json({
       success: true,
