@@ -50,7 +50,6 @@ export const mobileLogin = async (req, res) => {
     
     console.log('👤 Found user:', applicantFullName)
     console.log('🔍 User credentials structure:', {
-      registrationid: decryptedCredentials.registrationid,
       applicant_id: decryptedCredentials.applicant_id,
       username: decryptedCredentials.username,
       has_password_hash: !!decryptedCredentials.password_hash,
