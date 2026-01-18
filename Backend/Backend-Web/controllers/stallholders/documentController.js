@@ -160,16 +160,35 @@ export const createBranchDocumentRequirement = async (req, res) => {
     let totalAffected = 0;
     let createdRequirements = [];
     for (const pair of branchManagerPairs) {
-      const [rows] = await connection.execute(
-        'CALL setBranchDocumentRequirement(?, ?, ?, ?, ?)',
-        [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
+      // Use direct INSERT instead of stored procedure for compatibility
+      // First check if requirement already exists
+      const [existing] = await connection.execute(
+        'SELECT requirement_id FROM branch_document_requirements WHERE branch_id = ? AND document_type_id = ?',
+        [pair.branchId, document_type_id]
       );
-      const result = rows[0][0]; // First row of first result set
-      totalAffected += result.affected_rows || 0;
+      
+      let requirementId;
+      if (existing.length > 0) {
+        // Update existing requirement
+        await connection.execute(
+          'UPDATE branch_document_requirements SET is_required = ?, instructions = ?, updated_at = NOW() WHERE requirement_id = ?',
+          [isRequiredValue, instructions || null, existing[0].requirement_id]
+        );
+        requirementId = existing[0].requirement_id;
+      } else {
+        // Insert new requirement
+        const [insertResult] = await connection.execute(
+          'INSERT INTO branch_document_requirements (branch_id, document_type_id, is_required, instructions, created_by_business_manager, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+          [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
+        );
+        requirementId = insertResult.insertId;
+      }
+      
+      totalAffected += 1;
       createdRequirements.push({
         branch_id: pair.branchId,
         manager_id: pair.managerId,
-        requirement_id: result.requirement_id
+        requirement_id: requirementId
       });
     }
 
@@ -887,18 +906,35 @@ export const getStallholderDocumentSubmissions = async (req, res) => {
     
     connection = await createConnection();
     
-    // Use stored procedure to get stallholder documents
-    const [rows] = await connection.execute('CALL sp_getDocumentsByStallholderId(?)', [stallholderId]);
+    // Use direct query instead of stored procedure for compatibility
+    const [rows] = await connection.execute(`
+      SELECT 
+        sd.document_id,
+        sd.stallholder_id,
+        sd.document_type,
+        sd.document_name,
+        sd.document_mime_type,
+        sd.verification_status,
+        sd.verified_by,
+        sd.verified_at,
+        sd.remarks,
+        sd.created_at,
+        sh.full_name as stallholder_name,
+        sh.full_name as business_name
+      FROM stallholder_documents sd
+      LEFT JOIN stallholder sh ON sd.stallholder_id = sh.stallholder_id
+      WHERE sd.stallholder_id = ?
+      ORDER BY sd.created_at DESC
+    `, [stallholderId]);
     
     // Map the results to match expected frontend format
-    const documents = (rows[0] || []).map(doc => ({
+    const documents = (rows || []).map(doc => ({
       ...doc,
-      submission_id: doc.document_id, // Map for frontend compatibility
-      file_name: doc.original_filename,
-      file_url: doc.file_path,
-      uploaded_at: doc.upload_date,
-      // Map verification_status to status for frontend
-      status: doc.status === 'verified' ? 'approved' : doc.status
+      submission_id: doc.document_id,
+      file_name: doc.document_name,
+      uploaded_at: doc.created_at,
+      status: doc.verification_status === 'Approved' ? 'approved' : 
+              doc.verification_status === 'Rejected' ? 'rejected' : 'pending'
     }));
     
     res.json({

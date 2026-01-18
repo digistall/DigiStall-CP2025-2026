@@ -53,10 +53,34 @@ const StallholderController = {
       let rows;
       
       if (branchFilter === null) {
-        // System administrator - see all stallholders
+        // System administrator - see all stallholders using direct query
         console.log('✅ System admin - fetching all stallholders');
-        const [result] = await connection.execute('CALL getAllStallholders()');
-        rows = result[0] || [];
+        const [result] = await connection.execute(`
+          SELECT 
+            s.stallholder_id,
+            s.full_name,
+            s.full_name as stallholder_name,
+            s.full_name as business_name,
+            s.email,
+            s.contact_number,
+            s.address,
+            s.stall_id,
+            s.branch_id,
+            s.payment_status,
+            s.status,
+            s.move_in_date,
+            s.created_at,
+            s.updated_at,
+            st.stall_number as stall_no,
+            st.stall_number,
+            st.stall_location,
+            b.branch_name
+          FROM stallholder s
+          LEFT JOIN stall st ON s.stall_id = st.stall_id
+          LEFT JOIN branch b ON s.branch_id = b.branch_id
+          ORDER BY s.stallholder_id
+        `);
+        rows = result || [];
       } else if (branchFilter.length === 0) {
         // No branches accessible
         console.log('⚠️ No branches accessible');
@@ -1817,12 +1841,30 @@ const StallholderController = {
 
       connection = await createConnection();
 
-      const [records] = await connection.execute(
-        'CALL getViolationHistoryByStallholder(?)',
-        [id]
-      );
+      // Use direct query instead of stored procedure for compatibility
+      const [records] = await connection.execute(`
+        SELECT 
+          vr.report_id AS violation_id,
+          vr.stallholder_id,
+          vr.violation_id AS violation_type_id,
+          v.violation_name,
+          v.description AS violation_description,
+          v.severity,
+          vr.report_date,
+          vr.offense_count,
+          vr.penalty_amount,
+          vr.payment_status,
+          vr.paid_date,
+          vr.remarks,
+          vr.status,
+          vr.created_at
+        FROM violation_report vr
+        LEFT JOIN violation v ON vr.violation_id = v.violation_id
+        WHERE vr.stallholder_id = ?
+        ORDER BY vr.report_date DESC
+      `, [id]);
 
-      const violations = records[0] || [];
+      const violations = records || [];
 
       console.log(`✅ Found ${violations.length} violations for stallholder ${id}`);
 
