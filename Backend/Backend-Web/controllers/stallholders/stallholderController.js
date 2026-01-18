@@ -96,6 +96,8 @@ const StallholderController = {
         // Use correct column name: stall_number (stall_no doesn't exist)
         const [result] = await connection.execute(
           `SELECT s.*, 
+                  s.full_name as stallholder_name,
+                  s.full_name as business_name,
                   st.stall_number as stall_no, 
                   st.stall_number,
                   st.stall_location, 

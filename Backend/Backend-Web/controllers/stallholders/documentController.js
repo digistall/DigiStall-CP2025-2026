@@ -159,27 +159,35 @@ export const createBranchDocumentRequirement = async (req, res) => {
     // Apply to all branches with correct manager for each
     let totalAffected = 0;
     let createdRequirements = [];
+    
+    // Get the document type name from document_type_id
+    const [docTypes] = await connection.execute(
+      'SELECT type_name FROM document_types WHERE document_type_id = ?',
+      [document_type_id]
+    );
+    const documentName = docTypes.length > 0 ? docTypes[0].type_name : `Document Type ${document_type_id}`;
+    
     for (const pair of branchManagerPairs) {
-      // Use direct INSERT instead of stored procedure for compatibility
+      // Use correct column names: document_requirement_id, document_name, created_by
       // First check if requirement already exists
       const [existing] = await connection.execute(
-        'SELECT requirement_id FROM branch_document_requirements WHERE branch_id = ? AND document_type_id = ?',
-        [pair.branchId, document_type_id]
+        'SELECT document_requirement_id FROM branch_document_requirements WHERE branch_id = ? AND document_name = ?',
+        [pair.branchId, documentName]
       );
       
       let requirementId;
       if (existing.length > 0) {
         // Update existing requirement
         await connection.execute(
-          'UPDATE branch_document_requirements SET is_required = ?, instructions = ?, updated_at = NOW() WHERE requirement_id = ?',
-          [isRequiredValue, instructions || null, existing[0].requirement_id]
+          'UPDATE branch_document_requirements SET is_required = ?, description = ?, updated_at = NOW() WHERE document_requirement_id = ?',
+          [isRequiredValue, instructions || null, existing[0].document_requirement_id]
         );
-        requirementId = existing[0].requirement_id;
+        requirementId = existing[0].document_requirement_id;
       } else {
-        // Insert new requirement
+        // Insert new requirement with correct column names
         const [insertResult] = await connection.execute(
-          'INSERT INTO branch_document_requirements (branch_id, document_type_id, is_required, instructions, created_by_business_manager, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-          [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
+          'INSERT INTO branch_document_requirements (branch_id, document_name, description, is_required, created_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+          [pair.branchId, documentName, instructions || null, isRequiredValue, pair.managerId]
         );
         requirementId = insertResult.insertId;
       }
