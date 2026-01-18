@@ -69,8 +69,12 @@ const StallholderController = {
         // Filter by accessible branches
         console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
         const placeholders = branchFilter.map(() => '?').join(',');
+        // Use COALESCE to handle both column names (stall_no for production, stall_number for local dev)
         const [result] = await connection.execute(
-          `SELECT s.*, st.stall_no, st.stall_location, b.branch_name 
+          `SELECT s.*, 
+                  COALESCE(st.stall_no, st.stall_number) as stall_no, 
+                  st.stall_location, 
+                  b.branch_name 
            FROM stallholder s 
            LEFT JOIN stall st ON s.stall_id = st.stall_id 
            LEFT JOIN branch b ON s.branch_id = b.branch_id 

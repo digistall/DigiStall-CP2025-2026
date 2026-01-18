@@ -77,15 +77,77 @@ const PaymentController = {
       
       console.log('🔍 getStallholdersByBranch called for branch:', branchId);
       
-      // Use decrypted stored procedure for frontend display
-      console.log('🔍 Executing stored procedure with branchId:', branchId);
-      const [result] = await connection.execute(
-        'CALL sp_get_all_stallholders_decrypted(?)',
-        [branchId]
-      );
+      // Use direct query instead of stored procedure for compatibility
+      console.log('🔍 Executing query with branchId:', branchId);
+      let query;
+      let params;
       
-      // Extract stallholders from stored procedure result
-      const stallholders = result[0] || [];
+      if (branchId) {
+        query = `
+          SELECT 
+            sh.stallholder_id as id,
+            sh.stallholder_name as name,
+            sh.stallholder_name,
+            sh.contact_number as contact,
+            sh.email,
+            sh.address,
+            sh.stall_id,
+            COALESCE(s.stall_no, s.stall_number) as stallNo,
+            COALESCE(s.stall_no, s.stall_number) as stall_number,
+            s.stall_location as stallLocation,
+            s.rental_price as monthlyRental,
+            s.rental_price,
+            sh.branch_id,
+            b.branch_name as branchName,
+            b.branch_name,
+            sh.contract_status,
+            sh.payment_status,
+            sh.contract_start_date,
+            sh.business_name as businessName,
+            sh.business_name
+          FROM stallholder sh
+          LEFT JOIN stall s ON sh.stall_id = s.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE sh.branch_id = ?
+          ORDER BY sh.stallholder_id
+        `;
+        params = [branchId];
+      } else {
+        // For system admin or business owner, get all stallholders
+        query = `
+          SELECT 
+            sh.stallholder_id as id,
+            sh.stallholder_name as name,
+            sh.stallholder_name,
+            sh.contact_number as contact,
+            sh.email,
+            sh.address,
+            sh.stall_id,
+            COALESCE(s.stall_no, s.stall_number) as stallNo,
+            COALESCE(s.stall_no, s.stall_number) as stall_number,
+            s.stall_location as stallLocation,
+            s.rental_price as monthlyRental,
+            s.rental_price,
+            sh.branch_id,
+            b.branch_name as branchName,
+            b.branch_name,
+            sh.contract_status,
+            sh.payment_status,
+            sh.contract_start_date,
+            sh.business_name as businessName,
+            sh.business_name
+          FROM stallholder sh
+          LEFT JOIN stall s ON sh.stall_id = s.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          ORDER BY sh.stallholder_id
+        `;
+        params = [];
+      }
+      
+      const [result] = await connection.execute(query, params);
+      
+      // Extract stallholders from query result
+      const stallholders = result || [];
       console.log('📊 Stallholders found for branch', branchId + ':', stallholders.length);
       
       // Debug: Log first stallholder BEFORE decryption
@@ -425,9 +487,35 @@ const PaymentController = {
       let queryParams;
       
       if (branchFilter === null) {
-        // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
-        const payments = result[0] || [];
+        // System administrator - see all using direct query for compatibility
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.stallholder_name as stallholderName,
+            sh.business_name as businessName,
+            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Cash (Onsite)' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.collected_by as collectedBy,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'onsite'
+          ORDER BY p.created_at DESC
+          LIMIT ? OFFSET ?
+        `, [limit, offset]);
+        const payments = result || [];
         
         // Backend-level decryption for payment data
         const decryptedPayments = payments.map(payment => {
@@ -472,10 +560,37 @@ const PaymentController = {
           data: []
         });
       } else {
-        // Filter by accessible branches using stored procedure
+        // Filter by accessible branches using direct query for compatibility
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, null, null, null]);
-        const payments = result[0] || [];
+        const placeholders = branchFilter.map(() => '?').join(',');
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.stallholder_name as stallholderName,
+            sh.business_name as businessName,
+            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Cash (Onsite)' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.collected_by as collectedBy,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'onsite'
+          AND sh.branch_id IN (${placeholders})
+          ORDER BY p.created_at DESC
+        `, branchFilter);
+        const payments = result || [];
         
         // Backend-level decryption for payment data
         const decryptedPayments = payments.map(payment => {
@@ -542,9 +657,34 @@ const PaymentController = {
       const search = req.query.search || '';
       
       if (branchFilter === null) {
-        // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
-        const payments = result[0] || [];
+        // System administrator - see all using direct query for compatibility
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.stallholder_name as stallholderName,
+            sh.business_name as businessName,
+            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Online' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'online'
+          ORDER BY p.created_at DESC
+          LIMIT ? OFFSET ?
+        `, [limit, offset]);
+        const payments = result || [];
         
         // Backend-level decryption for online payment data
         const decryptedPayments = payments.map(payment => {
@@ -576,10 +716,36 @@ const PaymentController = {
           total: 0
         });
       } else {
-        // Filter by accessible branches using stored procedure
+        // Filter by accessible branches using direct query for compatibility
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, null, null, null]);
-        const payments = result[0] || [];
+        const placeholders = branchFilter.map(() => '?').join(',');
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.stallholder_name as stallholderName,
+            sh.business_name as businessName,
+            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Online' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'online'
+          AND sh.branch_id IN (${placeholders})
+          ORDER BY p.created_at DESC
+        `, branchFilter);
+        const payments = result || [];
         
         // Backend-level decryption for online payment data
         const decryptedPayments = payments.map(payment => {
