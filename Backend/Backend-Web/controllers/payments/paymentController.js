@@ -260,22 +260,53 @@ const PaymentController = {
       
       console.log('🔍 getStallholderDetails called for stallholderId:', stallholderId);
       
-      const [result] = await connection.execute(
-        'CALL sp_get_stallholder_details_decrypted(?)',
-        [parseInt(stallholderId)]
-      );
+      // Use direct query instead of stored procedure for compatibility
+      const [result] = await connection.execute(`
+        SELECT 
+          sh.stallholder_id as id,
+          sh.stallholder_id,
+          sh.full_name as name,
+          sh.full_name as stallholder_name,
+          sh.full_name as businessName,
+          sh.full_name as business_name,
+          sh.email,
+          sh.contact_number as contact,
+          sh.contact_number,
+          sh.address,
+          sh.stall_id,
+          sh.branch_id,
+          sh.payment_status,
+          sh.status as contract_status,
+          sh.move_in_date as contract_start_date,
+          sh.created_at,
+          sh.updated_at,
+          s.stall_number as stallNo,
+          s.stall_number,
+          s.stall_location as stallLocation,
+          s.stall_location,
+          s.rental_price as monthlyRental,
+          s.rental_price,
+          s.stall_size,
+          s.area_sqm,
+          b.branch_name as branchName,
+          b.branch_name
+        FROM stallholder sh
+        LEFT JOIN stall s ON sh.stall_id = s.stall_id
+        LEFT JOIN branch b ON sh.branch_id = b.branch_id
+        WHERE sh.stallholder_id = ?
+      `, [parseInt(stallholderId)]);
       
-      if (!result[0] || result[0].length === 0) {
+      if (!result || result.length === 0) {
         return res.status(404).json({
           success: false,
           message: 'Stallholder not found'
         });
       }
       
-      console.log('📊 Stallholder details found:', result[0][0]);
+      console.log('📊 Stallholder details found:', result[0]);
       
       // Backend-level decryption for stallholder details
-      const stallholder = result[0][0];
+      const stallholder = result[0];
       
       // Decrypt name (supports both 'name' and 'stallholder_name')
       const nameField = stallholder.name || stallholder.stallholder_name;
@@ -406,52 +437,76 @@ const PaymentController = {
       
       console.log('💳 Adding onsite payment:', { stallholderId, amount, paymentDate, referenceNumber });
       
-      // Call the enhanced addOnsitePayment procedure
-      const [result] = await connection.execute(
-        'CALL addOnsitePayment(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          parseInt(stallholderId),
-          parseFloat(amount),
-          paymentDate,
-          paymentTime || null,
-          paymentForMonth || null,
-          paymentType || 'rental',
-          referenceNumber,
-          collectedBy || userInfo.username || 'System',
-          notes || null,
-          userInfo.branchId || null,
-          userInfo.userId
-        ]
-      );
+      // Get stallholder's branch_id if not provided
+      let branchId = userInfo.branchId;
+      if (!branchId) {
+        const [shResult] = await connection.execute(
+          'SELECT branch_id FROM stallholder WHERE stallholder_id = ?',
+          [parseInt(stallholderId)]
+        );
+        if (shResult.length > 0) {
+          branchId = shResult[0].branch_id;
+        }
+      }
       
-      if (!result[0] || result[0].length === 0) {
+      // Use direct INSERT instead of stored procedure for compatibility
+      const [insertResult] = await connection.execute(`
+        INSERT INTO payments (
+          stallholder_id,
+          branch_id,
+          amount,
+          payment_date,
+          payment_time,
+          payment_for_month,
+          payment_type,
+          payment_method,
+          reference_number,
+          collected_by,
+          notes,
+          payment_status,
+          created_by,
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'onsite', ?, ?, ?, 'completed', ?, NOW())
+      `, [
+        parseInt(stallholderId),
+        branchId,
+        parseFloat(amount),
+        paymentDate,
+        paymentTime || null,
+        paymentForMonth || null,
+        paymentType || 'rental',
+        referenceNumber,
+        collectedBy || userInfo.username || 'System',
+        notes || null,
+        userInfo.userId
+      ]);
+      
+      const paymentId = insertResult.insertId;
+      
+      if (!paymentId) {
         throw new Error('Failed to add payment');
       }
       
-      const paymentResult = result[0][0];
+      // Update stallholder payment status
+      await connection.execute(
+        "UPDATE stallholder SET payment_status = 'paid' WHERE stallholder_id = ?",
+        [parseInt(stallholderId)]
+      );
       
-      // Check if payment was successful
-      if (!paymentResult.success) {
-        return res.status(400).json({
-          success: false,
-          message: paymentResult.message || 'Failed to add payment'
-        });
-      }
-      
-      console.log('✅ Payment added successfully:', paymentResult);
+      console.log('✅ Payment added successfully:', { paymentId, amount, referenceNumber });
       
       res.status(201).json({
         success: true,
-        message: paymentResult.message || 'Payment added successfully',
-        paymentId: paymentResult.payment_id,
-        amountPaid: paymentResult.amount_paid,
-        monthlyRent: paymentResult.monthly_rent || 0,
-        earlyDiscount: paymentResult.early_discount || 0,
-        lateFee: paymentResult.late_fee || 0,
-        daysEarly: paymentResult.days_early || 0,
-        daysOverdue: paymentResult.days_overdue || 0,
-        dueDate: paymentResult.due_date,
-        receiptNumber: paymentResult.receipt_number
+        message: 'Payment added successfully',
+        paymentId: paymentId,
+        amountPaid: parseFloat(amount),
+        monthlyRent: 0,
+        earlyDiscount: 0,
+        lateFee: 0,
+        daysEarly: 0,
+        daysOverdue: 0,
+        dueDate: null,
+        receiptNumber: referenceNumber
       });
       
     } catch (error) {
