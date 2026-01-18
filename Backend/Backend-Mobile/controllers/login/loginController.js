@@ -41,12 +41,10 @@ export const mobileLogin = async (req, res) => {
 
     const userCredentials = credentialRows[0]
     
-    // Decrypt user credentials if encrypted (first_name, last_name from applicant table)
-    const decryptedCredentials = decryptObjectFields(userCredentials, ['first_name', 'last_name', 'applicant_contact_number', 'applicant_address'])
+    // Decrypt user credentials if encrypted (applicant_full_name from applicant table)
+    const decryptedCredentials = decryptObjectFields(userCredentials, ['applicant_full_name', 'applicant_contact_number', 'applicant_address'])
     
-    // Build full name from decrypted first_name and last_name
-    const applicantFullName = `${decryptedCredentials.first_name || ''} ${decryptedCredentials.last_name || ''}`.trim() || 'User'
-    decryptedCredentials.applicant_full_name = applicantFullName
+    const applicantFullName = decryptedCredentials.applicant_full_name || 'User'
     
     console.log('👤 Found user:', applicantFullName)
     console.log('🔍 User credentials structure:', {
@@ -162,15 +160,9 @@ export const mobileLogin = async (req, res) => {
     )
     
     let stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
-    // Decrypt stallholder data if present
+    // Decrypt stallholder data if present (full_name is now a single column)
     if (stallholderInfo) {
-      // Decrypt individual fields first
-      stallholderInfo = decryptObjectFields(stallholderInfo, ['first_name', 'last_name', 'stallholder_contact', 'stallholder_email', 'stallholder_address'])
-      // Build stallholder_name from decrypted first_name and last_name
-      const decryptedFirst = stallholderInfo.first_name || ''
-      const decryptedLast = stallholderInfo.last_name || ''
-      stallholderInfo.stallholder_name = `${decryptedFirst} ${decryptedLast}`.trim()
-      console.log('🔓 Built stallholder_name:', stallholderInfo.stallholder_name)
+      stallholderInfo = decryptObjectFields(stallholderInfo, ['stallholder_name', 'stallholder_contact', 'stallholder_email', 'stallholder_address'])
     }
     console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
