@@ -162,7 +162,8 @@ export const mobileLogin = async (req, res) => {
     let stallholderInfo = stallholderRows[0]?.length > 0 ? stallholderRows[0][0] : null
     // Decrypt stallholder data if present (full_name is now a single column)
     if (stallholderInfo) {
-      stallholderInfo = decryptObjectFields(stallholderInfo, ['stallholder_name', 'stallholder_contact', 'stallholder_email', 'stallholder_address'])
+      stallholderInfo = decryptObjectFields(stallholderInfo, ['stallholder_name', 'contact_number', 'email', 'address'])
+      console.log('🔓 Decrypted stallholder_name:', stallholderInfo.stallholder_name)
     }
     console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
@@ -194,13 +195,13 @@ export const mobileLogin = async (req, res) => {
         applicant_id: decryptedCredentials.applicant_id,
         username: decryptedCredentials.username, // This is the email
         full_name: fullName,
-        stallholder_name: stallholderInfo?.stallholder_name || null,
-        contact_number: stallholderInfo?.stallholder_contact || decryptedCredentials.applicant_contact_number,
-        address: decryptedCredentials.applicant_address,
+        stallholder_name: stallholderInfo?.stallholder_name || fullName,
+        contact_number: stallholderInfo?.contact_number || decryptedCredentials.applicant_contact_number,
+        address: stallholderInfo?.address || decryptedCredentials.applicant_address,
         birthdate: decryptedCredentials.applicant_birthdate,
         civil_status: decryptedCredentials.applicant_civil_status,
         educational_attainment: decryptedCredentials.applicant_educational_attainment,
-        email: stallholderInfo?.stallholder_email || additionalInfo.email_address || decryptedCredentials.username,
+        email: stallholderInfo?.email || additionalInfo.email_address || decryptedCredentials.username,
         stall_number: stallholderInfo?.stall_number || null,
         created_date: decryptedCredentials.created_date,
         last_login: new Date().toISOString()
@@ -248,10 +249,10 @@ export const mobileLogin = async (req, res) => {
       // Stallholder information (if user is a stallholder)
       stallholder: stallholderInfo ? {
         stallholder_id: stallholderInfo.stallholder_id,
-        stallholder_name: stallholderInfo.stallholder_name, // Already built from decrypted first_name + last_name
-        contact_number: stallholderInfo.stallholder_contact,
-        email: stallholderInfo.stallholder_email,
-        address: stallholderInfo.stallholder_address,
+        stallholder_name: stallholderInfo.stallholder_name, // Already decrypted above
+        contact_number: stallholderInfo.contact_number,
+        email: stallholderInfo.email,
+        address: stallholderInfo.address,
         branch_id: stallholderInfo.branch_id,
         branch_name: stallholderInfo.branch_name,
         stall_id: stallholderInfo.stall_id,

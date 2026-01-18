@@ -170,32 +170,44 @@ export const getStallsByType = async (req, res) => {
       })
     }
 
-    // Build area list for stored procedure
-    const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
-
-    // Get stalls by type using stored procedure
-    const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [applicant_id, type, areaList])
+    // Get stalls by type using stored procedure (without area restriction for now)
+    const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
     const stalls = stallsRows[0]
 
+    // For each stall, fetch images from stall_images table
+    const stallsWithImages = await Promise.all(stalls.map(async (stall) => {
+      const [imageRows] = await connection.execute(
+        'SELECT image_url, is_primary FROM stall_images WHERE stall_id = ? ORDER BY is_primary DESC, image_id ASC',
+        [stall.stall_id]
+      )
+      
+      return {
+        ...stall,
+        images: imageRows,
+        primary_image: imageRows.find(img => img.is_primary)?.image_url || imageRows[0]?.image_url || null
+      }
+    }))
+
     // Format for mobile app
-    const formattedStalls = stalls.map(stall => ({
+    const formattedStalls = stallsWithImages.map(stall => ({
       id: stall.stall_id,
-      stallNumber: stall.stall_no,
+      stallNumber: stall.stall_number,
       location: stall.stall_location,
-      size: stall.size,
-      price: stall.rental_price ? stall.rental_price.toLocaleString() : '0',
-      priceValue: stall.rental_price || 0,
+      size: stall.stall_size || stall.size,
+      price: stall.monthly_rent ? stall.monthly_rent.toLocaleString() : (stall.rental_price ? stall.rental_price.toLocaleString() : '0'),
+      priceValue: stall.monthly_rent || stall.rental_price || 0,
       priceType: stall.price_type,
       status: stall.application_status,
       description: stall.description || 'No description available',
-      image: stall.stall_image || 'https://oldspitalfieldsmarket.com/cms/2017/10/OSM_FP_Stall_sq-1440x1440.jpg',
+      image: stall.primary_image || 'https://oldspitalfieldsmarket.com/cms/2017/10/OSM_FP_Stall_sq-1440x1440.jpg',
+      images: stall.images || [],
       
       // Branch information
       branch: {
         id: stall.branch_id,
         name: stall.branch_name,
         area: stall.area,
-        location: stall.location
+        location: stall.area
       },
       
       // Floor and section info

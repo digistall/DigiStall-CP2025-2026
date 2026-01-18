@@ -12,6 +12,8 @@ docker logs digistall-backend-web --tail 50
 
 docker logs digistall-backend-mobile --tail 50
 
-docker logs capstone-project-backend --tail 50
-
 docker-compose restart backend-mobile
+
+docker-compose up -d --build backend-mobile
+
+docker-compose down backend-mobile 
