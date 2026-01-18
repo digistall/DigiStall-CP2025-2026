@@ -86,25 +86,25 @@ const PaymentController = {
         query = `
           SELECT 
             sh.stallholder_id as id,
-            sh.stallholder_name as name,
-            sh.stallholder_name,
+            sh.full_name as name,
+            sh.full_name as stallholder_name,
             sh.contact_number as contact,
             sh.email,
             sh.address,
             sh.stall_id,
-            COALESCE(s.stall_no, s.stall_number) as stallNo,
-            COALESCE(s.stall_no, s.stall_number) as stall_number,
+            s.stall_number as stallNo,
+            s.stall_number,
             s.stall_location as stallLocation,
             s.rental_price as monthlyRental,
             s.rental_price,
             sh.branch_id,
             b.branch_name as branchName,
             b.branch_name,
-            sh.contract_status,
+            sh.status as contract_status,
             sh.payment_status,
-            sh.contract_start_date,
-            sh.business_name as businessName,
-            sh.business_name
+            sh.move_in_date as contract_start_date,
+            sh.full_name as businessName,
+            sh.full_name as business_name
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -117,25 +117,25 @@ const PaymentController = {
         query = `
           SELECT 
             sh.stallholder_id as id,
-            sh.stallholder_name as name,
-            sh.stallholder_name,
+            sh.full_name as name,
+            sh.full_name as stallholder_name,
             sh.contact_number as contact,
             sh.email,
             sh.address,
             sh.stall_id,
-            COALESCE(s.stall_no, s.stall_number) as stallNo,
-            COALESCE(s.stall_no, s.stall_number) as stall_number,
+            s.stall_number as stallNo,
+            s.stall_number,
             s.stall_location as stallLocation,
             s.rental_price as monthlyRental,
             s.rental_price,
             sh.branch_id,
             b.branch_name as branchName,
             b.branch_name,
-            sh.contract_status,
+            sh.status as contract_status,
             sh.payment_status,
-            sh.contract_start_date,
-            sh.business_name as businessName,
-            sh.business_name
+            sh.move_in_date as contract_start_date,
+            sh.full_name as businessName,
+            sh.full_name as business_name
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -492,9 +492,9 @@ const PaymentController = {
           SELECT 
             p.payment_id as id,
             p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            sh.business_name as businessName,
-            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
             p.amount as amountPaid,
             p.payment_date as paymentDate,
             p.payment_time as paymentTime,
@@ -567,9 +567,9 @@ const PaymentController = {
           SELECT 
             p.payment_id as id,
             p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            sh.business_name as businessName,
-            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
             p.amount as amountPaid,
             p.payment_date as paymentDate,
             p.payment_time as paymentTime,
@@ -662,9 +662,9 @@ const PaymentController = {
           SELECT 
             p.payment_id as id,
             p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            sh.business_name as businessName,
-            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
             p.amount as amountPaid,
             p.payment_date as paymentDate,
             p.payment_time as paymentTime,
@@ -723,9 +723,9 @@ const PaymentController = {
           SELECT 
             p.payment_id as id,
             p.stallholder_id as stallholderId,
-            sh.stallholder_name as stallholderName,
-            sh.business_name as businessName,
-            COALESCE(st.stall_no, st.stall_number, 'N/A') as stallNo,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
             p.amount as amountPaid,
             p.payment_date as paymentDate,
             p.payment_time as paymentTime,
