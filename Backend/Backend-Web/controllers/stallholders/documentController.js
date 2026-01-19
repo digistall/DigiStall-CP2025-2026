@@ -981,8 +981,13 @@ export const reviewStallholderDocument = async (req, res) => {
     const { status, rejection_reason } = req.body;
     const reviewedBy = req.user?.userId || req.user?.business_manager_id || req.user?.id || null;
     
-    // Map frontend status to database status
-    const dbStatus = status === 'approved' ? 'verified' : status;
+    // Map frontend status to database ENUM values: 'Pending', 'Approved', 'Rejected'
+    const statusMap = {
+      'approved': 'Approved',
+      'rejected': 'Rejected',
+      'pending': 'Pending'
+    };
+    const dbStatus = statusMap[status.toLowerCase()] || status;
     
     connection = await createConnection();
     
@@ -1030,9 +1035,26 @@ export const getStallholderDocumentFile = async (req, res) => {
     
     connection = await createConnection();
     
-    const [rows] = await connection.execute('CALL sp_getDocumentById(?)', [documentId]);
+    // Use direct query instead of stored procedure since table structure doesn't match
+    const [rows] = await connection.execute(`
+      SELECT 
+        sd.document_id,
+        sd.stallholder_id,
+        sd.document_type,
+        sd.document_name,
+        sd.document_mime_type,
+        sd.verification_status,
+        sd.verified_by,
+        sd.verified_at,
+        sd.remarks,
+        sd.created_at,
+        sh.full_name as stallholder_name
+      FROM stallholder_documents sd
+      LEFT JOIN stallholder sh ON sd.stallholder_id = sh.stallholder_id
+      WHERE sd.document_id = ?
+    `, [documentId]);
     
-    const doc = rows[0]?.[0];
+    const doc = rows[0];
     
     if (!doc) {
       return res.status(404).json({
@@ -1041,15 +1063,22 @@ export const getStallholderDocumentFile = async (req, res) => {
       });
     }
     
-    // Return document metadata (file is stored on filesystem via file_path)
+    // Return document metadata
     res.json({
       success: true,
       data: {
         document_id: doc.document_id,
-        file_path: doc.file_path,
-        file_name: doc.original_filename,
-        file_size: doc.file_size,
-        document_name: doc.document_name
+        stallholder_id: doc.stallholder_id,
+        stallholder_name: doc.stallholder_name,
+        document_type: doc.document_type,
+        document_name: doc.document_name,
+        file_name: doc.document_name,
+        mime_type: doc.document_mime_type,
+        verification_status: doc.verification_status,
+        verified_by: doc.verified_by,
+        verified_at: doc.verified_at,
+        remarks: doc.remarks,
+        created_at: doc.created_at
       }
     });
     
@@ -1086,17 +1115,16 @@ export const getStallholderDocumentBlob = async (req, res) => {
     connection = await createConnection();
     
     // Get the document with its blob data
-    // Columns based on actual table structure: document_id, stallholder_id, document_type_id, 
-    // file_path, original_filename, document_data, storage_type
+    // stallholder_documents: document_type is VARCHAR
+    // document_types: document_name is the type name
     const [rows] = await connection.execute(`
       SELECT 
         sd.document_id,
-        sd.original_filename,
-        sd.file_size,
+        sd.document_name,
         sd.document_data,
-        dt.document_name
+        sd.document_mime_type,
+        sd.document_type
       FROM stallholder_documents sd
-      LEFT JOIN document_types dt ON sd.document_type_id = dt.document_type_id
       WHERE sd.document_id = ?
     `, [documentId]);
 
@@ -1117,10 +1145,10 @@ export const getStallholderDocumentBlob = async (req, res) => {
       });
     }
 
-    // Determine content type from filename extension (no mime_type column in table)
-    let contentType = 'application/octet-stream';
-    if (doc.original_filename) {
-      const ext = doc.original_filename.toLowerCase().split('.').pop();
+    // Determine content type from mime_type or filename extension
+    let contentType = doc.document_mime_type || 'application/octet-stream';
+    if (!doc.document_mime_type && doc.document_name) {
+      const ext = doc.document_name.toLowerCase().split('.').pop();
       const mimeTypes = {
         'jpg': 'image/jpeg',
         'jpeg': 'image/jpeg',
@@ -1131,12 +1159,12 @@ export const getStallholderDocumentBlob = async (req, res) => {
       contentType = mimeTypes[ext] || 'application/octet-stream';
     }
 
-    console.log(`✅ Serving document: ${doc.original_filename}, type: ${contentType}, size: ${doc.document_data.length} bytes`);
+    console.log(`✅ Serving document: ${doc.document_name}, type: ${contentType}, size: ${doc.document_data.length} bytes`);
     
     // Set headers for binary response
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', doc.document_data.length);
-    res.setHeader('Content-Disposition', `inline; filename="${doc.original_filename || 'document'}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${doc.document_name || 'document'}"`);
     
     // Send the binary data
     res.send(doc.document_data);

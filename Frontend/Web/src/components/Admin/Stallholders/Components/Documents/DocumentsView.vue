@@ -1,54 +1,63 @@
 <template>
-  <div class="documents-modal-overlay" v-if="isVisible" @click="closeModal">
-    <div class="documents-modal" @click.stop>
-      <div class="modal-header">
-        <h2>{{ stallholder.fullName }}</h2>
-        <button class="close-btn" @click="closeModal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      
-      <div class="stallholder-info">
-        <p><strong>Email:</strong> {{ stallholder.email }}</p>
-        <p><strong>Phone:</strong> {{ stallholder.phone }}</p>
-        <p><strong>Address:</strong> {{ stallholder.address }}</p>
-      </div>
-      
-      <div class="documents-grid">
-        <div 
-          v-for="document in documents" 
-          :key="document.id"
-          class="document-card"
-          :class="{ 'complete': document.status === 'complete' }"
-          @click="viewDocument(document)"
-        >
-          <div class="document-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2Z"></path>
-              <polyline points="14,2 14,8 20,8"></polyline>
-            </svg>
-          </div>
-          <div class="document-info">
-            <h3>{{ document.name }}</h3>
-            <span 
-              class="document-status" 
+  <v-dialog v-model="isVisible" max-width="900px" @click:outside="closeModal">
+    <v-card>
+      <v-card-title class="documents-header">
+        <h3>Documents - {{ stallholder.full_name || stallholder.name }}</h3>
+        <v-btn icon @click="closeModal">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
+
+      <v-card-text>
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center py-8">
+          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          <p class="mt-4">Loading documents...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="text-center py-8">
+          <v-icon color="error" size="48">mdi-alert-circle</v-icon>
+          <p class="mt-4 text-error">{{ error }}</p>
+          <v-btn color="primary" @click="fetchStallholderDocuments">
+            Retry
+          </v-btn>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="documents.length === 0" class="text-center py-8">
+          <v-icon size="48" color="grey">mdi-file-document-outline</v-icon>
+          <p class="mt-4">No documents found</p>
+        </div>
+
+        <!-- Documents List -->
+        <div v-else class="documents-list">
+          <div 
+            v-for="document in documents" 
+            :key="document.id"
+            class="document-item"
+            @click="viewDocument(document)"
+          >
+            <div class="document-info">
+              <v-icon class="document-icon">
+                {{ document.type === 'pdf' ? 'mdi-file-pdf' : 'mdi-file-image' }}
+              </v-icon>
+              <div>
+                <h4>{{ document.name }}</h4>
+                <p class="text-caption">Uploaded: {{ document.uploadDate }}</p>
+              </div>
+            </div>
+            <v-chip 
               :class="getStatusClass(document.status)"
+              small
             >
-              {{ document.status.toUpperCase() }}
-            </span>
-          </div>
-          <div class="document-check" v-if="document.status === 'complete'">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20,6 9,17 4,12"></polyline>
-            </svg>
+              {{ document.status }}
+            </v-chip>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script src="./DocumentsView.js"></script>
