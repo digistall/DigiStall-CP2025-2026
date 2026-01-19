@@ -981,8 +981,13 @@ export const reviewStallholderDocument = async (req, res) => {
     const { status, rejection_reason } = req.body;
     const reviewedBy = req.user?.userId || req.user?.business_manager_id || req.user?.id || null;
     
-    // Map frontend status to database status
-    const dbStatus = status === 'approved' ? 'verified' : status;
+    // Map frontend status to database ENUM values: 'Pending', 'Approved', 'Rejected'
+    const statusMap = {
+      'approved': 'Approved',
+      'rejected': 'Rejected',
+      'pending': 'Pending'
+    };
+    const dbStatus = statusMap[status.toLowerCase()] || status;
     
     connection = await createConnection();
     
