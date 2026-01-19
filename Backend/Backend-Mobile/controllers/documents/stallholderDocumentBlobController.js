@@ -345,7 +345,7 @@ export async function getStallholderDocumentBlobById(req, res) {
       console.log('⚠️ Stored procedure not found, using raw query:', spError.message)
       // Fallback to raw query if stored procedure doesn't exist
       const [rows] = await connection.execute(
-        `SELECT document_data, original_filename 
+        `SELECT document_data, document_name as original_filename, document_mime_type as mime_type
          FROM stallholder_documents 
          WHERE document_id = ? 
            AND document_data IS NOT NULL`,
@@ -628,7 +628,7 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
       console.log('⚠️ Stored procedure not found, using raw query:', spError.message)
       // Fallback to raw query if stored procedure doesn't exist
       const [rows] = await connection.execute(
-        `SELECT document_data, original_filename 
+        `SELECT document_data, document_name as original_filename, document_mime_type as mime_type
          FROM stallholder_documents 
          WHERE document_id = ? 
            AND document_data IS NOT NULL`,

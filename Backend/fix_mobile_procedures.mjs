@@ -101,6 +101,62 @@ async function fixMobileDocumentProcedures() {
     await conn.query(createProcUploaded);
     console.log('✅ Created new sp_getStallholderUploadedDocuments');
     
+    // Step 5: Drop and recreate sp_insertStallholderDocumentBlob
+    await conn.query('DROP PROCEDURE IF EXISTS sp_insertStallholderDocumentBlob');
+    console.log('\n✅ Dropped old sp_insertStallholderDocumentBlob');
+    
+    const createProcInsert = `CREATE PROCEDURE sp_insertStallholderDocumentBlob(
+      IN p_stallholder_id INT,
+      IN p_document_type_id INT,
+      IN p_file_path VARCHAR(500),
+      IN p_original_filename VARCHAR(255),
+      IN p_file_size INT,
+      IN p_document_data LONGBLOB,
+      IN p_expiry_date DATE,
+      IN p_notes TEXT
+    )
+    BEGIN
+        -- Get document type name
+        DECLARE v_document_type VARCHAR(100);
+        SELECT type_name INTO v_document_type 
+        FROM document_types 
+        WHERE document_type_id = p_document_type_id 
+        LIMIT 1;
+        
+        -- Insert into stallholder_documents using actual table columns
+        INSERT INTO stallholder_documents (
+            stallholder_id, 
+            document_type_id,
+            document_type,
+            document_name,
+            document_data,
+            document_mime_type,
+            verification_status,
+            remarks,
+            created_at
+        ) VALUES (
+            p_stallholder_id,
+            p_document_type_id,
+            COALESCE(v_document_type, 'Unknown'),
+            p_original_filename,
+            p_document_data,
+            CASE 
+                WHEN p_original_filename LIKE '%.jpg' OR p_original_filename LIKE '%.jpeg' THEN 'image/jpeg'
+                WHEN p_original_filename LIKE '%.png' THEN 'image/png'
+                WHEN p_original_filename LIKE '%.pdf' THEN 'application/pdf'
+                ELSE 'application/octet-stream'
+            END,
+            'Pending',
+            p_notes,
+            NOW()
+        );
+        
+        SELECT LAST_INSERT_ID() as document_id;
+    END`;
+    
+    await conn.query(createProcInsert);
+    console.log('✅ Created new sp_insertStallholderDocumentBlob');
+    
     console.log('\n🎉 Mobile document procedures fixed successfully!\n');
     
   } catch (error) {
