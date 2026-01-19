@@ -363,10 +363,11 @@ CREATE PROCEDURE getStallholderById(IN p_stallholder_id INT)
 BEGIN
     SELECT 
         sh.stallholder_id,
-        sh.applicant_id,
+        sh.mobile_user_id,
         sh.branch_id,
         b.branch_name,
-        sh.stallholder_name,
+        sh.full_name as stallholder_name,
+        bi.nature_of_business,
         sh.contact_number,
         sh.email,
         sh.address,
@@ -374,16 +375,16 @@ BEGIN
         st.stall_number,
         st.stall_name,
         st.stall_type,
-        sh.monthly_rent,
-        sh.contract_start_date,
-        sh.contract_end_date,
+        s.rental_price as monthly_rent,
+        sh.move_in_date as contract_start_date,
         sh.payment_status,
-        sh.last_payment_date,
         sh.status,
         sh.created_at
     FROM stallholder sh
     LEFT JOIN branch b ON sh.branch_id = b.branch_id
     LEFT JOIN stall st ON sh.stall_id = st.stall_id
+    LEFT JOIN stall s ON sh.stall_id = s.stall_id
+    LEFT JOIN business_information bi ON sh.mobile_user_id = bi.applicant_id
     WHERE sh.stallholder_id = p_stallholder_id;
 END$$
 

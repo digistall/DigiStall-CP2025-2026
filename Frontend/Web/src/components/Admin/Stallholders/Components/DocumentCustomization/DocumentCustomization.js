@@ -100,8 +100,9 @@ export default {
         // Map requirements to include document type info
         this.documentTypes = this.branchRequirements.map(req => ({
           ...req,
-          document_name: req.document_name || 'Unknown Document',
-          description: req.description || ''
+          type_name: req.type_name || req.document_name || 'Unknown Document',
+          description: req.description || '',
+          category: req.category || 'General'
         }))
 
         this.originalRequirements = JSON.parse(JSON.stringify(this.branchRequirements))

@@ -60,7 +60,7 @@ const StallholderController = {
             s.stallholder_id,
             s.full_name,
             s.full_name as stallholder_name,
-            s.full_name as business_name,
+            bi.nature_of_business as business_name,
             s.email,
             s.contact_number,
             s.address,
@@ -68,7 +68,19 @@ const StallholderController = {
             s.branch_id,
             s.payment_status,
             s.status,
+            s.status as contract_status,
             s.move_in_date,
+            s.move_in_date as contract_start_date,
+            DATE_ADD(s.move_in_date, INTERVAL 1 YEAR) as contract_end_date,
+            st.rental_price as monthly_rent,
+            st.rental_price as lease_amount,
+            (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = s.stallholder_id AND p.payment_status = 'completed') as last_payment_date,
+            CASE 
+              WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status = 'Open') 
+              THEN 'Non-Compliant' 
+              ELSE 'Compliant' 
+            END as compliance_status,
+            (SELECT MAX(vr.report_date) FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id) as last_violation_date,
             s.created_at,
             s.updated_at,
             st.stall_number as stall_no,
@@ -78,6 +90,7 @@ const StallholderController = {
           FROM stallholder s
           LEFT JOIN stall st ON s.stall_id = st.stall_id
           LEFT JOIN branch b ON s.branch_id = b.branch_id
+          LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
           ORDER BY s.stallholder_id
         `);
         rows = result || [];
@@ -97,7 +110,19 @@ const StallholderController = {
         const [result] = await connection.execute(
           `SELECT s.*, 
                   s.full_name as stallholder_name,
-                  s.full_name as business_name,
+                  bi.nature_of_business as business_name,
+                  s.status as contract_status,
+                  s.move_in_date as contract_start_date,
+                  DATE_ADD(s.move_in_date, INTERVAL 1 YEAR) as contract_end_date,
+                  st.rental_price as monthly_rent,
+                  st.rental_price as lease_amount,
+                  (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = s.stallholder_id AND p.payment_status = 'completed') as last_payment_date,
+                  CASE 
+                    WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status = 'Open') 
+                    THEN 'Non-Compliant' 
+                    ELSE 'Compliant' 
+                  END as compliance_status,
+                  (SELECT MAX(vr.report_date) FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id) as last_violation_date,
                   st.stall_number as stall_no, 
                   st.stall_number,
                   st.stall_location, 
@@ -105,6 +130,7 @@ const StallholderController = {
            FROM stallholder s 
            LEFT JOIN stall st ON s.stall_id = st.stall_id 
            LEFT JOIN branch b ON s.branch_id = b.branch_id 
+           LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
            WHERE s.branch_id IN (${placeholders})`,
           branchFilter
         );
@@ -1849,9 +1875,9 @@ const StallholderController = {
           vr.report_id AS violation_id,
           vr.stallholder_id,
           vr.violation_id AS violation_type_id,
-          v.violation_name,
+          v.violation_type AS violation_name,
           v.description AS violation_description,
-          v.severity,
+          v.default_penalty AS severity,
           vr.report_date,
           vr.offense_count,
           vr.penalty_amount,

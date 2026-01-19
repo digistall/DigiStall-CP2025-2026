@@ -160,34 +160,39 @@ export const createBranchDocumentRequirement = async (req, res) => {
     let totalAffected = 0;
     let createdRequirements = [];
     
-    // Get the document type name from document_type_id
+    // Verify document type exists
     const [docTypes] = await connection.execute(
-      'SELECT type_name FROM document_types WHERE document_type_id = ?',
-      [document_type_id]
+      'SELECT document_type_id, type_name FROM document_types WHERE document_type_id = ? AND status = ?',
+      [document_type_id, 'Active']
     );
-    const documentName = docTypes.length > 0 ? docTypes[0].type_name : `Document Type ${document_type_id}`;
+    
+    if (docTypes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or inactive document type'
+      });
+    }
     
     for (const pair of branchManagerPairs) {
-      // Use correct column names: document_requirement_id, document_name, created_by
-      // First check if requirement already exists
+      // Check if requirement already exists for this branch and document type
       const [existing] = await connection.execute(
-        'SELECT document_requirement_id FROM branch_document_requirements WHERE branch_id = ? AND document_name = ?',
-        [pair.branchId, documentName]
+        'SELECT requirement_id FROM branch_document_requirements WHERE branch_id = ? AND document_type_id = ?',
+        [pair.branchId, document_type_id]
       );
       
       let requirementId;
       if (existing.length > 0) {
         // Update existing requirement
         await connection.execute(
-          'UPDATE branch_document_requirements SET is_required = ?, description = ?, updated_at = NOW() WHERE document_requirement_id = ?',
-          [isRequiredValue, instructions || null, existing[0].document_requirement_id]
+          'UPDATE branch_document_requirements SET is_required = ?, instructions = ?, updated_at = NOW() WHERE requirement_id = ?',
+          [isRequiredValue, instructions || null, existing[0].requirement_id]
         );
-        requirementId = existing[0].document_requirement_id;
+        requirementId = existing[0].requirement_id;
       } else {
-        // Insert new requirement with correct column names
+        // Insert new requirement
         const [insertResult] = await connection.execute(
-          'INSERT INTO branch_document_requirements (branch_id, document_name, description, is_required, created_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-          [pair.branchId, documentName, instructions || null, isRequiredValue, pair.managerId]
+          'INSERT INTO branch_document_requirements (branch_id, document_type_id, is_required, instructions, created_by_business_manager, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+          [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
         );
         requirementId = insertResult.insertId;
       }
@@ -499,14 +504,16 @@ export const getAllDocumentTypes = async (req, res) => {
     const [documentTypes] = await connection.execute(`
       SELECT 
         document_type_id,
-        document_name,
+        type_name,
         description,
-        is_required,
+        category,
+        is_system_default,
+        display_order,
         status,
         created_at
       FROM document_types
       WHERE status = 'Active'
-      ORDER BY document_name ASC
+      ORDER BY display_order ASC, type_name ASC
     `);
 
     res.json({
