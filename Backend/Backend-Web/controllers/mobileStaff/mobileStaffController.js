@@ -121,96 +121,6 @@ export async function createInspector(req, res) {
     } finally {
         if (connection) await connection.end();
     }
-
-    if (!branchId) {
-      return res.status(400).json({
-        success: false,
-        message: "Branch ID is required",
-      });
-    }
-
-    connection = await createConnection();
-
-    // Check if email already exists using stored procedure
-    const [existingResult] = await connection.execute(
-      "CALL sp_checkInspectorEmailExists(?)",
-      [email]
-    );
-
-    if (existingResult[0] && existingResult[0].length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "An inspector with this email already exists",
-      });
-    }
-
-    // Generate credentials
-    const username = generateMobileUsername("inspector");
-    const password = generateSecurePassword();
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    console.log(
-      `📱 Creating inspector: ${firstName} ${lastName} (${username})`
-    );
-
-    // Create inspector using stored procedure
-    const [insertResult] = await connection.execute(
-      "CALL sp_createInspectorDirect(?, ?, ?, ?, ?, ?)",
-      [
-        username,
-        firstName,
-        lastName,
-        email,
-        hashedPassword,
-        phoneNumber || null,
-      ]
-    );
-
-    const inspectorId = insertResult[0]?.[0]?.inspector_id;
-    console.log(`✅ Inspector created with ID: ${inspectorId}`);
-
-    // Create assignment using stored procedure
-    await connection.execute(
-      "CALL sp_createInspectorAssignmentDirect(?, ?, ?)",
-      [inspectorId, branchId, "Newly hired inspector"]
-    );
-    console.log(`✅ Inspector assignment created for branch ${branchId}`);
-
-    // Log the action using stored procedure
-    try {
-      await connection.execute("CALL sp_logInspectorAction(?, ?, ?, ?, ?)", [
-        inspectorId,
-        branchId,
-        branchManagerId,
-        "New Hire",
-        `Inspector ${firstName} ${lastName} was hired`,
-      ]);
-    } catch (logError) {
-      console.log("⚠️ Could not log action:", logError.message);
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: "Inspector created successfully",
-      data: {
-        inspectorId,
-        credentials: {
-          username,
-          password,
-        },
-        branchId,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Error creating inspector:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create inspector",
-      error: error.message,
-    });
-  } finally {
-    if (connection) await connection.end();
-  }
 }
 
 /**
@@ -375,83 +285,6 @@ export async function createCollector(req, res) {
     } finally {
         if (connection) await connection.end();
     }
-
-    // Check if email already exists using stored procedure
-    const [existingResult] = await connection.execute(
-      "CALL sp_checkCollectorEmailExists(?)",
-      [email]
-    );
-
-    if (existingResult[0] && existingResult[0].length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "A collector with this email already exists",
-      });
-    }
-
-    // Generate credentials
-    const username = generateMobileUsername("collector");
-    const password = generateSecurePassword();
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    console.log(
-      `📱 Creating collector: ${firstName} ${lastName} (${username})`
-    );
-
-    // Create collector using stored procedure
-    const [insertResult] = await connection.execute(
-      "CALL sp_createCollectorDirect(?, ?, ?, ?, ?, ?)",
-      [
-        username,
-        firstName,
-        lastName,
-        email,
-        hashedPassword,
-        phoneNumber || null,
-      ]
-    );
-
-    const collectorId = insertResult[0]?.[0]?.collector_id;
-
-    // Create assignment using stored procedure
-    await connection.execute(
-      "CALL sp_createCollectorAssignmentDirect(?, ?, ?)",
-      [collectorId, branchId, "Newly hired collector"]
-    );
-
-    // Log the action using stored procedure
-    await connection.execute("CALL sp_logCollectorAction(?, ?, ?, ?, ?)", [
-      collectorId,
-      branchId,
-      branchManagerId,
-      "New Hire",
-      `Collector ${firstName} ${lastName} was hired`,
-    ]);
-
-    console.log("✅ Collector created successfully");
-
-    return res.status(201).json({
-      success: true,
-      message: "Collector created successfully",
-      data: {
-        collectorId,
-        credentials: {
-          username,
-          password,
-        },
-        branchId,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Error creating collector:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create collector",
-      error: error.message,
-    });
-  } finally {
-    if (connection) await connection.end();
-  }
 }
 
 /**
@@ -500,21 +333,6 @@ export async function getInspectorsByBranch(req, res) {
     } finally {
         if (connection) await connection.end();
     }
-
-    res.json({
-      success: true,
-      data: inspectors,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching inspectors:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch inspectors",
-      error: error.message,
-    });
-  } finally {
-    if (connection) await connection.end();
-  }
 }
 
 /**
@@ -576,36 +394,6 @@ export async function getCollectorsByBranch(req, res) {
     } finally {
         if (connection) await connection.end();
     }
-
-    let collectors;
-
-    if (branchId) {
-      // Filter by branch if branchId is provided using stored procedure
-      const [result] = await connection.execute(
-        "CALL sp_getCollectorsByBranchDecrypted(?)",
-        [branchId]
-      );
-      collectors = result[0] || [];
-    } else {
-      // Return all collectors if no branchId (for admin view) using stored procedure
-      const [result] = await connection.execute("CALL sp_getCollectorsAllDecrypted()");
-      collectors = result[0] || [];
-    }
-
-    res.json({
-      success: true,
-      data: collectors,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching collectors:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch collectors",
-      error: error.message,
-    });
-  } finally {
-    if (connection) await connection.end();
-  }
 }
 
 /**

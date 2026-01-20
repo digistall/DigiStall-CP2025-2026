@@ -65,7 +65,6 @@ export const encryptData = (plainText) => {
   try {
     const key = getKey();
     const iv = crypto.randomBytes(IV_LENGTH);
-    const key = deriveKey(ENCRYPTION_KEY);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     
     let encrypted = cipher.update(text, 'utf8', 'base64');
@@ -116,7 +115,6 @@ export const decryptData = (encryptedData) => {
     const key = getKey();
     const iv = Buffer.from(ivBase64, 'base64');
     const authTag = Buffer.from(authTagBase64, 'base64');
-    const key = deriveKey(ENCRYPTION_KEY);
     
     // Validate IV and authTag lengths
     if (iv.length !== IV_LENGTH || authTag.length !== AUTH_TAG_LENGTH) {
@@ -127,7 +125,7 @@ export const decryptData = (encryptedData) => {
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
     
-    let decrypted = decipher.update(cipherText, 'base64', 'utf8');
+    let decrypted = decipher.update(encrypted, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
     
     return decrypted;
@@ -208,8 +206,8 @@ export const encryptObjectFields = (data, fieldsToEncrypt) => {
     }
   }
   
-  return result;
-}
+  return encrypted;
+};
 
 /**
  * Decrypt specific fields in an object
@@ -217,9 +215,26 @@ export const encryptObjectFields = (data, fieldsToEncrypt) => {
  * @param {Array<string>} fieldsToDecrypt - Field names to decrypt
  * @returns {Object} - Object with decrypted fields
  */
+export const decryptObjectFields = (data, fieldsToDecrypt) => {
+  if (!data || typeof data !== 'object') return data;
+  
+  const decrypted = { ...data };
+  
+  for (const field of fieldsToDecrypt) {
+    if (decrypted[field] !== null && decrypted[field] !== undefined) {
+      decrypted[field] = decryptData(decrypted[field]);
+    }
+  }
+  
+  return decrypted;
+};
+
+/**
+ * Decrypt an array of objects
+ */
 export function decryptArray(arr, fieldsToDecrypt = null) {
   if (!Array.isArray(arr)) return arr;
-  return arr.map(item => decryptObject(item, fieldsToDecrypt));
+  return arr.map(item => decryptObjectFields(item, fieldsToDecrypt));
 }
 
 /**
@@ -233,14 +248,11 @@ export function decryptStallholderData(data) {
     'business_name', 'notes', 'first_name', 'last_name'
   ];
   
-  const decrypted = { ...data };
-  
-  for (const field of fieldsToDecrypt) {
-    if (decrypted[field] !== null && decrypted[field] !== undefined) {
-      decrypted[field] = decryptData(decrypted[field]);
-    }
+  if (Array.isArray(data)) {
+    return data.map(item => decryptObjectFields(item, sensitiveFields));
   }
-  return decryptObject(data, sensitiveFields);
+  
+  return decryptObjectFields(data, sensitiveFields);
 }
 
 /**
