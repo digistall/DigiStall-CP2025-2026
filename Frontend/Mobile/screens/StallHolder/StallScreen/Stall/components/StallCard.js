@@ -186,6 +186,24 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
   };
 
   const getStatusButton = (stall) => {
+    // Check if user has already joined raffle
+    if (stall.hasJoinedRaffle || stall.status === 'joined_raffle') {
+      return (
+        <TouchableOpacity style={[styles.statusButton, styles.joinedButton]} disabled>
+          <Text style={[styles.statusButtonText, styles.joinedButtonText]}>ALREADY JOINED!</Text>
+        </TouchableOpacity>
+      );
+    }
+    
+    // Check if user has already joined auction
+    if (stall.hasJoinedAuction || stall.status === 'joined_auction') {
+      return (
+        <TouchableOpacity style={[styles.statusButton, styles.joinedButton]} disabled>
+          <Text style={[styles.statusButtonText, styles.joinedButtonText]}>ALREADY JOINED!</Text>
+        </TouchableOpacity>
+      );
+    }
+    
     // If user cannot apply (based on backend logic)
     if (!stall.canApply) {
       if (stall.maxApplicationsReached) {
@@ -199,7 +217,7 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
       } else if (stall.status === 'applied') {
         return (
           <TouchableOpacity style={[styles.statusButton, styles.appliedButton]} disabled>
-            <Text style={[styles.statusButtonText, styles.appliedButtonText]}>ALREADY APPLIED!</Text>
+            <Text style={[styles.statusButtonText, styles.appliedButtonText]}>ALREADY JOINED!</Text>
           </TouchableOpacity>
         );
       }
@@ -532,6 +550,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
   },
   appliedButtonText: {
+    color: '#FFFFFF',
+  },
+  joinedButton: {
+    backgroundColor: '#9CA3AF', // Same gray as appliedButton for consistency
+  },
+  joinedButtonText: {
     color: '#FFFFFF',
   },
   limitReachedButton: {
