@@ -10,6 +10,12 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
   
   try {
     const staffData = req.user; // From auth middleware
+    
+    // Debug logging
+    console.log('🔍 DEBUG req.user:', JSON.stringify(staffData, null, 2));
+    console.log('🔍 DEBUG staffData.branchId:', staffData?.branchId);
+    console.log('🔍 DEBUG staffData.branch_id:', staffData?.branch_id);
+    
     const branchId = staffData.branchId || staffData.branch_id;
     
     console.log('📋 Inspector fetching stallholders for branch:', branchId);
