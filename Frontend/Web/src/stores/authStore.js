@@ -194,8 +194,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Login user with direct database authentication
+   * Uses EMAIL for login (not username)
    */
-  async function login(username, password, userType) {
+  async function login(email, password) {
     try {
       isLoading.value = true;
       error.value = null;
@@ -235,15 +236,14 @@ export const useAuthStore = defineStore('auth', () => {
 
       const loginUrl = `${API_BASE_URL}/auth/login`;
       const loginData = {
-        username: username, // Backend expects 'username' field
-        password,
-        userType
+        email: email, // Backend expects 'email' field (not username)
+        password
       };
 
       SecureLogger.network('Login request', { url: loginUrl, method: 'POST' });
-      SecureLogger.auth('Login data prepared', { username, userType, passwordLength: password?.length });
+      SecureLogger.auth('Login data prepared', { email, passwordLength: password?.length });
 
-      // Call unified login API
+      // Call unified login API (backend will auto-detect user type)
       const response = await axios.post(loginUrl, loginData);
 
       if (response.data.success) {

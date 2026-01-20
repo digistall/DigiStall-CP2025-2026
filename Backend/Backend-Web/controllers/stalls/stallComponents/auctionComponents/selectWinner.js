@@ -22,7 +22,7 @@ export const selectAuctionWinner = async (req, res) => {
     const [auctionInfo] = await connection.execute(
       `SELECT a.auction_id, a.stall_id, a.auction_status, a.total_bids,
               a.created_by_manager, a.winner_applicant_id, a.highest_bidder_id,
-              a.current_highest_bid, s.stall_no, s.rental_price
+              a.current_highest_bid, s.stall_number, s.rental_price
        FROM auction a
        INNER JOIN stall s ON a.stall_id = s.stall_id
        WHERE a.auction_id = ?`,
@@ -169,7 +169,7 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
     // Find all expired auctions that haven't confirmed winners yet
     const [expiredAuctions] = await connection.execute(
       `SELECT a.auction_id, a.stall_id, a.total_bids, a.created_by_manager,
-              a.highest_bidder_id, a.current_highest_bid, s.stall_no
+              a.highest_bidder_id, a.current_highest_bid, s.stall_number
        FROM auction a
        INNER JOIN stall s ON a.stall_id = s.stall_id
        WHERE a.auction_status = 'Active'

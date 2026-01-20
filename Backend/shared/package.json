@@ -1,0 +1,42 @@
+{
+  "name": "@naga-stall/shared",
+  "version": "1.0.0",
+  "description": "Shared core libraries for Naga Stall Management System - includes ORM, repositories, services, and BFF adapters",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./prisma": "./database/prismaClient.js",
+    "./repositories": "./repositories/index.js",
+    "./services": "./services/index.js",
+    "./bff/web": "./bff/web/index.js",
+    "./bff/mobile": "./bff/mobile/index.js",
+    "./utils": "./utils/index.js"
+  },
+  "scripts": {
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "prisma:pull": "prisma db pull --schema=./prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema=./prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema=./prisma/schema.prisma",
+    "prisma:format": "prisma format --schema=./prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0"
+  },
+  "keywords": [
+    "naga-stall",
+    "shared",
+    "orm",
+    "prisma",
+    "bff",
+    "backend-for-frontend"
+  ],
+  "author": "Naga Stall Management Team",
+  "license": "ISC"
+}

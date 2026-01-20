@@ -262,15 +262,26 @@ export async function getStallImageBlobById(req, res) {
     
     console.log(`📷 Fetching BLOB image by ID: ${image_id}`)
     
+    // Guard against undefined or invalid image_id
+    if (!image_id || image_id === 'undefined' || image_id === 'null') {
+      console.log('📷 Invalid image_id, returning 404')
+      return res.status(404).json({
+        success: false,
+        message: 'Image ID is required'
+      })
+    }
+    
     connection = await createConnection()
     
-    // First check if image exists using stored procedure
-    const [checkRows] = await connection.execute('CALL sp_getStallImageInfoById(?)', [image_id])
-    const checkResult = checkRows[0]
+    // Direct query instead of broken stored procedure
+    const [rows] = await connection.execute(
+      'SELECT image_id, image_data, image_mime_type, image_name FROM stall_images WHERE image_id = ?',
+      [image_id]
+    )
     
-    console.log(`📷 Image check result:`, checkResult)
+    console.log(`📷 Image check result:`, rows.length > 0 ? 'Found' : 'Not found')
     
-    if (checkResult.length === 0) {
+    if (rows.length === 0) {
       console.log(`📷 Image ID ${image_id} not found in database`)
       return res.status(404).json({
         success: false,
@@ -278,26 +289,12 @@ export async function getStallImageBlobById(req, res) {
       })
     }
     
-    console.log(`📷 Image found: ${checkResult[0].file_name}, size: ${checkResult[0].data_size} bytes`)
+    const image = rows[0]
     
-    // Now fetch the actual binary data using stored procedure
-    const [rows] = await connection.execute('CALL sp_getStallImageById(?)', [image_id])
-    const images = rows[0]
+    console.log(`📷 Serving image: ${image.image_name}, type: ${image.image_mime_type}, size: ${image.image_data?.length || 0} bytes`)
     
-    if (images.length === 0 || !images[0].image_data) {
-      console.log(`📷 Image data is NULL for ID ${image_id}`)
-      return res.status(404).json({
-        success: false,
-        message: 'Image not found'
-      })
-    }
-    
-    const image = images[0]
-    
-    console.log(`📷 Serving image: ${image.file_name}, type: ${image.mime_type}, size: ${image.image_data?.length || 0} bytes`)
-    
-    res.set('Content-Type', image.mime_type || 'image/jpeg')
-    res.set('Content-Disposition', `inline; filename="${image.file_name || 'image.jpg'}"`)
+    res.set('Content-Type', image.image_mime_type || 'image/jpeg')
+    res.set('Content-Disposition', `inline; filename="${image.image_name || 'image.jpg'}"`)
     res.set('Cache-Control', 'public, max-age=86400')
     
     res.send(image.image_data)
@@ -326,20 +323,41 @@ export async function getStallImagesBlob(req, res) {
     
     connection = await createConnection()
     
-    // Use stored procedure based on whether data is needed
-    let images
+    // Direct query instead of broken stored procedure
+    let query
     if (include_data === 'true') {
-      const [rows] = await connection.execute('CALL sp_getAllStallImagesWithData(?)', [stall_id])
-      images = rows[0]
+      query = `SELECT 
+        image_id,
+        stall_id,
+        image_mime_type as mime_type,
+        image_name as file_name,
+        display_order,
+        is_primary,
+        TO_BASE64(image_data) as image_base64,
+        created_at
+      FROM stall_images
+      WHERE stall_id = ?
+      ORDER BY display_order ASC`
     } else {
-      const [rows] = await connection.execute('CALL sp_getAllStallImages(?)', [stall_id])
-      images = rows[0]
+      query = `SELECT 
+        image_id,
+        stall_id,
+        image_mime_type as mime_type,
+        image_name as file_name,
+        display_order,
+        is_primary,
+        created_at
+      FROM stall_images
+      WHERE stall_id = ?
+      ORDER BY display_order ASC`
     }
+    
+    const [images] = await connection.execute(query, [stall_id])
     
     // Add full URL for serving
     const imagesWithUrls = images.map(img => ({
       ...img,
-      serve_url: `/api/stalls/images/blob/id/${img.id}`,
+      serve_url: `/api/stalls/images/blob/id/${img.image_id}`,
       image_data: img.image_base64 ? `data:${img.mime_type};base64,${img.image_base64}` : undefined
     }))
     

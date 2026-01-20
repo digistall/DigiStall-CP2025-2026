@@ -14,6 +14,10 @@ export const createBranch = async (req, res) => {
       status = 'Active'
     } = req.body;
     
+    // Get the current user from auth middleware
+    const currentUser = req.user;
+    const userRole = currentUser?.role || currentUser?.staff_type;
+    
     // Validation
     if (!branch_name || !area || !location) {
       return res.status(400).json({
@@ -37,28 +41,48 @@ export const createBranch = async (req, res) => {
       });
     }
     
-    // Get admin_id (assuming there's only one admin for now)
-    const [adminResult] = await connection.execute(
-      `SELECT admin_id FROM admin WHERE status = 'Active' LIMIT 1`
-    );
+    // Handle based on user role
+    let insertResult;
     
-    if (adminResult.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No active admin found'
-      });
+    if (userRole === 'business_owner' || userRole === 'stall_business_owner') {
+      // Business owner creating their own branch
+      const businessOwnerId = currentUser.id || currentUser.business_owner_id || currentUser.userId;
+      
+      console.log('📌 Business Owner creating branch:', { businessOwnerId, branch_name, userRole });
+      
+      // Use createBranchForOwner stored procedure
+      const [results] = await connection.execute(
+        'CALL createBranchForOwner(?, ?, ?, ?, ?, ?, ?, ?)',
+        [businessOwnerId, branch_name, area, location, address || '', contact_number || '', email || '', status]
+      );
+      
+      insertResult = results[0];
+    } else {
+      // Admin creating branch (original logic)
+      // Get admin_id (assuming there's only one admin for now)
+      const [adminResult] = await connection.execute(
+        `SELECT admin_id FROM admin WHERE status = 'Active' LIMIT 1`
+      );
+      
+      if (adminResult.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No active admin found'
+        });
+      }
+      
+      const admin_id = adminResult[0].admin_id;
+      
+      // Insert new branch using stored procedure
+      const [results] = await connection.execute(
+        'CALL createBranch(?, ?, ?, ?, ?, ?, ?, ?)',
+        [admin_id, branch_name, area, location, address, contact_number, email, status]
+      );
+      
+      insertResult = results[0];
     }
     
-    const admin_id = adminResult[0].admin_id;
-    
-    // Insert new branch using stored procedure
-    // Note: createBranch SP signature: (admin_id, branch_name, area, location, address, contact_number, email, status)
-    const [results] = await connection.execute(
-      'CALL createBranch(?, ?, ?, ?, ?, ?, ?, ?)',
-      [admin_id, branch_name, area, location, address, contact_number, email, status]
-    );
-    
-    const createdBranch = results[0][0];
+    const createdBranch = insertResult[0];
     const branchId = createdBranch.branch_id;
     
     // Get complete branch data using the same stored procedure as getAllBranches

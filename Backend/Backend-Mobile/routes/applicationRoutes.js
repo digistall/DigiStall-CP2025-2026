@@ -6,13 +6,17 @@ import {
   submitMobileApplication,
   getMobileUserApplications,
   getMobileApplicationStatus,
-  updateMobileApplication 
+  updateMobileApplication,
+  joinRaffle,
+  joinAuction
 } from '../controllers/mobileApplicationController.js'
 
 const router = express.Router()
 
 // ===== PUBLIC MOBILE APPLICATION ROUTES =====
-router.post('/submit', submitMobileApplication)           // POST /mobile/applications/submit - Submit application from mobile
+router.post('/submit', submitMobileApplication)           // POST /api/mobile/applications/submit - Submit application from mobile
+router.post('/join-raffle', joinRaffle)                   // POST /api/mobile/applications/join-raffle - Join a raffle
+router.post('/join-auction', joinAuction)                 // POST /api/mobile/applications/join-auction - Join an auction
 
 // ===== PROTECTED MOBILE ROUTES =====
 router.use(verifyToken) // Apply auth middleware to routes below

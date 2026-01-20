@@ -57,12 +57,20 @@
                           <v-icon left :color="docType.is_required ? 'error' : 'warning'">
                             {{ docType.is_required ? 'mdi-file-document-alert' : 'mdi-file-document' }}
                           </v-icon>
-                          <span class="doc-name">{{ docType.document_name }}</span>
+                          <span class="doc-name">{{ docType.type_name || docType.document_name }}</span>
+                          <v-chip 
+                            v-if="docType.category"
+                            size="x-small"
+                            class="ml-2 mr-1"
+                            variant="outlined"
+                          >
+                            {{ docType.category }}
+                          </v-chip>
                           <v-chip 
                             :color="docType.is_required ? 'error' : 'orange'" 
                             small 
                             text-color="white"
-                            class="ml-2"
+                            class="ml-1"
                           >
                             {{ docType.is_required ? 'Required' : 'Optional' }}
                           </v-chip>
@@ -172,7 +180,7 @@
               :items="availableDocumentTypes.filter(type => 
                 !branchRequirements.find(req => req.document_type_id === type.document_type_id)
               )"
-              item-title="document_name"
+              item-title="type_name"
               item-value="document_type_id"
               label="Select Document Type *"
               :rules="[v => !!v || 'Document type is required']"
@@ -180,7 +188,13 @@
               dense
             >
               <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props" :title="item.raw.document_name" :subtitle="item.raw.description"></v-list-item>
+                <v-list-item v-bind="props" :title="item.raw.type_name" :subtitle="item.raw.description">
+                  <template v-slot:prepend>
+                    <v-chip size="x-small" variant="outlined" class="mr-2">
+                      {{ item.raw.category || 'General' }}
+                    </v-chip>
+                  </template>
+                </v-list-item>
               </template>
             </v-select>
             <v-textarea
@@ -221,7 +235,7 @@
           Confirm Delete
         </v-card-title>
         <v-card-text>
-          Are you sure you want to remove <strong>{{ docTypeToDelete?.document_name }}</strong> from the requirements? 
+          Are you sure you want to remove <strong>{{ docTypeToDelete?.type_name || docTypeToDelete?.document_name }}</strong> from the requirements? 
           This action cannot be undone.
         </v-card-text>
         <v-card-actions>

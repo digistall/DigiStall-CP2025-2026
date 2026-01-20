@@ -24,30 +24,24 @@ export const getStallsByArea = async (req, res) => {
       `
       SELECT 
         s.stall_id as id,
-        s.stall_no as stallNumber,
+        s.stall_number as stallNumber,
         s.stall_location as location,
         s.size as dimensions,
         s.rental_price,
         s.price_type,
         s.status,
         s.description,
-        si.image_url as imageUrl,
+        si.image_id as imageId,
         s.is_available as isAvailable,
         sec.section_name as section,
         f.floor_name as floor,
-        f.floor_number,
-        b.area,
-        b.location as branchLocation,
-        b.branch_name as branch,
-        bm.first_name as manager_first_name,
-        bm.last_name as manager_last_name
+        b.branch_name as branch
       FROM stall s
-      INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON sec.floor_id = f.floor_id
-      INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN business_manager bm ON b.branch_id = bm.branch_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON s.floor_id = f.floor_id
+      LEFT JOIN branch b ON f.branch_id = b.branch_id
       LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
-      WHERE b.${filterColumn} = ? AND s.status = 'Active' AND s.is_available = 1
+      WHERE b.${filterColumn} = ? AND s.status = 'Available' AND s.is_available = 1
       ORDER BY s.created_at DESC
     `,
       [filterParam]
@@ -72,7 +66,6 @@ export const getStallsByArea = async (req, res) => {
         id: stall.id,
         stallNumber: stall.stallNumber,
         branch: stall.branch,
-        branchLocation: stall.branchLocation,
         price: formattedPrice,
         price_type: stall.price_type,
         dimensions: stall.dimensions || "Contact for details",
@@ -80,7 +73,7 @@ export const getStallsByArea = async (req, res) => {
         section: stall.section,
         isAvailable: Boolean(stall.isAvailable),
         description: stall.description || "Perfect for business",
-        imageUrl: stall.imageUrl || "stall-image.jpg",
+        imageUrl: stall.imageId ? `/api/stalls/images/blob/id/${stall.imageId}` : null,
       };
     });
 

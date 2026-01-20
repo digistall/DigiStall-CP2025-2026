@@ -21,10 +21,15 @@ class EmailService {
      */
     createTransporter() {
         // For development - Log emails to console
-        if (process.env.NODE_ENV === 'development') {
+        // Also use this mode if SMTP credentials are not configured
+        if (process.env.NODE_ENV === 'development' || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.log('📧 Email service in DEVELOPMENT MODE - emails will be logged to console');
             return {
                 sendMail: async (mailOptions) => {
                     console.log('\n=== EMAIL SIMULATION ===');
+                    console.log('To:', mailOptions.to);
+                    console.log('Subject:', mailOptions.subject);
+                    console.log('Content:', mailOptions.text);
                     console.log('Email notification sent successfully');
                     console.log('========================\n');
                     return { messageId: 'simulated-' + Date.now() };
@@ -651,6 +656,106 @@ Naga Stall Management Team`,
 
         } catch (error) {
             console.error('Error sending stallholder welcome email:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send welcome email to new branch manager with credentials
+     */
+    async sendManagerWelcomeEmail(managerData) {
+        try {
+            const { email, firstName, lastName, username, password, branchName, managerId } = managerData;
+
+            const mailOptions = {
+                from: `"${this.fromName}" <${this.fromEmail}>`,
+                to: email,
+                subject: '[Naga Stall Management] Welcome - Branch Manager Access',
+                text: `
+Hello ${firstName} ${lastName},
+
+Welcome to Naga Stall Management System!
+
+You have been assigned as the Branch Manager for: ${branchName}
+
+Your login credentials are:
+Username (Email): ${username}
+Password: ${password}
+
+Login URL: ${this.baseUrl}/manager/login
+
+Please keep these credentials secure and change your password after first login.
+
+For any assistance, please contact the System Administrator.
+
+Best regards,
+Naga Stall Management Team
+                `.trim(),
+                html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1976d2; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { background: #f5f5f5; padding: 30px; border-radius: 0 0 5px 5px; }
+        .credentials { background: white; padding: 20px; margin: 20px 0; border-left: 4px solid #1976d2; }
+        .button { display: inline-block; padding: 12px 30px; background: #1976d2; color: white !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Welcome to Naga Stall Management</h1>
+        </div>
+        <div class="content">
+            <h2>Hello ${firstName} ${lastName},</h2>
+            <p>Welcome to the Naga Stall Management System!</p>
+            <p>You have been assigned as the <strong>Branch Manager</strong> for:</p>
+            <h3 style="color: #1976d2;">${branchName}</h3>
+            
+            <div class="credentials">
+                <h3>📧 Your Login Credentials</h3>
+                <p><strong>Username (Email):</strong> ${username}</p>
+                <p><strong>Password:</strong> <code style="background: #f5f5f5; padding: 5px 10px; border-radius: 3px; font-size: 16px;">${password}</code></p>
+                <p><strong>Manager ID:</strong> #${managerId}</p>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Security Notice:</strong><br>
+                Please keep these credentials secure and change your password after your first login for security purposes.
+            </div>
+
+            <div style="text-align: center;">
+                <a href="${this.baseUrl}/manager/login" class="button">Login to Your Account</a>
+            </div>
+
+            <div class="footer">
+                <p>For assistance, please contact your System Administrator.</p>
+                <p><strong>Naga Stall Management Team</strong></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+                `.trim()
+            };
+
+            // Send email
+            const result = await this.transporter.sendMail(mailOptions);
+
+            console.log(`✅ Branch Manager welcome email sent to: ${email}`);
+            return {
+                success: true,
+                messageId: result.messageId,
+                recipient: email
+            };
+
+        } catch (error) {
+            console.error('Error sending manager welcome email:', error);
             throw error;
         }
     }

@@ -3,7 +3,7 @@ import { createConnection } from '../../../../../config/database.js';
 /**
  * Get landing page statistics
  * Returns total active stallholders and total stalls count
- * Uses stored procedure sp_getLandingPageStats
+ * Uses stored procedure getLandingPageStats
  * 
  * @route GET /api/stalls/stats
  * @access Public
@@ -13,13 +13,14 @@ export const getLandingPageStats = async (req, res) => {
   try {
     connection = await createConnection();
     
-    // Call the stored procedure
-    const [results] = await connection.execute('CALL sp_getLandingPageStats()');
+    // Call the stored procedure (renamed from sp_getLandingPageStats)
+    const [results] = await connection.execute('CALL getLandingPageStats()');
     
     // The stored procedure returns results in the first element of the array
     const stats = results[0] && results[0][0] ? results[0][0] : {
-      total_stallholders: 0,
-      total_stalls: 0
+      total_branches: 0,
+      available_stalls: 0,
+      total_stallholders: 0
     };
     
     console.log('📊 Landing page stats fetched:', stats);
@@ -27,8 +28,10 @@ export const getLandingPageStats = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
+        totalBranches: stats.total_branches,
+        availableStalls: stats.available_stalls,
         totalStallholders: stats.total_stallholders,
-        totalStalls: stats.total_stalls
+        totalStalls: stats.available_stalls // backwards compatibility
       }
     });
     

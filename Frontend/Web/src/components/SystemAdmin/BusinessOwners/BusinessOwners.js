@@ -123,12 +123,15 @@ export default {
     showRecordPayment(owner) {
       this.selectedOwner = owner
       const today = new Date().toISOString().split('T')[0]
-      const nextMonth = new Date()
-      nextMonth.setMonth(nextMonth.getMonth() + 1)
-      const periodEnd = nextMonth.toISOString().split('T')[0]
+      
+      // Calculate period end based on plan duration_months
+      const duration = owner.duration_months || 1
+      const periodEndDate = new Date()
+      periodEndDate.setMonth(periodEndDate.getMonth() + duration)
+      const periodEnd = periodEndDate.toISOString().split('T')[0]
       
       this.payment = {
-        amount: owner.monthly_fee,
+        amount: owner.monthly_fee || owner.plan_price || 0,
         paymentDate: today,
         paymentMethod: '',
         referenceNumber: '',

@@ -105,7 +105,12 @@ export default {
             const documentTypeMap = {
               1: 'signature',
               2: 'house_location',
-              3: 'valid_id'
+              3: 'valid_id',
+              // Also map string document_type values
+              'signature': 'signature',
+              'house_sketch': 'house_location',
+              'house_location': 'house_location',
+              'valid_id': 'valid_id'
             }
             
             // Also map by document name
@@ -113,20 +118,24 @@ export default {
               'signature': 'signature',
               'house location': 'house_location',
               'house_location': 'house_location',
+              'house sketch': 'house_location',
+              'house sketch location': 'house_location',
               'valid id': 'valid_id',
               'valid_id': 'valid_id',
               'government id': 'valid_id'
             }
             
             for (const doc of result.data) {
-              // Determine document type from type_id or name
-              let docType = documentTypeMap[doc.document_type_id]
+              // Determine document type from type_id, document_type, or name
+              let docType = documentTypeMap[doc.document_type_id] || documentTypeMap[doc.document_type]
               if (!docType && doc.document_name) {
                 docType = documentNameMap[doc.document_name.toLowerCase()]
               }
               
+              console.log(`📄 Processing doc: type=${doc.document_type}, name=${doc.document_name}, mapped to=${docType}`)
+              
               if (docType && this.applicantDocuments.hasOwnProperty(docType)) {
-                // Use base64 data if available, otherwise use BLOB URL
+                // Use base64 data if available
                 if (doc.document_data_base64) {
                   this.applicantDocuments[docType] = doc.document_data_base64
                   console.log(`✅ Found ${docType} from BLOB API (base64)`)
@@ -134,6 +143,10 @@ export default {
                   // Use the BLOB API endpoint directly
                   this.applicantDocuments[docType] = `${apiBase}${doc.blob_url}`
                   console.log(`✅ Found ${docType} from BLOB API (URL)`)
+                } else if (doc.file_url) {
+                  // Use file system URL (from other_information table)
+                  this.applicantDocuments[docType] = `${apiBase}${doc.file_url}`
+                  console.log(`✅ Found ${docType} from file system (URL): ${apiBase}${doc.file_url}`)
                 }
               }
             }

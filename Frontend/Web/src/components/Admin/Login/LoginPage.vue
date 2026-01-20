@@ -41,19 +41,19 @@
             <h3 class="form-title text-center mb-4">System Login</h3>
 
             <v-form ref="loginForm" v-model="valid" @submit.prevent="handleLogin">
-              <!-- Username Field -->
+              <!-- Email Field -->
               <v-text-field
-                v-model="username"
-                :rules="usernameRules"
-                label="Username"
-                type="text"
+                v-model="email"
+                :rules="emailRules"
+                label="Email"
+                type="email"
                 required
                 variant="outlined"
-                prepend-inner-icon="mdi-account"
+                prepend-inner-icon="mdi-email"
                 class="login-field"
-                placeholder="Enter your username"
+                placeholder="Enter your email address"
                 persistent-hint
-                hint="Use your registered username"
+                hint="Use your registered email address"
               ></v-text-field>
 
               <!-- Password Field -->

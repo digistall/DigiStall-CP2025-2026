@@ -150,7 +150,8 @@ export default {
       stallholders: [],
       loading: false,
       searchQuery: '',
-      debounceTimer: null
+      debounceTimer: null,
+      internalErrorMessage: ''
     }
   },
   computed: {
@@ -307,70 +308,10 @@ export default {
     },
 
     loadFallbackStallholders() {
-      console.log('🧪 Loading fallback stallholder data')
-      this.stallholders = [
-        {
-          value: 16,
-          text: 'Carlos Mendoza',
-          stallholderData: {
-            id: 16,
-            name: 'Carlos Mendoza',
-            businessName: 'Mendoza Food Corner',
-            stallNo: 'NPM-008',
-            stallLocation: 'Food Court Central',
-            contact: '09201234567',
-            email: 'carlos.mendoza@email.com',
-            monthlyRent: 5000,
-            paymentStatus: 'current'
-          }
-        },
-        {
-          value: 13,
-          text: 'Maria Santos',
-          stallholderData: {
-            id: 13,
-            name: 'Maria Santos',
-            businessName: 'Santos General Merchandise',
-            stallNo: 'NPM-005',
-            stallLocation: 'Corner Market Area',
-            contact: '09171234567',
-            email: 'maria.santos@email.com',
-            monthlyRent: 4500,
-            paymentStatus: 'current'
-          }
-        },
-        {
-          value: 14,
-          text: 'Roberto Cruz',
-          stallholderData: {
-            id: 14,
-            name: 'Roberto Cruz',
-            businessName: 'Cruz Electronics Repair',
-            stallNo: 'NPM-008',
-            stallLocation: 'South Plaza',
-            contact: '09181234567',
-            email: 'roberto.cruz@email.com',
-            monthlyRent: 4000,
-            paymentStatus: 'current'
-          }
-        },
-        {
-          value: 15,
-          text: 'Elena Reyes',
-          stallholderData: {
-            id: 15,
-            name: 'Elena Reyes',
-            businessName: 'Elena\'s Fashion Corner',
-            stallNo: 'NPM-009',
-            stallLocation: 'Center Court',
-            contact: '09191234567',
-            email: 'elena.reyes@email.com',
-            monthlyRent: 4800,
-            paymentStatus: 'payment_overdue'
-          }
-        }
-      ]
-      console.log('✅ Loaded', this.stallholders.length, 'fallback stallholders')
+      // Don't load fake data - show empty state instead
+      console.log('⚠️ API error - showing empty stallholders list')
+      this.stallholders = []
+      this.internalErrorMessage = 'Unable to load stallholders from database. Please check your connection.'
     }
   }
 }

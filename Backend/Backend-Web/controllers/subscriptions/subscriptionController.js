@@ -2,7 +2,8 @@
 // System Administrator manages Stall Business Owner subscriptions
 
 import { createConnection } from '../../config/database.js';
-import bcrypt from 'bcrypt';
+import { encryptData } from '../../services/encryptionService.js';
+import { generateSecurePassword } from '../../utils/passwordGenerator.js';
 
 // Get all subscription plans
 export const getAllSubscriptionPlans = async (req, res) => {
@@ -35,8 +36,6 @@ export const createBusinessOwnerWithSubscription = async (req, res) => {
   
   try {
     const {
-      username,
-      password,
       firstName,
       lastName,
       email,
@@ -45,15 +44,22 @@ export const createBusinessOwnerWithSubscription = async (req, res) => {
     } = req.body;
     
     // Validate required fields
-    if (!username || !password || !firstName || !lastName || !email || !planId) {
+    if (!firstName || !lastName || !email || !planId) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
       });
     }
     
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 12);
+    // Generate secure password
+    const generatedPassword = generateSecurePassword(12);
+    
+    // Encrypt password and names (NOT email - needed for login search)
+    const encryptedPassword = encryptData(generatedPassword);
+    const encryptedFullName = encryptData(`${firstName} ${lastName}`);
+    const encryptedFirstName = encryptData(firstName);
+    const encryptedLastName = encryptData(lastName);
+    const encryptedContact = contactNumber ? encryptData(contactNumber) : null;
     
     connection = await createConnection();
     
@@ -61,15 +67,23 @@ export const createBusinessOwnerWithSubscription = async (req, res) => {
     const systemAdminId = req.user.userId;
     
     // Create business owner with subscription
+    // Email is stored as PLAIN TEXT for login search
     const [[result]] = await connection.execute(
       'CALL createBusinessOwnerWithSubscription(?, ?, ?, ?, ?, ?, ?, ?)',
-      [username, passwordHash, firstName, lastName, email, contactNumber, planId, systemAdminId]
+      [encryptedPassword, encryptedFullName, encryptedFirstName, encryptedLastName, email, encryptedContact, planId, systemAdminId]
     );
+    
+    // Return credentials to display to admin
+    console.log('✅ Business Owner created:', { email, generatedPassword });
     
     res.status(201).json({
       success: true,
       message: 'Business owner created successfully. Awaiting first payment.',
-      data: result[0]
+      data: result[0],
+      credentials: {
+        email: email,
+        password: generatedPassword
+      }
     });
   } catch (error) {
     console.error('❌ Error creating business owner:', error);
@@ -166,9 +180,18 @@ export const getAllBusinessOwnersWithSubscription = async (req, res) => {
       'CALL getAllBusinessOwnersWithSubscription()'
     );
     
+    // Decrypt sensitive fields and add monthly_fee
+    const { decryptData } = await import('../../services/encryptionService.js');
+    const decryptedOwners = businessOwners.map(owner => ({
+      ...owner,
+      full_name: decryptData(owner.owner_full_name),
+      contact_number: decryptData(owner.contact_number),
+      monthly_fee: owner.plan_price
+    }));
+    
     res.status(200).json({
       success: true,
-      data: businessOwners
+      data: decryptedOwners
     });
   } catch (error) {
     console.error('❌ Error fetching business owners:', error);
@@ -258,15 +281,17 @@ export const getSystemAdminDashboardStats = async (req, res) => {
     
     const [results] = await connection.execute('CALL getSystemAdminDashboardStats()');
     
-    // Extract values from result sets
+    // Extract values from single result set
+    const row = results[0][0];
     const stats = {
-      totalBusinessOwners: results[0][0].total_business_owners,
-      activeSubscriptions: results[1][0].active_subscriptions,
-      expiringSoon: results[2][0].expiring_soon,
-      expiredSubscriptions: results[3][0].expired_subscriptions,
-      revenueThisMonth: parseFloat(results[4][0].revenue_this_month),
-      totalRevenue: parseFloat(results[5][0].total_revenue),
-      pendingPayments: results[6][0].pending_payments
+      totalBusinessOwners: row.total_business_owners || 0,
+      activeSubscriptions: row.active_subscriptions || 0,
+      pendingSubscriptions: row.pending_subscriptions || 0,
+      pendingPayments: row.pending_payments || 0,
+      totalRevenue: parseFloat(row.total_revenue) || 0,
+      totalBranches: row.total_branches || 0,
+      availableStalls: row.available_stalls || 0,
+      occupiedStalls: row.occupied_stalls || 0
     };
     
     res.status(200).json({

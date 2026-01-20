@@ -554,8 +554,8 @@ export const logout = async (req, res) => {
                     UPDATE employee_session 
                     SET is_active = 0, 
                         logout_time = ?,
-                        last_activity = ?
-                    WHERE business_employee_id = ? 
+                        last_heartbeat = ?
+                    WHERE employee_id = ? 
                       AND is_active = 1
                   `, [philippineTime, philippineTime, userId]);
                   console.log(`✅ Employee session deactivated for ID ${userId}`);

@@ -1,33 +1,26 @@
 import { createConnection } from '../../../config/database.js'
-import bcrypt from 'bcrypt'
+import { encryptData } from '../../../services/encryptionService.js'
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js'
+import emailService from '../../../services/emailService.js'
 
-// Create branch manager
+// Create branch manager with auto-generated credentials and email notification
 export const createBranchManager = async (req, res) => {
   let connection;
   try {
     console.log('🔧 Creating branch manager - Request received')
-    console.log('📄 Request method:', req.method)
-    console.log('📄 Request URL:', req.url)
-    console.log('📄 Content-Type:', req.headers['content-type'])
-    console.log('📋 Request body keys:', Object.keys(req.body))
-    console.log('📋 Request body data:', JSON.stringify(req.body, null, 2))
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2))
 
     const {
       branch_id,
-      branchId = branch_id,        // Accept both formats
+      branchId = branch_id,
       first_name,
-      firstName = first_name,      // Accept both formats
+      firstName = first_name,
       last_name,
-      lastName = last_name,        // Accept both formats
-      manager_username,
-      username = manager_username, // Accept both formats
-      password,
-      manager_password = password, // Accept both formats
+      lastName = last_name,
       email,
       contact_number,
-      contactNumber = contact_number, // Accept both formats
-      phone = contact_number,         // Accept phone as well
-      address = null,               // Default to null if not provided
+      contactNumber = contact_number,
+      phone = contact_number,
       status = 'Active'
     } = req.body;
 
@@ -35,48 +28,43 @@ export const createBranchManager = async (req, res) => {
     const finalBranchId = branchId || branch_id
     const finalFirstName = firstName || first_name
     const finalLastName = lastName || last_name
-    const finalUsername = username || manager_username
-    const finalPassword = manager_password || password
     const finalContactNumber = contactNumber || contact_number || phone
-    const finalAddress = address || null  // Ensure null instead of undefined
 
-    console.log('🔍 Field validation after mapping:')
-    console.log('- finalBranchId:', finalBranchId, '(type:', typeof finalBranchId, ', valid:', !!finalBranchId, ')')
-    console.log('- finalFirstName:', finalFirstName, '(type:', typeof finalFirstName, ', valid:', !!finalFirstName, ')')
-    console.log('- finalLastName:', finalLastName, '(type:', typeof finalLastName, ', valid:', !!finalLastName, ')')
-    console.log('- finalUsername:', finalUsername, '(type:', typeof finalUsername, ', valid:', !!finalUsername, ')')
-    console.log('- finalPassword:', finalPassword ? '[PROVIDED]' : 'NULL', '(valid:', !!finalPassword, ')')
-    console.log('- email:', email, '(type:', typeof email, ', valid:', !!email, ')')
-    console.log('- finalContactNumber:', finalContactNumber, '(valid:', !!finalContactNumber, ')')
-    console.log('- finalAddress:', finalAddress, '(valid:', !!finalAddress, ')')
-    console.log('- status:', status, '(valid:', !!status, ')')
+    // Get current user info
+    const currentUser = req.user
+    const userRole = currentUser?.role || currentUser?.userType
+    const userId = currentUser?.userId || currentUser?.id
+
+    console.log('🔍 Mapped values:')
+    console.log('- Branch ID:', finalBranchId)
+    console.log('- Name:', finalFirstName, finalLastName)
+    console.log('- Email:', email)
+    console.log('- Contact:', finalContactNumber)
+    console.log('- User Role:', userRole)
+    console.log('- User ID:', userId)
     
-    // Validation
-    if (!finalBranchId || !finalFirstName || !finalLastName || !finalUsername || !finalPassword || !email) {
+    // Validation - only require name and email now
+    if (!finalBranchId || !finalFirstName || !finalLastName || !email) {
       const missingFields = []
       if (!finalBranchId) missingFields.push('branch_id/branchId')
       if (!finalFirstName) missingFields.push('first_name/firstName')
       if (!finalLastName) missingFields.push('last_name/lastName')
-      if (!finalUsername) missingFields.push('manager_username/username')
-      if (!finalPassword) missingFields.push('password/manager_password')
       if (!email) missingFields.push('email')
 
       console.log('❌ Validation failed - Missing fields:', missingFields)
-      console.log('📋 Available fields in request:', Object.keys(req.body))
       
       return res.status(400).json({
         success: false,
         message: `Missing required fields: ${missingFields.join(', ')}`,
-        availableFields: Object.keys(req.body),
         missingFields: missingFields
       });
     }
     
     connection = await createConnection();
     
-    // Check if branch exists
+    // Check if branch exists and get current manager
     const [branchExists] = await connection.execute(
-      'SELECT branch_id, branch_name FROM branch WHERE branch_id = ?',
+      'SELECT branch_id, branch_name, business_owner_id, business_manager_id FROM branch WHERE branch_id = ?',
       [finalBranchId]
     );
     
@@ -88,84 +76,126 @@ export const createBranchManager = async (req, res) => {
       });
     }
     
-    console.log('✅ Branch found:', branchExists[0].branch_name)
+    const branchName = branchExists[0].branch_name
+    const currentManagerId = branchExists[0].business_manager_id
+    console.log('✅ Branch found:', branchName)
     
-    // Check if username already exists
+    // If there's a current manager, deactivate them
+    if (currentManagerId) {
+      console.log('📝 Deactivating previous manager ID:', currentManagerId)
+      await connection.execute(
+        'UPDATE business_manager SET status = ? WHERE business_manager_id = ?',
+        ['Inactive', currentManagerId]
+      );
+      console.log('✅ Previous manager deactivated')
+    }
+    
+    // If user is business_owner, verify they own this branch
+    if (userRole === 'stall_business_owner') {
+      const branchOwnerId = branchExists[0].business_owner_id
+      
+      if (!branchOwnerId || branchOwnerId !== userId) {
+        console.log('❌ Access denied: Branch not owned by this business owner')
+        return res.status(403).json({
+          success: false,
+          message: 'You can only create managers for your own branches'
+        });
+      }
+      
+      console.log('✅ Branch ownership verified for business owner:', userId)
+    }
+    
+    // Check if email already exists
     const [existingUser] = await connection.execute(
-      'SELECT branch_manager_id FROM branch_manager WHERE manager_username = ?',
-      [finalUsername]
+      'SELECT branch_manager_id FROM branch_manager WHERE email = ?',
+      [email]
     );
     
     if (existingUser.length > 0) {
-      console.log('❌ Username already exists:', finalUsername)
+      console.log('❌ Email already exists:', email)
       return res.status(400).json({
         success: false,
-        message: 'Username already exists'
+        message: 'A manager with this email already exists'
       });
     }
     
-    console.log('✅ Username available:', finalUsername)
+    // Auto-generate credentials
+    const generatedPassword = generateSecurePassword(12)
     
-    // Check if branch already has a manager
-    const [existingManager] = await connection.execute(
-      'SELECT branch_manager_id FROM branch_manager WHERE branch_id = ?',
-      [finalBranchId]
-    );
+    // Email becomes the username
+    const username = email
     
-    if (existingManager.length > 0) {
-      console.log('❌ Branch already has a manager:', finalBranchId)
-      return res.status(400).json({
-        success: false,
-        message: 'Branch already has an assigned manager'
-      });
+    // Encrypt password and names
+    const encryptedPassword = encryptData(generatedPassword)
+    const encryptedFirstName = encryptData(finalFirstName)
+    const encryptedLastName = encryptData(finalLastName)
+    const encryptedContact = finalContactNumber ? encryptData(finalContactNumber) : null
+    
+    console.log('🔐 Credentials generated and encrypted')
+    console.log('📧 Email (username):', email)
+    console.log('🔑 Generated password:', generatedPassword)
+    
+    // Get business_owner_id (either from current user or from branch)
+    let businessOwnerId = null
+    if (userRole === 'stall_business_owner') {
+      businessOwnerId = userId
+    } else {
+      // Admin creating manager - get business_owner_id from branch
+      businessOwnerId = branchExists[0].business_owner_id || null
     }
     
-    console.log('✅ Branch has no existing manager')
+    console.log('👤 Business Owner ID:', businessOwnerId)
     
-    // Hash password properly
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(finalPassword, saltRounds);
-    console.log('✅ Password hashed successfully')
-    
-    // Insert new branch manager
-    const [result] = await connection.execute(
-      `INSERT INTO branch_manager (
-        branch_id, first_name, last_name, manager_username, manager_password_hash, 
-        email, contact_number, address, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [finalBranchId, finalFirstName, finalLastName, finalUsername, hashedPassword, email, finalContactNumber, finalAddress, status]
+    // Create branch manager using stored procedure
+    const [[result]] = await connection.execute(
+      'CALL createBranchManager(?, ?, ?, ?, ?, ?)',
+      [email, encryptedPassword, encryptedFirstName, encryptedLastName, encryptedContact, businessOwnerId]
     );
     
-    const managerId = result.insertId;
+    const managerId = result[0].branch_manager_id
+    console.log('✅ Branch manager created with ID:', managerId)
     
-    // Get the created manager details (without password)
-    const [createdManager] = await connection.execute(
-      `SELECT 
-        bm.branch_manager_id,
-        bm.branch_id,
-        bm.first_name,
-        bm.last_name,
-        bm.manager_username,
-        bm.email,
-        bm.contact_number,
-        bm.address,
-        bm.status,
-        bm.created_at,
-        b.branch_name,
-        b.area,
-        b.location
-      FROM branch_manager bm
-      INNER JOIN branch b ON bm.branch_id = b.branch_id
-      WHERE bm.branch_manager_id = ?`,
-      [managerId]
+    // Assign manager to branch
+    await connection.execute(
+      'CALL assignManagerToBranch(?, ?)',
+      [finalBranchId, managerId]
     );
     
-    console.log('✅ Branch manager created successfully:', finalUsername);
+    console.log('✅ Manager assigned to branch:', branchName)
+    
+    // Send welcome email with credentials (handled by frontend using EmailJS)
+    // Backend still attempts to send for redundancy
+    try {
+      await emailService.sendManagerWelcomeEmail({
+        email: email,
+        firstName: finalFirstName,
+        lastName: finalLastName,
+        username: username,
+        password: generatedPassword,
+        branchName: branchName,
+        managerId: managerId
+      })
+      
+      console.log('✅ Welcome email sent to:', email)
+    } catch (emailError) {
+      console.error('⚠️ Failed to send email (non-critical):', emailError.message)
+      // Don't fail the request if email fails - frontend will send via EmailJS
+    }
     
     res.status(201).json({
       success: true,
-      message: 'Branch manager created successfully',
-      data: createdManager[0]
+      message: `Branch manager created successfully!`,
+      data: {
+        manager_id: managerId,
+        branch_id: finalBranchId,
+        branch_name: branchName,
+        email: email,
+        full_name: `${finalFirstName} ${finalLastName}`,
+        credentials: {
+          username: username,
+          password: generatedPassword
+        }
+      }
     });
     
   } catch (error) {

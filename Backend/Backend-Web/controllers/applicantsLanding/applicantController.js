@@ -194,11 +194,25 @@ export const applicantController = {
           [stall_id]
         );
 
+        console.log("🏪 Stall check result:", stallCheck);
+
         if (stallCheck.length === 0) {
           throw new Error("Selected stall does not exist");
         }
 
-        if (!stallCheck[0].is_available || stallCheck[0].status !== 'Active') {
+        // Check availability - handle both numeric (1/0) and boolean values
+        const stall = stallCheck[0];
+        const isAvailable = stall.is_available === 1 || stall.is_available === true || stall.is_available === '1';
+        const hasValidStatus = stall.status === 'Available' || stall.status === 'Active';
+        
+        console.log("🏪 Stall availability check:", { 
+          raw_is_available: stall.is_available, 
+          isAvailable, 
+          status: stall.status, 
+          hasValidStatus 
+        });
+
+        if (!isAvailable || !hasValidStatus) {
           throw new Error("Selected stall is not available");
         }
 

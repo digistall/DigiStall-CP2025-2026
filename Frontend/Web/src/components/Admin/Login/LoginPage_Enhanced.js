@@ -14,7 +14,7 @@ export default {
       valid: false,
       loading: false,
       showLoadingScreen: false,
-      username: '',
+      email: '',
       password: '',
       showPassword: false,
       showSuccessPopup: false,
@@ -39,9 +39,9 @@ export default {
         operation: 'login',
         operationType: 'user',
       },
-      usernameRules: [
-        (v) => !!v || 'Username is required',
-        (v) => (v && v.length >= 3) || 'Username must be at least 3 characters',
+      emailRules: [
+        (v) => !!v || 'Email is required',
+        (v) => /.+@.+\..+/.test(v) || 'Email must be valid',
       ],
       passwordRules: [
         (v) => !!v || 'Password is required',
@@ -52,22 +52,6 @@ export default {
   setup() {
     const authStore = useAuthStore()
     return { authStore }
-  },
-  computed: {
-    userType() {
-      // Determine user type from username pattern
-      const username = this.username.toLowerCase()
-      
-      if (username.includes('sysadmin') || username.includes('system')) {
-        return 'system_administrator'
-      } else if (username.includes('admin') || username.includes('owner')) {
-        return 'stall_business_owner'
-      } else if (username.includes('manager')) {
-        return 'business_manager'
-      } else {
-        return 'business_employee'
-      }
-    },
   },
   async mounted() {
     // Check if already authenticated
@@ -122,7 +106,7 @@ export default {
       // Show loading screen immediately BEFORE starting authentication
       this.currentLoadingStep = 0
       this.currentProgress = 0
-      this.loggedInUserName = this.username.trim()
+      this.loggedInUserName = this.email.trim()
       this.showLoadingScreen = true
 
       try {
@@ -133,7 +117,7 @@ export default {
         this.currentLoadingStep = 1
         this.currentProgress = 20
 
-        console.log('🔐 Attempting login with username:', this.username.trim())
+        console.log('🔐 Attempting login with email:', this.email.trim())
 
         // Step 2: Authentication - verifying credentials
         this.currentLoadingStep = 1
@@ -141,11 +125,10 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 200))
         this.currentProgress = 35
 
-        // Use the new auth store login method
+        // Use the new auth store login method (email-based, backend auto-detects user type)
         const result = await this.authStore.login(
-          this.username.trim(),
-          this.password,
-          this.userType
+          this.email.trim(),
+          this.password
         )
         
         if (result.success) {

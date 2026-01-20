@@ -26,6 +26,8 @@ export default {
       imagePreviews: [], // NEW: Support multiple previews
       showDeleteConfirm: false,
       showImageDeleteDialog: false, // NEW: Image delete confirmation modal
+      floors: [], // Dynamically loaded floors
+      sections: [], // Dynamically loaded sections
       imageToDelete: null, // NEW: Track which image to delete
       valid: false,
       loading: false,
@@ -116,13 +118,18 @@ export default {
   },
   watch: {
     stallData: {
-      handler(newData, oldData) {
+      async handler(newData, oldData) {
         console.log('👀 stallData watcher triggered')
         console.log('New data:', newData)
         console.log('Old data:', oldData)
 
         if (newData && Object.keys(newData).length) {
           console.log('📝 Populating form with new data')
+          // Ensure floors/sections are loaded before populating form
+          if (this.floors.length === 0 || this.sections.length === 0) {
+            console.log('⏳ Floors/sections not loaded yet, fetching...')
+            await this.fetchFloorsAndSections()
+          }
           this.populateForm(newData)
           // Fetch images from htdocs after populating form
           this.fetchStallImagesFromHtdocs(newData)
@@ -204,14 +211,44 @@ export default {
       // If no base_rate in DB, existing price IS the monthly rent, so base rate = price / 2
       const calculatedBaseRate = baseRateFromDb || (existingPrice ? (existingPrice / 2).toFixed(2) : '')
 
+      // Look up floor/section names from IDs if not provided directly
+      const floorId = data.floor_id || data.floorId
+      const sectionId = data.section_id || data.sectionId
+      let floorName = data.floor_name || data.floor || ''
+      let sectionName = data.section_name || data.section || ''
+      
+      console.log('🔍 Looking up floor/section:', { floorId, sectionId, floorName, sectionName })
+      console.log('📚 Available floors:', this.floors)
+      console.log('📚 Available sections:', this.sections)
+      
+      // If we have IDs but no names, look up from our fetched arrays
+      if (floorId && !floorName && this.floors.length > 0) {
+        const floor = this.floors.find(f => f.floor_id === floorId)
+        if (floor) {
+          floorName = floor.floor_name
+          console.log('✅ Found floor name:', floorName)
+        } else {
+          console.warn('⚠️ Floor not found for ID:', floorId)
+        }
+      }
+      if (sectionId && !sectionName && this.sections.length > 0) {
+        const section = this.sections.find(s => s.section_id === sectionId)
+        if (section) {
+          sectionName = section.section_name
+          console.log('✅ Found section name:', sectionName)
+        } else {
+          console.warn('⚠️ Section not found for ID:', sectionId)
+        }
+      }
+
       this.editForm = {
         id: extractedId,
-        stallNumber: data.stall_no || data.stallNumber || '',
+        stallNumber: data.stall_number || data.stall_no || data.stallNumber || '',
         price: existingPrice || '',
-        floor: data.floor_name || data.floor || '',
-        floorId: data.floor_id || data.floorId || null,
-        section: data.section_name || data.section || '',
-        sectionId: data.section_id || data.sectionId || null,
+        floor: floorName,
+        floorId: floorId || null,
+        section: sectionName,
+        sectionId: sectionId || null,
         areaSqm: data.area_sqm || data.areaSqm || this.extractAreaFromSize(data.size) || '', // NEW
         baseRate: calculatedBaseRate, // RENTAL RATE (2010) - either from DB or price/2
         location: data.stall_location || data.location || '',
@@ -339,6 +376,13 @@ export default {
           isAvailable: this.editForm.isAvailable,
           priceType: this.editForm.priceType,
         }
+
+        console.log('📊 editForm before save:', {
+          floor: this.editForm.floor,
+          floorId: this.editForm.floorId,
+          section: this.editForm.section,
+          sectionId: this.editForm.sectionId
+        })
 
         // Calculate rate per sq.m if area is provided
         if (updateData.area_sqm > 0 && updateData.price > 0) {
@@ -579,10 +623,10 @@ export default {
           if (result.success && result.data.images && result.data.images.length > 0) {
             // Map images to use BLOB serving endpoint
             this.stallImages = result.data.images.map(img => {
-              const imageUrl = `${apiUrl}/api/stalls/images/blob/id/${img.id}`
-              console.log(`🖼️ Image ${img.id} URL:`, imageUrl)
+              const imageUrl = `${apiUrl}/api/stalls/images/blob/id/${img.image_id}`
+              console.log(`🖼️ Image ${img.image_id} URL:`, imageUrl)
               return {
-                id: img.id,
+                id: img.image_id,
                 url: imageUrl,
                 is_primary: img.is_primary,
                 display_order: img.display_order,
@@ -961,19 +1005,78 @@ export default {
     },
 
     getFloorOptions() {
-      return ['1st Floor', '2nd Floor', '3rd Floor']
+      // Return floors from API with value/title format for v-select
+      return this.floors.map(f => ({
+        title: f.floor_name,
+        value: f.floor_name
+      }))
     },
 
     getSectionOptions() {
-      return [
-        'Grocery Section',
-        'Meat Section',
-        'Fresh Produce',
-        'Clothing Section',
-        'Electronics Section',
-        'Food Court',
-        'General Section',
-      ]
+      // Return sections filtered by selected floor
+      const selectedFloor = this.floors.find(f => f.floor_name === this.editForm.floor)
+      if (!selectedFloor) {
+        return this.sections.map(s => ({
+          title: s.section_name,
+          value: s.section_name
+        }))
+      }
+      return this.sections
+        .filter(s => s.floor_id === selectedFloor.floor_id)
+        .map(s => ({
+          title: s.section_name,
+          value: s.section_name
+        }))
+    },
+
+    async fetchFloorsAndSections() {
+      try {
+        const token = sessionStorage.getItem('authToken')
+        if (!token) return
+
+        // Fetch floors
+        const floorsResponse = await fetch(`${this.apiBaseUrl}/branches/floors`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (floorsResponse.ok) {
+          const floorsData = await floorsResponse.json()
+          this.floors = floorsData.data || floorsData.floors || []
+          console.log('✅ Loaded floors:', this.floors)
+        }
+
+        // Fetch all sections for all floors
+        for (const floor of this.floors) {
+          const sectionsResponse = await fetch(`${this.apiBaseUrl}/branches/floors/${floor.floor_id}/sections`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (sectionsResponse.ok) {
+            const sectionsData = await sectionsResponse.json()
+            const floorSections = (sectionsData.data || sectionsData.sections || []).map(s => ({
+              ...s,
+              floor_id: floor.floor_id
+            }))
+            this.sections = [...this.sections, ...floorSections]
+          }
+        }
+        console.log('✅ Loaded sections:', this.sections)
+      } catch (error) {
+        console.error('❌ Error fetching floors/sections:', error)
+      }
+    },
+
+    handleFloorChange(floorName) {
+      // Update floorId when floor name changes
+      const floor = this.floors.find(f => f.floor_name === floorName)
+      this.editForm.floorId = floor ? floor.floor_id : null
+      // Reset section when floor changes
+      this.editForm.section = ''
+      this.editForm.sectionId = null
+    },
+
+    handleSectionChange(sectionName) {
+      // Update sectionId when section name changes
+      const section = this.sections.find(s => s.section_name === sectionName)
+      this.editForm.sectionId = section ? section.section_id : null
     },
 
     getPriceTypeOptions() {
@@ -991,6 +1094,11 @@ export default {
 
       this.editForm.price = value
     },
+  },
+
+  async mounted() {
+    // Fetch floors and sections when component mounts
+    await this.fetchFloorsAndSections()
   },
 
   beforeDestroy() {

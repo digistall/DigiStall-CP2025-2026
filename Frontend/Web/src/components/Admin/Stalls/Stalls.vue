@@ -33,6 +33,7 @@
             <!-- Card Stalls Component -->
             <CardStallsComponent
               v-if="hasStalls"
+              :key="stallsUpdateKey"
               :stalls="displayStalls"
               @stall-edit="handleStallEdit"
               @stall-raffle-management="handleRaffleManagement"

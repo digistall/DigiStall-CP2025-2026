@@ -143,7 +143,7 @@ export const addStallWithImages = async (req, res) => {
 
     // Check for duplicate stall number in section
     const [duplicateCheck] = await connection.execute(
-      `SELECT stall_id FROM stall WHERE stall_no = ? AND section_id = ?`,
+      `SELECT stall_id FROM stall WHERE stall_number = ? AND section_id = ?`,
       [stallNo_final, section_id_final]
     );
 
@@ -165,7 +165,7 @@ export const addStallWithImages = async (req, res) => {
       baseRate_final,
       calculatedRatePerSqm,
       priceType_final,
-      status: isAvailable !== false ? "Active" : "Inactive",
+      status: isAvailable !== false ? "Available" : "Maintenance",
       userId,
       userType,
       branchId
@@ -174,17 +174,24 @@ export const addStallWithImages = async (req, res) => {
     // 1. Create stall record using direct SQL
     const [insertResult] = await connection.execute(
       `INSERT INTO stall (
-        stall_no, 
+        stall_number,
+        stall_name,
+        stall_type,
+        stall_size,
         stall_location, 
         size, 
         area_sqm,
         floor_id, 
         section_id, 
+        monthly_rent,
         rental_price,
         base_rate,
         rate_per_sqm,
         price_type, 
-        status, 
+        status,
+        branch_id,
+        floor_level,
+        section,
         stamp, 
         description, 
         is_available,
@@ -193,19 +200,26 @@ export const addStallWithImages = async (req, res) => {
         raffle_auction_status,
         created_by_business_manager,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         stallNo_final,
+        `Stall ${stallNo_final}`,
+        priceType_final,
+        size,
         location_final,
         size,
         areaSqm_final || null,
         floor_id_final,
         section_id_final,
+        finalPrice / 2,
         finalPrice,
         baseRate_final || null,
         calculatedRatePerSqm,
         priceType_final,
-        isAvailable !== false ? "Active" : "Inactive",
+        isAvailable !== false ? "Available" : "Maintenance",
+        branchId,
+        floor_name,
+        section_name,
         "APPROVED",
         description || null,
         isAvailable !== false ? 1 : 0,
@@ -237,20 +251,21 @@ export const addStallWithImages = async (req, res) => {
         const mimeType = imgData.mime_type || 'image/jpeg';
         const fileName = imgData.file_name || `stall_${stallId}_${i + 1}.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
         const displayOrder = i + 1;
-        const imageUrl = `/api/stalls/images/blob/${stallId}/${displayOrder}`;
         
         // Insert into stall_images with BLOB data
-        await connection.execute(
-          `INSERT INTO stall_images (stall_id, image_url, image_data, mime_type, file_name, display_order, is_primary, created_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [stallId, imageUrl, imageBuffer, mimeType, fileName, displayOrder, i === 0 ? 1 : 0]
+        const [imgInsertResult] = await connection.execute(
+          `INSERT INTO stall_images (stall_id, image_data, image_mime_type, image_name, display_order, is_primary, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [stallId, imageBuffer, mimeType, fileName, displayOrder, i === 0 ? 1 : 0]
         );
         
+        const imageId = imgInsertResult.insertId;
         uploadedImages.push({
-          url: imageUrl,
+          image_id: imageId,
           file_name: fileName,
           display_order: displayOrder,
-          is_primary: i === 0
+          is_primary: i === 0,
+          image_url: `/api/stalls/images/blob/id/${imageId}`
         });
         console.log(`✅ Added BLOB image ${i + 1}: ${fileName} (primary: ${i === 0})`);
       }
@@ -290,7 +305,10 @@ export const addStallWithImages = async (req, res) => {
     const [stallData] = await connection.execute(
       `SELECT 
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
+        s.stall_name,
+        s.stall_type,
+        s.stall_size,
         s.stall_location,
         s.size,
         s.area_sqm,
@@ -298,11 +316,12 @@ export const addStallWithImages = async (req, res) => {
         s.rate_per_sqm,
         s.floor_id,
         s.section_id,
+        s.monthly_rent,
         s.rental_price,
         s.price_type,
         s.status,
         s.description,
-        si.image_url as stall_image,
+        si.image_id as primary_image_id,
         s.is_available,
         s.raffle_auction_deadline,
         s.created_at,

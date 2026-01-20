@@ -264,12 +264,13 @@ export async function getStallImageBlobById(req, res) {
     
     connection = await createConnection()
     
-    // First check if image exists at all using stored procedure
-    const [checkRows] = await connection.execute(
-      'CALL sp_checkStallImageById(?)',
+    // First check if image exists using direct SQL (column is image_id, not id)
+    const [checkResult] = await connection.execute(
+      `SELECT image_id, stall_id, image_mime_type as mime_type, image_name as file_name, LENGTH(image_data) as data_size 
+       FROM stall_images 
+       WHERE image_id = ?`,
       [image_id]
     )
-    const checkResult = checkRows[0]
     
     console.log(`📷 Image check result:`, checkResult)
     
@@ -283,12 +284,13 @@ export async function getStallImageBlobById(req, res) {
     
     console.log(`📷 Image found: ${checkResult[0].file_name}, size: ${checkResult[0].data_size} bytes`)
     
-    // Now fetch the actual binary data using stored procedure
-    const [rows] = await connection.execute(
-      'CALL sp_getStallImageDataById(?)',
+    // Now fetch the actual binary data using direct SQL
+    const [images] = await connection.execute(
+      `SELECT image_id, stall_id, image_data, image_mime_type as mime_type, image_name as file_name
+       FROM stall_images 
+       WHERE image_id = ?`,
       [image_id]
     )
-    const images = rows[0]
     
     if (images.length === 0 || !images[0].image_data) {
       console.log(`📷 Image data is NULL for ID ${image_id}`)
@@ -332,17 +334,42 @@ export async function getStallImagesBlob(req, res) {
     
     connection = await createConnection()
     
-    // Use stored procedure with include_data parameter
-    const [rows] = await connection.execute(
-      'CALL sp_getStallImagesWithData(?, ?)',
-      [stall_id, include_data === 'true' ? 1 : 0]
-    )
-    const images = rows[0]
+    // Direct query instead of broken stored procedure (same as web backend)
+    let query
+    if (include_data === 'true') {
+      query = `SELECT 
+        image_id,
+        stall_id,
+        image_mime_type as mime_type,
+        image_name as file_name,
+        display_order,
+        is_primary,
+        TO_BASE64(image_data) as image_base64,
+        created_at
+      FROM stall_images
+      WHERE stall_id = ?
+      ORDER BY display_order ASC`
+    } else {
+      query = `SELECT 
+        image_id,
+        stall_id,
+        image_mime_type as mime_type,
+        image_name as file_name,
+        display_order,
+        is_primary,
+        created_at
+      FROM stall_images
+      WHERE stall_id = ?
+      ORDER BY display_order ASC`
+    }
     
-    // Add full URL for serving
+    const [images] = await connection.execute(query, [stall_id])
+    
+    // Add full URL for serving and map image_id to id for mobile frontend compatibility
     const imagesWithUrls = images.map(img => ({
       ...img,
-      serve_url: `/api/stalls/images/blob/id/${img.id}`,
+      id: img.image_id, // Mobile frontend expects 'id' field
+      serve_url: `/api/mobile/stalls/images/blob/id/${img.image_id}`,
       image_data: img.image_base64 ? `data:${img.mime_type};base64,${img.image_base64}` : undefined
     }))
     

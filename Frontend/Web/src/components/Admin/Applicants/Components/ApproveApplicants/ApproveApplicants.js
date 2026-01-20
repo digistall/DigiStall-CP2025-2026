@@ -1,5 +1,4 @@
 import {
-  generateUsername,
   generatePassword,
   sendApprovalEmailWithRetry,
 } from '../emailJS/emailService.js'
@@ -70,8 +69,8 @@ export default {
           throw new Error('Cannot determine applicant ID')
         }
 
-        // Generate credentials for the applicant
-        const username = generateUsername()
+        // Username is the email, password is auto-generated
+        const username = this.applicant.email  // Email from other_information
         const password = generatePassword()
 
         this.credentials = { username, password }

@@ -63,15 +63,77 @@ const PaymentController = {
       
       console.log('🔍 getStallholdersByBranch called for branch:', branchId);
       
-      // Use stored procedure for consistency with working getStallholderDetails
-      console.log('🔍 Executing stored procedure with branchId:', branchId);
-      const [result] = await connection.execute(
-        'CALL sp_get_all_stallholders(?)',
-        [branchId]
-      );
+      // Use direct query instead of stored procedure for compatibility
+      console.log('🔍 Executing query with branchId:', branchId);
+      let query;
+      let params;
       
-      // Extract stallholders from stored procedure result
-      const stallholders = result[0] || [];
+      if (branchId) {
+        query = `
+          SELECT 
+            sh.stallholder_id as id,
+            sh.full_name as name,
+            sh.full_name as stallholder_name,
+            sh.contact_number as contact,
+            sh.email,
+            sh.address,
+            sh.stall_id,
+            s.stall_number as stallNo,
+            s.stall_number,
+            s.stall_location as stallLocation,
+            s.rental_price as monthlyRental,
+            s.rental_price,
+            sh.branch_id,
+            b.branch_name as branchName,
+            b.branch_name,
+            sh.status as contract_status,
+            sh.payment_status,
+            sh.move_in_date as contract_start_date,
+            sh.full_name as businessName,
+            sh.full_name as business_name
+          FROM stallholder sh
+          LEFT JOIN stall s ON sh.stall_id = s.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE sh.branch_id = ?
+          ORDER BY sh.stallholder_id
+        `;
+        params = [branchId];
+      } else {
+        // For system admin or business owner, get all stallholders
+        query = `
+          SELECT 
+            sh.stallholder_id as id,
+            sh.full_name as name,
+            sh.full_name as stallholder_name,
+            sh.contact_number as contact,
+            sh.email,
+            sh.address,
+            sh.stall_id,
+            s.stall_number as stallNo,
+            s.stall_number,
+            s.stall_location as stallLocation,
+            s.rental_price as monthlyRental,
+            s.rental_price,
+            sh.branch_id,
+            b.branch_name as branchName,
+            b.branch_name,
+            sh.status as contract_status,
+            sh.payment_status,
+            sh.move_in_date as contract_start_date,
+            sh.full_name as businessName,
+            sh.full_name as business_name
+          FROM stallholder sh
+          LEFT JOIN stall s ON sh.stall_id = s.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          ORDER BY sh.stallholder_id
+        `;
+        params = [];
+      }
+      
+      const [result] = await connection.execute(query, params);
+      
+      // Extract stallholders from query result
+      const stallholders = result || [];
       console.log('📊 Stallholders found for branch', branchId + ':', stallholders.length);
       
       res.status(200).json({
@@ -120,19 +182,102 @@ const PaymentController = {
       
       console.log('🔍 getStallholderDetails called for stallholderId:', stallholderId);
       
-      const [result] = await connection.execute(
-        'CALL sp_get_stallholder_details(?)',
-        [parseInt(stallholderId)]
-      );
+      // Use direct query instead of stored procedure for compatibility
+      const [result] = await connection.execute(`
+        SELECT 
+          sh.stallholder_id as id,
+          sh.stallholder_id,
+          sh.full_name as name,
+          sh.full_name as stallholder_name,
+          sh.full_name as businessName,
+          sh.full_name as business_name,
+          sh.email,
+          sh.contact_number as contact,
+          sh.contact_number,
+          sh.address,
+          sh.stall_id,
+          sh.branch_id,
+          sh.payment_status,
+          sh.status as contract_status,
+          sh.move_in_date as contract_start_date,
+          sh.created_at,
+          sh.updated_at,
+          s.stall_number as stallNo,
+          s.stall_number,
+          s.stall_location as stallLocation,
+          s.stall_location,
+          s.rental_price as monthlyRental,
+          s.rental_price,
+          s.stall_size,
+          s.area_sqm,
+          b.branch_name as branchName,
+          b.branch_name
+        FROM stallholder sh
+        LEFT JOIN stall s ON sh.stall_id = s.stall_id
+        LEFT JOIN branch b ON sh.branch_id = b.branch_id
+        WHERE sh.stallholder_id = ?
+      `, [parseInt(stallholderId)]);
       
-      if (!result[0] || result[0].length === 0) {
+      if (!result || result.length === 0) {
         return res.status(404).json({
           success: false,
           message: 'Stallholder not found'
         });
       }
       
-      console.log('📊 Stallholder details found:', result[0][0]);
+      console.log('📊 Stallholder details found:', result[0]);
+      
+      // Backend-level decryption for stallholder details
+      const stallholder = result[0];
+      
+      // Decrypt name (supports both 'name' and 'stallholder_name')
+      const nameField = stallholder.name || stallholder.stallholder_name;
+      if (nameField && typeof nameField === 'string' && nameField.includes(':')) {
+        try {
+          const decrypted = decryptData(nameField);
+          if (stallholder.name) stallholder.name = decrypted;
+          if (stallholder.stallholder_name) stallholder.stallholder_name = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt name for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
+      // Decrypt business_name (supports both 'businessName' and 'business_name')
+      const businessField = stallholder.businessName || stallholder.business_name;
+      if (businessField && typeof businessField === 'string' && businessField.includes(':')) {
+        try {
+          const decrypted = decryptData(businessField);
+          if (stallholder.businessName) stallholder.businessName = decrypted;
+          if (stallholder.business_name) stallholder.business_name = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt business_name for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
+      // Decrypt contact (supports multiple field names)
+      const contactField = stallholder.contact || stallholder.stallholder_contact || stallholder.contact_number;
+      if (contactField && typeof contactField === 'string' && contactField.includes(':')) {
+        try {
+          const decrypted = decryptData(contactField);
+          if (stallholder.contact) stallholder.contact = decrypted;
+          if (stallholder.stallholder_contact) stallholder.stallholder_contact = decrypted;
+          if (stallholder.contact_number) stallholder.contact_number = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt contact for ID ${stallholderId}:`, error.message);
+        }
+      }
+      
+      // Decrypt address
+      const addressField = stallholder.stallholder_address || stallholder.address;
+      if (addressField && typeof addressField === 'string' && addressField.includes(':')) {
+        try {
+          const decrypted = decryptData(addressField);
+          if (stallholder.stallholder_address) stallholder.stallholder_address = decrypted;
+          if (stallholder.address) stallholder.address = decrypted;
+        } catch (error) {
+          console.error(`Failed to decrypt address for ID ${stallholderId}:`, error.message);
+        }
+      }
       
       res.status(200).json({
         success: true,
@@ -214,52 +359,76 @@ const PaymentController = {
       
       console.log('💳 Adding onsite payment:', { stallholderId, amount, paymentDate, referenceNumber });
       
-      // Call the enhanced addOnsitePayment procedure
-      const [result] = await connection.execute(
-        'CALL addOnsitePayment(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          parseInt(stallholderId),
-          parseFloat(amount),
-          paymentDate,
-          paymentTime || null,
-          paymentForMonth || null,
-          paymentType || 'rental',
-          referenceNumber,
-          collectedBy || userInfo.username || 'System',
-          notes || null,
-          userInfo.branchId || null,
-          userInfo.userId
-        ]
-      );
+      // Get stallholder's branch_id if not provided
+      let branchId = userInfo.branchId;
+      if (!branchId) {
+        const [shResult] = await connection.execute(
+          'SELECT branch_id FROM stallholder WHERE stallholder_id = ?',
+          [parseInt(stallholderId)]
+        );
+        if (shResult.length > 0) {
+          branchId = shResult[0].branch_id;
+        }
+      }
       
-      if (!result[0] || result[0].length === 0) {
+      // Use direct INSERT instead of stored procedure for compatibility
+      const [insertResult] = await connection.execute(`
+        INSERT INTO payments (
+          stallholder_id,
+          branch_id,
+          amount,
+          payment_date,
+          payment_time,
+          payment_for_month,
+          payment_type,
+          payment_method,
+          reference_number,
+          collected_by,
+          notes,
+          payment_status,
+          created_by,
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'onsite', ?, ?, ?, 'completed', ?, NOW())
+      `, [
+        parseInt(stallholderId),
+        branchId,
+        parseFloat(amount),
+        paymentDate,
+        paymentTime || null,
+        paymentForMonth || null,
+        paymentType || 'rental',
+        referenceNumber,
+        collectedBy || userInfo.username || 'System',
+        notes || null,
+        userInfo.userId
+      ]);
+      
+      const paymentId = insertResult.insertId;
+      
+      if (!paymentId) {
         throw new Error('Failed to add payment');
       }
       
-      const paymentResult = result[0][0];
+      // Update stallholder payment status
+      await connection.execute(
+        "UPDATE stallholder SET payment_status = 'paid' WHERE stallholder_id = ?",
+        [parseInt(stallholderId)]
+      );
       
-      // Check if payment was successful
-      if (!paymentResult.success) {
-        return res.status(400).json({
-          success: false,
-          message: paymentResult.message || 'Failed to add payment'
-        });
-      }
-      
-      console.log('✅ Payment added successfully:', paymentResult);
+      console.log('✅ Payment added successfully:', { paymentId, amount, referenceNumber });
       
       res.status(201).json({
         success: true,
-        message: paymentResult.message || 'Payment added successfully',
-        paymentId: paymentResult.payment_id,
-        amountPaid: paymentResult.amount_paid,
-        monthlyRent: paymentResult.monthly_rent || 0,
-        earlyDiscount: paymentResult.early_discount || 0,
-        lateFee: paymentResult.late_fee || 0,
-        daysEarly: paymentResult.days_early || 0,
-        daysOverdue: paymentResult.days_overdue || 0,
-        dueDate: paymentResult.due_date,
-        receiptNumber: paymentResult.receipt_number
+        message: 'Payment added successfully',
+        paymentId: paymentId,
+        amountPaid: parseFloat(amount),
+        monthlyRent: 0,
+        earlyDiscount: 0,
+        lateFee: 0,
+        daysEarly: 0,
+        daysOverdue: 0,
+        dueDate: null,
+        receiptNumber: referenceNumber
       });
       
     } catch (error) {
@@ -295,9 +464,35 @@ const PaymentController = {
       let queryParams;
       
       if (branchFilter === null) {
-        // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
-        const payments = result[0] || [];
+        // System administrator - see all using direct query for compatibility
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Cash (Onsite)' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.collected_by as collectedBy,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'onsite'
+          ORDER BY p.created_at DESC
+          LIMIT ? OFFSET ?
+        `, [limit, offset]);
+        const payments = result || [];
         
         return res.status(200).json({
           success: true,
@@ -312,10 +507,37 @@ const PaymentController = {
           data: []
         });
       } else {
-        // Filter by accessible branches using stored procedure
+        // Filter by accessible branches using direct query for compatibility
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnsitePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
-        const payments = result[0] || [];
+        const placeholders = branchFilter.map(() => '?').join(',');
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Cash (Onsite)' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.collected_by as collectedBy,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'onsite'
+          AND sh.branch_id IN (${placeholders})
+          ORDER BY p.created_at DESC
+        `, branchFilter);
+        const payments = result || [];
         
         return res.status(200).json({
           success: true,
@@ -352,9 +574,34 @@ const PaymentController = {
       const search = req.query.search || '';
       
       if (branchFilter === null) {
-        // System administrator - see all using stored procedure
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsAllDecrypted(?, ?, ?)`, [search, limit, offset]);
-        const payments = result[0] || [];
+        // System administrator - see all using direct query for compatibility
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Online' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'online'
+          ORDER BY p.created_at DESC
+          LIMIT ? OFFSET ?
+        `, [limit, offset]);
+        const payments = result || [];
         
         return res.status(200).json({
           success: true,
@@ -369,10 +616,36 @@ const PaymentController = {
           total: 0
         });
       } else {
-        // Filter by accessible branches using stored procedure
+        // Filter by accessible branches using direct query for compatibility
         const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute(`CALL sp_getOnlinePaymentsByBranchesDecrypted(?, ?, ?, ?)`, [branchIdsString, search, limit, offset]);
-        const payments = result[0] || [];
+        const placeholders = branchFilter.map(() => '?').join(',');
+        const [result] = await connection.execute(`
+          SELECT 
+            p.payment_id as id,
+            p.stallholder_id as stallholderId,
+            sh.full_name as stallholderName,
+            sh.full_name as businessName,
+            COALESCE(st.stall_number, 'N/A') as stallNo,
+            p.amount as amountPaid,
+            p.payment_date as paymentDate,
+            p.payment_time as paymentTime,
+            p.payment_for_month as paymentForMonth,
+            p.payment_type as paymentType,
+            'Online' as paymentMethod,
+            p.reference_number as referenceNo,
+            p.notes,
+            p.payment_status as status,
+            p.created_at as createdAt,
+            COALESCE(b.branch_name, 'Unknown') as branchName
+          FROM payments p
+          INNER JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+          LEFT JOIN stall st ON sh.stall_id = st.stall_id
+          LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          WHERE p.payment_method = 'online'
+          AND sh.branch_id IN (${placeholders})
+          ORDER BY p.created_at DESC
+        `, branchFilter);
+        const payments = result || [];
         
         return res.status(200).json({
           success: true,

@@ -18,18 +18,25 @@
           <div class="stall-card" v-for="stall in paginatedStalls" :key="stall.id" @click="openStallDetails(stall)">
             <div class="stall-image">
               <!-- Loading placeholder until images are fetched -->
-              <div v-if="!stall.stallImages || stall.stallImages.length === 0" class="stall-image-loading">
+              <div v-if="(!stall.stallImages || stall.stallImages.length === 0) && !stallImageCache.has(stall.id)" class="stall-image-loading">
                 <div class="loading-spinner-small"></div>
               </div>
-              <img v-else :src="getStallDisplayImage(stall)" :alt="`Stall ${stall.stallNumber}`" @error="handleImageError" />
+              <!-- Display image -->
+              <img 
+                v-else 
+                :src="getStallDisplayImage(stall)" 
+                :alt="`Stall ${stall.stallNumber}`" 
+                @error="handleImageError" 
+                class="stall-main-image"
+              />
               <div class="stall-status-badge" :class="getStallBadgeClass(stall)">
                 {{ getStallBadgeText(stall) }}
               </div>
               
               <!-- Image pagination dots (show only if multiple images) -->
-              <div class="image-pagination-dots" v-if="stall.imageCount > 1">
+              <div class="image-pagination-dots" v-if="stall.stallImages && stall.stallImages.length > 1">
                 <div 
-                  v-for="n in Math.min(stall.imageCount, 10)" 
+                  v-for="n in Math.min(stall.stallImages.length, 10)" 
                   :key="n"
                   class="pagination-dot"
                   :class="{ active: stall.currentImageIndex === (n - 1) }"
@@ -475,9 +482,9 @@ export default {
           const result = await response.json()
           if (result.success && result.data?.images && result.data.images.length > 0) {
             const images = result.data.images.map(img => ({
-              id: img.id,
+              id: img.image_id,  // Backend returns image_id, not id
               stall_id: stallId,
-              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.id}`,
+              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.image_id}`,
               display_order: img.display_order,
               is_primary: img.is_primary ? 1 : 0
             }))
@@ -509,8 +516,9 @@ export default {
       if (stall.stallImages && stall.stallImages.length > 0 && stall.stallImages[stall.currentImageIndex]) {
         return this.buildImageUrl(stall.stallImages[stall.currentImageIndex].image_url)
       }
-      // Fallback to original image
-      return stall.imageUrl || stall.image || stallBackgroundImg
+      // Fallback to original image (ensure we build the URL properly)
+      const rawImage = stall.imageUrl || stall.image
+      return rawImage ? this.buildImageUrl(rawImage) : stallBackgroundImg
     },
 
     changeStallImage(stall, imageIndex) {
@@ -573,9 +581,9 @@ export default {
           const result = await response.json()
           if (result.success && result.data?.images && result.data.images.length > 0) {
             this.stallImages = result.data.images.map(img => ({
-              id: img.id,
+              id: img.image_id,  // Backend returns image_id, not id
               stall_id: stallId,
-              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.id}`,
+              image_url: `${baseUrl}/api/stalls/images/blob/id/${img.image_id}`,
               display_order: img.display_order,
               is_primary: img.is_primary ? 1 : 0
             }))

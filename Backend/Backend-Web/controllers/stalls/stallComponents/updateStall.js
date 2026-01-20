@@ -26,7 +26,15 @@ export const updateStall = async (req, res) => {
     const floorId = updateData.floor_id || updateData.floorId || null;
     const sectionId = updateData.section_id || updateData.sectionId || null;
     const priceType = updateData.price_type || updateData.priceType || "Fixed Price";
-    const status = updateData.status || "Active";
+    
+    // Map frontend status values to database ENUM values
+    let status = updateData.status || "Active";
+    if (status === "Active") {
+      status = "Available";
+    } else if (status === "Inactive") {
+      status = "Maintenance";
+    }
+    
     const description = updateData.description || null;
     const stallImage = updateData.stall_image || updateData.image || null;
     
@@ -112,7 +120,7 @@ export const updateStall = async (req, res) => {
 
     // Check for duplicate stall number
     const [duplicateCheck] = await connection.execute(
-      `SELECT stall_id FROM stall WHERE stall_no = ? AND section_id = ? AND stall_id != ?`,
+      `SELECT stall_id FROM stall WHERE stall_number = ? AND section_id = ? AND stall_id != ?`,
       [stallNo, sectionId, id]
     );
 
@@ -123,49 +131,73 @@ export const updateStall = async (req, res) => {
       });
     }
 
+    // Build dynamic UPDATE query - only update floor_id/section_id if provided
+    const updates = [];
+    const values = [];
+    
+    updates.push('stall_number = ?');
+    values.push(stallNo);
+    
+    updates.push('stall_location = ?');
+    values.push(stallLocation);
+    
+    updates.push('size = ?');
+    values.push(size);
+    
+    updates.push('area_sqm = ?');
+    values.push(areaSqm || null);
+    
+    // Only update floor_id if provided
+    if (floorId !== null && floorId !== undefined) {
+      updates.push('floor_id = ?');
+      values.push(floorId);
+    }
+    
+    // Only update section_id if provided
+    if (sectionId !== null && sectionId !== undefined) {
+      updates.push('section_id = ?');
+      values.push(sectionId);
+    }
+    
+    updates.push('rental_price = ?');
+    values.push(rentalPrice);
+    
+    updates.push('base_rate = ?');
+    values.push(baseRate || null);
+    
+    updates.push('rate_per_sqm = ?');
+    values.push(ratePerSqm);
+    
+    updates.push('price_type = ?');
+    values.push(priceType);
+    
+    updates.push('status = ?');
+    values.push(status);
+    
+    updates.push('description = ?');
+    values.push(description);
+    
+    updates.push('is_available = ?');
+    values.push(isAvailable);
+    
+    updates.push('raffle_auction_deadline = ?');
+    values.push(parsedDeadline);
+    
+    updates.push('updated_at = NOW()');
+    
+    values.push(id);
+    
     // Update the stall with rental calculation fields
     await connection.execute(
-      `UPDATE stall SET
-        stall_no = ?,
-        stall_location = ?,
-        size = ?,
-        area_sqm = ?,
-        floor_id = ?,
-        section_id = ?,
-        rental_price = ?,
-        base_rate = ?,
-        rate_per_sqm = ?,
-        price_type = ?,
-        status = ?,
-        description = ?,
-        is_available = ?,
-        raffle_auction_deadline = ?,
-        updated_at = NOW()
-      WHERE stall_id = ?`,
-      [
-        stallNo,
-        stallLocation,
-        size,
-        areaSqm || null,
-        floorId,
-        sectionId,
-        rentalPrice,
-        baseRate || null,
-        ratePerSqm,
-        priceType,
-        status,
-        description,
-        isAvailable,
-        parsedDeadline,
-        id
-      ]
+      `UPDATE stall SET ${updates.join(', ')} WHERE stall_id = ?`,
+      values
     );
 
     // Fetch the updated stall data
     const [updatedStall] = await connection.execute(
       `SELECT 
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
         s.stall_location,
         s.size,
         s.area_sqm,
@@ -180,7 +212,6 @@ export const updateStall = async (req, res) => {
         s.status,
         s.stamp,
         s.description,
-        si.image_url as stall_image,
         s.is_available,
         s.raffle_auction_deadline,
         s.deadline_active,
@@ -197,13 +228,12 @@ export const updateStall = async (req, res) => {
           ELSE 'Unavailable'
         END as availability_status,
         sh.stallholder_id,
-        sh.stallholder_name
+        CONCAT(sh.first_name, ' ', sh.last_name) as stallholder_name
       FROM stall s
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON s.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.contract_status = 'Active'
-      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
+      LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.status = 'Active'
       WHERE s.stall_id = ?`,
       [id]
     );
