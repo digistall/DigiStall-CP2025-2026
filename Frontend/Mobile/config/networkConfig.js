@@ -54,6 +54,7 @@ export const API_CONFIG = {
     // Application endpoints
     SUBMIT_APPLICATION: '/api/mobile/applications/submit',
     JOIN_RAFFLE: '/api/mobile/applications/join-raffle',
+    JOIN_AUCTION: '/api/mobile/applications/join-auction',
     GET_MY_APPLICATIONS: '/api/mobile/applications/my',
     GET_APPLICATION_STATUS: '/api/mobile/applications',
     UPDATE_APPLICATION: '/api/mobile/applications',

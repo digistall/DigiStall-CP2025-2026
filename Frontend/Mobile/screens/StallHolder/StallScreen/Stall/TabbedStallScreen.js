@@ -180,13 +180,18 @@ const TabbedStallScreen = () => {
           location: stall.branch.name,
           floor: stall.floorSection,
           size: stall.size,
-          status: stall.isApplied ? 'applied' : (stall.canApply ? 'available' : 'locked'),
+          status: stall.hasJoinedRaffle ? 'joined_raffle' : 
+                  stall.hasJoinedAuction ? 'joined_auction' :
+                  stall.isApplied ? 'applied' : 
+                  (stall.canApply ? 'available' : 'locked'),
           image: stall.image,
           branchId: stall.branch.id,
           priceType: stall.priceType,
           stallLocation: stall.location,
           description: stall.description,
-          canApply: stall.canApply,
+          canApply: stall.canApply && !stall.hasJoinedRaffle && !stall.hasJoinedAuction,
+          hasJoinedRaffle: stall.hasJoinedRaffle || false,
+          hasJoinedAuction: stall.hasJoinedAuction || false,
           stallType: activeTab, // Add stall type for filtering
           applicationsInBranch: 0,
           maxApplicationsReached: false
@@ -332,9 +337,38 @@ const TabbedStallScreen = () => {
           console.error('❌ joinRaffle failed:', response.message);
           Alert.alert('Failed to Join Raffle', response.message || 'Failed to join raffle. Please try again.');
         }
+      } else if (activeTab === 'Auction') {
+        // For Auction stalls, use joinAuction endpoint
+        console.log('🔨 ====== AUCTION STALL DETECTED ======');
+        console.log('🔨 Calling ApiService.joinAuction with:');
+        console.log('   - applicantId:', applicantId);
+        console.log('   - stallId:', stallId);
+        
+        response = await ApiService.joinAuction(applicantId, stallId);
+        
+        console.log('🔨 joinAuction response:', JSON.stringify(response, null, 2));
+        
+        if (response.success) {
+          Alert.alert(
+            'Auction Joined! 🔨',
+            `You have successfully joined the auction for this stall. Good luck!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Refresh stalls to show updated status
+                  loadUserDataAndStalls();
+                }
+              }
+            ]
+          );
+        } else {
+          console.error('❌ joinAuction failed:', response.message);
+          Alert.alert('Failed to Join Auction', response.message || 'Failed to join auction. Please try again.');
+        }
       } else {
-        // For Fixed Price and Auction stalls, use submitApplication
-        console.log('📝 ====== NON-RAFFLE STALL (using submitApplication) ======');
+        // For Fixed Price stalls, use submitApplication
+        console.log('📝 ====== FIXED PRICE STALL (using submitApplication) ======');
         
         const applicationData = {
           applicantId: applicantId,
