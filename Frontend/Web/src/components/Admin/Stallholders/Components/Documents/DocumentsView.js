@@ -12,100 +12,132 @@ export default {
   },
   data() {
     return {
-      documents: [
-        {
-          id: 1,
-          name: 'Award Paper',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-28',
-        },
-        {
-          id: 2,
-          name: 'Lease Contract',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-25',
-        },
-        {
-          id: 3,
-          name: 'MEPO Market Clearance',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-20',
-        },
-        {
-          id: 4,
-          name: 'Barangay Business Clearance',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-18',
-        },
-        {
-          id: 5,
-          name: 'Cedula',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-15',
-        },
-        {
-          id: 6,
-          name: 'Association Clearance',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-12',
-        },
-        {
-          id: 7,
-          name: "Voter's ID",
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-10',
-        },
-        {
-          id: 8,
-          name: 'Health Card',
-          status: 'complete',
-          type: 'pdf',
-          uploadDate: '2025-03-08',
-        },
-      ],
+      documents: [],  // Start with empty array
+      loading: false,
+      error: null,
     }
   },
+  
+  watch: {
+    // Fetch documents when modal opens or stallholder changes
+    isVisible(newValue) {
+      if (newValue && this.stallholder?.stallholder_id) {
+        this.fetchStallholderDocuments();
+      }
+    },
+    'stallholder.stallholder_id'(newValue) {
+      if (newValue && this.isVisible) {
+        this.fetchStallholderDocuments();
+      }
+    }
+  },
+  
   methods: {
+    async fetchStallholderDocuments() {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await this.$http.get(
+          `/api/documents/stallholder/${this.stallholder.stallholder_id}/submissions`
+        );
+        
+        if (response.data.success) {
+          // Map the documents to your display format
+          this.documents = response.data.data.map(doc => ({
+            id: doc.document_id,
+            submission_id: doc.submission_id,
+            name: doc.document_name || doc.file_name || doc.document_type,
+            status: this.mapStatus(doc.status || doc.verification_status),
+            type: this.getFileType(doc.document_mime_type || doc.file_name),
+            uploadDate: this.formatDate(doc.uploaded_at || doc.created_at),
+            verifiedBy: doc.verified_by,
+            verifiedAt: doc.verified_at,
+            remarks: doc.remarks || doc.rejection_reason,
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Error fetching stallholder documents:', error);
+        this.error = 'Failed to load documents';
+        this.$notify({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load stallholder documents'
+        });
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    mapStatus(status) {
+      const statusMap = {
+        'Approved': 'approved',
+        'approved': 'approved',
+        'verified': 'approved',
+        'Rejected': 'rejected',
+        'rejected': 'rejected',
+        'Pending': 'pending',
+        'pending': 'pending',
+      };
+      return statusMap[status] || 'pending';
+    },
+    
+    getFileType(mimeTypeOrFilename) {
+      if (!mimeTypeOrFilename) return 'file';
+      
+      const str = mimeTypeOrFilename.toLowerCase();
+      if (str.includes('pdf')) return 'pdf';
+      if (str.includes('image') || str.includes('jpg') || str.includes('jpeg') || str.includes('png')) return 'image';
+      if (str.includes('word') || str.includes('doc')) return 'doc';
+      return 'file';
+    },
+    
+    formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    },
+    
     closeModal() {
-      this.$emit('close')
+      this.$emit('close');
     },
 
     viewDocument(document) {
-      console.log('View document:', document)
-      this.$emit('view-document', document)
+      console.log('View document:', document);
+      this.$emit('view-document', document);
     },
 
     getStatusClass(status) {
       const statusClasses = {
         complete: 'status-complete',
+        approved: 'status-approved',
         pending: 'status-pending',
         rejected: 'status-rejected',
-        approved: 'status-approved',
-      }
-      return statusClasses[status] || 'status-default'
+      };
+      return statusClasses[status] || 'status-default';
     },
 
     handleEscKey(event) {
       if (event.key === 'Escape' && this.isVisible) {
-        this.closeModal()
+        this.closeModal();
       }
     },
   },
 
   mounted() {
-    // Add escape key listener
-    document.addEventListener('keydown', this.handleEscKey)
+    document.addEventListener('keydown', this.handleEscKey);
+    
+    // Fetch documents if modal is already open on mount
+    if (this.isVisible && this.stallholder?.stallholder_id) {
+      this.fetchStallholderDocuments();
+    }
   },
 
   beforeDestroy() {
-    // Remove escape key listener
-    document.removeEventListener('keydown', this.handleEscKey)
+    document.removeEventListener('keydown', this.handleEscKey);
   },
 }

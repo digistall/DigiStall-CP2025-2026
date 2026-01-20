@@ -15,6 +15,14 @@ export default {
     }
   },
   methods: {
+    // Get the URL for fetching document blob from the server
+    getDocumentUrl(documentId) {
+      if (!documentId) return null;
+      // This endpoint serves the document directly from the database
+      const baseUrl = process.env.VUE_APP_API_BASE_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/documents/blob/${documentId}`;
+    },
+    
     closeModal() {
       this.$emit('close')
     },
@@ -53,6 +61,17 @@ export default {
         'approved': 'status-approved'
       }
       return statusClasses[status] || 'status-default'
+    },
+    
+    handleImageError(event) {
+      console.error('Failed to load document image:', this.document.id);
+      // Optionally show an error message to the user
+      event.target.style.display = 'none';
+    },
+    
+    handlePdfError(event) {
+      console.error('Failed to load document PDF:', this.document.id);
+      // Optionally show an error message to the user
     },
     
     formatDate(dateString) {
