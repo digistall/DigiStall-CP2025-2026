@@ -19,6 +19,9 @@ import {
   mobileStaffAutoLogout 
 } from '../controllers/mobileStaffAuthController.js'
 
+// Import change password controller
+import { mobileChangePassword } from '../controllers/mobileChangePasswordController.js'
+
 const router = express.Router()
 
 // ===== MOBILE AUTHENTICATION ROUTES =====
@@ -33,5 +36,6 @@ router.post('/logout', mobileLogout)                     // POST /mobile/auth/lo
 router.post('/staff-logout', mobileStaffLogout)          // POST /mobile/auth/staff-logout - Inspector/Collector logout
 router.post('/staff-heartbeat', mobileStaffHeartbeat)    // POST /mobile/auth/staff-heartbeat - Keep staff marked as online
 router.post('/staff-auto-logout', mobileStaffAutoLogout) // POST /mobile/auth/staff-auto-logout - Auto-logout due to inactivity
+router.post('/change-password', mobileChangePassword)    // POST /mobile/auth/change-password - Change user password
 
 export default router

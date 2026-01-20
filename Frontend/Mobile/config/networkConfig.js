@@ -41,6 +41,7 @@ export const API_CONFIG = {
     STAFF_LOGOUT: '/api/mobile/auth/staff-logout',
     STAFF_HEARTBEAT: '/api/mobile/auth/staff-heartbeat',
     STAFF_AUTO_LOGOUT: '/api/mobile/auth/staff-auto-logout',
+    CHANGE_PASSWORD: '/api/mobile/auth/change-password',
     
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
