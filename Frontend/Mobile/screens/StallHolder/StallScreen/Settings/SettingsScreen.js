@@ -15,6 +15,7 @@ import ThemeModal from "../Settings/components/ThemeComponents/ThemeModal";
 import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
 import AboutApp from "../Settings/components/AboutComponents/AboutApp";
 import PrivacyModal from "../Settings/components/PrivacyComponents/PrivacyModal";
+import ChangePassword from "../Settings/components/ChangePasswordComponents/ChangePassword";
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
 
@@ -25,6 +26,7 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [userData, setUserData] = useState(null);
   const { theme, themeMode, changeTheme } = useTheme();
 
@@ -101,6 +103,14 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
   const handlePrivacyPress = () => setShowPrivacyModal(true);
   const handleClosePrivacyModal = () => setShowPrivacyModal(false);
 
+  // Change Password handlers
+  const handleChangePasswordPress = () => setShowChangePassword(true);
+  const handleChangePasswordGoBack = () => setShowChangePassword(false);
+  const handlePasswordChanged = () => {
+    console.log("Password changed successfully");
+    // You could add additional logic here like showing a toast or logging the user out
+  };
+
   // get theme name for display
   const getThemeDisplayName = () => {
     switch (themeMode) {
@@ -123,6 +133,14 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
   }
   if (showAbout) {
     return <AboutApp onGoBack={handleAboutGoBack} />;
+  }
+  if (showChangePassword) {
+    return (
+      <ChangePassword
+        onGoBack={handleChangePasswordGoBack}
+        onPasswordChanged={handlePasswordChanged}
+      />
+    );
   }
 
   return (
@@ -197,6 +215,29 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
               color={theme.colors.primary}
             />
             <Text style={themedStyles.settingsText}>Privacy</Text>
+          </TouchableOpacity>
+
+          {/* Change Password */}
+          <TouchableOpacity
+            style={themedStyles.settingsRow}
+            onPress={handleChangePasswordPress}
+          >
+            <Ionicons
+              name="key-outline"
+              size={24}
+              color={theme.colors.primary}
+            />
+            <View style={themedStyles.settingsTextContainer}>
+              <Text style={themedStyles.settingsText}>Change Password</Text>
+              <Text style={themedStyles.settingsSubtext}>
+                Update your account password
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={theme.colors.textTertiary}
+            />
           </TouchableOpacity>
         </View>
 

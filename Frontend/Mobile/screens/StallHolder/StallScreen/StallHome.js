@@ -167,7 +167,7 @@ const StallHome = ({ navigation }) => {
   const renderCurrentScreen = () => {
     switch (currentScreen) {
       case "dashboard":
-        return <DashboardScreen />;
+        return <DashboardScreen onNavigate={handleNavigation} />;
       case "stall":
         return <TabbedStallScreen />;
       case "reports":
