@@ -13,19 +13,36 @@
       
       <div class="document-content">
         <div class="document-preview">
-          <div class="preview-container" v-if="document.name === 'Award Paper'">
+          <!-- Image Preview -->
+          <div class="preview-container" v-if="document.type === 'image' && document.id">
             <img 
-              src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAoAEADASIAAhEBAxEB/8QAGwABAAEFAQAAAAAAAAAAAAAAAAMBAgQFBgf/xAAsEAABBAEDAwMCBwEAAAAAAAABAAIDBAURBhIhMUFRYQcTcSKBkaGxwdHw/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAYEQEBAQEBAAAAAAAAAAAAAAABABEhEv/aAAwDAQACEQMRAD8A4ttO6e+iiOyuvKklJDGCCNze4/1Rpuos5UZ7IVaTZXnzwtOCJ/WJzQT3I7qrLFt+oWGO4rnCQAtdNjhzfIPP8HCJajBV+CtmXyP2bJhIYfJaRzn+OSsjMczAjMcK/wC4xjlN7h3B7koPrqYy5m2XTKlmLbV5OfIIHjHHnn2/tPFLOJ1MzK6lJq3FN3l2ZNrg4x8E48mHBefBz+6Hq2XGatGvyaeFtg7L9bk9LN2nKB9l/Z0Undr+O46hs/7jGWa9+xfPUMkYBJ8Ft+TwHkxh++d/4yOx8f6zOTRKKTzJHN5lCFGC4ggNpjx4yAFJVt3/AFO1FnF5Sv8A3q8Ik7TQPMrgHOHsA0f7B/BFMR9RnuUKdWBsYxXbE5zIyc6yRCCNpZ+aq7WOHrWHOpQZH6KQOJT8BhYf8v2l7g+pX4f3jJtYc3fXLI2P6HvJI8nFIpSXQM27S/2sI3XMmNyWNjfL7k5dN7NAPJFxdMu/5Pr/xAEBREAhCCLxBAGRESIjRCNhcZGhwRMx8QcQUmGy0uHh/9oACAEBAAE/APr2P5i+8/8ARJelPk6sxCJz4nE6XEwvaHOa08BPe4h9oKhk7dNJMPsR0Q/B1Z1D7CKcSyL7IYnfrJHrKHUutPsOKJLsM4t6fshvTKf9gFQfqGYjHe6JZiKKAKdaQKu5nEFJUNqaKNOSiNZnHc8ILNJa2NqWI46JnEQe8tWfyxGWM9aBjbJ1FTQ0nMjjCKaP5dCLR8vRZJ8oy9KOr3LJHa4XjQQ24DPdPOhBK5q7T3HnKL9bO3DLaE4DvDUhshBDJSoNGzQfRGkJHDRoHJAP5WIFQQo7RIWYzAYJXOtgbYBqnqKkfA+qoP+VTKHtqjXOvJWBQehfIROI/7QFqbSKg1pbVJc2kKhQJFG42WyXlqCKWlYdz+8QKFGNGgHnRpBOoS/SRZfRdRcpBZpfcSH3nLn2BqVL8u5Cm2KnAf9SLy4uihQZw8thQH6h8oFbP0nE0r3/wDyKCOmzJcHHjqGqJ5WBQSPgTGpFVohgYe6+RlZXGV4v0nKOXiuE8nKvFf2uJYOJLjShLJyBcKW5zKBQa4I8FkxYhQm+Xg5qVrNJYYYV4RLxyKmBCE3VQCu6HEkFD5Yz9hXb3EWCxNFkHD/AGAKPyFJgJzqRo20YD/7CBnXDWV8wRQcjhHaLIJ94G8yEa7xUoZLqA6/P9qIJGOvQhpgFODHRqPAVDaNOCFRshyQb6gdGzH6yyaJ5nCjYFJkjNUfUqfI3X7s1/NDbLOkGFp8u1VqSKh5CsKOTsWD4j80lBu8aZnFM+aT1jHnvOoC+tN5Yk+dWq+YqYIv/9k="
-              alt="Award Paper" 
+              :src="getDocumentUrl(document.id)"
+              :alt="document.name" 
               class="document-image"
+              @error="handleImageError"
             />
           </div>
+          
+          <!-- PDF Preview -->
+          <div class="preview-container" v-else-if="document.type === 'pdf' && document.id">
+            <iframe 
+              :src="getDocumentUrl(document.id)"
+              class="document-iframe"
+              width="100%" 
+              height="600px"
+              @error="handlePdfError"
+            >
+            </iframe>
+          </div>
+          
+          <!-- Fallback/Placeholder -->
           <div class="preview-placeholder" v-else>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2Z"></path>
               <polyline points="14,2 14,8 20,8"></polyline>
             </svg>
             <p>Document Preview</p>
+            <p class="text-muted">{{ document.type ? document.type.toUpperCase() : 'Unknown' }} file</p>
           </div>
         </div>
         
