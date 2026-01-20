@@ -342,6 +342,53 @@ class ApiService {
     }
   }
 
+  // Change password for authenticated users
+  static async changePassword(currentPassword, newPassword) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        return {
+          success: false,
+          message: 'Authentication required. Please log in again.'
+        };
+      }
+
+      console.log('🔄 Changing password at:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.CHANGE_PASSWORD}`);
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.CHANGE_PASSWORD}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      console.log('✅ Password changed successfully');
+      return {
+        success: true,
+        message: data.message || 'Password changed successfully'
+      };
+    } catch (error) {
+      console.error('❌ Change Password API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'An error occurred while changing password'
+      };
+    }
+  }
+
   // ===== STALL METHODS =====
 
   // Get all stalls
