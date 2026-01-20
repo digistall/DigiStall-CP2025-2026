@@ -249,8 +249,8 @@ export async function getApplicantDocuments(req, res) {
     
     connection = await createConnection()
     
-    // Use stored procedure based on whether data is needed
-    let documents
+    // Get documents from applicant_documents table
+    let documents = []
     if (include_data === 'true') {
       const [rows] = await connection.execute(
         'CALL sp_getAllApplicantDocumentsWithData(?, ?)',
@@ -259,20 +259,82 @@ export async function getApplicantDocuments(req, res) {
       documents = rows[0]
     } else {
       const [rows] = await connection.execute(
-        'CALL sp_getAllApplicantDocuments(?, ?)',
-        [applicant_id, business_owner_id || null]
+        'SELECT document_id, applicant_id, document_type, document_name, document_mime_type, file_path, verification_status, created_at FROM applicant_documents WHERE applicant_id = ?',
+        [applicant_id]
       )
-      documents = rows[0]
+      documents = rows
     }
     
-    // Transform documents to include virtual URL for BLOB API
+    // Also fetch documents from other_information table (signature, house sketch, valid ID)
+    // BUT ONLY if they don't already exist in applicant_documents table
+    const [otherInfo] = await connection.execute(
+      'SELECT signature_of_applicant, house_sketch_location, valid_id FROM other_information WHERE applicant_id = ?',
+      [applicant_id]
+    )
+    
+    if (otherInfo.length > 0) {
+      const info = otherInfo[0]
+      
+      // Check which document types already exist in applicant_documents
+      const existingTypes = documents.map(d => d.document_type)
+      
+      // Add signature document ONLY if not already in applicant_documents
+      if (info.signature_of_applicant && !existingTypes.includes('signature')) {
+        documents.push({
+          document_id: `other_signature_${applicant_id}`,
+          applicant_id: parseInt(applicant_id),
+          document_type: 'signature',
+          document_name: 'Signature',
+          file_path: info.signature_of_applicant,
+          document_mime_type: 'image/webp',
+          storage_type: 'filesystem',
+          verification_status: 'pending',
+          created_at: new Date()
+        })
+      }
+      
+      // Add house sketch document ONLY if not already in applicant_documents
+      if (info.house_sketch_location && !existingTypes.includes('house_location')) {
+        documents.push({
+          document_id: `other_house_${applicant_id}`,
+          applicant_id: parseInt(applicant_id),
+          document_type: 'house_sketch',
+          document_name: 'House Sketch Location',
+          file_path: info.house_sketch_location,
+          document_mime_type: 'image/png',
+          storage_type: 'filesystem',
+          verification_status: 'pending',
+          created_at: new Date()
+        })
+      }
+      
+      // Add valid ID document ONLY if not already in applicant_documents
+      if (info.valid_id && !existingTypes.includes('valid_id')) {
+        documents.push({
+          document_id: `other_validid_${applicant_id}`,
+          applicant_id: parseInt(applicant_id),
+          document_type: 'valid_id',
+          document_name: 'Valid ID',
+          file_path: info.valid_id,
+          document_mime_type: 'image/png',
+          storage_type: 'filesystem',
+          verification_status: 'pending',
+          created_at: new Date()
+        })
+      }
+    }
+    
+    // Transform documents to include URLs
     const transformedDocs = documents.map(doc => ({
       ...doc,
       blob_url: doc.storage_type === 'blob' 
         ? `/api/applicants/documents/blob/id/${doc.document_id}`
         : null,
+      file_url: doc.storage_type === 'filesystem' && doc.file_path
+        ? `/uploads/${doc.file_path}`
+        : null,
       document_data_base64: include_data === 'true' && doc.document_data_base64
-        ? `data:${doc.mime_type};base64,${doc.document_data_base64}`
+        ? `data:${doc.document_mime_type};base64,${doc.document_data_base64}`
         : undefined
     }))
     

@@ -49,7 +49,7 @@
             v-model="formData.planId"
             :items="plans"
             item-title="plan_display"
-            item-value="subscription_plan_id"
+            item-value="plan_id"
             label="Subscription Plan"
             required
             :rules="[v => !!v || 'Subscription plan is required']"

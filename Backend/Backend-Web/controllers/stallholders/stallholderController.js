@@ -6,9 +6,24 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
 import emailService from '../../services/emailService.js';
+import { decryptData, decryptStallholders, encryptData } from '../../services/encryptionService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Helper to encrypt if value is not null
+const encryptIfNotNull = (value) => {
+    if (value === undefined || value === null || value === '' || 
+        (typeof value === 'string' && value.trim() === '')) {
+        return null;
+    }
+    try {
+        return encryptData(value);
+    } catch (error) {
+        console.error('⚠️ Encryption failed:', error.message);
+        return value;
+    }
+};
 
 /**
  * Stallholder Controller
@@ -38,10 +53,47 @@ const StallholderController = {
       let rows;
       
       if (branchFilter === null) {
-        // System administrator - see all stallholders using stored procedure
+        // System administrator - see all stallholders using direct query
         console.log('✅ System admin - fetching all stallholders');
-        const [result] = await connection.execute('CALL sp_getAllStallholdersAllDecrypted()');
-        rows = result[0] || [];
+        const [result] = await connection.execute(`
+          SELECT 
+            s.stallholder_id,
+            s.full_name,
+            s.full_name as stallholder_name,
+            bi.nature_of_business as business_name,
+            s.email,
+            s.contact_number,
+            s.address,
+            s.stall_id,
+            s.branch_id,
+            s.payment_status,
+            s.status,
+            s.status as contract_status,
+            s.move_in_date,
+            s.move_in_date as contract_start_date,
+            DATE_ADD(s.move_in_date, INTERVAL 1 YEAR) as contract_end_date,
+            st.rental_price as monthly_rent,
+            st.rental_price as lease_amount,
+            (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = s.stallholder_id AND p.payment_status = 'completed') as last_payment_date,
+            CASE 
+              WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status = 'Open') 
+              THEN 'Non-Compliant' 
+              ELSE 'Compliant' 
+            END as compliance_status,
+            (SELECT MAX(vr.report_date) FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id) as last_violation_date,
+            s.created_at,
+            s.updated_at,
+            st.stall_number as stall_no,
+            st.stall_number,
+            st.stall_location,
+            b.branch_name
+          FROM stallholder s
+          LEFT JOIN stall st ON s.stall_id = st.stall_id
+          LEFT JOIN branch b ON s.branch_id = b.branch_id
+          LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
+          ORDER BY s.stallholder_id
+        `);
+        rows = result || [];
       } else if (branchFilter.length === 0) {
         // No branches accessible
         console.log('⚠️ No branches accessible');
@@ -51,14 +103,44 @@ const StallholderController = {
           total: 0
         });
       } else {
-        // Filter by accessible branches using stored procedure
+        // Filter by accessible branches
         console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
-        const branchIdsString = branchFilter.join(',');
-        const [result] = await connection.execute('CALL sp_getAllStallholdersByBranchesDecrypted(?)', [branchIdsString]);
-        rows = result[0] || [];
+        const placeholders = branchFilter.map(() => '?').join(',');
+        // Use correct column name: stall_number (stall_no doesn't exist)
+        const [result] = await connection.execute(
+          `SELECT s.*, 
+                  s.full_name as stallholder_name,
+                  bi.nature_of_business as business_name,
+                  s.status as contract_status,
+                  s.move_in_date as contract_start_date,
+                  DATE_ADD(s.move_in_date, INTERVAL 1 YEAR) as contract_end_date,
+                  st.rental_price as monthly_rent,
+                  st.rental_price as lease_amount,
+                  (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = s.stallholder_id AND p.payment_status = 'completed') as last_payment_date,
+                  CASE 
+                    WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status = 'Open') 
+                    THEN 'Non-Compliant' 
+                    ELSE 'Compliant' 
+                  END as compliance_status,
+                  (SELECT MAX(vr.report_date) FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id) as last_violation_date,
+                  st.stall_number as stall_no, 
+                  st.stall_number,
+                  st.stall_location, 
+                  b.branch_name 
+           FROM stallholder s 
+           LEFT JOIN stall st ON s.stall_id = st.stall_id 
+           LEFT JOIN branch b ON s.branch_id = b.branch_id 
+           LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
+           WHERE s.branch_id IN (${placeholders})`,
+          branchFilter
+        );
+        rows = result || [];
       }
       
-      console.log(`✅ Found ${rows.length} stallholders`);
+      // Decrypt all sensitive fields using the decryptStallholders helper
+      const decryptedRows = decryptStallholders(rows);
+      
+      console.log(`✅ Found ${decryptedRows.length} stallholders`);
       res.json({
         success: true,
         data: rows,
@@ -95,6 +177,66 @@ const StallholderController = {
           success: false,
           message: 'Stallholder not found'
         });
+      }
+      
+      // Backend-level decryption for stallholder details
+      const rawStallholder = rows[0][0];
+      
+      // Decrypt all sensitive fields
+      const stallholder = decryptStallholders([rawStallholder])[0];
+      
+      // Decrypt legacy field names too
+      if (rawStallholder.stallholder_name && typeof rawStallholder.stallholder_name === 'string' && rawStallholder.stallholder_name.includes(':')) {
+        try {
+          stallholder.stallholder_name = decryptData(rawStallholder.stallholder_name);
+        } catch (error) {
+          console.error(`Failed to decrypt stallholder_name for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt contact number
+      if (stallholder.stallholder_contact && typeof stallholder.stallholder_contact === 'string' && stallholder.stallholder_contact.includes(':')) {
+        try {
+          stallholder.stallholder_contact = decryptData(stallholder.stallholder_contact);
+        } catch (error) {
+          console.error(`Failed to decrypt stallholder_contact for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt contact_number (alternative field name)
+      if (stallholder.contact_number && typeof stallholder.contact_number === 'string' && stallholder.contact_number.includes(':')) {
+        try {
+          stallholder.contact_number = decryptData(stallholder.contact_number);
+        } catch (error) {
+          console.error(`Failed to decrypt contact_number for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt email
+      if (stallholder.email && typeof stallholder.email === 'string' && stallholder.email.includes(':')) {
+        try {
+          stallholder.email = decryptData(stallholder.email);
+        } catch (error) {
+          console.error(`Failed to decrypt email for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt address
+      if (stallholder.stallholder_address && typeof stallholder.stallholder_address === 'string' && stallholder.stallholder_address.includes(':')) {
+        try {
+          stallholder.stallholder_address = decryptData(stallholder.stallholder_address);
+        } catch (error) {
+          console.error(`Failed to decrypt stallholder_address for ID ${id}:`, error.message);
+        }
+      }
+      
+      // Decrypt address (alternative field name)
+      if (stallholder.address && typeof stallholder.address === 'string' && stallholder.address.includes(':')) {
+        try {
+          stallholder.address = decryptData(stallholder.address);
+        } catch (error) {
+          console.error(`Failed to decrypt address for ID ${id}:`, error.message);
+        }
       }
       
       res.json({
@@ -1727,12 +1869,30 @@ const StallholderController = {
 
       connection = await createConnection();
 
-      const [records] = await connection.execute(
-        'CALL getViolationHistoryByStallholder(?)',
-        [id]
-      );
+      // Use direct query instead of stored procedure for compatibility
+      const [records] = await connection.execute(`
+        SELECT 
+          vr.report_id AS violation_id,
+          vr.stallholder_id,
+          vr.violation_id AS violation_type_id,
+          v.violation_type AS violation_name,
+          v.description AS violation_description,
+          v.default_penalty AS severity,
+          vr.report_date,
+          vr.offense_count,
+          vr.penalty_amount,
+          vr.payment_status,
+          vr.paid_date,
+          vr.remarks,
+          vr.status,
+          vr.created_at
+        FROM violation_report vr
+        LEFT JOIN violation v ON vr.violation_id = v.violation_id
+        WHERE vr.stallholder_id = ?
+        ORDER BY vr.report_date DESC
+      `, [id]);
 
-      const violations = records[0] || [];
+      const violations = records || [];
 
       console.log(`✅ Found ${violations.length} violations for stallholder ${id}`);
 

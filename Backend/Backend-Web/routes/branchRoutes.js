@@ -31,24 +31,24 @@ import {
 const router = express.Router()
 
 // Apply authentication middleware to all branch routes
-// Allow both admin and branch manager access
+// Allow admin, branch manager, and business_owner access
 router.use(authMiddleware.authenticateToken)
 
-// Branch routes (admin-only for creation/deletion, admin+branch_manager for reading)
-router.post('/', authMiddleware.authorizeRole('admin'), createBranch)                      // POST /api/branches - Create new branch (admin only)
+// Branch routes (admin/business_owner for creation/deletion, all roles for reading)
+router.post('/', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), createBranch)    // POST /api/branches - Create new branch
 router.get('/', getAllBranches)                     // GET /api/branches - Get all branches (admin + branch manager)
-router.delete('/:id', authMiddleware.authorizeRole('admin'), deleteBranch)                 // DELETE /api/branches/:id - Delete branch (admin only)
+router.delete('/:id', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), deleteBranch)   // DELETE /api/branches/:id - Delete branch
 router.get('/areas', getAreas)                      // GET /api/branches/areas - Get all areas
 router.get('/area/:area', getBranchesByArea)        // GET /api/branches/area/:area - Get branches by area
 
-// Branch manager routes (admin only)
-router.get('/managers', authMiddleware.authorizeRole('admin'), getAllBranchManagers)       // GET /api/branches/managers - Get all branch managers (admin only)
-router.post('/managers', authMiddleware.authorizeRole('admin'), createBranchManager)       // POST /api/branches/managers - Create branch manager (admin only)
-router.get('/managers/:managerId', authMiddleware.authorizeRole('admin'), getBranchManagerById)  // GET /api/branches/managers/:managerId - Get branch manager by ID (admin only)
-router.put('/managers/:managerId', authMiddleware.authorizeRole('admin'), updateBranchManager)   // PUT /api/branches/managers/:managerId - Update branch manager (admin only)
-router.delete('/managers/:managerId', authMiddleware.authorizeRole('admin'), deleteBranchManager) // DELETE /api/branches/managers/:managerId - Delete branch manager (admin only)
-router.post('/assign-manager', authMiddleware.authorizeRole('admin'), assignManager)
-router.post('/branch-managers', authMiddleware.authorizeRole('admin'), assignManager)       // POST /api/branches/branch-managers - Assign manager to branch (admin only)
+// Branch manager routes (admin and business_owner)
+router.get('/managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), getAllBranchManagers)       // GET /api/branches/managers - Get all branch managers
+router.post('/managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), createBranchManager)       // POST /api/branches/managers - Create branch manager
+router.get('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), getBranchManagerById)  // GET /api/branches/managers/:managerId - Get branch manager by ID
+router.put('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), updateBranchManager)   // PUT /api/branches/managers/:managerId - Update branch manager
+router.delete('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), deleteBranchManager) // DELETE /api/branches/managers/:managerId - Delete branch manager
+router.post('/assign-manager', authMiddleware.authorizeRole('admin', 'stall_business_owner'), assignManager)
+router.post('/branch-managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), assignManager)       // POST /api/branches/branch-managers - Assign manager to branch
 
 // Floor routes
 router.get('/floors', getFloors)                    // GET /api/branches/floors - Get floors for branch manager

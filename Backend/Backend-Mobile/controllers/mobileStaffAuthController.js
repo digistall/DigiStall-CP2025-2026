@@ -1,6 +1,76 @@
 import { createConnection } from '../config/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { decryptStaffData } from '../services/mysqlDecryptionService.js';
+
+// Get encryption key using same derivation as Web backend
+const getEncryptionKey = () => {
+    const envKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
+    // Use scryptSync with same salt as Web backend
+    return crypto.scryptSync(envKey, 'digistall-salt-v2', 32);
+};
+
+// Cache the key
+let cachedKey = null;
+const getKey = () => {
+    if (!cachedKey) {
+        cachedKey = getEncryptionKey();
+    }
+    return cachedKey;
+};
+
+// Decrypt AES-256-GCM encrypted data (format: iv:authTag:encrypted)
+const decryptAES256GCM = (encryptedData) => {
+    if (!encryptedData || typeof encryptedData !== 'string' || !encryptedData.includes(':')) {
+        return encryptedData;
+    }
+    
+    const parts = encryptedData.split(':');
+    if (parts.length !== 3) {
+        return encryptedData;
+    }
+    
+    try {
+        const [ivBase64, authTagBase64, encrypted] = parts;
+        const key = getKey();  // Use properly derived key
+        const iv = Buffer.from(ivBase64, 'base64');
+        const authTag = Buffer.from(authTagBase64, 'base64');
+        
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAuthTag(authTag);
+        
+        let decrypted = decipher.update(encrypted, 'base64', 'utf8');
+        decrypted += decipher.final('utf8');
+        
+        return decrypted;
+    } catch (error) {
+        console.error('❌ AES-256-GCM decryption error:', error.message);
+        return encryptedData;
+    }
+};
+
+// Decrypt all encrypted fields in staff data
+const decryptStaffFields = (staffData) => {
+    if (!staffData) return staffData;
+    
+    const result = { ...staffData };
+    
+    // Decrypt fields that might be encrypted
+    const fieldsToDecrypt = ['first_name', 'last_name', 'contact_no', 'middle_name'];
+    
+    for (const field of fieldsToDecrypt) {
+        if (result[field] && typeof result[field] === 'string' && result[field].includes(':')) {
+            const decrypted = decryptAES256GCM(result[field]);
+            if (decrypted !== result[field]) {
+                console.log(`🔓 Decrypted ${field}: ${decrypted}`);
+                result[field] = decrypted;
+            }
+        }
+    }
+    
+    return result;
+};
 
 /**
  * Mobile Staff Login Controller
@@ -113,6 +183,10 @@ export const mobileStaffLogin = async (req, res) => {
             
             if (inspectors && inspectors.length > 0) {
                 staffData = inspectors[0];
+                console.log('🔍 BEFORE decryption - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
+                // Decrypt staff data using our custom function
+                staffData = decryptStaffFields(staffData);
+                console.log('🔍 AFTER decryption - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 staffType = 'inspector';
                 console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
             }
@@ -145,6 +219,8 @@ export const mobileStaffLogin = async (req, res) => {
                 
                 if (collectors && collectors.length > 0) {
                     staffData = collectors[0];
+                    // Decrypt staff data using our custom function
+                    staffData = decryptStaffFields(staffData);
                     staffType = 'collector';
                     console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
                 }
@@ -169,15 +245,21 @@ export const mobileStaffLogin = async (req, res) => {
         console.log('   - Stored password hash (first 20 chars):', storedPassword ? storedPassword.substring(0, 20) + '...' : 'NULL');
         console.log('   - Password length entered:', password.length);
         console.log('   - Is bcrypt hash:', storedPassword?.startsWith('$2b$') || storedPassword?.startsWith('$2a$'));
+        console.log('   - Is AES-GCM encrypted:', storedPassword?.includes(':') && storedPassword?.split(':').length === 3);
         
         try {
             // Try bcrypt comparison
             if (storedPassword && (storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2a$'))) {
                 isValidPassword = await bcrypt.compare(password, storedPassword);
                 console.log('   - Bcrypt comparison result:', isValidPassword);
+            } else if (storedPassword && storedPassword.includes(':') && storedPassword.split(':').length === 3) {
+                // Decrypt AES-256-GCM encrypted password and compare directly
+                const decryptedPassword = decryptAES256GCM(storedPassword);
+                console.log('   - Decrypted password (first 3 chars):', decryptedPassword ? decryptedPassword.substring(0, 3) + '***' : 'NULL');
+                isValidPassword = password === decryptedPassword;
+                console.log('   - AES-GCM decryption comparison result:', isValidPassword);
             } else if (storedPassword) {
                 // Fallback for SHA256 hashed passwords (legacy inspector)
-                const crypto = await import('crypto');
                 const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
                 isValidPassword = storedPassword === sha256Hash;
                 
@@ -185,6 +267,7 @@ export const mobileStaffLogin = async (req, res) => {
                 if (!isValidPassword) {
                     isValidPassword = password === storedPassword;
                 }
+                console.log('   - Legacy comparison result:', isValidPassword);
             }
         } catch (error) {
             console.error('❌ Password verification error:', error);
@@ -252,13 +335,13 @@ export const mobileStaffLogin = async (req, res) => {
             
             // First, deactivate any old sessions for this staff
             await connection.execute(
-                `UPDATE staff_session SET is_active = 0 WHERE staff_id = ? AND staff_type = ?`,
+                `UPDATE staff_session SET is_active = 0 WHERE user_id = ? AND user_type = ?`,
                 [staffId, staffType]
             );
             
             // Insert new active session with Philippine time (NOW() will use the session timezone)
             await connection.execute(
-                `INSERT INTO staff_session (staff_id, staff_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
+                `INSERT INTO staff_session (user_id, user_type, session_token, ip_address, user_agent, login_time, last_activity, is_active) 
                  VALUES (?, ?, ?, ?, ?, NOW(), NOW(), 1)`,
                 [staffId, staffType, token, req.ip || req.connection?.remoteAddress || 'unknown', req.get('User-Agent') || 'Mobile App']
             );
@@ -269,7 +352,7 @@ export const mobileStaffLogin = async (req, res) => {
             try {
                 await connection.execute(`SET time_zone = '+08:00'`);
                 await connection.execute(
-                    `INSERT INTO staff_session (staff_id, staff_type, is_active, login_time, last_activity) 
+                    `INSERT INTO staff_session (user_id, user_type, is_active, login_time, last_activity) 
                      VALUES (?, ?, 1, NOW(), NOW())`,
                     [staffId, staffType]
                 );
@@ -363,7 +446,9 @@ export const mobileStaffLogout = async (req, res) => {
             
             // End staff session (set is_active = 0) using NOW() for logout_time and last_activity
             await connection.execute(
-                `UPDATE staff_session SET is_active = 0, logout_time = NOW(), last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+                `UPDATE staff_session 
+                 SET is_active = 0, logout_time = NOW(), last_activity = NOW() 
+                 WHERE user_id = ? AND user_type = ? AND is_active = 1`,
                 [staffId, staffType]
             );
             console.log(`✅ Staff session ended for ${staffType} ${staffId}`);
@@ -436,7 +521,26 @@ export const mobileStaffHeartbeat = async (req, res) => {
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
         
-        // Update last_login using NOW() with correct timezone
+        // CRITICAL: Check if staff has an active session before updating last_login
+        // This prevents heartbeats that arrive after logout from updating last_login
+        const [sessionCheck] = await connection.execute(
+            `SELECT session_id FROM staff_session 
+             WHERE user_id = ? AND user_type = ? AND is_active = 1 
+             LIMIT 1`,
+            [staffId, staffType]
+        );
+        
+        if (sessionCheck.length === 0) {
+            // No active session - staff has logged out, don't update last_login
+            console.log(`⚠️ Heartbeat rejected - no active session for ${staffType} ${staffId}`);
+            return res.json({
+                success: false,
+                message: 'No active session found',
+                timestamp: philippineTime
+            });
+        }
+        
+        // Staff has active session, safe to update last_login using direct SQL
         if (staffType === 'inspector') {
             await connection.execute(`UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?`, [staffId]);
         } else if (staffType === 'collector') {
@@ -445,7 +549,7 @@ export const mobileStaffHeartbeat = async (req, res) => {
         
         // Update staff session last_activity
         await connection.execute(
-            `UPDATE staff_session SET last_activity = NOW() WHERE staff_id = ? AND staff_type = ? AND is_active = 1`,
+            `UPDATE staff_session SET last_activity = NOW() WHERE user_id = ? AND user_type = ? AND is_active = 1`,
             [staffId, staffType]
         );
         

@@ -1,7 +1,22 @@
 import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
-import bcrypt from 'bcryptjs';
+import { encryptData, decryptData, decryptEmployees } from '../../services/encryptionService.js';
+import { generateSecurePassword } from '../../utils/passwordGenerator.js';
 import jwt from 'jsonwebtoken';
+
+// Helper function to encrypt if value is not null
+const encryptIfNotNull = (value) => {
+    if (value === undefined || value === null || value === '' || 
+        (typeof value === 'string' && value.trim() === '')) {
+        return null;
+    }
+    try {
+        return encryptData(value);
+    } catch (error) {
+        console.error('⚠️ Encryption failed, storing as plain text:', error.message);
+        return value;
+    }
+};
 
 export async function createEmployee(req, res) {
     let connection;
@@ -26,11 +41,10 @@ export async function createEmployee(req, res) {
 
         connection = await createConnection();
         
-        // Generate unique username and password
-        const randomDigits = Math.floor(1000 + Math.random() * 9000);
-        const username = `EMP${randomDigits}`;
-        const password = Math.random().toString(36).substring(2, 10);
-        const hashedPassword = await bcrypt.hash(password, 12);
+        // Generate password (no longer need username since we use email for login)
+        const password = generateSecurePassword(12);
+        // Encrypt password with AES-256-GCM (not hash - so we can email it to user)
+        const encryptedPassword = encryptData(password);
 
         const finalBranchId = branchId || userBranchId;
         const finalCreatedBy = createdByManager || userId;
@@ -38,10 +52,18 @@ export async function createEmployee(req, res) {
         // Convert permissions array to JSON string
         const permissionsJson = permissions && Array.isArray(permissions) ? JSON.stringify(permissions) : null;
 
-        // Call stored procedure (correct procedure name: createBusinessEmployee)
+        // Encrypt sensitive PII fields before storing (but NOT email - it's used for login)
+        const encryptedFirstName = encryptIfNotNull(firstName);
+        const encryptedLastName = encryptIfNotNull(lastName);
+        const encryptedPhone = encryptIfNotNull(phoneNumber);
+
+        console.log('🔐 Encrypting employee data before storage (email stays plain for login)...');
+
+        // Call stored procedure with encrypted data (email is now login - stored plain, password is encrypted)
+        // 8 parameters: password, first_name, last_name, email, phone_number, branch_id, created_by, permissions
         const [[result]] = await connection.execute(
-            'CALL createBusinessEmployee(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [username, hashedPassword, firstName, lastName, email, phoneNumber, finalBranchId, finalCreatedBy, permissionsJson]
+            'CALL createBusinessEmployee(?, ?, ?, ?, ?, ?, ?, ?)',
+            [encryptedPassword, encryptedFirstName, encryptedLastName, email, encryptedPhone, finalBranchId, finalCreatedBy, permissionsJson]
         );
 
         res.status(201).json({
@@ -50,8 +72,8 @@ export async function createEmployee(req, res) {
             data: {
                 employeeId: result.business_employee_id,
                 credentials: {
-                    username,
-                    password
+                    email: email, // User logs in with email
+                    password: password // Plain password to send to user
                 },
                 branchId: finalBranchId
             }
@@ -79,25 +101,48 @@ export async function getAllEmployees(req, res) {
         
         let employees;
         if (branchFilter === null) {
-            // System administrator - see all employees using stored procedure
-            const [result] = await connection.execute(`CALL sp_getBusinessEmployeesAllDecrypted(?)`, ['Active']);
+            // System administrator - see all employees
+            const [result] = await connection.execute(`CALL getAllBusinessEmployees(?)`, ['Active']);
             employees = result[0] || [];
         } else if (branchFilter.length === 0) {
             // Business owner with no accessible branches
             employees = [];
         } else {
-            // Business owner (multiple branches) or business manager using stored procedure
-            const branchIdsString = branchFilter.join(',');
-            const [result] = await connection.execute(`CALL sp_getBusinessEmployeesByBranchDecrypted(?, ?)`, [branchIdsString, 'Active']);
-            employees = result[0] || [];
+            // Business owner (multiple branches) or business manager
+            // Get employees for these branches
+            const placeholders = branchFilter.map(() => '?').join(',');
+            const [result] = await connection.execute(
+                `SELECT * FROM business_employee WHERE branch_id IN (${placeholders}) AND status = 'Active'`,
+                branchFilter
+            );
+            employees = result || [];
         }
         
+        // Decrypt sensitive fields in Node.js
+        const decryptedEmployees = decryptEmployees(employees);
+        
         // Parse permissions for each employee and alias business_employee_id as employee_id
-        const employeesWithPermissions = employees.map(emp => ({
-            ...emp,
-            employee_id: emp.business_employee_id, // Alias for frontend compatibility
-            permissions: emp.permissions ? JSON.parse(emp.permissions) : []
-        }));
+        const employeesWithPermissions = decryptedEmployees.map(emp => {
+            // Handle permissions - may already be an array (MySQL JSON type) or a string
+            let parsedPermissions = [];
+            if (emp.permissions) {
+                if (Array.isArray(emp.permissions)) {
+                    parsedPermissions = emp.permissions;
+                } else if (typeof emp.permissions === 'string') {
+                    try {
+                        parsedPermissions = JSON.parse(emp.permissions);
+                    } catch (e) {
+                        console.warn('Failed to parse permissions:', e.message);
+                        parsedPermissions = [];
+                    }
+                }
+            }
+            return {
+                ...emp,
+                employee_id: emp.business_employee_id, // Alias for frontend compatibility
+                permissions: parsedPermissions
+            };
+        });
         
         res.json({ 
             success: true, 
@@ -604,10 +649,10 @@ export async function getActiveSessions(req, res) {
             const [empRows] = await connection.execute(`
                 SELECT 
                     es.session_id,
-                    es.business_employee_id,
+                    es.employee_id as business_employee_id,
                     es.is_active,
                     es.login_time,
-                    es.last_activity,
+                    es.last_heartbeat as last_activity,
                     es.logout_time,
                     be.first_name,
                     be.last_name,
@@ -615,7 +660,7 @@ export async function getActiveSessions(req, res) {
                     be.email,
                     b.branch_name
                 FROM employee_session es
-                INNER JOIN business_employee be ON es.business_employee_id = be.business_employee_id
+                INNER JOIN business_employee be ON es.employee_id = be.business_employee_id
                 LEFT JOIN branch b ON be.branch_id = b.branch_id
                 WHERE es.is_active = 1 
                    OR es.last_activity >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)

@@ -10,6 +10,8 @@ export default {
   data() {
     return {
       expandedDescriptions: {},
+      stallImages: {}, // Store images for each stall { stallId: [images] }
+      loadingImages: {}, // Track loading state for each stall { stallId: boolean }
     }
   },
   mounted() {
@@ -19,9 +21,81 @@ export default {
     if (this.stalls.length > 0) {
       console.log('Sample stall data:', this.stalls[0])
       console.log('Sample stall location:', this.stalls[0].location)
+      // Fetch images for all stalls
+      this.fetchAllStallImages()
+    }
+  },
+  watch: {
+    stalls: {
+      handler() {
+        this.fetchAllStallImages()
+      },
+      deep: true
     }
   },
   methods: {
+    async fetchAllStallImages() {
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '')
+      const token = sessionStorage.getItem('authToken')
+
+      for (const stall of this.stalls) {
+        if (!this.stallImages[stall.id]) {
+          // Set loading state
+          this.loadingImages = {
+            ...this.loadingImages,
+            [stall.id]: true
+          }
+          
+          try {
+            const fetchUrl = `${apiUrl}/api/stalls/${stall.id}/images/blob`
+            const response = await fetch(fetchUrl, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            })
+
+            if (response.ok) {
+              const result = await response.json()
+              if (result.success && result.data.images && result.data.images.length > 0) {
+                // Vue 3 compatible reactive update
+                this.stallImages = {
+                  ...this.stallImages,
+                  [stall.id]: result.data.images.map(img => ({
+                    url: `${apiUrl}/api/stalls/images/blob/id/${img.image_id}`,
+                    is_primary: img.is_primary
+                  }))
+                }
+              } else {
+                // No images found
+                this.stallImages = {
+                  ...this.stallImages,
+                  [stall.id]: []
+                }
+              }
+            } else {
+              // Request failed
+              this.stallImages = {
+                ...this.stallImages,
+                [stall.id]: []
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching images for stall ${stall.id}:`, error)
+            this.stallImages = {
+              ...this.stallImages,
+              [stall.id]: []
+            }
+          } finally {
+            // Clear loading state
+            this.loadingImages = {
+              ...this.loadingImages,
+              [stall.id]: false
+            }
+          }
+        }
+      }
+    },
     handleCardClick(stall) {
       console.log('Card clicked for stall:', stall)
       this.$emit('stall-edit', stall)

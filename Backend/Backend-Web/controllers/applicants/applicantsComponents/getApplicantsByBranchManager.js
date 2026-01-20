@@ -137,7 +137,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
       managerData = branchManagerInfo[0];
     }
 
-    // Build query with multi-branch support
+    // Build query with multi-branch support - data is already encrypted in app format
     let query = `
       SELECT DISTINCT
         a.applicant_id,
@@ -147,6 +147,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         a.applicant_birthdate,
         a.applicant_civil_status,
         a.applicant_educational_attainment,
+        a.status as applicant_status,
         a.created_at,
         a.updated_at,
         -- Business information from separate table
@@ -169,7 +170,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         app.application_status as current_application_status,
         -- Stall details
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
         s.rental_price,
         s.price_type,
         s.stall_location,
@@ -193,6 +194,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
       LEFT JOIN spouse sp ON a.applicant_id = sp.applicant_id
     `;
 
+    // No encryption params needed - data is encrypted in application format (iv:tag:data)
     let params = [];
 
     // Apply branch filter
@@ -221,7 +223,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         a.applicant_full_name LIKE ? OR 
         oi.email_address LIKE ? OR 
         bi.nature_of_business LIKE ? OR 
-        s.stall_no LIKE ?
+        s.stall_number LIKE ?
       )`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
@@ -287,7 +289,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
         application_status: row.current_application_status,
         stall: {
           stall_id: row.stall_id,
-          stall_no: row.stall_no,
+          stall_no: row.stall_number,  // Map stall_number to stall_no for frontend compatibility
           rental_price: row.rental_price,
           price_type: row.price_type,
           stall_location: row.stall_location,

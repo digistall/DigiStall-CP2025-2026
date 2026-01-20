@@ -80,41 +80,17 @@
 
               <v-col cols="12">
                 <v-text-field
-                  v-model="formData.manager_username"
-                  label="Username *"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-account-circle"
-                  placeholder="Enter username"
-                  :disabled="loading"
-                />
-              </v-col>
-
-              <v-col cols="12">
-                <v-text-field
-                  v-model="formData.manager_password"
-                  label="Password *"
-                  :type="showPassword ? 'text' : 'password'"
-                  :rules="[rules.required, rules.minLength]"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-lock"
-                  :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                  @click:append-inner="showPassword = !showPassword"
-                  placeholder="Enter password (min 6 characters)"
-                  :disabled="loading"
-                />
-              </v-col>
-
-              <v-col cols="12" sm="6">
-                <v-text-field
                   v-model="formData.email"
-                  label="Email Address"
-                  :rules="[rules.email]"
+                  label="Email Address *"
+                  :rules="[rules.required, rules.email]"
                   variant="outlined"
                   prepend-inner-icon="mdi-email"
                   placeholder="manager@example.com"
                   :disabled="loading"
                 />
+                <v-alert type="info" variant="tonal" density="compact" class="mt-2">
+                  <small>Credentials will be auto-generated and sent to this email address</small>
+                </v-alert>
               </v-col>
 
               <v-col cols="12" sm="6">

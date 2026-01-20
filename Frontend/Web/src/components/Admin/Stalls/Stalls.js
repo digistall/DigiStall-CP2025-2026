@@ -59,6 +59,13 @@ export default {
       
       // Flag to track when we're in the middle of updating a stall
       isUpdatingStall: false,
+      
+      // Key to force CardStallsComponent re-render when stalls data changes
+      stallsUpdateKey: 0,
+
+      // Raffle Participants Modal
+      showRaffleParticipantsModal: false,
+      selectedRaffleStall: null,
     }
   },
 
@@ -136,8 +143,16 @@ export default {
             this.$refs.searchFilter.clearAllFilters()
           }
           
-          // Update display
+          // Update display with new array reference
           this.displayStalls = [...this.stallsData]
+          
+          // Increment key to force CardStallsComponent re-render
+          this.stallsUpdateKey++
+          
+          // Force Vue to update the view
+          this.$forceUpdate()
+          
+          console.log('🔑 stallsUpdateKey after add:', this.stallsUpdateKey)
           
           // Close modal if it's open
           this.closeAddStallModal()
@@ -432,7 +447,7 @@ export default {
       const transformed = {
         // Basic stall info - ensure ID is consistent
         id: Number(extractedId),
-        stallNumber: stall.stall_no || stall.stallNumber,
+        stallNumber: stall.stall_number || stall.stall_no || stall.stallNumber,
         price: this.formatPrice(stall.rental_price || stall.price || 0),
         location: stall.stall_location || stall.location,
         size: stall.size,
@@ -467,12 +482,8 @@ export default {
 
         // Image - Convert relative path to full URL
         // BLOB images use /api/stalls/images/blob/* format
-        image: stall.stall_image 
-          ? (stall.stall_image.startsWith('http') 
-              ? stall.stall_image 
-              : stall.stall_image.startsWith('/api/') 
-                ? `${this.apiBaseUrl.replace(/\/api$/, '')}${stall.stall_image}`
-                : `http://localhost${stall.stall_image}`)
+        image: stall.stall_image_id 
+          ? `${this.apiBaseUrl.replace(/\/api$/, '')}/api/stalls/images/blob/id/${stall.stall_image_id}`
           : this.getDefaultImage(stall.section_name),
 
         // Manager info
@@ -496,6 +507,31 @@ export default {
 
       console.log('🔄 Transformed stall ID:', transformed.id, 'type:', typeof transformed.id)
       return transformed
+    },
+
+    // Fetch stall image from BLOB API
+    async fetchStallImageFromBlob(stallId) {
+      if (!stallId) return null
+      
+      const baseUrl = this.apiBaseUrl.replace(/\/api$/, '')
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/stalls/public/${stallId}/images/blob`)
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data?.images && result.data.images.length > 0) {
+            // Return primary image or first image - backend returns image_id, not id
+            const primaryImage = result.data.images.find(img => img.is_primary)
+            const imageId = primaryImage ? primaryImage.image_id : result.data.images[0].image_id
+            return `${baseUrl}/api/stalls/images/blob/id/${imageId}`
+          }
+        }
+      } catch (error) {
+        console.log(`Failed to fetch BLOB image for stall ${stallId}:`, error.message)
+      }
+      
+      return null
     },
 
     // Format price display
@@ -656,21 +692,34 @@ export default {
           const transformedStall = this.transformStallData(updatedStallData)
           console.log('✨ Transformed stall:', transformedStall)
           
-          // Update stallsData
-          this.stallsData.splice(stallIndex, 1, transformedStall)
+          // Update stallsData using Vue 3 reactive approach
+          this.stallsData[stallIndex] = transformedStall
+          
+          // Force re-render by creating a new array reference
+          this.stallsData = [...this.stallsData]
           
           // Clear all filters to show all stalls including the updated one
           if (this.$refs.searchFilter) {
             this.$refs.searchFilter.clearAllFilters()
           }
           
-          // Show all stalls after clearing filters
+          // Show all stalls after clearing filters with new array reference
           this.displayStalls = [...this.stallsData]
+          
+          // Increment key to force CardStallsComponent re-render
+          this.stallsUpdateKey++
+          
+          // Force Vue to update the view
+          this.$forceUpdate()
           
           // Invalidate cache since stall was updated
           dataCacheService.invalidatePattern('stalls');
           
           console.log('✅ Stall updated successfully - using real-time updates')
+          console.log('📊 Updated stallsData length:', this.stallsData.length)
+          console.log('📊 Updated displayStalls length:', this.displayStalls.length)
+          console.log('🔍 Updated stall data:', this.displayStalls.find(s => s.stall_id === transformedStall.stall_id))
+          console.log('🔑 stallsUpdateKey:', this.stallsUpdateKey)
         } else {
           console.warn('⚠️ Stall not found for update, refetching all stalls...')
           await this.fetchStalls()
@@ -692,24 +741,42 @@ export default {
 
     async handleStallDeleted(stallId) {
       try {
-        console.log('Processing stall deletion for ID:', stallId)
+        console.log('🗑️ Processing stall deletion for ID:', stallId)
 
         // Invalidate cache since stall was deleted
         dataCacheService.invalidatePattern('stalls');
 
-        // Remove from local data
-        const index = this.stallsData.findIndex((s) => s.id === stallId)
+        // Remove from local data - check both stall_id and id (transformed data uses stall_id)
+        const index = this.stallsData.findIndex((s) => 
+          Number(s.stall_id) === Number(stallId) || Number(s.id) === Number(stallId)
+        )
+        
         if (index > -1) {
           const deletedStall = this.stallsData[index]
+          console.log('🗑️ Found stall to delete:', deletedStall.stallNumber || deletedStall.stall_no)
+          
+          // Remove from stallsData
           this.stallsData.splice(index, 1)
+          
+          // Create new array reference for reactivity
+          this.stallsData = [...this.stallsData]
           this.displayStalls = [...this.stallsData]
+          
+          // Increment key to force CardStallsComponent re-render
+          this.stallsUpdateKey++
+          
+          // Force Vue to update the view
+          this.$forceUpdate()
 
-          console.log(`Stall "${deletedStall.stallNumber}" removed from local data`)
+          console.log(`✅ Stall "${deletedStall.stallNumber || deletedStall.stall_no}" removed from local data`)
+          console.log('🔑 stallsUpdateKey after delete:', this.stallsUpdateKey)
+          console.log('📊 Remaining stalls:', this.stallsData.length)
         } else {
-          console.warn('Stall not found in local data for deletion')
+          console.warn('⚠️ Stall not found in local data for deletion, refetching...')
+          await this.fetchStalls()
         }
       } catch (error) {
-        console.error('Error handling stall deletion:', error)
+        console.error('❌ Error handling stall deletion:', error)
         this.showMessage('Error removing stall from display', 'error', 'delete', 'stall')
       }
     },
@@ -753,11 +820,19 @@ export default {
       // For business managers, check if floors and sections are available before allowing stall creation
       if (this.currentUser?.userType === 'business_manager') {
         console.log('🔄 Checking floors and sections availability before opening stall modal...')
-        this.hasFloorsSections = await this.checkFloorsAndSections()
         
-        if (!this.hasFloorsSections) {
-          this.showMessage('Please set up floors and sections first before adding stalls.', 'primary')
-          return
+        // Show loading overlay while checking
+        this.loading = true
+        
+        try {
+          this.hasFloorsSections = await this.checkFloorsAndSections()
+          
+          if (!this.hasFloorsSections) {
+            this.showMessage('Please set up floors and sections first before adding stalls.', 'primary')
+            return
+          }
+        } finally {
+          this.loading = false
         }
       }
       this.showModal = true

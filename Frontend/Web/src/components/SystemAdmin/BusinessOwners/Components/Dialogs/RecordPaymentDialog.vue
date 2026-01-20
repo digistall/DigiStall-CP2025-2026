@@ -115,7 +115,21 @@ export default {
   watch: {
     show(newVal) {
       if (newVal && this.owner) {
-        this.formData.amount = this.owner.monthly_fee || 0;
+        // Calculate period end based on plan duration
+        const today = new Date();
+        const duration = this.owner.duration_months || 1;
+        const periodEndDate = new Date();
+        periodEndDate.setMonth(periodEndDate.getMonth() + duration);
+        
+        this.formData = {
+          amount: this.owner.monthly_fee || this.owner.plan_price || 0,
+          paymentDate: today.toISOString().split('T')[0],
+          paymentMethod: '',
+          referenceNumber: '',
+          periodStart: today.toISOString().split('T')[0],
+          periodEnd: periodEndDate.toISOString().split('T')[0],
+          notes: ''
+        };
       } else if (!newVal) {
         this.resetForm();
       }

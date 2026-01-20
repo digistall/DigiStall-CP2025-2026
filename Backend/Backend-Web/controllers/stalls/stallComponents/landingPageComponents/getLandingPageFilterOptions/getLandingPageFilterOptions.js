@@ -16,11 +16,11 @@ export const getLandingPageFilterOptions = async (req, res) => {
     // Call the stored procedure
     const [results] = await connection.execute('CALL sp_getLandingPageFilterOptions()');
     
-    // Results contains multiple result sets
+    // Results contains multiple result sets:
+    // [0] = branches, [1] = statuses, [2] = priceTypes
     const branches = results[0] || [];
-    const businessTypes = results[1] || [];
-    const statuses = results[2] || [];
-    const priceTypes = results[3] || [];
+    const statuses = results[1] || [];
+    const priceTypes = results[2] || [];
     
     console.log('📊 Landing page filter options fetched');
     
@@ -28,7 +28,6 @@ export const getLandingPageFilterOptions = async (req, res) => {
       success: true,
       data: {
         branches: branches.map(b => ({ id: b.branch_id, name: b.branch_name })),
-        businessTypes: businessTypes.map(bt => bt.business_type),
         statuses: statuses.map(s => s.status),
         priceTypes: priceTypes.map(pt => pt.price_type)
       }

@@ -242,12 +242,54 @@
           </div>
           <div v-else class="stats-list stalls-grid">
             <div v-for="stall in availableStallsList" :key="stall.stall_id" class="stats-list-item stall-card">
-              <div class="stall-card-image" :class="{ 'no-image': !stall.stall_image }">
-                <img v-if="stall.stall_image" :src="stall.stall_image" :alt="stall.stall_no" @error="handleImageError($event, stall)" />
+              <div class="stall-card-image" :class="{ 'no-image': !stallImages[stall.stall_id] || stallImages[stall.stall_id].length === 0 }">
+                <!-- Loading State -->
+                <div v-if="loadingStallImages[stall.stall_id]" class="stall-image-loading">
+                  <div class="loading-spinner-overlay">
+                    <i class="mdi mdi-loading mdi-spin"></i>
+                    <span>Loading...</span>
+                  </div>
+                </div>
+                
+                <!-- Image Carousel -->
+                <template v-else-if="stallImages[stall.stall_id] && stallImages[stall.stall_id].length > 0">
+                  <img 
+                    :src="stallImages[stall.stall_id][stall.currentImageIndex || 0].url" 
+                    :alt="stall.stall_no" 
+                    @error="handleImageError($event, stall)" 
+                  />
+                  
+                  <!-- Navigation arrows for multiple images -->
+                  <template v-if="stallImages[stall.stall_id].length > 1">
+                    <button 
+                      class="stall-image-nav prev" 
+                      @click.stop="changeStallImage(stall, 'prev')"
+                      aria-label="Previous image"
+                    >
+                      <i class="mdi mdi-chevron-left"></i>
+                    </button>
+                    <button 
+                      class="stall-image-nav next" 
+                      @click.stop="changeStallImage(stall, 'next')"
+                      aria-label="Next image"
+                    >
+                      <i class="mdi mdi-chevron-right"></i>
+                    </button>
+                    
+                    <!-- Image counter -->
+                    <div class="stall-image-counter">
+                      <i class="mdi mdi-image-multiple"></i>
+                      {{ (stall.currentImageIndex || 0) + 1 }}/{{ stallImages[stall.stall_id].length }}
+                    </div>
+                  </template>
+                </template>
+                
+                <!-- Placeholder if no images -->
                 <div v-else class="stall-card-placeholder">
                   <i class="mdi mdi-storefront-outline"></i>
                   <span>{{ stall.stall_no }}</span>
                 </div>
+                
                 <span class="stall-price-badge" :class="stall.price_type?.toLowerCase().replace(' ', '-')">
                   {{ stall.price_type }}
                 </span>

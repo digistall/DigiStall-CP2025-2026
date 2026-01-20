@@ -60,7 +60,7 @@ export const generateEmployeePassword = () => {
 const sendEmployeeCredentialsEmailFetch = async (
   recipientEmail,
   employeeName,
-  username,
+  loginEmail,
   password,
 ) => {
   try {
@@ -83,7 +83,7 @@ const sendEmployeeCredentialsEmailFetch = async (
 Welcome to the Naga Stall Management System! Your employee account has been successfully created.
 
 🔐 YOUR LOGIN CREDENTIALS:
-Username: ${username}
+Username: ${loginEmail}
 Password: ${password}
 
 📋 IMPORTANT INSTRUCTIONS:
@@ -104,7 +104,7 @@ Welcome to the team!
 Best regards,
 Stall Management Admin Team`,
         reply_to: SENDER_EMAIL,
-        stall_username: username,
+        stall_username: loginEmail,
         stall_password: password,
       },
     }

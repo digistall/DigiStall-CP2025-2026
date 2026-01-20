@@ -123,7 +123,6 @@
         <v-card-text class="pa-0">
           <v-tabs v-model="activeTab" color="primary" class="border-b">
             <v-tab value="personal">Personal Information</v-tab>
-            <v-tab value="business">Business Information</v-tab>
             <v-tab value="contract">Contract Details</v-tab>
             <v-tab value="payment">Payment History</v-tab>
             <v-tab value="violations">
@@ -167,39 +166,6 @@
                     <div class="info-item">
                       <span class="info-label">Address:</span>
                       <span class="info-value">{{ selectedStallholder?.address }}</span>
-                    </div>
-                  </v-col>
-                </v-row>
-              </div>
-            </v-tabs-window-item>
-
-            <!-- Business Information Tab -->
-            <v-tabs-window-item value="business">
-              <div class="info-section">
-                <h3 class="section-title">Business Information</h3>
-                <v-row>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Business Name:</span>
-                      <span class="info-value">{{ selectedStallholder?.business_name }}</span>
-                    </div>
-                  </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Business Type:</span>
-                      <span class="info-value">{{ selectedStallholder?.business_type }}</span>
-                    </div>
-                  </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Stall Number:</span>
-                      <span class="info-value stall-number">{{ selectedStallholder?.stall_no || 'Unassigned' }}</span>
-                    </div>
-                  </v-col>
-                  <v-col cols="12" md="6">
-                    <div class="info-item">
-                      <span class="info-label">Stall Location:</span>
-                      <span class="info-value">{{ selectedStallholder?.stall_location || 'Not assigned' }}</span>
                     </div>
                   </v-col>
                 </v-row>
