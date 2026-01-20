@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Vibration,
+  Alert,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +19,7 @@ import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 
-const DashboardScreen = () => {
+const DashboardScreen = ({ onNavigate }) => {
   const { theme, isDark } = useTheme();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,61 @@ const DashboardScreen = () => {
     loadUserData();
   }, []);
 
+  // Quick Action Handlers
+  const handleQuickAction = (action) => {
+    // Haptic feedback for better UX
+    Vibration.vibrate(50);
+    
+    switch(action) {
+      case 'payment':
+        console.log('📱 Quick Action: Navigate to Payment');
+        if (onNavigate) {
+          onNavigate('payment');
+        }
+        break;
+      
+      case 'documents':
+        console.log('📱 Quick Action: Navigate to Documents');
+        if (onNavigate) {
+          onNavigate('documents');
+        }
+        break;
+      
+      case 'report':
+        console.log('📱 Quick Action: Navigate to Report Issue');
+        if (onNavigate) {
+          onNavigate('reports');
+        }
+        break;
+      
+      case 'support':
+        console.log('📱 Quick Action: Show Support Info');
+        // Show support information
+        Alert.alert(
+          '🆘 Support & Help',
+          'Need assistance?\n\n' +
+          '📞 Contact: (123) 456-7890\n' +
+          '📧 Email: support@digistall.com\n' +
+          '🕐 Hours: Mon-Fri, 8AM-5PM\n\n' +
+          'You can also visit the Settings page for more help options.',
+          [
+            {
+              text: 'Go to Settings',
+              onPress: () => onNavigate && onNavigate('settings')
+            },
+            {
+              text: 'OK',
+              style: 'cancel'
+            }
+          ]
+        );
+        break;
+      
+      default:
+        console.log('Unknown quick action:', action);
+    }
+  };
+
   // Extract display data from userData
   const getUserName = () => {
     if (!userData) return 'Stallholder';
@@ -58,7 +115,22 @@ const DashboardScreen = () => {
 
   const getStallNumber = () => {
     if (!userData) return 'N/A';
-    return userData.stallholder?.stall_no || userData.application?.stall_no || 'N/A';
+    // Check stallholder data first (approved stallholders), then application data
+    // Database uses 'stall_number' in stall table
+    const stallNo = userData.stallholder?.stall_number ||
+                    userData.stallholder?.stall_no || 
+                    userData.stallholder?.stallNo ||
+                    userData.application?.stall_number ||
+                    userData.application?.stall_no || 
+                    userData.application?.stallNo ||
+                    userData.stall?.stall_number ||
+                    userData.stall?.stall_no;
+    console.log('📍 Getting stall number:', stallNo, 'from userData:', {
+      stallholder_stall_number: userData.stallholder?.stall_number,
+      stallholder_stall_no: userData.stallholder?.stall_no,
+      application_stall_number: userData.application?.stall_number
+    });
+    return stallNo || 'N/A';
   };
 
   const getStallLocation = () => {
@@ -89,6 +161,23 @@ const DashboardScreen = () => {
   const getContractStatus = () => {
     if (!userData) return 'Unknown';
     return userData.stallholder?.contract_status || 'N/A';
+  };
+
+  const getContractEndDate = () => {
+    if (!userData) return null;
+    // contract_end_date is calculated from move_in_date (1 year contract)
+    return userData.stallholder?.contract_end_date || 
+           userData.stallholder?.contractEndDate ||
+           userData.application?.contract_end_date;
+  };
+
+  const getContractStartDate = () => {
+    if (!userData) return null;
+    // move_in_date is the contract start date
+    return userData.stallholder?.contract_start_date || 
+           userData.stallholder?.move_in_date ||
+           userData.stallholder?.contractStartDate ||
+           userData.application?.contract_start_date;
   };
 
   const getComplianceStatus = () => {
@@ -169,11 +258,18 @@ const DashboardScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
         }
       >
-        {/* Header with Gradient */}
+        {/* Header with Gradient - Matching Payment Page Colors */}
         <LinearGradient
-          colors={['#4472C4', '#2c5aa0']}
+          colors={isDark ? ['#001050', '#002181', '#001a66'] : ['#002181', '#003399', '#305CDE']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.headerGradient}
         >
+          {/* Decorative circles - matching Payment Page */}
+          <View style={styles.decorativeCircle1} />
+          <View style={styles.decorativeCircle2} />
+          <View style={styles.decorativeCircle3} />
+          
           <View style={styles.headerContent}>
             <View style={styles.greetingSection}>
               <Text style={styles.greetingText}>{getGreeting()},</Text>
@@ -231,7 +327,7 @@ const DashboardScreen = () => {
           {/* Stall Information Card */}
           <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
-              <Ionicons name="storefront-outline" size={22} color={theme.colors.primary} />
+              <Ionicons name="storefront-outline" size={22} color="#002181" />
               <Text style={[styles.infoCardTitle, { color: theme.colors.text }]}>My Stall</Text>
             </View>
             
@@ -276,7 +372,7 @@ const DashboardScreen = () => {
           {/* Payment Summary Card */}
           <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
-              <Ionicons name="wallet-outline" size={22} color={theme.colors.primary} />
+              <Ionicons name="wallet-outline" size={22} color="#003399" />
               <Text style={[styles.infoCardTitle, { color: theme.colors.text }]}>Payment Summary</Text>
             </View>
             
@@ -307,27 +403,33 @@ const DashboardScreen = () => {
           {isStallholder() && userData?.stallholder && (
             <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
               <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
-                <Ionicons name="document-text-outline" size={22} color={theme.colors.primary} />
+                <Ionicons name="document-text-outline" size={22} color="#305CDE" />
                 <Text style={[styles.infoCardTitle, { color: theme.colors.text }]}>Contract Details</Text>
               </View>
               
               <View style={styles.contractDetails}>
                 <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
+                  <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>Stall Number</Text>
+                  <Text style={[styles.contractValue, { color: '#002181', fontWeight: 'bold' }]}>
+                    {getStallNumber()}
+                  </Text>
+                </View>
+                <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
                   <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>Start Date</Text>
                   <Text style={[styles.contractValue, { color: theme.colors.text }]}>
-                    {formatDate(userData.stallholder.contract_start_date)}
+                    {formatDate(getContractStartDate())}
                   </Text>
                 </View>
                 <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
                   <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>End Date</Text>
-                  <Text style={[styles.contractValue, { color: theme.colors.text }]}>
-                    {formatDate(userData.stallholder.contract_end_date)}
+                  <Text style={[styles.contractValue, { color: getContractEndDate() ? theme.colors.text : '#f59e0b', fontWeight: getContractEndDate() ? '600' : 'bold' }]}>
+                    {formatDate(getContractEndDate())}
                   </Text>
                 </View>
                 <View style={[styles.contractRow, { borderBottomColor: theme.colors.border }]}>
-                  <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>Lease Amount</Text>
-                  <Text style={[styles.contractValue, { color: theme.colors.text }]}>
-                    {formatCurrency(userData.stallholder.lease_amount || 0)}
+                  <Text style={[styles.contractLabel, { color: theme.colors.textSecondary }]}>Monthly Rent Due</Text>
+                  <Text style={[styles.contractValue, { color: '#002181', fontWeight: 'bold' }]}>
+                    {formatCurrency(getMonthlyRent())}
                   </Text>
                 </View>
               </View>
@@ -338,30 +440,47 @@ const DashboardScreen = () => {
           <View style={[styles.quickActionsCard, { backgroundColor: theme.colors.card }]}>
             <Text style={[styles.quickActionsTitle, { color: theme.colors.text }]}>Quick Actions</Text>
             <View style={styles.quickActionsGrid}>
-              <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#1e3a5f' : '#dbeafe' }]}>
-                  <Ionicons name="receipt-outline" size={22} color="#3b82f6" />
+              
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => handleQuickAction('payment')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#001050' : '#e8eeff' }]}>
+                  <Ionicons name="receipt-outline" size={24} color="#002181" />
                 </View>
                 <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Pay Rent</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#14432a' : '#dcfce7' }]}>
-                  <Ionicons name="document-attach-outline" size={22} color="#22c55e" />
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => handleQuickAction('documents')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#001050' : '#e8eeff' }]}>
+                  <Ionicons name="document-attach-outline" size={24} color="#003399" />
                 </View>
                 <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Documents</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.quickActionButton}>
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => handleQuickAction('report')}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#422006' : '#fef3c7' }]}>
-                  <Ionicons name="warning-outline" size={22} color="#f59e0b" />
+                  <Ionicons name="warning-outline" size={24} color="#f59e0b" />
                 </View>
                 <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Report Issue</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.quickActionButton}>
-                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#3b0764' : '#f3e8ff' }]}>
-                  <Ionicons name="help-circle-outline" size={22} color="#a855f7" />
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => handleQuickAction('support')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: isDark ? '#001050' : '#e8eeff' }]}>
+                  <Ionicons name="help-circle-outline" size={24} color="#305CDE" />
                 </View>
                 <Text style={[styles.quickActionLabel, { color: theme.colors.textSecondary }]}>Support</Text>
               </TouchableOpacity>
@@ -403,7 +522,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: width * 0.05,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
+    position: 'relative',
+    overflow: 'hidden',
   },
+  
+  // Decorative circles - matching Payment Page style
+  decorativeCircle1: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    top: -50,
+    right: -30,
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    bottom: -30,
+    left: -20,
+  },
+  decorativeCircle3: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    top: 20,
+    left: 40,
+  },
+  
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -645,33 +796,43 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   quickActionsTitle: {
-    fontSize: width * 0.042,
+    fontSize: width * 0.045,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: width * 0.04,
+    letterSpacing: 0.3,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: width * 0.03,
+    justifyContent: 'space-between',
+    gap: width * 0.025,
   },
   quickActionButton: {
     width: (width - width * 0.17) / 4,
     alignItems: 'center',
+    paddingVertical: width * 0.02,
   },
   quickActionIcon: {
-    width: width * 0.12,
-    height: width * 0.12,
-    borderRadius: width * 0.06,
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    // Add subtle shadow for depth
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   quickActionLabel: {
-    fontSize: width * 0.028,
+    fontSize: width * 0.03,
     color: '#4b5563',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
+    lineHeight: width * 0.035,
   },
   
   bottomSpacing: {
