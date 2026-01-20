@@ -307,8 +307,10 @@ const DocumentsScreen = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'verified': return '#10b981';
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
+      case 'verified':
+      case 'approved': return '#10b981';
       case 'pending': return '#f59e0b';
       case 'rejected': return '#ef4444';
       case 'expired': return '#6b7280';
@@ -317,13 +319,21 @@ const DocumentsScreen = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case 'verified': return '✓';
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
+      case 'verified':
+      case 'approved': return '✓';
       case 'pending': return '⏱';
       case 'rejected': return '✗';
       case 'expired': return '⚠';
       default: return '○';
     }
+  };
+
+  // Helper function to check if document is approved/verified
+  const isDocumentApproved = (status) => {
+    const normalizedStatus = status?.toLowerCase();
+    return normalizedStatus === 'verified' || normalizedStatus === 'approved';
   };
 
   // Document preview modal handlers
@@ -501,7 +511,6 @@ const DocumentsScreen = () => {
             }}
           />
           <View style={styles.previewOverlay}>
-            <Text style={styles.previewIcon}>🔍</Text>
             <Text style={styles.previewText}>View</Text>
           </View>
         </TouchableOpacity>
@@ -534,8 +543,8 @@ const DocumentsScreen = () => {
         </View>
       )}
 
-      {/* Show Upload/Replace button only if not verified */}
-      {doc.status !== 'verified' && (
+      {/* Show Upload/Replace button only if not verified/approved */}
+      {!isDocumentApproved(doc.status) && (
         <TouchableOpacity
           style={[
             styles.uploadButton,
@@ -1064,10 +1073,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  previewIcon: {
-    fontSize: 28,
-    marginBottom: 4,
   },
   previewText: {
     fontSize: 12,
