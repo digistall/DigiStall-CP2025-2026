@@ -44,7 +44,7 @@ export const getAllStalls = async (req, res) => {
         s.deadline_active,
         s.raffle_auction_status,
         s.branch_id,
-        s.stallholder_id,
+        sh.stallholder_id as stallholder_id,
         s.floor_level,
         s.section,
         s.amenities,
@@ -56,12 +56,20 @@ export const getAllStalls = async (req, res) => {
         f.floor_number,
         sec.section_name,
         si.image_id as primary_image_id,
-        sh.full_name as stallholder_name
+        sh.full_name as stallholder_name,
+        sh.stallholder_id as linked_stallholder_id,
+        sh.status as stallholder_status,
+        CASE
+          WHEN sh.stallholder_id IS NOT NULL THEN 'Occupied'
+          WHEN s.status = 'MAINTENANCE' THEN 'Maintenance'
+          WHEN s.is_available = 1 OR s.status = 'VACANT' THEN 'Available'
+          ELSE 'Unavailable'
+        END as availability_status
       FROM stall s
       LEFT JOIN branch b ON s.branch_id = b.branch_id
       LEFT JOIN floor f ON s.floor_id = f.floor_id
       LEFT JOIN section sec ON s.section_id = sec.section_id
-      LEFT JOIN stallholder sh ON s.stallholder_id = sh.stallholder_id
+      LEFT JOIN stallholder sh ON sh.stall_id = s.stall_id
       LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.branch_id = ?
       ORDER BY s.created_at DESC`,
@@ -75,6 +83,7 @@ export const getAllStalls = async (req, res) => {
         stall.stall_image = `/api/stalls/images/blob/id/${stall.primary_image_id}`;
       }
       
+      // Decrypt stallholder name if encrypted
       if (stall.stallholder_name && typeof stall.stallholder_name === 'string' && stall.stallholder_name.includes(':')) {
         try {
           stall.stallholder_name = decryptData(stall.stallholder_name);
@@ -82,6 +91,7 @@ export const getAllStalls = async (req, res) => {
           console.error(`Failed to decrypt stallholder name for stall ${stall.stall_id}:`, error.message);
         }
       }
+      
       return stall;
     });
 
