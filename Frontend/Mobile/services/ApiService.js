@@ -342,6 +342,53 @@ class ApiService {
     }
   }
 
+  // Change password for authenticated users
+  static async changePassword(currentPassword, newPassword) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      if (!token) {
+        return {
+          success: false,
+          message: 'Authentication required. Please log in again.'
+        };
+      }
+
+      console.log('🔄 Changing password at:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.CHANGE_PASSWORD}`);
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.CHANGE_PASSWORD}`, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      console.log('✅ Password changed successfully');
+      return {
+        success: true,
+        message: data.message || 'Password changed successfully'
+      };
+    } catch (error) {
+      console.error('❌ Change Password API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'An error occurred while changing password'
+      };
+    }
+  }
+
   // ===== STALL METHODS =====
 
   // Get all stalls
@@ -720,6 +767,85 @@ class ApiService {
       console.error('❌ Error message:', error.message);
       console.error('❌ Error stack:', error.stack);
       console.error('❌ Join Raffle API Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Join Auction - Pre-register for an auction stall
+  static async joinAuction(applicantId, stallId) {
+    console.log('🔨 ====== JOIN AUCTION START ======');
+    console.log('🔨 Input params - applicantId:', applicantId, 'type:', typeof applicantId);
+    console.log('🔨 Input params - stallId:', stallId, 'type:', typeof stallId);
+    
+    // Validate inputs before making the request
+    if (!applicantId) {
+      console.error('❌ VALIDATION ERROR: applicantId is missing or undefined');
+      return {
+        success: false,
+        message: 'Applicant ID is required to join auction'
+      };
+    }
+    
+    if (!stallId) {
+      console.error('❌ VALIDATION ERROR: stallId is missing or undefined');
+      return {
+        success: false,
+        message: 'Stall ID is required to join auction'
+      };
+    }
+    
+    try {
+      console.log('🔌 Getting active server...');
+      const server = await NetworkUtils.getActiveServer();
+      console.log('🔌 Active server:', server);
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.JOIN_AUCTION}`;
+      console.log('🔨 Full URL:', url);
+      
+      const requestBody = { applicantId, stallId };
+      console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+
+      console.log('🚀 Sending POST request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+      
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('📡 Raw response text:', responseText);
+        data = JSON.parse(responseText);
+        console.log('📡 Parsed response data:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError.message);
+        throw new Error('Server returned invalid response');
+      }
+
+      if (!response.ok) {
+        console.error('❌ Response not OK - Status:', response.status);
+        console.error('❌ Server error message:', data.message);
+        throw new Error(data.message || 'Failed to join auction');
+      }
+
+      console.log('✅ Successfully joined auction:', data.message);
+      console.log('🔨 ====== JOIN AUCTION SUCCESS ======');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ ====== JOIN AUCTION ERROR ======');
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Join Auction API Error:', error);
       return {
         success: false,
         message: error.message || 'Network error occurred'

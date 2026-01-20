@@ -191,6 +191,24 @@ const StallDetailsModal = ({
   };
 
   const getStatusButton = () => {
+    // Check if user has already joined raffle
+    if (stall?.hasJoinedRaffle || stall?.status === 'joined_raffle') {
+      return (
+        <TouchableOpacity style={[styles.applyButton, styles.joinedButton]} disabled>
+          <Text style={styles.applyButtonText}>ALREADY JOINED!</Text>
+        </TouchableOpacity>
+      );
+    }
+    
+    // Check if user has already joined auction
+    if (stall?.hasJoinedAuction || stall?.status === 'joined_auction') {
+      return (
+        <TouchableOpacity style={[styles.applyButton, styles.joinedButton]} disabled>
+          <Text style={styles.applyButtonText}>ALREADY JOINED!</Text>
+        </TouchableOpacity>
+      );
+    }
+    
     if (!stall?.canApply) {
       if (stall?.maxApplicationsReached) {
         return (
@@ -201,7 +219,7 @@ const StallDetailsModal = ({
       } else if (stall?.status === 'applied') {
         return (
           <TouchableOpacity style={[styles.applyButton, styles.appliedButton]} disabled>
-            <Text style={styles.applyButtonText}>ALREADY APPLIED!</Text>
+            <Text style={styles.applyButtonText}>ALREADY JOINED!</Text>
           </TouchableOpacity>
         );
       }
@@ -334,7 +352,15 @@ const StallDetailsModal = ({
                 <Text style={styles.badgeNumber}>{stall.stallNumber}</Text>
                 <View style={[styles.badgeStatus, stall.canApply ? styles.badgeAvailable : styles.badgeOccupied]}>
                   <Text style={styles.badgeStatusText}>
-                    {stall.canApply ? 'Available' : (stall.status === 'applied' ? 'Applied' : 'Unavailable')}
+                    {stall.canApply 
+                      ? 'Available' 
+                      : stall.status === 'applied' 
+                        ? 'Applied' 
+                        : (stall.status === 'joined_raffle' || stall.hasJoinedRaffle)
+                          ? 'Applied'
+                          : (stall.status === 'joined_auction' || stall.hasJoinedAuction)
+                            ? 'Joined Auction'
+                            : 'Unavailable'}
                   </Text>
                 </View>
               </View>
@@ -712,6 +738,9 @@ const styles = StyleSheet.create({
   },
   appliedButton: {
     backgroundColor: '#9CA3AF',
+  },
+  joinedButton: {
+    backgroundColor: '#9CA3AF', // Same gray as appliedButton for consistency
   },
   limitReachedButton: {
     backgroundColor: '#DC2626',

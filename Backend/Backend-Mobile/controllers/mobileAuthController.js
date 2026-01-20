@@ -111,9 +111,23 @@ export const mobileLogin = async (req, res) => {
     const applicationData = applicationResult[0] || [];
     console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
 
-    // Get stallholder information (if approved)
-    const [stallholderResult] = await connection.execute('CALL sp_getStallholderByApplicantId(?)', [applicantId]);
-    let stallholderData = stallholderResult[0] || [];
+    // Get stallholder information (if approved) - Using direct query instead of stored procedure
+    // because sp_getStallholderByApplicantId depends on fn_getEncryptionKey which may not exist
+    // Check both applicant_id and mobile_user_id since stallholders can be linked by either
+    const [stallholderResult] = await connection.execute(`
+      SELECT 
+        sh.*,
+        s.stall_number,
+        s.stall_location,
+        s.size,
+        s.monthly_rent as stall_monthly_rent,
+        b.branch_name
+      FROM stallholder sh
+      LEFT JOIN stall s ON sh.stall_id = s.stall_id
+      LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      WHERE sh.applicant_id = ? OR sh.mobile_user_id = ?
+    `, [applicantId, applicantId]);
+    let stallholderData = stallholderResult || [];
     // Decrypt stallholder data if found
     if (stallholderData.length > 0) {
       stallholderData[0] = await decryptStallholderData(stallholderData[0]);
@@ -189,7 +203,8 @@ export const mobileLogin = async (req, res) => {
         stall_id: applicationData[0].stall_id,
         status: applicationData[0].application_status,
         application_date: applicationData[0].application_date,
-        stall_no: applicationData[0].stall_no,
+        stall_number: applicationData[0].stall_number || applicationData[0].stall_no,
+        stall_no: applicationData[0].stall_no || applicationData[0].stall_number, // Keep for backwards compatibility
         rental_price: applicationData[0].rental_price,
         stall_location: applicationData[0].stall_location,
         size: applicationData[0].size,
@@ -198,7 +213,7 @@ export const mobileLogin = async (req, res) => {
       } : null,
       stallholder: stallholderData.length > 0 ? {
         stallholder_id: stallholderData[0].stallholder_id,
-        stallholder_name: stallholderData[0].stallholder_name,
+        stallholder_name: stallholderData[0].full_name || stallholderData[0].stallholder_name,
         contact_number: stallholderData[0].contact_number,
         email: stallholderData[0].email,
         address: stallholderData[0].address,
@@ -207,16 +222,21 @@ export const mobileLogin = async (req, res) => {
         branch_id: stallholderData[0].branch_id,
         branch_name: stallholderData[0].branch_name,
         stall_id: stallholderData[0].stall_id,
-        stall_no: stallholderData[0].stall_no,
+        stall_number: stallholderData[0].stall_number || stallholderData[0].stall_no,
+        stall_no: stallholderData[0].stall_no || stallholderData[0].stall_number, // Keep for backwards compatibility
         stall_location: stallholderData[0].stall_location,
         size: stallholderData[0].size,
-        contract_start_date: stallholderData[0].contract_start_date,
-        contract_end_date: stallholderData[0].contract_end_date,
-        contract_status: stallholderData[0].contract_status,
-        lease_amount: stallholderData[0].lease_amount,
-        monthly_rent: stallholderData[0].monthly_rent,
+        // Contract dates - move_in_date is the contract start date
+        move_in_date: stallholderData[0].move_in_date,
+        contract_start_date: stallholderData[0].move_in_date, // Use move_in_date as contract start
+        contract_end_date: stallholderData[0].move_in_date 
+          ? new Date(new Date(stallholderData[0].move_in_date).setFullYear(new Date(stallholderData[0].move_in_date).getFullYear() + 1)).toISOString()
+          : null, // Calculate end date as 1 year from move_in_date
+        contract_status: stallholderData[0].status === 'active' ? 'Active' : stallholderData[0].status,
+        lease_amount: stallholderData[0].lease_amount || 0,
+        monthly_rent: stallholderData[0].stall_monthly_rent || stallholderData[0].monthly_rent || 0,
         payment_status: stallholderData[0].payment_status,
-        compliance_status: stallholderData[0].compliance_status
+        compliance_status: stallholderData[0].compliance_status || 'Pending'
       } : null,
       // Computed fields for easy access
       isStallholder: stallholderData.length > 0,
