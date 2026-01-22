@@ -3,6 +3,7 @@ import SearchFilter from '../Stalls/StallsComponents/SearchAndFilter/SearchAndFi
 import AddChoiceModal from './StallsComponents/ChoicesModal/AddChoiceModal/AddChoiceModal.vue'
 import EditStall from '../Stalls/StallsComponents/EditStall/EditStall.vue'
 import RaffleParticipantsModal from './RaffleComponents/RaffleParticipantsModal/RaffleParticipantsModal.vue'
+import AuctionParticipantsModal from './AuctionComponents/AuctionParticipantsModal/AuctionParticipantsModal.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
@@ -16,6 +17,7 @@ export default {
     AddChoiceModal,
     EditStall,
     RaffleParticipantsModal,
+    AuctionParticipantsModal,
     ToastNotification,
     LoadingOverlay,
   },
@@ -58,6 +60,10 @@ export default {
       // Raffle Participants Modal
       showRaffleParticipantsModal: false,
       selectedRaffleStall: null,
+
+      // Auction Participants Modal
+      showAuctionParticipantsModal: false,
+      selectedAuctionStall: null,
     }
   },
 
@@ -1026,12 +1032,28 @@ export default {
 
     // Handle auction management
     handleAuctionManagement(stall) {
-      console.log('🔨 Auction management for stall:', stall)
+      console.log('🔨 Opening auction participants modal for stall:', stall)
+      this.selectedAuctionStall = stall
+      this.showAuctionParticipantsModal = true
+    },
+
+    // Close auction participants modal
+    closeAuctionParticipantsModal() {
+      console.log('🔨 Closing auction participants modal')
+      this.showAuctionParticipantsModal = false
+      this.selectedAuctionStall = null
+    },
+
+    // Handle auction winner selected
+    handleAuctionWinnerSelected(winnerData) {
+      console.log('🏆 Auction winner selected:', winnerData)
       this.toast = {
         show: true,
-        message: 'Auction management coming soon',
-        type: 'info'
+        message: `Winner selected: ${winnerData?.winner_name || 'Unknown'}`,
+        type: 'success'
       }
+      // Refresh stalls data to update the UI
+      this.fetchStalls()
     },
 
     // Error handling utilities

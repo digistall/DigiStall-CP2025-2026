@@ -684,8 +684,8 @@ export async function getActiveSessions(req, res) {
             const [staffRows] = await connection.execute(`
                 SELECT 
                     ss.session_id,
-                    ss.staff_id as user_id,
-                    ss.staff_type as user_type,
+                    ss.user_id as user_id,
+                    ss.user_type as user_type,
                     ss.is_active,
                     ss.login_time,
                     ss.last_activity,

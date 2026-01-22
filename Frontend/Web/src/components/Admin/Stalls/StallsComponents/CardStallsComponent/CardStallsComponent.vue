@@ -172,7 +172,7 @@
             VIEW PARTICIPANTS
           </v-btn>
 
-          <!-- Auction Management Button -->
+          <!-- Auction Management Button - Now shows View Participants -->
           <v-btn
             v-if="stall.priceType === 'Auction'"
             color="primary"
@@ -182,7 +182,7 @@
             class="action-btn"
           >
             <v-icon left size="small" class="me-2">mdi-gavel</v-icon>
-            MANAGE AUCTION
+            VIEW PARTICIPANTS
           </v-btn>
         </div>
       </v-card-actions>

@@ -90,10 +90,12 @@ export const getRaffleParticipantsByStall = async (req, res) => {
       raffleData = raffleInfo[0];
       
       // Get all participants who joined this raffle
+      // Now includes stallholder information if the participant is a stallholder
       const [participantsList] = await connection.execute(
         `SELECT 
           rp.participant_id,
           rp.applicant_id,
+          rp.stallholder_id,
           rp.application_id,
           rp.participation_time,
           rp.is_winner,
@@ -103,12 +105,19 @@ export const getRaffleParticipantsByStall = async (req, res) => {
           a.applicant_address,
           a.applicant_email,
           app.application_date,
-          app.business_name,
+          app.business_name AS app_business_name,
           app.business_type,
-          app.application_status
+          app.application_status,
+          sh.stallholder_id as sh_id,
+          sh.stallholder_name,
+          sh.business_name AS stallholder_business_name,
+          sh.stall_id as current_stall_id,
+          sh.contact_number as sh_contact_number,
+          sh.email as sh_email
         FROM raffle_participants rp
-        INNER JOIN applicant a ON rp.applicant_id = a.applicant_id
+        LEFT JOIN applicant a ON rp.applicant_id = a.applicant_id
         LEFT JOIN stall_application app ON rp.application_id = app.application_id
+        LEFT JOIN stallholder sh ON rp.stallholder_id = sh.stallholder_id
         WHERE rp.raffle_id = ?
         ORDER BY rp.participation_time ASC`,
         [raffleData.raffle_id]
@@ -117,19 +126,22 @@ export const getRaffleParticipantsByStall = async (req, res) => {
       participants = participantsList.map((p, index) => ({
         participantId: p.participant_id,
         applicantId: p.applicant_id,
+        stallholderId: p.stallholder_id || p.sh_id,
         applicationId: p.application_id,
         participantNumber: index + 1,
         isWinner: p.is_winner === 1,
+        isStallholder: !!(p.stallholder_id || p.sh_id),
         joinedAt: p.participation_time || p.joined_at,
         personalInfo: {
-          fullName: p.applicant_full_name || 'Unknown',
-          email: p.applicant_email || 'N/A',
-          contactNumber: p.applicant_contact_number || 'N/A',
+          fullName: p.stallholder_name || p.applicant_full_name || 'Unknown',
+          email: p.sh_email || p.applicant_email || 'N/A',
+          contactNumber: p.sh_contact_number || p.applicant_contact_number || 'N/A',
           address: p.applicant_address || 'N/A'
         },
         businessInfo: {
-          name: p.business_name || 'N/A',
-          type: p.business_type || 'N/A'
+          name: p.stallholder_business_name || p.app_business_name || 'N/A',
+          type: p.business_type || 'N/A',
+          currentStallId: p.current_stall_id || null
         },
         applicationInfo: {
           applicationDate: p.application_date,

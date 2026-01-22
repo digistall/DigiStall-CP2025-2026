@@ -4,6 +4,7 @@
 
 import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { decryptObjectFields } from '../../services/encryptionService.js';
 
 /**
  * Convert evidence BLOB Buffer to base64 string for frontend consumption
@@ -83,8 +84,34 @@ export const getAllComplianceRecords = async (req, res) => {
 
     console.log(`✅ Found ${complianceRecords.length} compliance records`);
 
-    // Convert evidence BLOB to base64 for each record
-    const processedRecords = complianceRecords.map(convertEvidenceToBase64);
+    // Convert evidence BLOB to base64 and decrypt sensitive data for each record
+    const processedRecords = complianceRecords.map(record => {
+      // Convert evidence BLOB to base64
+      const recordWithEvidence = convertEvidenceToBase64(record);
+      
+      // Decrypt stallholder and inspector sensitive fields (including all aliases)
+      const decrypted = decryptObjectFields(recordWithEvidence, [
+        // Stallholder fields and aliases
+        'stallholder_name',
+        'stallholder',
+        'stallholder_email', 
+        'stallholder_contact',
+        'full_name',
+        'email',
+        'contact_number',
+        // Inspector fields
+        'inspector_first_name',
+        'inspector_last_name'
+      ]);
+      
+      // Concatenate inspector name after decryption
+      if (decrypted.inspector_first_name || decrypted.inspector_last_name) {
+        decrypted.inspector_name = `${decrypted.inspector_first_name || ''} ${decrypted.inspector_last_name || ''}`.trim();
+        decrypted.inspector = decrypted.inspector_name; // Add alias
+      }
+      
+      return decrypted;
+    });
 
     res.status(200).json({
       success: true,
@@ -134,7 +161,30 @@ export const getComplianceRecordById = async (req, res) => {
     }
 
     // Convert evidence BLOB to base64
-    const processedRecord = convertEvidenceToBase64(record);
+    const recordWithEvidence = convertEvidenceToBase64(record);
+    
+    // Decrypt stallholder and inspector sensitive fields (including all aliases)
+    const decrypted = decryptObjectFields(recordWithEvidence, [
+      // Stallholder fields and aliases
+      'stallholder_name',
+      'stallholder',
+      'stallholder_email', 
+      'stallholder_contact',
+      'full_name',
+      'email',
+      'contact_number',
+      // Inspector fields
+      'inspector_first_name',
+      'inspector_last_name'
+    ]);
+    
+    // Concatenate inspector name after decryption
+    if (decrypted.inspector_first_name || decrypted.inspector_last_name) {
+      decrypted.inspector_name = `${decrypted.inspector_first_name || ''} ${decrypted.inspector_last_name || ''}`.trim();
+      decrypted.inspector = decrypted.inspector_name; // Add alias
+    }
+    
+    const processedRecord = decrypted;
 
     console.log('✅ Compliance record found');
 

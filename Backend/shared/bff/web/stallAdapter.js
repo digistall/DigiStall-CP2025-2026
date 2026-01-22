@@ -9,6 +9,26 @@ import { StallService } from '../../services/stallService.js';
  * Web needs: full details, action buttons, status badges
  */
 export function transformForAdminList(stall) {
+  // Determine if stall has an active stallholder
+  const hasStallholder = stall.stallholder && stall.stallholder.stallholder_id;
+  
+  // Build stallholder name
+  let stallholderName = 'Vacant Stall';
+  let stallholderInfo = null;
+  
+  if (hasStallholder) {
+    const firstName = stall.stallholder.first_name || '';
+    const lastName = stall.stallholder.last_name || '';
+    stallholderName = stall.stallholder_name || `${firstName} ${lastName}`.trim() || 'Unknown';
+    
+    stallholderInfo = {
+      id: stall.stallholder.stallholder_id,
+      name: stallholderName,
+      businessName: stall.stallholder.business_name,
+      businessType: stall.stallholder.business_type
+    };
+  }
+  
   return {
     id: stall.stall_id,
     stallNumber: stall.stall_number,
@@ -30,12 +50,8 @@ export function transformForAdminList(stall) {
     },
     
     // Stallholder info (for occupied stalls)
-    stallholder: stall.stallholder ? {
-      id: stall.stallholder.stallholder_id,
-      name: stall.stallholder_name || `${stall.stallholder.first_name} ${stall.stallholder.last_name}`,
-      businessName: stall.stallholder.business_name,
-      businessType: stall.stallholder.business_type
-    } : null,
+    stallholder: stallholderInfo,
+    stallholderName: stallholderName,  // Add this for easy display
     
     // Image
     imageUrl: stall.primary_image_url || (stall.images?.[0] ? `/api/stalls/images/blob/id/${stall.images[0].image_id}` : null),
@@ -155,14 +171,35 @@ export async function getLandingPageStalls(filters = {}) {
 export async function getDashboardStats(branchId) {
   const stats = await StallService.getStallStats(branchId);
   
+  // Case-insensitive status lookup
+  const byStatus = stats.byStatus || {};
+  const getStatusCount = (statusName) => {
+    // Try exact match first, then case-insensitive
+    if (byStatus[statusName]) return byStatus[statusName];
+    
+    const lowerStatusName = statusName.toLowerCase();
+    for (const [key, value] of Object.entries(byStatus)) {
+      if (key.toLowerCase() === lowerStatusName) {
+        return value;
+      }
+    }
+    return 0;
+  };
+  
+  const occupied = getStatusCount('Occupied') || getStatusCount('occupied') || getStatusCount('ACTIVE');
+  const available = getStatusCount('Available') || getStatusCount('available') || getStatusCount('VACANT');
+  const maintenance = getStatusCount('Maintenance') || getStatusCount('maintenance');
+  
   return {
     total: stats.total,
-    available: stats.byStatus?.available || 0,
-    occupied: stats.byStatus?.occupied || 0,
-    maintenance: stats.byStatus?.maintenance || 0,
+    available,
+    occupied,
+    maintenance,
     occupancyRate: stats.total > 0 
-      ? Math.round(((stats.byStatus?.occupied || 0) / stats.total) * 100) 
-      : 0
+      ? Math.round((occupied / stats.total) * 100) 
+      : 0,
+    // Include active stallholders count
+    activeStallholders: stats.activeStallholders || occupied
   };
 }
 
