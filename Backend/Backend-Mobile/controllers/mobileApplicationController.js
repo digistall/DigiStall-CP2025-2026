@@ -463,7 +463,7 @@ export const joinRaffle = async (req, res) => {
     // Check if user is a stallholder (has been approved and owns stalls)
     console.log('🔍 Checking if user is a stallholder...');
     const [stallholderRows] = await connection.execute(
-      `SELECT stallholder_id, stallholder_name, stall_id, business_name
+      `SELECT stallholder_id, full_name, stall_id
        FROM stallholder 
        WHERE (mobile_user_id = ? OR applicant_id = ?) AND status = 'Active'
        ORDER BY stallholder_id LIMIT 1`,
@@ -698,7 +698,7 @@ export const joinAuction = async (req, res) => {
 
     // Check if user is a stallholder (they may be applying for additional stalls)
     const [stallholderRows] = await connection.execute(
-      `SELECT stallholder_id, stallholder_name, stall_id, business_name
+      `SELECT stallholder_id, full_name, stall_id
        FROM stallholder 
        WHERE (mobile_user_id = ? OR applicant_id = ?) AND status = 'Active'`,
       [applicantId, applicantId]
@@ -710,7 +710,7 @@ export const joinAuction = async (req, res) => {
     console.log('📊 Stallholder check:', {
       isStallholder,
       stallholderId,
-      stallholderName: isStallholder ? stallholderRows[0].stallholder_name : null
+      stallholderName: isStallholder ? stallholderRows[0].full_name : null
     });
 
     console.log('✅ Validation passed, querying stall details...');
@@ -721,8 +721,8 @@ export const joinAuction = async (req, res) => {
         s.stall_id, s.stall_number, s.stall_location, s.rental_price,
         s.price_type, s.is_available, s.status, s.description,
         s.amenities, s.area_sqm, s.raffle_auction_status,
-        f.floor_level,
-        sec.section,
+        f.floor_name,
+        sec.section_name,
         b.branch_id, b.branch_name
       FROM stall s
       LEFT JOIN section sec ON s.section_id = sec.section_id
