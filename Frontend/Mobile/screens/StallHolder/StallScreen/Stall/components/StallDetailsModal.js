@@ -264,14 +264,14 @@ const StallDetailsModal = ({
             {applying ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={styles.applyButtonText}>🔨 JOIN AUCTION</Text>
+              <Text style={styles.applyButtonText}>JOIN AUCTION</Text>
             )}
           </TouchableOpacity>
         );
       default:
         return (
           <TouchableOpacity style={[styles.applyButton, styles.lockedButton]} disabled>
-            <Text style={styles.applyButtonText}>🔒 NOT AVAILABLE</Text>
+            <Text style={styles.applyButtonText}>NOT AVAILABLE</Text>
           </TouchableOpacity>
         );
     }

@@ -41,7 +41,8 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
   
   // Selection state
   const [stallholderName, setStallholderName] = useState(
-    preselectedStallholder?.stallholder_name || preselectedStall?.stallholder_name || ""
+    preselectedStallholder?.full_name || preselectedStallholder?.stallholder_name || 
+    preselectedStall?.full_name || preselectedStall?.stallholder_name || ""
   );
   const [stallholderId, setStallholderId] = useState(
     preselectedStallholder?.stallholder_id?.toString() || preselectedStall?.stallholder_id?.toString() || ""
