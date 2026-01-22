@@ -636,7 +636,7 @@ export default {
         const hasActiveStaffSessionForUser = (userId, userType) => {
           return activeSessions.some(s => 
             s.user_id == userId && 
-            s.user_type === userType && 
+            s.user_type?.toLowerCase() === userType.toLowerCase() && 
             (s.is_active === 1 || s.is_active === true || s.is_active === '1')
           )
         }
@@ -826,7 +826,7 @@ export default {
               
               // ONLY use timestamp fallback if no session data exists for this user
               const hasSessionData = activeSessions.some(s => 
-                s.user_id == col.collector_id && s.user_type === 'collector'
+                s.user_id == col.collector_id && s.user_type?.toLowerCase() === 'collector'
               )
               
               // If session exists, use is_active; otherwise fall back to timestamps
@@ -874,7 +874,7 @@ export default {
               
               // ONLY use timestamp fallback if no session data exists for this user
               const hasSessionData = activeSessions.some(s => 
-                s.user_id == ins.inspector_id && s.user_type === 'inspector'
+                s.user_id == ins.inspector_id && s.user_type?.toLowerCase() === 'inspector'
               )
               
               // If session exists, use is_active; otherwise fall back to timestamps

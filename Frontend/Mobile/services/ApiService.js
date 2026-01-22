@@ -342,53 +342,6 @@ class ApiService {
     }
   }
 
-  // Change password for authenticated users
-  static async changePassword(currentPassword, newPassword) {
-    try {
-      const server = await NetworkUtils.getActiveServer();
-      const token = await UserStorageService.getAuthToken();
-
-      if (!token) {
-        return {
-          success: false,
-          message: 'Authentication required. Please log in again.'
-        };
-      }
-
-      console.log('🔄 Changing password at:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.CHANGE_PASSWORD}`);
-
-      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.CHANGE_PASSWORD}`, {
-        method: 'POST',
-        headers: {
-          ...API_CONFIG.HEADERS,
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to change password');
-      }
-
-      console.log('✅ Password changed successfully');
-      return {
-        success: true,
-        message: data.message || 'Password changed successfully'
-      };
-    } catch (error) {
-      console.error('❌ Change Password API Error:', error);
-      return {
-        success: false,
-        message: error.message || 'An error occurred while changing password'
-      };
-    }
-  }
-
   // ===== STALL METHODS =====
 
   // Get all stalls
@@ -774,7 +727,7 @@ class ApiService {
     }
   }
 
-  // Join Auction - Pre-register for an auction stall
+  // Join Auction - Register for an auction stall (no application record created)
   static async joinAuction(applicantId, stallId) {
     console.log('🔨 ====== JOIN AUCTION START ======');
     console.log('🔨 Input params - applicantId:', applicantId, 'type:', typeof applicantId);
@@ -836,6 +789,7 @@ class ApiService {
       }
 
       console.log('✅ Successfully joined auction:', data.message);
+      console.log('✅ Response data:', JSON.stringify(data.data, null, 2));
       console.log('🔨 ====== JOIN AUCTION SUCCESS ======');
       return {
         success: true,
@@ -844,7 +798,9 @@ class ApiService {
       };
     } catch (error) {
       console.error('❌ ====== JOIN AUCTION ERROR ======');
+      console.error('❌ Error name:', error.name);
       console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       console.error('❌ Join Auction API Error:', error);
       return {
         success: false,

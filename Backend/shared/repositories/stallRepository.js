@@ -212,8 +212,16 @@ export async function getStatsByBranch(branchId) {
     where: { branch_id: branchId }
   });
   
+  // Count all stallholders in this branch (regardless of status for total count)
+  const activeStallholders = await prisma.stallholder.count({
+    where: { 
+      branch_id: branchId
+    }
+  });
+  
   return {
     total,
+    activeStallholders,
     byStatus: stats.reduce((acc, s) => {
       acc[s.status] = s._count.stall_id;
       return acc;

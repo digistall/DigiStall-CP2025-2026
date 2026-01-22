@@ -41,7 +41,8 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
   
   // Selection state
   const [stallholderName, setStallholderName] = useState(
-    preselectedStallholder?.stallholder_name || preselectedStall?.stallholder_name || ""
+    preselectedStallholder?.full_name || preselectedStallholder?.stallholder_name || 
+    preselectedStall?.full_name || preselectedStall?.stallholder_name || ""
   );
   const [stallholderId, setStallholderId] = useState(
     preselectedStallholder?.stallholder_id?.toString() || preselectedStall?.stallholder_id?.toString() || ""
@@ -485,7 +486,10 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
                     {violation.violation_type}
                   </Text>
                   <Text style={[styles.ordinanceNo, { color: theme.colors.textSecondary }]}>
-                    {violation.ordinance_no}
+                    {violation.description}
+                  </Text>
+                  <Text style={[styles.penaltyAmount, { color: '#f59e0b' }]}>
+                    Penalty: ₱{parseFloat(violation.default_penalty).toFixed(2)}
                   </Text>
                 </View>
               </View>
@@ -748,6 +752,11 @@ const styles = StyleSheet.create({
   ordinanceNo: {
     fontSize: 12,
     marginTop: 2,
+  },
+  penaltyAmount: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
   },
   violationDetails: {
     fontSize: 13,
