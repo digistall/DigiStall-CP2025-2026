@@ -219,56 +219,77 @@ const StallScreen = () => {
     }
   };
 
-  // Submit application to backend using the new API
+  // Submit application to backend using the appropriate API based on stall type
+  // - Fixed Price: Creates application record (needs approval)
+  // - Raffle: Only joins raffle_participants (no application record)
+  // - Auction: Only joins auction_participants (no application record)
   const submitApplication = async (stall) => {
     try {
       setApplying(stall.id);
       
-      const response = await ApiService.submitApplication(userData.user.applicant_id, stall.id);
+      let response;
+      const applicantId = userData.user.applicant_id;
+      
+      // Use different endpoints based on stall price type
+      if (stall.priceType === 'Raffle') {
+        // Join raffle - only creates raffle_participants entry (no application record)
+        response = await ApiService.joinRaffle(applicantId, stall.id);
+      } else if (stall.priceType === 'Auction') {
+        // Join auction - only creates auction_participants entry (no application record)
+        response = await ApiService.joinAuction(applicantId, stall.id);
+      } else {
+        // Fixed Price - creates application record (needs approval)
+        response = await ApiService.submitApplication({ applicantId, stallId: stall.id });
+      }
       
       if (response.success) {
-        // Update local data with the new application
-        const newApplication = {
-          application_id: response.data.application_id,
-          stall_id: stall.id,
-          applicant_id: userData.user.applicant_id,
-          application_date: new Date().toISOString().split('T')[0],
-          application_status: 'Pending',
-          branch_id: stall.branchId,
-          stall_no: stall.stallNumber,
-          branch_name: stall.location,
-          stall_location: stall.stallLocation,
-          size: stall.size,
-          rental_price: stall.priceValue,
-          price_type: stall.priceType,
-          description: stall.description,
-          floor_name: stall.floor.split(' / ')[0],
-          section_name: stall.floor.split(' / ')[1],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        // Update applications in storage
-        await UserStorageService.addApplication(newApplication);
-        
-        // Update local state
-        const updatedApplications = [...userApplications, newApplication];
-        setUserApplications(updatedApplications);
+        // Only update local applications if it's a Fixed Price stall (creates application record)
+        if (stall.priceType === 'Fixed Price') {
+          const newApplication = {
+            application_id: response.data?.applicationId || response.data?.application_id,
+            stall_id: stall.id,
+            applicant_id: applicantId,
+            application_date: new Date().toISOString().split('T')[0],
+            application_status: 'Pending',
+            branch_id: stall.branchId,
+            stall_no: stall.stallNumber,
+            branch_name: stall.location,
+            stall_location: stall.stallLocation,
+            size: stall.size,
+            rental_price: stall.priceValue,
+            price_type: stall.priceType,
+            description: stall.description,
+            floor_name: stall.floor.split(' / ')[0],
+            section_name: stall.floor.split(' / ')[1],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          // Update applications in storage
+          await UserStorageService.addApplication(newApplication);
+          
+          // Update local state
+          const updatedApplications = [...userApplications, newApplication];
+          setUserApplications(updatedApplications);
+        }
         
         // Update stall status and metadata
         setStallsData(prevStalls => 
           prevStalls.map(s => 
             s.id === stall.id ? { 
               ...s, 
-              status: 'applied',
+              status: stall.priceType === 'Raffle' ? 'joined_raffle' : 
+                      stall.priceType === 'Auction' ? 'joined_auction' : 'applied',
               canApply: false,
-              applicationsInBranch: s.applicationsInBranch + 1
+              hasJoinedRaffle: stall.priceType === 'Raffle',
+              hasJoinedAuction: stall.priceType === 'Auction',
+              applicationsInBranch: stall.priceType === 'Fixed Price' ? s.applicationsInBranch + 1 : s.applicationsInBranch
             } : s
           )
         );
         
         const successMessage = stall.priceType === 'Raffle' ? 'You have successfully joined the raffle!' :
-                              stall.priceType === 'Auction' ? 'You can now participate in the auction!' :
+                              stall.priceType === 'Auction' ? 'You have successfully joined the auction!' :
                               'Your application has been submitted successfully!';
         
         Alert.alert('Success', successMessage);

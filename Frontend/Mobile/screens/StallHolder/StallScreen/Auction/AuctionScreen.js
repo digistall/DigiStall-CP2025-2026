@@ -120,14 +120,60 @@ const AuctionScreen = () => {
     }
   };
 
-  const handlePreRegister = (stallId) => {
-    console.log('🔔 Pre-registering stall:', stallId);
-    console.log('📋 Current pre-registered stalls:', preRegisteredStalls);
-    setPreRegisteredStalls((prev) => {
-      const updated = prev.includes(stallId) ? prev : [...prev, stallId];
-      console.log('✅ Updated pre-registered stalls:', updated);
-      return updated;
-    });
+  // Handle pre-registration for auction - calls the joinAuction API
+  // This creates an auction_participants record (no application record)
+  const handlePreRegister = async (stallId) => {
+    console.log('🔔 Pre-registering for auction - stall:', stallId);
+    
+    try {
+      // Get user data from storage
+      const userData = await UserStorageService.getUserData();
+      if (!userData || !userData.user) {
+        Alert.alert('Error', 'User not logged in. Please login again.');
+        return;
+      }
+      
+      const applicantId = userData.user.applicant_id;
+      
+      // Check if already pre-registered locally
+      if (preRegisteredStalls.includes(stallId)) {
+        console.log('⚠️ Already pre-registered for stall:', stallId);
+        return;
+      }
+      
+      // Call the joinAuction API to register in auction_participants table
+      console.log('📤 Calling joinAuction API...');
+      const response = await ApiService.joinAuction(applicantId, stallId);
+      
+      if (response.success) {
+        console.log('✅ Successfully joined auction:', response.data);
+        
+        // Update local state
+        setPreRegisteredStalls((prev) => {
+          const updated = prev.includes(stallId) ? prev : [...prev, stallId];
+          console.log('✅ Updated pre-registered stalls:', updated);
+          return updated;
+        });
+        
+        // Update stall status in the list
+        setAuctionStallsData(prevStalls => 
+          prevStalls.map(s => 
+            s.id === stallId ? { 
+              ...s, 
+              status: 'joined_auction',
+              isApplied: true,
+              canApply: false
+            } : s
+          )
+        );
+      } else {
+        console.error('❌ Failed to join auction:', response.message);
+        Alert.alert('Error', response.message || 'Failed to pre-register for auction.');
+      }
+    } catch (error) {
+      console.error('❌ Error pre-registering for auction:', error);
+      Alert.alert('Error', 'Failed to pre-register for auction. Please try again.');
+    }
   };
 
   // Auto-refresh every 5 seconds to update auction status
