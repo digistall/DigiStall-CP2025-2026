@@ -176,6 +176,33 @@ export const getStallsByType = async (req, res) => {
     const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
     const stalls = stallsRows[0]
 
+    // Get raffle participation status for this applicant (workaround until stored procedure is updated)
+    const [raffleParticipations] = await connection.execute(
+      `SELECT DISTINCT r.stall_id 
+       FROM raffle_participants rp 
+       INNER JOIN raffle r ON rp.raffle_id = r.raffle_id 
+       WHERE rp.applicant_id = ?`,
+      [applicant_id]
+    )
+    const joinedRaffleStallIds = new Set(raffleParticipations.map(r => r.stall_id))
+    console.log('🎰 Raffle participations found:', joinedRaffleStallIds.size, 'stalls')
+
+    // Get auction participation status for this applicant
+    let joinedAuctionStallIds = new Set()
+    try {
+      const [auctionParticipations] = await connection.execute(
+        `SELECT DISTINCT a.stall_id 
+         FROM auction_participants ap 
+         INNER JOIN auction a ON ap.auction_id = a.auction_id 
+         WHERE ap.applicant_id = ?`,
+        [applicant_id]
+      )
+      joinedAuctionStallIds = new Set(auctionParticipations.map(a => a.stall_id))
+      console.log('🔨 Auction participations found:', joinedAuctionStallIds.size, 'stalls')
+    } catch (auctionError) {
+      console.log('⚠️ Could not fetch auction participations (table may not exist):', auctionError.message)
+    }
+
     // For each stall, fetch images from stall_images table (images stored as BLOB)
     const stallsWithImages = await Promise.all(stalls.map(async (stall) => {
       const [imageRows] = await connection.execute(
@@ -198,46 +225,61 @@ export const getStallsByType = async (req, res) => {
     }))
 
     // Format for mobile app
-    const formattedStalls = stallsWithImages.map(stall => ({
-      id: stall.stall_id,
-      stallNumber: stall.stall_number,
-      location: stall.stall_location,
-      size: stall.stall_size || stall.size,
-      price: stall.monthly_rent ? stall.monthly_rent.toLocaleString() : (stall.rental_price ? stall.rental_price.toLocaleString() : '0'),
-      priceValue: stall.monthly_rent || stall.rental_price || 0,
-      priceType: stall.price_type,
-      status: stall.application_status,
-      description: stall.description || 'No description available',
-      image: stall.primary_image || 'https://oldspitalfieldsmarket.com/cms/2017/10/OSM_FP_Stall_sq-1440x1440.jpg',
-      images: stall.images || [],
+    const formattedStalls = stallsWithImages.map(stall => {
+      // Determine the actual status based on raffle/auction participation
+      const hasJoinedRaffle = joinedRaffleStallIds.has(stall.stall_id)
+      const hasJoinedAuction = joinedAuctionStallIds.has(stall.stall_id)
       
-      // Branch information
-      branch: {
-        id: stall.branch_id,
-        name: stall.branch_name,
-        area: stall.area,
-        location: stall.area
-      },
+      let actualStatus = stall.application_status
+      if (hasJoinedRaffle) actualStatus = 'joined_raffle'
+      else if (hasJoinedAuction) actualStatus = 'joined_auction'
       
-      // Floor and section info - use floor_level/section from stall table if floor_name/section_name are null
-      floor: stall.floor_name || stall.floor_level || 'N/A',
-      section: stall.section_name || stall.section || 'N/A',
-      floorSection: `${stall.floor_name || stall.floor_level || 'N/A'} / ${stall.section_name || stall.section || 'N/A'}`,
+      // Debug log for joined status
+      if (hasJoinedRaffle || hasJoinedAuction) {
+        console.log(`🎯 Stall ${stall.stall_id} (${stall.stall_number}): hasJoinedRaffle=${hasJoinedRaffle}, hasJoinedAuction=${hasJoinedAuction}, actualStatus=${actualStatus}`)
+      }
       
-      // Application status - now includes joined_raffle and joined_auction status
-      canApply: stall.application_status === 'available',
-      isApplied: stall.application_status === 'applied',
-      hasJoinedRaffle: stall.application_status === 'joined_raffle',
-      hasJoinedAuction: stall.application_status === 'joined_auction',
-      
-      // Special fields for auction stalls
-      ...(type === 'Auction' && {
-        currentBid: stall.rental_price || 0,
-        currentBidder: null,
-        auctionDate: "To be announced",
-        startTime: "To be announced"
-      })
-    }))
+      return {
+        id: stall.stall_id,
+        stallNumber: stall.stall_number,
+        location: stall.stall_location,
+        size: stall.stall_size || stall.size,
+        price: stall.monthly_rent ? stall.monthly_rent.toLocaleString() : (stall.rental_price ? stall.rental_price.toLocaleString() : '0'),
+        priceValue: stall.monthly_rent || stall.rental_price || 0,
+        priceType: stall.price_type,
+        status: actualStatus,
+        description: stall.description || 'No description available',
+        image: stall.primary_image || 'https://oldspitalfieldsmarket.com/cms/2017/10/OSM_FP_Stall_sq-1440x1440.jpg',
+        images: stall.images || [],
+        
+        // Branch information
+        branch: {
+          id: stall.branch_id,
+          name: stall.branch_name,
+          area: stall.area,
+          location: stall.area
+        },
+        
+        // Floor and section info - use floor_level/section from stall table if floor_name/section_name are null
+        floor: stall.floor_name || stall.floor_level || 'N/A',
+        section: stall.section_name || stall.section || 'N/A',
+        floorSection: `${stall.floor_name || stall.floor_level || 'N/A'} / ${stall.section_name || stall.section || 'N/A'}`,
+        
+        // Application status - now includes joined_raffle and joined_auction status
+        canApply: actualStatus === 'available',
+        isApplied: actualStatus === 'applied',
+        hasJoinedRaffle: hasJoinedRaffle,
+        hasJoinedAuction: hasJoinedAuction,
+        
+        // Special fields for auction stalls
+        ...(type === 'Auction' && {
+          currentBid: stall.rental_price || 0,
+          currentBidder: null,
+          auctionDate: "To be announced",
+          startTime: "To be announced"
+        })
+      }
+    })
 
     res.json({
       success: true,

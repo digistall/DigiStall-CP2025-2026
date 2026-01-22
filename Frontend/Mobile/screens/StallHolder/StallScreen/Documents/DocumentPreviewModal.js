@@ -10,8 +10,11 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,6 +29,92 @@ const DocumentPreviewModal = ({
   const { theme, isDark } = useTheme();
   const [imageLoading, setImageLoading] = useState(true);
   const [scale, setScale] = useState(1);
+  const [fullScreenVisible, setFullScreenVisible] = useState(false);
+
+  // Pinch-to-zoom shared values
+  const zoomScale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+
+  // Reset zoom when modal closes
+  const resetZoom = () => {
+    zoomScale.value = withTiming(1);
+    savedScale.value = 1;
+    translateX.value = withTiming(0);
+    translateY.value = withTiming(0);
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  };
+
+  // Pinch gesture for zoom
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      zoomScale.value = Math.min(Math.max(savedScale.value * event.scale, 1), 5);
+    })
+    .onEnd(() => {
+      savedScale.value = zoomScale.value;
+      // Reset if zoom is too small
+      if (zoomScale.value < 1.1) {
+        zoomScale.value = withTiming(1);
+        savedScale.value = 1;
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      }
+    });
+
+  // Pan gesture for moving zoomed image
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (zoomScale.value > 1) {
+        translateX.value = savedTranslateX.value + event.translationX;
+        translateY.value = savedTranslateY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  // Double tap to zoom in/out
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onStart(() => {
+      if (zoomScale.value > 1) {
+        // Reset zoom
+        zoomScale.value = withTiming(1);
+        savedScale.value = 1;
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        // Zoom in to 2.5x
+        zoomScale.value = withTiming(2.5);
+        savedScale.value = 2.5;
+      }
+    });
+
+  // Combine gestures
+  const composedGesture = Gesture.Simultaneous(
+    pinchGesture,
+    Gesture.Simultaneous(panGesture, doubleTapGesture)
+  );
+
+  // Animated style for the image
+  const animatedImageStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: zoomScale.value },
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    };
+  });
 
   const handleDelete = () => {
     Alert.alert(
@@ -54,8 +143,10 @@ const DocumentPreviewModal = ({
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'verified':
+      case 'approved':
         return '#10b981';
       case 'pending':
         return '#f59e0b';
@@ -69,9 +160,12 @@ const DocumentPreviewModal = ({
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'verified':
         return '✓ Verified';
+      case 'approved':
+        return '✓ Approved';
       case 'pending':
         return '⏱ Pending';
       case 'rejected':
@@ -83,10 +177,63 @@ const DocumentPreviewModal = ({
     }
   };
 
+  // Helper function to check if document is approved/verified
+  const isDocumentApproved = (status) => {
+    const normalizedStatus = status?.toLowerCase();
+    return normalizedStatus === 'verified' || normalizedStatus === 'approved';
+  };
+
   const isImage = document?.mime_type?.startsWith('image/');
   const isPDF = document?.mime_type === 'application/pdf';
 
+  // Full Screen Image Viewer Modal
+  const FullScreenImageViewer = () => (
+    <Modal
+      visible={fullScreenVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => {
+        resetZoom();
+        setFullScreenVisible(false);
+      }}
+      statusBarTranslucent={true}
+    >
+      <StatusBar hidden={true} />
+      <GestureHandlerRootView style={styles.fullScreenOverlay}>
+        <TouchableOpacity 
+          style={styles.fullScreenCloseButton}
+          onPress={() => {
+            resetZoom();
+            setFullScreenVisible(false);
+          }}
+        >
+          <Text style={styles.fullScreenCloseText}>Close</Text>
+        </TouchableOpacity>
+        
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={[styles.fullScreenImageContainer, animatedImageStyle]}>
+            <Image
+              source={{ uri: document?.document_data }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        </GestureDetector>
+        
+        <View style={styles.fullScreenFooter}>
+          <Text style={styles.fullScreenFileName} numberOfLines={1}>
+            {document?.file_name || document?.document_name || 'Document'}
+          </Text>
+          <Text style={styles.fullScreenHint}>Pinch to zoom • Double tap to toggle zoom • Drag to pan</Text>
+        </View>
+      </GestureHandlerRootView>
+    </Modal>
+  );
+
   return (
+    <>
+      {/* Full Screen Image Viewer */}
+      <FullScreenImageViewer />
     <Modal
       visible={visible}
       transparent={true}
@@ -117,19 +264,28 @@ const DocumentPreviewModal = ({
               contentContainerStyle={styles.contentContainer}
               showsVerticalScrollIndicator={true}
             >
-              {/* Document Preview */}
-              <View style={[styles.previewContainer, { backgroundColor: isDark ? theme.colors.card : '#f1f5f9' }]}>
+              {/* Document Preview - Tappable for full screen */}
+              <TouchableOpacity 
+                style={[styles.previewContainer, { backgroundColor: isDark ? theme.colors.card : '#f1f5f9' }]}
+                onPress={() => isImage && document?.document_data && setFullScreenVisible(true)}
+                activeOpacity={isImage && document?.document_data ? 0.8 : 1}
+              >
                 {isImage && document?.document_data ? (
-                  <Image
-                    source={{ uri: document.document_data }}
-                    style={[
-                      styles.documentImage,
-                      { transform: [{ scale }] },
-                    ]}
-                    onLoadStart={() => setImageLoading(true)}
-                    onLoadEnd={() => setImageLoading(false)}
-                    resizeMode="contain"
-                  />
+                  <>
+                    <Image
+                      source={{ uri: document.document_data }}
+                      style={[
+                        styles.documentImage,
+                        { transform: [{ scale }] },
+                      ]}
+                      onLoadStart={() => setImageLoading(true)}
+                      onLoadEnd={() => setImageLoading(false)}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.tapToExpandHint}>
+                      <Text style={styles.tapToExpandText}>Tap to view full screen</Text>
+                    </View>
+                  </>
                 ) : isPDF ? (
                   <View style={styles.pdfPlaceholder}>
                     <Text style={[styles.pdfIcon, { color: theme.colors.textSecondary }]}>📄</Text>
@@ -153,7 +309,7 @@ const DocumentPreviewModal = ({
                     <ActivityIndicator size="large" color={theme.colors.primary} />
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
 
               {/* Document Details */}
               <View style={[styles.detailsContainer, { backgroundColor: theme.colors.card }]}>
@@ -304,8 +460,9 @@ const DocumentPreviewModal = ({
                 <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
               
-              {/* Only show Replace button if document is not verified */}
-              {(document?.verification_status !== 'verified' && document?.status !== 'verified') && (
+              {/* Only show Replace button if document is not verified/approved */}
+              {!isDocumentApproved(document?.verification_status) && 
+               !isDocumentApproved(document?.status) && (
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: theme.colors.primary }]}
                   onPress={handleReplace}
@@ -325,6 +482,7 @@ const DocumentPreviewModal = ({
         </View>
       </View>
     </Modal>
+    </>
   );
 };
 
@@ -545,6 +703,74 @@ const styles = StyleSheet.create({
   closeActionText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Tap to expand hint styles
+  tapToExpandHint: {
+    position: 'absolute',
+    bottom: 8,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  tapToExpandText: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    color: '#ffffff',
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  // Full Screen Image Viewer Styles
+  fullScreenOverlay: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  fullScreenCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  fullScreenCloseText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  fullScreenImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: width,
+    height: height,
+  },
+  fullScreenFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  fullScreenFileName: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  fullScreenHint: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
 
