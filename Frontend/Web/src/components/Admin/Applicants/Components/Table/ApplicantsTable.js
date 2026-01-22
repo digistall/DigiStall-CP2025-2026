@@ -362,17 +362,75 @@ export default {
     },
 
     // Check if application status is processed (not pending)
-    isProcessedStatus(status) {
+    // Also checks applicant.status field and credential/stallholder existence
+    isProcessedStatus(status, applicant = null) {
       const processedStatuses = ['Approved', 'Rejected', 'Under Review', 'Cancelled']
-      return processedStatuses.includes(status)
+      
+      // Check application_status first
+      if (processedStatuses.includes(status)) {
+        return true
+      }
+      
+      // Also check if applicant object has indicators of being processed
+      if (applicant) {
+        // Check applicant.status field (from applicant table)
+        if (applicant.status && ['approved', 'Approved', 'rejected', 'Rejected'].includes(applicant.status)) {
+          return true
+        }
+        
+        // Check if applicant has credentials (meaning they were accepted)
+        if (applicant.has_credentials || applicant.applicant_username) {
+          return true
+        }
+        
+        // Check if applicant has a stallholder record
+        if (applicant.stallholder_id) {
+          return true
+        }
+        
+        // Check approved_at or declined_at dates
+        if (applicant.approved_at || applicant.declined_at) {
+          return true
+        }
+      }
+      
+      return false
+    },
+
+    // Get the effective status for display (considering multiple status sources)
+    getEffectiveStatus(applicant) {
+      // Priority: application_status > applicant.status > derived status
+      if (applicant.application_status && applicant.application_status !== 'Pending') {
+        return applicant.application_status
+      }
+      
+      if (applicant.status) {
+        // Normalize status to proper case
+        const statusLower = applicant.status.toLowerCase()
+        if (statusLower === 'approved') return 'Approved'
+        if (statusLower === 'rejected') return 'Rejected'
+      }
+      
+      // Check for approved indicators
+      if (applicant.has_credentials || applicant.applicant_username || applicant.stallholder_id || applicant.approved_at) {
+        return 'Approved'
+      }
+      
+      // Check for declined indicators  
+      if (applicant.declined_at) {
+        return 'Rejected'
+      }
+      
+      return applicant.application_status || 'Pending'
     },
 
     // Handle status badge click for re-check or approve
     handleStatusClick(applicant) {
-      if (applicant.application_status === 'Rejected') {
+      const effectiveStatus = this.getEffectiveStatus(applicant)
+      if (effectiveStatus === 'Rejected') {
         // Re-check functionality for rejected applicants
         this.$emit('recheck', applicant)
-      } else if (applicant.application_status === 'Under Review') {
+      } else if (effectiveStatus === 'Under Review') {
         // Approve functionality for under review applicants
         this.$emit('accept', applicant)
       }

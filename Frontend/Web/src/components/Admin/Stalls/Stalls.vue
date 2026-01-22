@@ -110,6 +110,15 @@
         @winner-selected="handleRaffleWinnerSelected"
         @show-message="handleShowMessage"
       />
+
+      <!-- Auction Participants Modal -->
+      <AuctionParticipantsModal
+        :show="showAuctionParticipantsModal"
+        :stall="selectedAuctionStall"
+        @close="closeAuctionParticipantsModal"
+        @winner-selected="handleAuctionWinnerSelected"
+        @show-message="handleShowMessage"
+      />
     </v-main>
 
     <!-- Warning Container Dialog -->

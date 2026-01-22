@@ -41,6 +41,7 @@ import {
   placeBid,
   getActiveAuctions,
   getAuctionDetails,
+  getAuctionParticipantsByStall,
   extendAuctionTimer,
   cancelAuction,
   selectAuctionWinner,
@@ -153,6 +154,7 @@ router.post('/raffles/auto-select-winners', viewOnlyForOwners, autoSelectWinnerF
 
 // ===== AUCTION MANAGEMENT ROUTES =====
 router.get('/auctions/active', getActiveAuctions)                   // GET /api/stalls/auctions/active - Get all active auctions
+router.get('/auctions/stall/:stallId/participants', getAuctionParticipantsByStall)  // GET /api/stalls/auctions/stall/:stallId/participants - Get participants who joined auction
 router.get('/auctions/:auctionId', getAuctionDetails)               // GET /api/stalls/auctions/:auctionId - Get auction details
 router.post('/auctions/:stallId/create', viewOnlyForOwners, createAuction)             // POST /api/stalls/auctions/:stallId/create - Create auction for stall
 router.post('/auctions/:stallId/bid', viewOnlyForOwners, placeBid)                     // POST /api/stalls/auctions/:stallId/bid - Place bid (triggers timer)
