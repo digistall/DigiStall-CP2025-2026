@@ -120,9 +120,10 @@ const StallholdersScreen = ({ onSelectStallholder }) => {
 
   const filteredStallholders = stallholders.filter((item) => {
     const matchesSearch = 
-      item.stallholder_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.stall_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.business_type.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (item.stall_number?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (item.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (item.contact_number?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     
     const matchesFilter = 
       selectedFilter === "all" ||
@@ -156,16 +157,16 @@ const StallholdersScreen = ({ onSelectStallholder }) => {
           <View style={styles.avatarContainer}>
             <View style={[styles.avatar, { backgroundColor: '#f59e0b' }]}>
               <Text style={styles.avatarText}>
-                {item.stallholder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                {(item.full_name || 'N/A').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
               </Text>
             </View>
           </View>
           <View style={styles.headerInfo}>
             <Text style={[styles.stallholderName, { color: theme.colors.text }]}>
-              {item.stallholder_name}
+              {item.full_name || 'Unknown Stallholder'}
             </Text>
             <Text style={[styles.businessType, { color: theme.colors.textSecondary }]}>
-              {item.business_type}
+              {item.email || 'No email'}
             </Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: complianceColors.bg }]}>
@@ -181,19 +182,19 @@ const StallholdersScreen = ({ onSelectStallholder }) => {
           <View style={styles.detailRow}>
             <Ionicons name="business-outline" size={16} color={theme.colors.textSecondary} />
             <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-              Stall: {item.stall_no}
+              Stall: {item.stall_number || 'N/A'}
             </Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="location-outline" size={16} color={theme.colors.textSecondary} />
             <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-              {item.stall_location}
+              {item.branch_name || 'Unknown Branch'}
             </Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="call-outline" size={16} color={theme.colors.textSecondary} />
             <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-              {item.contact_number}
+              {item.contact_number || 'No contact'}
             </Text>
           </View>
         </View>
