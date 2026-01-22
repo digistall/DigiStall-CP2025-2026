@@ -385,6 +385,7 @@ export const updateMobileApplication = async (req, res) => {
 
 // ===== JOIN RAFFLE =====
 // Simple endpoint to join a raffle - only inserts into raffle_participants table
+// Uses stallholder_id if user is a stallholder, otherwise uses applicant_id
 export const joinRaffle = async (req, res) => {
   let connection;
   
@@ -459,19 +460,55 @@ export const joinRaffle = async (req, res) => {
       });
     }
 
+    // Check if user is a stallholder (has been approved and owns stalls)
+    console.log('🔍 Checking if user is a stallholder...');
+    const [stallholderRows] = await connection.execute(
+      `SELECT stallholder_id, full_name, stall_id
+       FROM stallholder 
+       WHERE (mobile_user_id = ? OR applicant_id = ?) AND status = 'Active'
+       ORDER BY stallholder_id LIMIT 1`,
+      [applicantId, applicantId]
+    );
+    
+    const isStallholder = stallholderRows && stallholderRows.length > 0;
+    const stallholderId = isStallholder ? stallholderRows[0].stallholder_id : null;
+    
+    console.log('📊 Is stallholder:', isStallholder, stallholderId ? `(ID: ${stallholderId})` : '');
+
+    // Check 2-stall limit per branch if user is a stallholder
+    if (isStallholder) {
+      const [stallCountRows] = await connection.execute(
+        `SELECT COUNT(*) as count FROM stallholder sh
+         JOIN stall s ON sh.stall_id = s.stall_id
+         LEFT JOIN section sec ON s.section_id = sec.section_id
+         LEFT JOIN floor f ON sec.floor_id = f.floor_id
+         WHERE (sh.mobile_user_id = ? OR sh.applicant_id = ?)
+         AND f.branch_id = ? AND sh.status = 'Active'`,
+        [applicantId, applicantId, stall.branch_id]
+      );
+      
+      const stallsOwned = stallCountRows[0]?.count || 0;
+      if (stallsOwned >= 2) {
+        return res.status(400).json({
+          success: false,
+          message: `You already own ${stallsOwned} stalls in ${stall.branch_name}. Maximum 2 stalls per branch allowed.`
+        });
+      }
+    }
+
     console.log('📊 Raffle Stall:', {
       stallId: stall.stall_id,
       stallNumber: stall.stall_number,
       branchName: stall.branch_name
     });
 
-    // Check if user already joined this raffle
+    // Check if user already joined this raffle (by applicant_id or stallholder_id)
     console.log('🔍 Checking if user already joined raffle...');
     const [existingParticipant] = await connection.execute(
       `SELECT participant_id FROM raffle_participants rp
        JOIN raffle r ON rp.raffle_id = r.raffle_id
-       WHERE rp.applicant_id = ? AND r.stall_id = ?`,
-      [applicantId, stallId]
+       WHERE r.stall_id = ? AND (rp.applicant_id = ? OR rp.stallholder_id = ?)`,
+      [stallId, applicantId, stallholderId]
     );
     
     console.log('🔍 Existing participant check result:', existingParticipant?.length || 0, 'records found');
@@ -537,19 +574,19 @@ export const joinRaffle = async (req, res) => {
     }
 
     // Insert into raffle_participants table
-    // Note: application_id is NULL for pre-registration (joining raffle only, no full application yet)
-    // The application will be created when the winner is selected by the branch manager
+    // Uses stallholder_id if user is a stallholder, otherwise uses applicant_id
     console.log('📝 Inserting participant into raffle_participants...');
     console.log('   - raffleId:', raffleId);
     console.log('   - applicantId:', applicantId);
+    console.log('   - stallholderId:', stallholderId);
     
     try {
-      // Add participant to raffle_participants table (using correct columns: raffle_id, applicant_id, registration_date, status)
+      // Add participant to raffle_participants table with stallholder_id if available
       const [participantResult] = await connection.execute(
         `INSERT INTO raffle_participants 
-         (raffle_id, applicant_id, registration_date, status)
-         VALUES (?, ?, NOW(), 'Registered')`,
-        [raffleId, applicantId]
+         (raffle_id, applicant_id, stallholder_id, registration_date, status)
+         VALUES (?, ?, ?, NOW(), 'Registered')`,
+        [raffleId, applicantId, stallholderId]
       );
 
       const participantId = participantResult.insertId;
@@ -624,6 +661,7 @@ export const joinRaffle = async (req, res) => {
 
 // ===== JOIN AUCTION =====
 // Endpoint to join an auction - inserts into auction_participants table
+// Now supports stallholder_id for users who are already stallholders
 export const joinAuction = async (req, res) => {
   let connection;
   
@@ -658,6 +696,23 @@ export const joinAuction = async (req, res) => {
       });
     }
 
+    // Check if user is a stallholder (they may be applying for additional stalls)
+    const [stallholderRows] = await connection.execute(
+      `SELECT stallholder_id, full_name, stall_id
+       FROM stallholder 
+       WHERE (mobile_user_id = ? OR applicant_id = ?) AND status = 'Active'`,
+      [applicantId, applicantId]
+    );
+    
+    const isStallholder = stallholderRows && stallholderRows.length > 0;
+    const stallholderId = isStallholder ? stallholderRows[0].stallholder_id : null;
+    
+    console.log('📊 Stallholder check:', {
+      isStallholder,
+      stallholderId,
+      stallholderName: isStallholder ? stallholderRows[0].full_name : null
+    });
+
     console.log('✅ Validation passed, querying stall details...');
 
     // Get stall details to verify it's an auction stall
@@ -666,8 +721,8 @@ export const joinAuction = async (req, res) => {
         s.stall_id, s.stall_number, s.stall_location, s.rental_price,
         s.price_type, s.is_available, s.status, s.description,
         s.amenities, s.area_sqm, s.raffle_auction_status,
-        f.floor_level,
-        sec.section,
+        f.floor_name,
+        sec.section_name,
         b.branch_id, b.branch_name
       FROM stall s
       LEFT JOIN section sec ON s.section_id = sec.section_id
@@ -699,20 +754,55 @@ export const joinAuction = async (req, res) => {
       });
     }
 
+    // If user is a stallholder, check the 2-stall per branch limit
+    if (isStallholder) {
+      const [stallCountRows] = await connection.execute(
+        `SELECT COUNT(*) as stall_count 
+         FROM stallholder 
+         WHERE stallholder_id = ? AND status = 'Active'
+         AND stall_id IN (
+           SELECT stall_id FROM stall s
+           JOIN section sec ON s.section_id = sec.section_id
+           JOIN floor f ON sec.floor_id = f.floor_id
+           WHERE f.branch_id = ?
+         )`,
+        [stallholderId, stall.branch_id]
+      );
+      
+      const currentStallCount = stallCountRows[0]?.stall_count || 0;
+      console.log(`📊 Stallholder has ${currentStallCount} stalls in branch ${stall.branch_id}`);
+      
+      if (currentStallCount >= 2) {
+        console.error('❌ Stallholder already owns 2 stalls in this branch');
+        return res.status(400).json({
+          success: false,
+          message: 'You already own 2 stalls in this branch. Maximum limit reached.'
+        });
+      }
+    }
+
     console.log('📊 Auction Stall:', {
       stallId: stall.stall_id,
       stallNumber: stall.stall_number,
       branchName: stall.branch_name
     });
 
-    // Check if user already joined this auction
+    // Check if user already joined this auction (check both applicant_id and stallholder_id)
     console.log('🔍 Checking if user already joined auction...');
-    const [existingParticipant] = await connection.execute(
-      `SELECT participant_id FROM auction_participants ap
-       JOIN auction a ON ap.auction_id = a.auction_id
-       WHERE ap.applicant_id = ? AND a.stall_id = ?`,
-      [applicantId, stallId]
-    );
+    let existingParticipantQuery = `
+      SELECT participant_id FROM auction_participants ap
+      JOIN auction a ON ap.auction_id = a.auction_id
+      WHERE a.stall_id = ? AND (ap.applicant_id = ?`;
+    
+    const existingParams = [stallId, applicantId];
+    
+    if (stallholderId) {
+      existingParticipantQuery += ` OR ap.stallholder_id = ?`;
+      existingParams.push(stallholderId);
+    }
+    existingParticipantQuery += `)`;
+    
+    const [existingParticipant] = await connection.execute(existingParticipantQuery, existingParams);
     
     console.log('🔍 Existing participant check result:', existingParticipant?.length || 0, 'records found');
 
@@ -774,21 +864,22 @@ export const joinAuction = async (req, res) => {
       console.log('✅ Using existing auction - ID:', auctionId, 'Status:', auctionRows[0].status);
     }
 
-    // Insert into auction_participants table
+    // Insert into auction_participants table (includes stallholder_id if user is a stallholder)
     console.log('📝 Inserting participant into auction_participants...');
     console.log('   - auctionId:', auctionId);
     console.log('   - applicantId:', applicantId);
+    console.log('   - stallholderId:', stallholderId);
     
     try {
       const [participantResult] = await connection.execute(
         `INSERT INTO auction_participants 
-         (auction_id, applicant_id, registration_date, status)
-         VALUES (?, ?, NOW(), 'Registered')`,
-        [auctionId, applicantId]
+         (auction_id, applicant_id, stallholder_id, registration_date, status)
+         VALUES (?, ?, ?, NOW(), 'Registered')`,
+        [auctionId, applicantId, stallholderId]
       );
 
       const participantId = participantResult.insertId;
-      console.log('✅ Auction participant added:', { participantId, auctionId, applicantId });
+      console.log('✅ Auction participant added:', { participantId, auctionId, applicantId, stallholderId });
 
       // Update auction status to Open if scheduled
       console.log('📝 Updating auction status...');

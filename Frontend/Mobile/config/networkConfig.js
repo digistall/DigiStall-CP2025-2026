@@ -41,6 +41,7 @@ export const API_CONFIG = {
     STAFF_LOGOUT: '/api/mobile/auth/staff-logout',
     STAFF_HEARTBEAT: '/api/mobile/auth/staff-heartbeat',
     STAFF_AUTO_LOGOUT: '/api/mobile/auth/staff-auto-logout',
+    CHANGE_PASSWORD: '/api/mobile/auth/change-password',
     
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
@@ -54,6 +55,7 @@ export const API_CONFIG = {
     // Application endpoints
     SUBMIT_APPLICATION: '/api/mobile/applications/submit',
     JOIN_RAFFLE: '/api/mobile/applications/join-raffle',
+    JOIN_AUCTION: '/api/mobile/applications/join-auction',
     GET_MY_APPLICATIONS: '/api/mobile/applications/my',
     GET_APPLICATION_STATUS: '/api/mobile/applications',
     UPDATE_APPLICATION: '/api/mobile/applications',

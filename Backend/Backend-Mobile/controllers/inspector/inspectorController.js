@@ -1,4 +1,5 @@
 import { createConnection } from '../../config/database.js';
+import { decryptAES256GCM } from '../../services/mysqlDecryptionService.js';
 
 /**
  * Get stallholders by inspector's branch
@@ -10,6 +11,12 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
   
   try {
     const staffData = req.user; // From auth middleware
+    
+    // Debug logging
+    console.log('🔍 DEBUG req.user:', JSON.stringify(staffData, null, 2));
+    console.log('🔍 DEBUG staffData.branchId:', staffData?.branchId);
+    console.log('🔍 DEBUG staffData.branch_id:', staffData?.branch_id);
+    
     const branchId = staffData.branchId || staffData.branch_id;
     
     console.log('📋 Inspector fetching stallholders for branch:', branchId);
@@ -31,13 +38,35 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
     
     const stallholders = results[0]; // First result set from stored procedure
     
-    console.log(`✅ Found ${stallholders.length} stallholders for branch ${branchId}`);
+    // Decrypt sensitive fields
+    const decryptedStallholders = stallholders.map(sh => {
+      try {
+        return {
+          ...sh,
+          full_name: sh.full_name ? decryptAES256GCM(sh.full_name) : null,
+          email: sh.email ? decryptAES256GCM(sh.email) : null,
+          contact_number: sh.contact_number ? decryptAES256GCM(sh.contact_number) : null,
+          address: sh.address ? decryptAES256GCM(sh.address) : null,
+        };
+      } catch (decryptError) {
+        console.error('⚠️  Decryption error for stallholder', sh.stallholder_id, ':', decryptError.message);
+        return {
+          ...sh,
+          full_name: 'Decryption Error',
+          email: null,
+          contact_number: null,
+          address: null,
+        };
+      }
+    });
+    
+    console.log(`✅ Found ${decryptedStallholders.length} stallholders for branch ${branchId}`);
     
     return res.status(200).json({
       success: true,
       message: 'Stallholders retrieved successfully',
-      data: stallholders,
-      count: stallholders.length
+      data: decryptedStallholders,
+      count: decryptedStallholders.length
     });
     
   } catch (error) {
