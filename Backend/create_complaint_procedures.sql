@@ -15,9 +15,9 @@ BEGIN
   CREATE TABLE IF NOT EXISTS complaint (
     complaint_id INT AUTO_INCREMENT PRIMARY KEY,
     complaint_type VARCHAR(100) NOT NULL,
-    sender_name VARCHAR(255),
-    sender_contact VARCHAR(50),
-    sender_email VARCHAR(255),
+    sender_name VARCHAR(500),
+    sender_contact VARCHAR(500),
+    sender_email VARCHAR(500),
     stallholder_id INT,
     stall_id INT,
     branch_id INT,
@@ -84,22 +84,28 @@ BEGIN
 END$$
 
 -- =============================================
--- Insert new complaint
+-- Insert new complaint (LEGACY - DO NOT USE)
 -- =============================================
 DROP PROCEDURE IF EXISTS sp_insertComplaint$$
 CREATE PROCEDURE sp_insertComplaint(
   IN p_complaint_type VARCHAR(100),
-  IN p_sender_name VARCHAR(255),
-  IN p_sender_contact VARCHAR(50),
-  IN p_sender_email VARCHAR(255),
+  IN p_sender_name VARCHAR(500),
+  IN p_sender_contact VARCHAR(500),
+  IN p_sender_email VARCHAR(500),
   IN p_stallholder_id INT,
   IN p_stall_id INT,
   IN p_branch_id INT,
   IN p_subject VARCHAR(255),
   IN p_description TEXT,
-  IN p_evidence LONGBLOB
+  IN p_evidence TEXT
 )
 BEGIN
+  DECLARE v_evidence_blob LONGBLOB DEFAULT NULL;
+  
+  IF p_evidence IS NOT NULL AND p_evidence != '' THEN
+    SET v_evidence_blob = FROM_BASE64(p_evidence);
+  END IF;
+  
   INSERT INTO complaint (
     complaint_type,
     sender_name,
@@ -123,7 +129,7 @@ BEGIN
     p_branch_id,
     p_subject,
     p_description,
-    p_evidence,
+    v_evidence_blob,
     'pending',
     NOW()
   );
@@ -132,45 +138,39 @@ BEGIN
 END$$
 
 -- =============================================
--- Get complaints by stallholder
+-- Submit new complaint (SIMPLIFIED - USE THIS)
 -- =============================================
-DROP PROCEDURE IF EXISTS sp_getComplaintsByStallholder$$
-CREATE PROCEDURE sp_getComplaintsByStallholder(
-  IN p_stallholder_id INT
-)
-BEGIN
-  SELECT 
-    complaint_id,
-    complaint_type,
-    subject,
-    description,
-    status,
-    resolution_notes,
-    created_at,
-    updated_at,
-    resolved_at
-  FROM complaint 
-  WHERE stallholder_id = p_stallholder_id
-  ORDER BY created_at DESC;
-END$$
-
--- =============================================
--- Insert new complaint
--- =============================================
-DROP PROCEDURE IF EXISTS sp_insertComplaint$$
-CREATE PROCEDURE sp_insertComplaint(
+DROP PROCEDURE IF EXISTS sp_submitComplaint$$
+CREATE PROCEDURE sp_submitComplaint(
   IN p_complaint_type VARCHAR(100),
-  IN p_sender_name VARCHAR(255),
-  IN p_sender_contact VARCHAR(50),
-  IN p_sender_email VARCHAR(255),
   IN p_stallholder_id INT,
   IN p_stall_id INT,
   IN p_branch_id INT,
   IN p_subject VARCHAR(255),
   IN p_description TEXT,
-  IN p_evidence LONGBLOB
+  IN p_evidence_text TEXT
 )
 BEGIN
+  DECLARE v_sender_name VARCHAR(500);
+  DECLARE v_sender_contact VARCHAR(500);
+  DECLARE v_sender_email VARCHAR(500);
+  
+  -- Fetch sender details from stallholder table
+  SELECT full_name, contact_number, email
+  INTO v_sender_name, v_sender_contact, v_sender_email
+  FROM stallholder
+  WHERE stallholder_id = p_stallholder_id
+  LIMIT 1;
+  
+  -- If not found in stallholder, try applicant table
+  IF v_sender_name IS NULL THEN
+    SELECT full_name, contact_number, email
+    INTO v_sender_name, v_sender_contact, v_sender_email
+    FROM applicant
+    WHERE applicant_id = p_stallholder_id
+    LIMIT 1;
+  END IF;
+  
   INSERT INTO complaint (
     complaint_type,
     sender_name,
@@ -186,15 +186,15 @@ BEGIN
     created_at
   ) VALUES (
     p_complaint_type,
-    p_sender_name,
-    p_sender_contact,
-    p_sender_email,
+    v_sender_name,
+    v_sender_contact,
+    v_sender_email,
     p_stallholder_id,
     p_stall_id,
     p_branch_id,
     p_subject,
     p_description,
-    p_evidence,
+    NULL,
     'pending',
     NOW()
   );
