@@ -52,13 +52,7 @@ export default {
       console.log('Delete complaints:', complaints)
       if (confirm(`Are you sure you want to delete complaint record ${complaints.id}?`)) {
         try {
-          const token = sessionStorage.getItem('authToken')
-
-          await axios.delete(`${API_BASE_URL}/complaints/${complaints.complaint_id}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
+          await apiClient.delete(`/complaints/${complaints.complaint_id}`)
 
           console.log('Complaint record deleted successfully!')
           await this.loadComplaintsData() // Reload data
