@@ -42,12 +42,13 @@
               <span v-else class="no-payment">—</span>
             </td>
             <td>
-              <span
-                class="compliance-status-badge"
-                :class="getStatusClass(compliance.status || 'pending')"
+              <v-chip
+                :color="getStatusColor(compliance.status || 'pending')"
+                variant="flat"
+                size="small"
               >
                 {{ (compliance.status || 'PENDING').toUpperCase() }}
-              </span>
+              </v-chip>
             </td>
           </tr>
         </tbody>
