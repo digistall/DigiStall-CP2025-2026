@@ -235,18 +235,14 @@ const ComplaintScreen = () => {
       // Get stallholder data from fullUserData
       const stallholderData = fullUserData?.stallholder || fullUserData?.user || userData;
       
+      // Only send fields that the backend expects
       const complaintData = {
         complaint_type: selectedComplaintType.type,
-        sender_name: stallholderData?.stallholder_name || stallholderData?.full_name || userData?.full_name || 'Unknown',
-        sender_contact: stallholderData?.phone || stallholderData?.contact_number || null,
-        sender_email: stallholderData?.email || null,
-        stallholder_id: stallholderData?.stallholder_id || fullUserData?.user?.applicant_id || null,
-        stall_id: stallholderData?.stall_id || null,
-        branch_id: stallholderData?.branch_id || null,
         subject: subject.trim(),
         description: description.trim(),
-        evidence: evidencePhoto ? 'Photo attached' : null,
-        priority: 'medium', // Default priority
+        stall_id: stallholderData?.stall_id || null,
+        branch_id: stallholderData?.branch_id || null,
+        evidence: evidencePhoto ? 'Photo attached' : null
       };
 
       console.log('📤 Submitting complaint:', complaintData);

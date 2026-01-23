@@ -9,8 +9,14 @@ export const submitComplaint = async (req, res) => {
   let connection;
   
   try {
+    console.log('🚀 === COMPLAINT SUBMISSION START ===');
+    console.log('📥 Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('👤 User from token:', JSON.stringify(req.user, null, 2));
+    
     const userData = req.user; // From auth middleware
     const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    
+    console.log('🆔 Resolved stallholder ID:', stallholderId);
     
     const {
       complaint_type,
@@ -30,92 +36,49 @@ export const submitComplaint = async (req, res) => {
     
     // Validation
     if (!complaint_type || !subject || !description) {
+      console.log('❌ Validation failed - missing fields');
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: complaint_type, subject, and description are required'
       });
     }
     
+    if (!stallholderId) {
+      console.log('❌ No stallholder ID found');
+      return res.status(400).json({
+        success: false,
+        message: 'Stallholder ID not found in token'
+      });
+    }
+    
+    console.log('📡 Creating database connection...');
     connection = await createConnection();
+    console.log('✅ Database connected');
     
     // Ensure complaint table exists using stored procedure
+    console.log('🔧 Ensuring complaint table exists...');
     await connection.execute('CALL sp_ensureComplaintTableExists()');
+    console.log('✅ Complaint table ready');
     
-    // Get stallholder details for sender info using stored procedure WITH DECRYPTION
-    let stallholder = null;
+    // Use provided branch_id and stall_id or null (procedure will fetch from stallholder table)
+    const finalBranchId = branch_id || null;
+    const finalStallId = stall_id || null;
     
-    // Try to get from stallholder table first (DECRYPTED VERSION)
-    const [stallholderResult] = await connection.execute(
-      'CALL sp_getStallholderDetailsForComplaintDecrypted(?)',
-      [stallholderId]
-    );
-    
-    if (stallholderResult[0] && stallholderResult[0].length > 0) {
-      stallholder = stallholderResult[0][0];
-      console.log('✅ Found stallholder details:', {
-        name: stallholder.sender_name,
-        branch_id: stallholder.branch_id,
-        stall_id: stallholder.stall_id,
-        stall_number: stallholder.stall_number
-      });
-    } else {
-      // Fallback to applicant table using stored procedure (DECRYPTED VERSION)
-      const [applicantResult] = await connection.execute(
-        'CALL sp_getApplicantDetailsForComplaintDecrypted(?)',
-        [stallholderId]
-      );
-      if (applicantResult[0] && applicantResult[0].length > 0) {
-        stallholder = applicantResult[0][0];
-        console.log('✅ Found applicant details (fallback):', {
-          name: stallholder.sender_name
-        });
-      }
-    }
-    
-    if (!stallholder) {
-      console.error('❌ Stallholder not found for ID:', stallholderId);
-      return res.status(404).json({
-        success: false,
-        message: 'Stallholder not found'
-      });
-    }
-    
-    console.log('📊 Stallholder data retrieved:', {
-      source: stallholder.source,
-      name: stallholder.sender_name,
-      branch_id: stallholder.branch_id,
-      stall_id: stallholder.stall_id
-    });
-    
-    // Use branch_id and stall_id from stallholder if not provided
-    const finalBranchId = branch_id || stallholder.branch_id || null;
-    const finalStallId = stall_id || stallholder.stall_id || null;
-    
-    console.log('📍 Final IDs for complaint:', {
-      branch_id: finalBranchId,
-      stall_id: finalStallId
-    });
-    
-    // Insert complaint using stored procedure
-    console.log('💾 Inserting complaint with params:', {
+    console.log('💾 Calling sp_submitComplaint with params:', {
       complaint_type,
-      sender_name: stallholder.sender_name,
-      sender_contact: stallholder.sender_contact,
-      sender_email: stallholder.sender_email,
       stallholder_id: stallholderId,
       stall_id: finalStallId,
       branch_id: finalBranchId,
       subject,
-      description: description.substring(0, 50) + '...'
+      description: description.substring(0, 50) + '...',
+      evidence: evidence ? 'provided' : 'null'
     });
     
+    // Submit complaint using stored procedure (it fetches stallholder details automatically)
     const [insertResult] = await connection.execute(
-      'CALL sp_insertComplaint(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'CALL sp_submitComplaint(?, ?, ?, ?, ?, ?, ?)',
       [
         complaint_type,
-        stallholder.sender_name,
-        stallholder.sender_contact,
-        stallholder.sender_email,
         stallholderId,
         finalStallId,
         finalBranchId,
@@ -125,6 +88,8 @@ export const submitComplaint = async (req, res) => {
       ]
     );
     
+    console.log('✅ Procedure executed, result:', JSON.stringify(insertResult, null, 2));
+    
     const result = insertResult[0]?.[0] || {};
     
     console.log('✅ Complaint submitted successfully, ID:', result.complaint_id);
@@ -133,15 +98,16 @@ export const submitComplaint = async (req, res) => {
       success: true,
       message: 'Complaint submitted successfully',
       data: {
-        complaint_id: result.complaint_id,
-        stall_number: stallholder.stall_number || null
+        complaint_id: result.complaint_id
       }
     });
     
   } catch (error) {
-    console.error('❌ Error submitting complaint:', error);
-    console.error('Error details:', {
-      message: error.message,
+    console.error('❌ ===  ERROR SUBMITTING COMPLAINT ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('SQL details:', {
       code: error.code,
       errno: error.errno,
       sqlMessage: error.sqlMessage,

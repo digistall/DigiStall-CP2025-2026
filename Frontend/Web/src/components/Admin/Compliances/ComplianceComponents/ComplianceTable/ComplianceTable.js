@@ -69,14 +69,16 @@ const ComplianceTable = {
         .toUpperCase()
     },
 
-    getStatusClass(status) {
-      const statusClasses = {
-        'complete': 'compliance-status-complete',
-        'pending': 'compliance-status-pending',
-        'incomplete': 'compliance-status-incomplete',
-        'in-progress': 'compliance-status-active'
+    getStatusColor(status) {
+      const statusLower = (status || '').toLowerCase();
+      const statusColors = {
+        'complete': 'blue',
+        'resolved': 'green',
+        'pending': 'orange',
+        'incomplete': 'red',
+        'in-progress': 'teal'
       }
-      return statusClasses[status] || 'compliance-status-default'
+      return statusColors[statusLower] || 'grey';
     },
 
     viewCompliance(compliance) {

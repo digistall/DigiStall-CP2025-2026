@@ -13,6 +13,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,6 +30,91 @@ const DocumentPreviewModal = ({
   const [imageLoading, setImageLoading] = useState(true);
   const [scale, setScale] = useState(1);
   const [fullScreenVisible, setFullScreenVisible] = useState(false);
+
+  // Pinch-to-zoom shared values
+  const zoomScale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+
+  // Reset zoom when modal closes
+  const resetZoom = () => {
+    zoomScale.value = withTiming(1);
+    savedScale.value = 1;
+    translateX.value = withTiming(0);
+    translateY.value = withTiming(0);
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  };
+
+  // Pinch gesture for zoom
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      zoomScale.value = Math.min(Math.max(savedScale.value * event.scale, 1), 5);
+    })
+    .onEnd(() => {
+      savedScale.value = zoomScale.value;
+      // Reset if zoom is too small
+      if (zoomScale.value < 1.1) {
+        zoomScale.value = withTiming(1);
+        savedScale.value = 1;
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      }
+    });
+
+  // Pan gesture for moving zoomed image
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (zoomScale.value > 1) {
+        translateX.value = savedTranslateX.value + event.translationX;
+        translateY.value = savedTranslateY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  // Double tap to zoom in/out
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onStart(() => {
+      if (zoomScale.value > 1) {
+        // Reset zoom
+        zoomScale.value = withTiming(1);
+        savedScale.value = 1;
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        // Zoom in to 2.5x
+        zoomScale.value = withTiming(2.5);
+        savedScale.value = 2.5;
+      }
+    });
+
+  // Combine gestures
+  const composedGesture = Gesture.Simultaneous(
+    pinchGesture,
+    Gesture.Simultaneous(panGesture, doubleTapGesture)
+  );
+
+  // Animated style for the image
+  const animatedImageStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: zoomScale.value },
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    };
+  });
 
   const handleDelete = () => {
     Alert.alert(
@@ -105,42 +192,41 @@ const DocumentPreviewModal = ({
       visible={fullScreenVisible}
       transparent={true}
       animationType="fade"
-      onRequestClose={() => setFullScreenVisible(false)}
+      onRequestClose={() => {
+        resetZoom();
+        setFullScreenVisible(false);
+      }}
       statusBarTranslucent={true}
     >
       <StatusBar hidden={true} />
-      <View style={styles.fullScreenOverlay}>
+      <GestureHandlerRootView style={styles.fullScreenOverlay}>
         <TouchableOpacity 
           style={styles.fullScreenCloseButton}
-          onPress={() => setFullScreenVisible(false)}
+          onPress={() => {
+            resetZoom();
+            setFullScreenVisible(false);
+          }}
         >
           <Text style={styles.fullScreenCloseText}>Close</Text>
         </TouchableOpacity>
         
-        <ScrollView
-          style={styles.fullScreenScrollView}
-          contentContainerStyle={styles.fullScreenScrollContent}
-          maximumZoomScale={4}
-          minimumZoomScale={1}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          centerContent={true}
-          bouncesZoom={true}
-        >
-          <Image
-            source={{ uri: document?.document_data }}
-            style={styles.fullScreenImage}
-            resizeMode="contain"
-          />
-        </ScrollView>
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={[styles.fullScreenImageContainer, animatedImageStyle]}>
+            <Image
+              source={{ uri: document?.document_data }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        </GestureDetector>
         
         <View style={styles.fullScreenFooter}>
           <Text style={styles.fullScreenFileName} numberOfLines={1}>
             {document?.file_name || document?.document_name || 'Document'}
           </Text>
-          <Text style={styles.fullScreenHint}>Pinch to zoom • Tap Close to exit</Text>
+          <Text style={styles.fullScreenHint}>Pinch to zoom • Double tap to toggle zoom • Drag to pan</Text>
         </View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 
@@ -655,10 +741,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  fullScreenScrollView: {
-    flex: 1,
-  },
-  fullScreenScrollContent: {
+  fullScreenImageContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
