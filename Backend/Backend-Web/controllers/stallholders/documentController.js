@@ -922,6 +922,7 @@ export const getStallholderDocumentSubmissions = async (req, res) => {
     connection = await createConnection();
     
     // Use direct query instead of stored procedure for compatibility
+    // Calculate file_size from BLOB data length since table doesn't have file_size column
     const [rows] = await connection.execute(`
       SELECT 
         sd.document_id,
@@ -934,6 +935,7 @@ export const getStallholderDocumentSubmissions = async (req, res) => {
         sd.verified_at,
         sd.remarks,
         sd.created_at,
+        LENGTH(sd.document_data) as file_size,
         sh.full_name as stallholder_name,
         sh.full_name as business_name
       FROM stallholder_documents sd
