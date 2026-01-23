@@ -80,11 +80,23 @@ export const getAllComplaints = async (req, res) => {
 
     console.log(`✅ Found ${complaints.length} complaints`);
 
+    // Decrypt sensitive fields in complaints
+    const decryptedComplaints = complaints.map(complaint => ({
+      ...complaint,
+      sender_name: decryptSafe(complaint.sender_name),
+      sender_contact: decryptSafe(complaint.sender_contact),
+      sender_email: decryptSafe(complaint.sender_email),
+      stallholder_name: decryptSafe(complaint.stallholder_name),
+      subject: decryptSafe(complaint.subject),
+      description: decryptSafe(complaint.description),
+      resolution_notes: decryptSafe(complaint.resolution_notes)
+    }));
+
     res.status(200).json({
       success: true,
       message: 'Complaints retrieved successfully',
-      data: complaints,
-      count: complaints.length
+      data: decryptedComplaints,
+      count: decryptedComplaints.length
     });
 
   } catch (error) {

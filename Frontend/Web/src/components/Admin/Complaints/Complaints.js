@@ -145,7 +145,7 @@ export default {
           this.complaintsList = response.data.data.map((item) => ({
             id: `CMPT-${String(item.complaint_id).padStart(4, '0')}`,
             complaint_id: item.complaint_id,
-            date: item.date_submitted ? new Date(item.date_submitted).toISOString().split('T')[0] : 'N/A',
+            date: item.date || item.created_at ? new Date(item.date || item.created_at).toISOString().split('T')[0] : 'N/A',
             type: item.complaint_type,
             sender: item.sender_name,
             sender_contact: item.sender_contact,
