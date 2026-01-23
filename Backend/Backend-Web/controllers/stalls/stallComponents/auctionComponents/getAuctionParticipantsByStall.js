@@ -1,4 +1,5 @@
 import { createConnection } from '../../../../config/database.js';
+import { decryptData } from '../../../../services/encryptionService.js';
 
 /**
  * Get all participants who joined an auction for a specific stall
@@ -29,13 +30,12 @@ export const getAuctionParticipantsByStall = async (req, res) => {
     const [stallInfo] = await connection.execute(
       `SELECT 
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
         s.stall_location,
         s.rental_price,
         s.price_type,
         s.raffle_auction_status,
-        s.raffle_auction_start_time,
-        s.raffle_auction_end_time,
+        s.raffle_auction_deadline,
         b.branch_name,
         b.branch_id,
         f.floor_name,
@@ -90,59 +90,133 @@ export const getAuctionParticipantsByStall = async (req, res) => {
       auctionData = auctionInfo[0];
       
       // Get all participants who joined this auction
-      // Join with stallholder first, then fallback to applicant
       const [participantsList] = await connection.execute(
         `SELECT 
           ap.participant_id,
           ap.applicant_id,
           ap.stallholder_id,
+          ap.bid_amount,
           ap.registration_date,
-          ap.status as participant_status,
-          ap.created_at as joined_at,
-          -- Get stallholder info if available
-          sh.stallholder_id as sh_id,
-          sh.stallholder_name as sh_name,
-          sh.contact_number as sh_contact,
-          sh.email as sh_email,
-          sh.address as sh_address,
-          sh.business_name as sh_business,
-          -- Get applicant info as fallback
-          a.applicant_id as app_id,
-          a.applicant_full_name as app_name,
-          a.applicant_contact_number as app_contact,
-          a.applicant_email as app_email,
-          a.applicant_address as app_address,
-          -- Get highest bid for this participant
-          (SELECT MAX(ab.bid_amount) FROM auction_bids ab 
-           WHERE ab.auction_id = ap.auction_id AND ab.bidder_id = ap.applicant_id) as highest_bid
+          ap.status as participant_status
         FROM auction_participants ap
-        LEFT JOIN stallholder sh ON ap.stallholder_id = sh.stallholder_id
-        LEFT JOIN applicant a ON ap.applicant_id = a.applicant_id
         WHERE ap.auction_id = ?
         ORDER BY ap.registration_date ASC`,
         [auctionData.auction_id]
       );
 
-      participants = participantsList.map((p, index) => ({
-        participantId: p.participant_id,
-        applicantId: p.applicant_id,
-        stallholderId: p.stallholder_id,
-        participantNumber: index + 1,
-        joinedAt: p.registration_date || p.joined_at,
-        status: p.participant_status,
-        highestBid: p.highest_bid || 0,
-        personalInfo: {
-          // Prefer stallholder info, fallback to applicant
-          fullName: p.sh_name || p.app_name || 'Unknown',
-          email: p.sh_email || p.app_email || 'N/A',
-          contactNumber: p.sh_contact || p.app_contact || 'N/A',
-          address: p.sh_address || p.app_address || 'N/A',
-          businessName: p.sh_business || 'N/A'
-        }
-      }));
+      // Fetch decrypted details for each participant
+      const participantsWithDetails = await Promise.all(
+        participantsList.map(async (p, index) => {
+          let personalInfo = {
+            fullName: 'Unknown',
+            email: 'N/A',
+            contactNumber: 'N/A',
+            address: 'N/A',
+            businessName: 'N/A'
+          };
+
+          try {
+            if (p.stallholder_id) {
+              // Fetch stallholder details
+              console.log(`Fetching stallholder details for ID: ${p.stallholder_id}`);
+              const [stallholderDetails] = await connection.execute(
+                `SELECT stallholder_id, full_name, email, contact_number, address
+                 FROM stallholder WHERE stallholder_id = ?`,
+                [p.stallholder_id]
+              );
+              console.log('Stallholder query result:', stallholderDetails);
+              if (stallholderDetails.length > 0) {
+                const sh = stallholderDetails[0];
+                // Decrypt stallholder data
+                personalInfo = {
+                  fullName: decryptData(sh.full_name) || 'Unknown',
+                  email: decryptData(sh.email) || 'N/A',
+                  contactNumber: decryptData(sh.contact_number) || 'N/A',
+                  address: decryptData(sh.address) || 'N/A',
+                  businessName: 'Stallholder'
+                };
+                console.log('Decrypted stallholder info:', personalInfo);
+              } else {
+                console.warn(`No stallholder found for ID: ${p.stallholder_id}`);
+              }
+            } else if (p.applicant_id) {
+              // Fetch applicant details using correct column names
+              console.log(`Fetching applicant details for ID: ${p.applicant_id}`);
+              const [applicantDetails] = await connection.execute(
+                `SELECT applicant_id, applicant_full_name, applicant_contact_number, applicant_address
+                 FROM applicant WHERE applicant_id = ?`,
+                [p.applicant_id]
+              );
+              console.log('Applicant query result:', applicantDetails);
+              
+              // Try to fetch email from stallholder table using applicant_id
+              let applicantEmail = 'N/A';
+              const [stallholderByApplicant] = await connection.execute(
+                `SELECT email, full_name FROM stallholder WHERE applicant_id = ? LIMIT 1`,
+                [p.applicant_id]
+              );
+              if (stallholderByApplicant.length > 0 && stallholderByApplicant[0].email) {
+                applicantEmail = decryptData(stallholderByApplicant[0].email) || 'N/A';
+                console.log('Found email from stallholder table by applicant_id:', applicantEmail);
+              }
+              
+              if (applicantDetails.length > 0) {
+                const app = applicantDetails[0];
+                const decryptedFullName = decryptData(app.applicant_full_name) || 'Unknown';
+                
+                // Fallback: If email not found by applicant_id, try to find by matching full_name
+                if (applicantEmail === 'N/A') {
+                  console.log('Email not found by applicant_id, trying to match by name...');
+                  const [stallholderByName] = await connection.execute(
+                    `SELECT email, full_name FROM stallholder WHERE status = 'active' LIMIT 100`
+                  );
+                  for (const sh of stallholderByName) {
+                    const shName = decryptData(sh.full_name);
+                    if (shName && shName.toLowerCase() === decryptedFullName.toLowerCase()) {
+                      applicantEmail = decryptData(sh.email) || 'N/A';
+                      console.log('Found email by matching name:', applicantEmail);
+                      break;
+                    }
+                  }
+                }
+                
+                // Decrypt applicant data using correct column names
+                personalInfo = {
+                  fullName: decryptedFullName,
+                  email: applicantEmail,
+                  contactNumber: decryptData(app.applicant_contact_number) || 'N/A',
+                  address: decryptData(app.applicant_address) || 'N/A',
+                  businessName: 'Applicant'
+                };
+                console.log('Decrypted applicant info:', personalInfo);
+              } else {
+                console.warn(`No applicant found for ID: ${p.applicant_id}`);
+              }
+            }
+          } catch (err) {
+            console.error(`❌ Error fetching details for participant ${p.participant_id}:`, err);
+            console.error('Error stack:', err.stack);
+          }
+
+          return {
+            participantId: p.participant_id,
+            applicantId: p.applicant_id,
+            stallholderId: p.stallholder_id,
+            participantNumber: index + 1,
+            joinedAt: p.registration_date,
+            status: p.participant_status,
+            bidAmount: p.bid_amount || 0,
+            highestBid: p.bid_amount || 0,
+            isWinner: p.participant_status === 'Winner',
+            personalInfo
+          };
+        })
+      );
+
+      participants = participantsWithDetails;
     }
 
-    console.log(`✅ Found ${participants.length} auction participants for stall ${stall.stall_no}`);
+    console.log(`✅ Found ${participants.length} auction participants for stall ${stall.stall_number}`);
 
     res.json({
       success: true,
@@ -151,15 +225,14 @@ export const getAuctionParticipantsByStall = async (req, res) => {
       count: participants.length,
       stallInfo: {
         stallId: stall.stall_id,
-        stallNumber: stall.stall_no,
+        stallNumber: stall.stall_number,
         location: stall.stall_location,
         rentalPrice: stall.rental_price,
         branchName: stall.branch_name,
         floorName: stall.floor_name,
         sectionName: stall.section_name,
         auctionStatus: stall.raffle_auction_status,
-        startTime: stall.raffle_auction_start_time,
-        endTime: stall.raffle_auction_end_time
+        deadline: stall.raffle_auction_deadline
       },
       auctionInfo: auctionData ? {
         auctionId: auctionData.auction_id,
