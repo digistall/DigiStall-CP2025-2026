@@ -12,7 +12,47 @@ class EmailService {
         this.baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
         this.fromEmail = process.env.FROM_EMAIL || 'noreply@nagastallmanagement.com';
         this.fromName = process.env.FROM_NAME || 'Naga Stall Management System';
-        this.mobileAppDownloadUrl = process.env.MOBILE_APP_DOWNLOAD_URL || 'https://expo.dev/accounts/genosexe02/projects/digistall/builds';
+        this.mobileAppDownloadUrl = 'https://expo.dev/artifacts/eas/rBeXxdRciCCghHbgNisKim.apk';
+    }
+
+    /**
+     * Add mobile app download link to email content
+     */
+    addMobileAppLink(content, isHtml = false) {
+        if (isHtml) {
+            const mobileAppSection = `
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="color: #2c3e50; margin-top: 0;">📱 Download DigiStall Mobile App</h3>
+                    <p style="color: #555; margin: 10px 0;">Access your account on the go with our mobile application!</p>
+                    <a href="${this.mobileAppDownloadUrl}" 
+                       style="display: inline-block; background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 10px; font-weight: bold;">
+                        Download Android APK
+                    </a>
+                    <p style="color: #777; font-size: 12px; margin-top: 15px;">
+                        <strong>Note:</strong> You may need to enable "Install from unknown sources" in your Android device settings.
+                    </p>
+                </div>
+            `;
+            return content + mobileAppSection;
+        } else {
+            const mobileAppSection = `
+
+────────────────────────────────────────────────
+
+📱 DOWNLOAD DIGISTALL MOBILE APP
+
+Access your account on the go with our mobile application!
+
+Download Android APK:
+${this.mobileAppDownloadUrl}
+
+Note: You may need to enable "Install from unknown sources" in your Android device settings.
+
+────────────────────────────────────────────────
+`;
+            return content + mobileAppSection;
+        }
     }
 
     /**
@@ -111,8 +151,8 @@ class EmailService {
             };
 
             // Process template content
-            const htmlContent = this.replaceTemplateVariables(template.html_content, variables);
-            const textContent = this.replaceTemplateVariables(template.text_content, variables);
+            const htmlContent = this.addMobileAppLink(this.replaceTemplateVariables(template.html_content, variables), true);
+            const textContent = this.addMobileAppLink(this.replaceTemplateVariables(template.text_content, variables), false);
             const subject = this.replaceTemplateVariables(template.subject, variables);
 
             // Email options
@@ -162,8 +202,8 @@ class EmailService {
             };
 
             // Process template content
-            const htmlContent = this.replaceTemplateVariables(template.html_content, variables);
-            const textContent = this.replaceTemplateVariables(template.text_content, variables);
+            const htmlContent = this.addMobileAppLink(this.replaceTemplateVariables(template.html_content, variables), true);
+            const textContent = this.addMobileAppLink(this.replaceTemplateVariables(template.text_content, variables), false);
             const subject = this.replaceTemplateVariables(template.subject, variables);
 
             // Email options
@@ -198,25 +238,28 @@ class EmailService {
         try {
             const { email, subject, message, employeeName } = notificationData;
 
+            const textContent = `Hello ${employeeName},\n\n${message}\n\nBest regards,\nNaga Stall Management Team`;
+            const htmlContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;">
+                        <h2>Naga Stall Management</h2>
+                    </div>
+                    <div style="padding: 30px; background: #f9f9f9;">
+                        <p>Hello ${employeeName},</p>
+                        <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                            ${message.replace(/\n/g, '<br>')}
+                        </div>
+                        <p>Best regards,<br>Naga Stall Management Team</p>
+                    </div>
+                </div>
+            `;
+
             const mailOptions = {
                 from: `"${this.fromName}" <${this.fromEmail}>`,
                 to: email,
                 subject: `[Naga Stall Management] ${subject}`,
-                text: `Hello ${employeeName},\n\n${message}\n\nBest regards,\nNaga Stall Management Team`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;">
-                            <h2>Naga Stall Management</h2>
-                        </div>
-                        <div style="padding: 30px; background: #f9f9f9;">
-                            <p>Hello ${employeeName},</p>
-                            <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                                ${message.replace(/\n/g, '<br>')}
-                            </div>
-                            <p>Best regards,<br>Naga Stall Management Team</p>
-                        </div>
-                    </div>
-                `
+                text: this.addMobileAppLink(textContent, false),
+                html: this.addMobileAppLink(htmlContent, true)
             };
 
             const result = await this.transporter.sendMail(mailOptions);
@@ -342,8 +385,8 @@ class EmailService {
                 from: `"${this.fromName}" <${this.fromEmail}>`,
                 to: applicant_email,
                 subject: subject,
-                text: message,
-                html: htmlMessage
+                text: this.addMobileAppLink(message, false),
+                html: this.addMobileAppLink(htmlMessage, true)
             };
 
             const result = await this.transporter.sendMail(mailOptions);
@@ -406,8 +449,8 @@ class EmailService {
                 from: `"${this.fromName}" <${this.fromEmail}>`,
                 to: applicant_email,
                 subject: subject,
-                text: message,
-                html: htmlMessage
+                text: this.addMobileAppLink(message, false),
+                html: this.addMobileAppLink(htmlMessage, true)
             };
 
             const result = await this.transporter.sendMail(mailOptions);
@@ -667,11 +710,7 @@ Naga Stall Management Team`,
         try {
             const { email, firstName, lastName, username, password, branchName, managerId } = managerData;
 
-            const mailOptions = {
-                from: `"${this.fromName}" <${this.fromEmail}>`,
-                to: email,
-                subject: '[Naga Stall Management] Welcome - Branch Manager Access',
-                text: `
+            const textContent = `
 Hello ${firstName} ${lastName},
 
 Welcome to Naga Stall Management System!
@@ -690,8 +729,9 @@ For any assistance, please contact the System Administrator.
 
 Best regards,
 Naga Stall Management Team
-                `.trim(),
-                html: `
+                `.trim();
+
+            const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -741,7 +781,14 @@ Naga Stall Management Team
     </div>
 </body>
 </html>
-                `.trim()
+                `.trim();
+
+            const mailOptions = {
+                from: `"${this.fromName}" <${this.fromEmail}>`,
+                to: email,
+                subject: '[Naga Stall Management] Welcome - Branch Manager Access',
+                text: this.addMobileAppLink(textContent, false),
+                html: this.addMobileAppLink(htmlContent, true)
             };
 
             // Send email
