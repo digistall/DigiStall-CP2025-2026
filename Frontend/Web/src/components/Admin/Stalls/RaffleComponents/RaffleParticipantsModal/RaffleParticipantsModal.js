@@ -63,12 +63,20 @@ export default {
         
         const response = await raffleService.getRaffleParticipantsByStall(this.stall.id)
 
+        console.log('🔍 Full raffle response:', response)
+        console.log('🔍 Response data:', response.data)
+        console.log('🔍 Response stallInfo:', response.stallInfo)
+        console.log('🔍 Response raffleInfo:', response.raffleInfo)
+
         if (response.success) {
           this.participants = response.data || []
           this.stallInfo = response.stallInfo
           this.raffleInfo = response.raffleInfo
           
           console.log(`✅ Loaded ${this.participants.length} participants`)
+          if (this.participants.length > 0) {
+            console.log('📋 First participant:', this.participants[0])
+          }
         } else {
           throw new Error(response.message || 'Failed to fetch participants')
         }
@@ -100,6 +108,36 @@ export default {
 
       try {
         const response = await raffleService.selectWinner(this.raffleInfo.raffleId)
+
+        if (response.success) {
+          this.$emit('show-message', { text: 'Winner selected successfully!', type: 'success', operation: 'update', operationType: 'raffle' })
+          this.$emit('winner-selected', response.data)
+          // Refresh participants to show the winner
+          await this.fetchParticipants()
+        } else {
+          throw new Error(response.message || 'Failed to select winner')
+        }
+      } catch (error) {
+        console.error('❌ Error selecting winner:', error)
+        this.$emit('show-message', { text: error.message || 'Failed to select winner', type: 'error' })
+      } finally {
+        this.selectingWinner = false
+      }
+    },
+
+    /**
+     * Handle select winner for specific participant
+     */
+    async handleSelectWinnerForParticipant(participantId) {
+      if (!this.raffleInfo?.raffleId) {
+        this.$emit('show-message', { text: 'No raffle found for this stall', type: 'error' })
+        return
+      }
+
+      this.selectingWinner = true
+
+      try {
+        const response = await raffleService.selectWinnerByParticipantId(this.raffleInfo.raffleId, participantId)
 
         if (response.success) {
           this.$emit('show-message', { text: 'Winner selected successfully!', type: 'success', operation: 'update', operationType: 'raffle' })

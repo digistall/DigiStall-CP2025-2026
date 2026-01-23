@@ -143,6 +143,31 @@ class RaffleService {
   }
 
   /**
+   * Select specific participant as winner for a raffle
+   * @param {number|string} raffleId - ID of the raffle
+   * @param {number|string} participantId - ID of the participant to select as winner
+   * @returns {Promise} API response with winner selection result
+   */
+  async selectWinnerByParticipantId(raffleId, participantId) {
+    try {
+      console.log(`🎰 Selecting participant ${participantId} as winner for raffle ID: ${raffleId}`)
+      
+      const response = await this.apiClient.post(`/raffles/${raffleId}/select-winner/${participantId}`)
+      
+      console.log('✅ Winner selection response:', response.data)
+      
+      return {
+        success: true,
+        data: response.data.data || null,
+        message: response.data.message
+      }
+    } catch (error) {
+      console.error(`❌ Error selecting winner for raffle ID ${raffleId}:`, error)
+      return this.handleError(error)
+    }
+  }
+
+  /**
    * Handle API errors and format them consistently
    * @param {Error} error - The error object
    * @returns {Object} Formatted error object
