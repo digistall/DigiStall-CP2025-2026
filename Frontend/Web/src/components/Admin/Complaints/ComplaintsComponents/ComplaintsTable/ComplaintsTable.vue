@@ -9,7 +9,6 @@
             <th>Date</th>
             <th>Type</th>
             <th>Sender</th>
-            <th>Stallholder</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -26,14 +25,6 @@
             <td>{{ complaints.date }}</td>
             <td>{{ complaints.type }}</td>
             <td>{{ complaints.sender }}</td>
-            <td class="complaints-name-cell">
-              <div class="complaints-name-wrapper">
-                <div class="complaints-avatar">
-                  {{ getInitials(complaints.stallholder) }}
-                </div>
-                <span>{{ complaints.stallholder }}</span>
-              </div>
-            </td>
             <td>
               <span
                 class="complaints-status-badge"
