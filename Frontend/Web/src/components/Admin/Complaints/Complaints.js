@@ -52,13 +52,7 @@ export default {
       console.log('Delete complaints:', complaints)
       if (confirm(`Are you sure you want to delete complaint record ${complaints.id}?`)) {
         try {
-          const token = sessionStorage.getItem('authToken')
-
-          await axios.delete(`${API_BASE_URL}/complaints/${complaints.complaint_id}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
+          await apiClient.delete(`/complaints/${complaints.complaint_id}`)
 
           console.log('Complaint record deleted successfully!')
           await this.loadComplaintsData() // Reload data
@@ -145,7 +139,7 @@ export default {
           this.complaintsList = response.data.data.map((item) => ({
             id: `CMPT-${String(item.complaint_id).padStart(4, '0')}`,
             complaint_id: item.complaint_id,
-            date: item.date_submitted ? new Date(item.date_submitted).toISOString().split('T')[0] : 'N/A',
+            date: item.date || item.created_at ? new Date(item.date || item.created_at).toISOString().split('T')[0] : 'N/A',
             type: item.complaint_type,
             sender: item.sender_name,
             sender_contact: item.sender_contact,

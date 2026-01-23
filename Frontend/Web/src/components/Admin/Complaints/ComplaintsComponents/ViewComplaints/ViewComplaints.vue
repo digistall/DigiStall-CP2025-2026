@@ -75,34 +75,6 @@
           </div>
         </div>
 
-        <!-- Stallholder Section with Icon -->
-        <div class="person-section stallholder-section">
-          <div class="person-header">
-            <svg class="person-icon stallholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-            <span class="person-label">COMPLAINED STALLHOLDER</span>
-          </div>
-          <div class="person-card">
-            <div class="avatar stallholder-avatar">
-              {{ complaints.stallholder ? complaints.stallholder.split(' ').map(n => n[0]).join('').substring(0, 2) : "N/A" }}
-            </div>
-            <div class="person-details">
-              <span class="person-name">{{ complaints.stallholder || 'Not Specified' }}</span>
-              <div class="contact-info">
-                <div v-if="complaints.stall_no" class="contact-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="9" y1="3" x2="9" y2="21"></line>
-                  </svg>
-                  <span>Stall #{{ complaints.stall_no }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Subject -->
         <div class="info-section">
           <strong class="section-title">Subject</strong>
