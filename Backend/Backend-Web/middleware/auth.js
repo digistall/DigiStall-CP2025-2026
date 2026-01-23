@@ -5,7 +5,13 @@ const { verify } = jwt;
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+  // Support token from query param for SSE connections (EventSource doesn't support headers)
+  let token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+  
+  // Fallback to query parameter for SSE
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
 
   if (!token) {
     return res.status(401).json({

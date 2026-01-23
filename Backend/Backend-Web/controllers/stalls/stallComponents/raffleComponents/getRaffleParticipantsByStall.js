@@ -1,4 +1,5 @@
 import { createConnection } from '../../../../config/database.js';
+import { decryptData } from '../../../../services/encryptionService.js';
 
 /**
  * Get all participants who joined a raffle for a specific stall
@@ -29,13 +30,12 @@ export const getRaffleParticipantsByStall = async (req, res) => {
     const [stallInfo] = await connection.execute(
       `SELECT 
         s.stall_id,
-        s.stall_no,
+        s.stall_number,
         s.stall_location,
         s.rental_price,
         s.price_type,
         s.raffle_auction_status,
-        s.raffle_auction_start_time,
-        s.raffle_auction_end_time,
+        s.raffle_auction_deadline,
         b.branch_name,
         b.branch_id,
         f.floor_name,
@@ -69,11 +69,11 @@ export const getRaffleParticipantsByStall = async (req, res) => {
     const [raffleInfo] = await connection.execute(
       `SELECT 
         r.raffle_id,
-        r.raffle_status,
-        r.total_participants,
-        r.start_time,
-        r.end_time,
-        r.winner_applicant_id,
+        r.raffle_name,
+        r.status as raffle_status,
+        r.start_date,
+        r.end_date,
+        r.draw_date,
         r.created_at
       FROM raffle r
       WHERE r.stall_id = ?
@@ -90,67 +90,133 @@ export const getRaffleParticipantsByStall = async (req, res) => {
       raffleData = raffleInfo[0];
       
       // Get all participants who joined this raffle
-      // Now includes stallholder information if the participant is a stallholder
       const [participantsList] = await connection.execute(
         `SELECT 
           rp.participant_id,
           rp.applicant_id,
           rp.stallholder_id,
-          rp.application_id,
-          rp.participation_time,
-          rp.is_winner,
-          rp.created_at as joined_at,
-          a.applicant_full_name,
-          a.applicant_contact_number,
-          a.applicant_address,
-          a.applicant_email,
-          app.application_date,
-          app.business_name AS app_business_name,
-          app.business_type,
-          app.application_status,
-          sh.stallholder_id as sh_id,
-          sh.stallholder_name,
-          sh.business_name AS stallholder_business_name,
-          sh.stall_id as current_stall_id,
-          sh.contact_number as sh_contact_number,
-          sh.email as sh_email
+          rp.ticket_number,
+          rp.registration_date,
+          rp.status as participant_status
         FROM raffle_participants rp
-        LEFT JOIN applicant a ON rp.applicant_id = a.applicant_id
-        LEFT JOIN stall_application app ON rp.application_id = app.application_id
-        LEFT JOIN stallholder sh ON rp.stallholder_id = sh.stallholder_id
         WHERE rp.raffle_id = ?
-        ORDER BY rp.participation_time ASC`,
+        ORDER BY rp.registration_date ASC`,
         [raffleData.raffle_id]
       );
 
-      participants = participantsList.map((p, index) => ({
-        participantId: p.participant_id,
-        applicantId: p.applicant_id,
-        stallholderId: p.stallholder_id || p.sh_id,
-        applicationId: p.application_id,
-        participantNumber: index + 1,
-        isWinner: p.is_winner === 1,
-        isStallholder: !!(p.stallholder_id || p.sh_id),
-        joinedAt: p.participation_time || p.joined_at,
-        personalInfo: {
-          fullName: p.stallholder_name || p.applicant_full_name || 'Unknown',
-          email: p.sh_email || p.applicant_email || 'N/A',
-          contactNumber: p.sh_contact_number || p.applicant_contact_number || 'N/A',
-          address: p.applicant_address || 'N/A'
-        },
-        businessInfo: {
-          name: p.stallholder_business_name || p.app_business_name || 'N/A',
-          type: p.business_type || 'N/A',
-          currentStallId: p.current_stall_id || null
-        },
-        applicationInfo: {
-          applicationDate: p.application_date,
-          status: p.application_status || 'Participating'
-        }
-      }));
+      // Fetch decrypted details for each participant
+      const participantsWithDetails = await Promise.all(
+        participantsList.map(async (p, index) => {
+          let personalInfo = {
+            fullName: 'Unknown',
+            email: 'N/A',
+            contactNumber: 'N/A',
+            address: 'N/A',
+            businessName: 'N/A'
+          };
+
+          try {
+            if (p.stallholder_id) {
+              // Fetch stallholder details
+              console.log(`Fetching stallholder details for ID: ${p.stallholder_id}`);
+              const [stallholderDetails] = await connection.execute(
+                `SELECT stallholder_id, full_name, email, contact_number, address
+                 FROM stallholder WHERE stallholder_id = ?`,
+                [p.stallholder_id]
+              );
+              console.log('Stallholder query result:', stallholderDetails);
+              if (stallholderDetails.length > 0) {
+                const sh = stallholderDetails[0];
+                // Decrypt stallholder data
+                personalInfo = {
+                  fullName: decryptData(sh.full_name) || 'Unknown',
+                  email: decryptData(sh.email) || 'N/A',
+                  contactNumber: decryptData(sh.contact_number) || 'N/A',
+                  address: decryptData(sh.address) || 'N/A',
+                  businessName: 'Stallholder'
+                };
+                console.log('Decrypted stallholder info:', personalInfo);
+              } else {
+                console.warn(`No stallholder found for ID: ${p.stallholder_id}`);
+              }
+            } else if (p.applicant_id) {
+              // Fetch applicant details using correct column names
+              console.log(`Fetching applicant details for ID: ${p.applicant_id}`);
+              const [applicantDetails] = await connection.execute(
+                `SELECT applicant_id, applicant_full_name, applicant_contact_number, applicant_address
+                 FROM applicant WHERE applicant_id = ?`,
+                [p.applicant_id]
+              );
+              console.log('Applicant query result:', applicantDetails);
+              
+              // Try to fetch email from stallholder table using applicant_id
+              let applicantEmail = 'N/A';
+              const [stallholderByApplicant] = await connection.execute(
+                `SELECT email, full_name FROM stallholder WHERE applicant_id = ? LIMIT 1`,
+                [p.applicant_id]
+              );
+              if (stallholderByApplicant.length > 0 && stallholderByApplicant[0].email) {
+                applicantEmail = decryptData(stallholderByApplicant[0].email) || 'N/A';
+                console.log('Found email from stallholder table by applicant_id:', applicantEmail);
+              }
+              
+              if (applicantDetails.length > 0) {
+                const app = applicantDetails[0];
+                const decryptedFullName = decryptData(app.applicant_full_name) || 'Unknown';
+                
+                // Fallback: If email not found by applicant_id, try to find by matching full_name
+                if (applicantEmail === 'N/A') {
+                  console.log('Email not found by applicant_id, trying to match by name...');
+                  const [stallholderByName] = await connection.execute(
+                    `SELECT email, full_name FROM stallholder WHERE status = 'active' LIMIT 100`
+                  );
+                  for (const sh of stallholderByName) {
+                    const shName = decryptData(sh.full_name);
+                    if (shName && shName.toLowerCase() === decryptedFullName.toLowerCase()) {
+                      applicantEmail = decryptData(sh.email) || 'N/A';
+                      console.log('Found email by matching name:', applicantEmail);
+                      break;
+                    }
+                  }
+                }
+                
+                // Decrypt applicant data using correct column names
+                personalInfo = {
+                  fullName: decryptedFullName,
+                  email: applicantEmail,
+                  contactNumber: decryptData(app.applicant_contact_number) || 'N/A',
+                  address: decryptData(app.applicant_address) || 'N/A',
+                  businessName: 'Applicant'
+                };
+                console.log('Decrypted applicant info:', personalInfo);
+              } else {
+                console.warn(`No applicant found for ID: ${p.applicant_id}`);
+              }
+            }
+          } catch (err) {
+            console.error(`❌ Error fetching details for participant ${p.participant_id}:`, err);
+            console.error('Error stack:', err.stack);
+          }
+
+          return {
+            participantId: p.participant_id,
+            applicantId: p.applicant_id,
+            stallholderId: p.stallholder_id,
+            ticketNumber: p.ticket_number,
+            participantNumber: index + 1,
+            isWinner: p.participant_status === 'Winner',
+            isStallholder: !!p.stallholder_id,
+            joinedAt: p.registration_date,
+            status: p.participant_status,
+            personalInfo
+          };
+        })
+      );
+
+      participants = participantsWithDetails;
     }
 
-    console.log(`✅ Found ${participants.length} raffle participants for stall ${stall.stall_no}`);
+    console.log(`✅ Found ${participants.length} raffle participants for stall ${stall.stall_number}`);
 
     res.json({
       success: true,
@@ -159,24 +225,25 @@ export const getRaffleParticipantsByStall = async (req, res) => {
       count: participants.length,
       stallInfo: {
         stallId: stall.stall_id,
-        stallNumber: stall.stall_no,
+        stallNumber: stall.stall_number,
         location: stall.stall_location,
         rentalPrice: stall.rental_price,
         branchName: stall.branch_name,
         floorName: stall.floor_name,
         sectionName: stall.section_name,
         raffleStatus: stall.raffle_auction_status,
-        startTime: stall.raffle_auction_start_time,
-        endTime: stall.raffle_auction_end_time
+        deadline: stall.raffle_auction_deadline
       },
       raffleInfo: raffleData ? {
         raffleId: raffleData.raffle_id,
+        raffleName: raffleData.raffle_name,
         status: raffleData.raffle_status,
-        totalParticipants: raffleData.total_participants,
-        startTime: raffleData.start_time,
-        endTime: raffleData.end_time,
-        hasWinner: raffleData.winner_applicant_id !== null,
-        createdAt: raffleData.created_at
+        startDate: raffleData.start_date,
+        endDate: raffleData.end_date,
+        drawDate: raffleData.draw_date,
+        createdAt: raffleData.created_at,
+        totalParticipants: participants.length,
+        endTime: raffleData.end_date  // Add endTime for the modal
       } : null
     });
 

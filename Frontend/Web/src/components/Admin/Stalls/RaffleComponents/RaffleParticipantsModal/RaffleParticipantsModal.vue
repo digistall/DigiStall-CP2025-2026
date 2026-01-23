@@ -120,7 +120,7 @@
                 <th class="text-left">Contact</th>
                 <th class="text-left">Business</th>
                 <th class="text-left">Joined At</th>
-                <th class="text-center">Status</th>
+                <th class="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -156,8 +156,7 @@
                 </td>
                 <td>
                   <div class="business-info">
-                    <div class="business-name">{{ participant.businessInfo.name }}</div>
-                    <div class="business-type">{{ participant.businessInfo.type }}</div>
+                    <div class="business-name">{{ participant.personalInfo.businessName || 'N/A' }}</div>
                   </div>
                 </td>
                 <td>
@@ -173,14 +172,18 @@
                     <v-icon start size="small">mdi-trophy</v-icon>
                     Winner
                   </v-chip>
-                  <v-chip 
+                  <v-btn 
                     v-else
-                    color="primary" 
+                    color="success" 
                     size="small" 
-                    variant="outlined"
+                    variant="flat"
+                    @click="handleSelectWinnerForParticipant(participant.participantId)"
+                    :loading="selectingWinner"
+                    :disabled="hasWinner || raffleInfo?.status !== 'Open'"
                   >
-                    Participating
-                  </v-chip>
+                    <v-icon start size="small">mdi-crown</v-icon>
+                    Pick Winner
+                  </v-btn>
                 </td>
               </tr>
             </tbody>

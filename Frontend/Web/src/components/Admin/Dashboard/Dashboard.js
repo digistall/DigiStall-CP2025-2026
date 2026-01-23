@@ -2,6 +2,7 @@ import Chart from 'chart.js/auto'
 import { markRaw } from 'vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import * as XLSX from 'xlsx'
+import dashboardSubscription from '@/services/dashboardSubscriptionService.js'
 
 export default {
   name: 'Dashboard',
@@ -18,10 +19,14 @@ export default {
       loading: false,
       dataLoaded: false,
       
-      // Auto-refresh interval (30 seconds)
-      refreshInterval: null,
-      autoRefreshEnabled: true,
+      // Subscription state (replaces auto-refresh interval)
+      subscriptionEnabled: true,
+      subscriptionConnected: false,
       lastRefreshTime: null,
+      
+      // Legacy auto-refresh (kept for fallback but disabled by default)
+      refreshInterval: null,
+      autoRefreshEnabled: false, // Disabled - using subscription instead
       
       // Real data for metrics (fetched from API)
       totalStalls: 0,
@@ -70,13 +75,17 @@ export default {
         minute: '2-digit',
         second: '2-digit'
       })
+    },
+    // Check if real-time updates are active (subscription or polling)
+    isRealTimeActive() {
+      return this.subscriptionConnected || this.autoRefreshEnabled
     }
   },
   mounted() {
     this._isMounted = true
     this.initializeDashboard()
-    // Start auto-refresh for realtime updates
-    this.startAutoRefresh()
+    // Start subscription for real-time updates (replaces polling)
+    this.startSubscription()
   },
   beforeUnmount() {
     this._isMounted = false
@@ -93,11 +102,106 @@ export default {
       this.collectorChart.destroy()
       this.collectorChart = null
     }
-    // Stop auto-refresh
+    // Stop subscription and legacy auto-refresh
+    this.stopSubscription()
     this.stopAutoRefresh()
   },
   methods: {
-    // ===== AUTO-REFRESH METHODS =====
+    // ===== SUBSCRIPTION METHODS (Replaces polling) =====
+    // Start subscription to dashboard updates via SSE
+    startSubscription() {
+      if (!this.subscriptionEnabled) {
+        console.log('📡 Subscription disabled, using manual refresh only')
+        return
+      }
+      
+      console.log('📡 Starting dashboard subscription...')
+      
+      dashboardSubscription.subscribe({
+        onConnect: (data) => {
+          console.log('✅ Dashboard subscription connected:', data.connectionId)
+          this.subscriptionConnected = true
+        },
+        onUpdate: (data) => {
+          console.log('📊 Received dashboard update:', data.timestamp)
+          this.handleSubscriptionUpdate(data.updates)
+          this.lastRefreshTime = new Date(data.timestamp)
+        },
+        onDisconnect: (info) => {
+          console.log('📡 Dashboard subscription disconnected:', info.reason)
+          this.subscriptionConnected = false
+          // Fall back to manual refresh if subscription fails
+          if (info.reason === 'max_attempts') {
+            console.log('⚠️ Falling back to manual refresh mode')
+          }
+        },
+        onError: (error) => {
+          console.error('❌ Dashboard subscription error:', error)
+          this.subscriptionConnected = false
+        }
+      })
+    },
+    
+    // Stop subscription
+    stopSubscription() {
+      console.log('📡 Stopping dashboard subscription...')
+      dashboardSubscription.unsubscribe()
+      this.subscriptionConnected = false
+    },
+    
+    // Toggle subscription on/off
+    toggleSubscription() {
+      this.subscriptionEnabled = !this.subscriptionEnabled
+      if (this.subscriptionEnabled) {
+        this.startSubscription()
+      } else {
+        this.stopSubscription()
+      }
+    },
+    
+    // Handle incoming subscription updates
+    handleSubscriptionUpdate(updates) {
+      if (!updates || !this._isMounted) return
+      
+      // Update stalls data if changed
+      if (updates.stalls) {
+        this.totalStalls = updates.stalls.total || this.totalStalls
+        this.occupiedStalls = updates.stalls.occupied || this.occupiedStalls
+        this.vacantStalls = updates.stalls.vacant || this.vacantStalls
+      }
+      
+      // Update stallholders count if changed
+      if (updates.stallholders) {
+        this.totalStallholders = updates.stallholders.total || this.totalStallholders
+      }
+      
+      // Update payments data if changed
+      if (updates.payments) {
+        this.totalPayments = updates.payments.totalAmount || this.totalPayments
+      }
+      
+      // Update recent payments if changed
+      if (updates.recentPayments) {
+        this.recentPayments = updates.recentPayments.map(p => ({
+          id: p.payment_id,
+          amount: p.amount_paid,
+          date: p.payment_date,
+          method: p.payment_method,
+          stallholderName: p.stallholder_name,
+          stallNumber: p.stall_number
+        }))
+      }
+      
+      // Update active sessions count if changed
+      if (updates.activeSessions) {
+        this.totalCollectors = updates.activeSessions.activeCount || this.totalCollectors
+      }
+      
+      // Update charts with new data
+      this.updateCharts()
+    },
+    
+    // ===== LEGACY AUTO-REFRESH METHODS (kept for fallback) =====
     // Start auto-refresh interval for realtime updates
     startAutoRefresh() {
       if (this.refreshInterval) {

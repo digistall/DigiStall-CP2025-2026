@@ -35,6 +35,7 @@ import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
+import dashboardSubscriptionRoutes from './routes/dashboardSubscriptionRoutes.js';
 import { getComplianceEvidenceImage } from './controllers/compliances/complianceController.js';
 const app = express();
 const PORT = process.env.WEB_PORT || 3001;
@@ -90,6 +91,10 @@ console.log('🏪 Vendor routes registered at /api/vendors');
 // Activity log routes (for monitoring staff activities)
 app.use('/api/activity-logs', staffActivityLogRoutes);
 console.log('📊 Activity log routes registered at /api/activity-logs');
+
+// Dashboard subscription routes (SSE for real-time updates)
+app.use('/api/dashboard-subscription', dashboardSubscriptionRoutes);
+console.log('📡 Dashboard subscription routes registered at /api/dashboard-subscription');
 
 // ===== HEALTH CHECK =====
 app.get('/api/health', async (req, res) => {

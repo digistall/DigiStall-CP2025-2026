@@ -20,15 +20,26 @@
                   <h1 class="text-h5 font-weight-bold">Dashboard</h1>
                   <v-chip
                     class="ml-3"
-                    color="success"
+                    :color="subscriptionConnected ? 'success' : 'warning'"
                     size="small"
                     variant="flat"
                   >
-                    <v-icon start size="14">mdi-refresh-auto</v-icon>
-                    Live
+                    <v-icon start size="14">{{ subscriptionConnected ? 'mdi-broadcast' : 'mdi-broadcast-off' }}</v-icon>
+                    {{ subscriptionConnected ? 'Live' : 'Disconnected' }}
                   </v-chip>
                 </div>
                 <div class="d-flex align-center">
+                  <v-btn
+                    v-if="!subscriptionConnected"
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    class="mr-2"
+                    @click="startSubscription"
+                  >
+                    <v-icon start size="16">mdi-refresh</v-icon>
+                    Reconnect
+                  </v-btn>
                   <span v-if="lastRefreshTime" class="text-caption text-grey">
                     Updated: {{ formatLastRefreshTime }}
                   </span>
