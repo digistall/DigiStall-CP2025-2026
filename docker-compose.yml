@@ -7,7 +7,7 @@ services:
   # Backend Web API Server (Port 5000)
   backend-web:
     build:
-      context: ./Backend/Backend-Web
+      context: ./BACKEND-WEB
       dockerfile: Dockerfile
     container_name: digistall-backend-web
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
   # Backend Mobile API Server (Port 5001)
   backend-mobile:
     build:
-      context: ./Backend/Backend-Mobile
+      context: ./BACKEND-MOBILE
       dockerfile: Dockerfile
     container_name: digistall-backend-mobile
     restart: unless-stopped
@@ -69,7 +69,7 @@ services:
   # Frontend Web Application
   frontend-web:
     build:
-      context: ./Frontend/Web
+      context: ./FRONTEND-WEB
       dockerfile: Dockerfile
     container_name: digistall-frontend-web
     restart: unless-stopped
