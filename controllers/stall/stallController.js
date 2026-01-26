@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js'
+import { createConnection } from '../../CONFIG/database.js'
 
 // Get all available stalls for mobile app (restricted to applicant's applied areas) - Uses stored procedures
 export const getAllStalls = async (req, res) => {
@@ -817,3 +817,4 @@ export const getStallImages = async (req, res) => {
     await connection.end()
   }
 }
+

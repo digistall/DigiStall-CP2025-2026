@@ -1,4 +1,4 @@
-import { createConnection } from '../config/database.js'
+import { createConnection } from '../CONFIG/database.js'
 import bcrypt from 'bcryptjs'
 
 /**
@@ -216,3 +216,4 @@ export const mobileChangePassword = async (req, res) => {
 };
 
 export default { mobileChangePassword };
+

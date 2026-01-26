@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js';
+import { createConnection } from '../../CONFIG/database.js';
 
 /**
  * Staff Activity Log Controller
@@ -333,3 +333,4 @@ export default {
     clearAllActivityLogs,
     activityLogMiddleware
 };
+

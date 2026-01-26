@@ -1,5 +1,5 @@
-﻿import express from 'express'
-import authMiddleware from '../middleware/auth.js'
+import express from 'express'
+import authMiddleware from '../MIDDLEWARE/auth.js'
 import {
   getAllApplicants,
   getApplicantById,
@@ -15,7 +15,7 @@ import {
   getParticipantsByStall,
   autoCleanupApplicants,
   triggerCleanup
-} from '../controllers/applicants/applicantsController.js'
+} from '../CONTROLLERS/applicants/applicantsController.js'
 
 // Import document controller and multer config
 import {
@@ -23,8 +23,8 @@ import {
   getApplicantDocuments,
   deleteApplicantDocument,
   deleteAllDocuments
-} from '../controllers/applicants/applicantDocumentController.js'
-import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
+} from '../CONTROLLERS/applicants/applicantDocumentController.js'
+import { uploadApplicantDocs } from '../CONFIG/multerApplicantDocuments.js'
 
 // Import BLOB document controller for cloud storage
 import {
@@ -35,7 +35,7 @@ import {
   deleteApplicantDocumentBlob,
   updateDocumentVerificationStatus,
   getApplicantDocumentByType
-} from '../controllers/applicants/applicantDocumentBlobController.js'
+} from '../CONTROLLERS/applicants/applicantDocumentBlobController.js'
 
 const router = express.Router()
 

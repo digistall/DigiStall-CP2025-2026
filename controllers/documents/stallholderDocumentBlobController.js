@@ -8,7 +8,7 @@
 // Max: 10MB per document, Images and PDFs allowed
 // =============================================
 
-import { createConnection } from '../../config/database.js'
+import { createConnection } from '../../CONFIG/database.js'
 
 // =============================================
 // UPLOAD STALLHOLDER DOCUMENT AS BLOB
@@ -699,3 +699,4 @@ export default {
   deleteStallholderDocumentBlob,
   updateStallholderDocumentVerificationStatus
 }
+

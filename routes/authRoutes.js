@@ -1,15 +1,15 @@
 import express from 'express'
-import { verifyToken } from '../middleware/auth.js';
+import { verifyToken } from '../MIDDLEWARE/auth.js';
 
 // Import mobile login controller with full data fetching (including spouse, business, stallholder data)
-import { mobileLogin } from '../controllers/login/loginController.js'
+import { mobileLogin } from '../CONTROLLERS/login/loginController.js'
 
 // Import other mobile-specific auth controllers
 import { 
   mobileRegister,
   mobileVerifyToken,
   mobileLogout 
-} from '../controllers/mobileAuthController.js'
+} from '../CONTROLLERS/mobileAuthController.js'
 
 // Import mobile staff auth controller (inspector/collector)
 import { 
@@ -17,10 +17,10 @@ import {
   mobileStaffLogout,
   mobileStaffHeartbeat,
   mobileStaffAutoLogout 
-} from '../controllers/mobileStaffAuthController.js'
+} from '../CONTROLLERS/mobileStaffAuthController.js'
 
 // Import change password controller
-import { mobileChangePassword } from '../controllers/mobileChangePasswordController.js'
+import { mobileChangePassword } from '../CONTROLLERS/mobileChangePasswordController.js'
 
 const router = express.Router()
 

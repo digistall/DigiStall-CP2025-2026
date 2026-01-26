@@ -1,4 +1,4 @@
-import { createConnection } from '../config/database.js';
+import { createConnection } from '../CONFIG/database.js';
 
 /**
  * Activity Logger Middleware
@@ -312,3 +312,5 @@ export const logActivity = async ({
 };
 
 export default activityLogger;
+
+

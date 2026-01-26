@@ -380,3 +380,5 @@ export async function saveApplicantDocumentToBlob(connection, applicantId, busin
 }
 
 export default applicantUpload
+
+

@@ -1,4 +1,4 @@
-import { createConnection } from "../../../config/database.js";
+import { createConnection } from "../../../CONFIG/database.js";
 
 // Get stalls by area or branch (supports both for backward compatibility) - Uses stored procedure
 export const getStallsByArea = async (req, res) => {
@@ -99,3 +99,4 @@ export const getStallsByArea = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+

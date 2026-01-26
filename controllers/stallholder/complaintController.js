@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js';
+import { createConnection } from '../../CONFIG/database.js';
 
 /**
  * Submit a complaint from stallholder
@@ -172,3 +172,4 @@ export const getMyComplaints = async (req, res) => {
     }
   }
 };
+

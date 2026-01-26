@@ -1,4 +1,4 @@
-import { createConnection } from "../../../config/database.js";
+import { createConnection } from "../../../CONFIG/database.js";
 
 // Get filtered stalls (supports both area and branch parameters) - Uses stored procedure
 export const getFilteredStalls = async (req, res) => {
@@ -121,3 +121,4 @@ export const getFilteredStalls = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+

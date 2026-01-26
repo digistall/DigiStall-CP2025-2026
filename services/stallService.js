@@ -164,3 +164,5 @@ export const StallService = {
 };
 
 export default StallService;
+
+

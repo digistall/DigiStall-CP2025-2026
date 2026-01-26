@@ -1,4 +1,4 @@
-import { createConnection } from '../../../config/database.js'
+import { createConnection } from '../../../CONFIG/database.js'
 
 // Get available markets - Uses stored procedure
 export const getAvailableMarkets = async (req, res) => {
@@ -27,3 +27,4 @@ export const getAvailableMarkets = async (req, res) => {
     if (connection) await connection.end()
   }
 }
+

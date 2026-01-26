@@ -52,15 +52,17 @@ Write-Host ""
 Write-Host "Project Root: $projectRoot" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Role Folders Active:" -ForegroundColor White
-Write-Host "  - SYSTEM-ADMINISTRATOR" -ForegroundColor DarkGray
-Write-Host "  - LGU-NAGA (Business Owner)" -ForegroundColor DarkGray
-Write-Host "  - BRANCH-MANAGER" -ForegroundColor DarkGray
+Write-Host "  - BUSINESS/" -ForegroundColor DarkGray
+Write-Host "    - BUSINESS-OWNER (Branch, Subscription)" -ForegroundColor DarkGray
+Write-Host "    - BUSINESS-MANAGER (Shared features)" -ForegroundColor DarkGray
+Write-Host "    - SHARED (Dashboard, Employees, Stalls, etc.)" -ForegroundColor DarkGray
+Write-Host "  - EMPLOYEE/ (WEB-EMPLOYEE, MOBILE-EMPLOYEE)" -ForegroundColor DarkGray
 Write-Host "  - STALL-HOLDER" -ForegroundColor DarkGray
-Write-Host "  - APPLICANTS" -ForegroundColor DarkGray
-Write-Host "  - EMPLOYEE (Inspector/Collector)" -ForegroundColor DarkGray
 Write-Host "  - VENDOR" -ForegroundColor DarkGray
+Write-Host "  - APPLICANTS" -ForegroundColor DarkGray
 Write-Host "  - AUTH" -ForegroundColor DarkGray
 Write-Host "  - PUBLIC-LANDINGPAGE" -ForegroundColor DarkGray
+Write-Host "  - SYSTEM-ADMINISTRATOR" -ForegroundColor DarkGray
 Write-Host ""
 
 # ============================================
@@ -68,9 +70,9 @@ Write-Host ""
 # ============================================
 Write-Host "[0] Syncing .env files..." -ForegroundColor Gray
 if (Test-Path "$projectRoot\.env") {
-    Copy-Item "$projectRoot\.env" "$projectRoot\Frontend\Web\.env" -Force -ErrorAction SilentlyContinue
-    Copy-Item "$projectRoot\.env" "$projectRoot\Frontend\Mobile\.env" -Force -ErrorAction SilentlyContinue
-    Write-Host "    .env files synced" -ForegroundColor DarkGray
+    Copy-Item "$projectRoot\.env" "$projectRoot\FRONTEND-RUNNER\WEB\.env" -Force -ErrorAction SilentlyContinue
+    Copy-Item "$projectRoot\.env" "$projectRoot\FRONTEND-RUNNER\MOBILE\.env" -Force -ErrorAction SilentlyContinue
+    Write-Host "    .env files synced to FRONTEND-RUNNER" -ForegroundColor DarkGray
 } else {
     Write-Host "    WARNING: .env file not found!" -ForegroundColor Red
 }
@@ -101,9 +103,10 @@ if ($startAll -or $Web) {
     Write-Host "[2] Starting Frontend Web (port 5173)..." -ForegroundColor Yellow
     Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
         `$Host.UI.RawUI.WindowTitle = 'DigiStall - Frontend Web (5173)'
-        cd '$projectRoot\Frontend\Web'
+        cd '$projectRoot\FRONTEND-RUNNER\WEB'
         Write-Host '========================================' -ForegroundColor Green
         Write-Host '  FRONTEND WEB - Vue.js Port 5173' -ForegroundColor Green
+        Write-Host '  Location: FRONTEND-RUNNER/WEB' -ForegroundColor Green
         Write-Host '========================================' -ForegroundColor Green
         Write-Host ''
         npm run dev
@@ -117,14 +120,15 @@ if ($startAll -or $Web) {
 if ($startAll -or $Mobile) {
     Write-Host "[3] Starting Frontend Mobile (Expo)..." -ForegroundColor Yellow
     
-    # Check if Frontend/Mobile has node_modules
-    if (-not (Test-Path "$projectRoot\Frontend\Mobile\node_modules")) {
+    # Check if FRONTEND-RUNNER/MOBILE has node_modules
+    if (-not (Test-Path "$projectRoot\FRONTEND-RUNNER\MOBILE\node_modules")) {
         Write-Host "    Installing mobile dependencies first..." -ForegroundColor DarkYellow
         Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
             `$Host.UI.RawUI.WindowTitle = 'DigiStall - Mobile (Expo)'
-            cd '$projectRoot\Frontend\Mobile'
+            cd '$projectRoot\FRONTEND-RUNNER\MOBILE'
             Write-Host '========================================' -ForegroundColor Green
             Write-Host '  FRONTEND MOBILE - Expo' -ForegroundColor Green
+            Write-Host '  Location: FRONTEND-RUNNER/MOBILE' -ForegroundColor Green
             Write-Host '========================================' -ForegroundColor Green
             Write-Host ''
             Write-Host 'Installing dependencies...' -ForegroundColor Yellow
@@ -135,9 +139,10 @@ if ($startAll -or $Mobile) {
     } else {
         Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
             `$Host.UI.RawUI.WindowTitle = 'DigiStall - Mobile (Expo)'
-            cd '$projectRoot\Frontend\Mobile'
+            cd '$projectRoot\FRONTEND-RUNNER\MOBILE'
             Write-Host '========================================' -ForegroundColor Green
             Write-Host '  FRONTEND MOBILE - Expo' -ForegroundColor Green
+            Write-Host '  Location: FRONTEND-RUNNER/MOBILE' -ForegroundColor Green
             Write-Host '========================================' -ForegroundColor Green
             Write-Host ''
             npx expo start
@@ -163,7 +168,8 @@ if ($startAll -or $Mobile) {
 Write-Host ""
 Write-Host "Architecture:" -ForegroundColor White
 Write-Host "  - Backend uses new MVC role-based folders" -ForegroundColor DarkGray
-Write-Host "  - Frontend uses original design (preserved)" -ForegroundColor DarkGray
+Write-Host "  - Frontend runs from FRONTEND-RUNNER/" -ForegroundColor DarkGray
+Write-Host "  - Views distributed in role folders (MVC)" -ForegroundColor DarkGray
 Write-Host "  - Database: DigitalOcean MySQL (cloud)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Tips:" -ForegroundColor White

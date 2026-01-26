@@ -1,4 +1,4 @@
-import { createConnection } from "../../../config/database.js";
+import { createConnection } from "../../../CONFIG/database.js";
 
 // Get available branches - Uses stored procedure - NEW endpoint to support branch-based architecture
 export const getBranches = async (req, res) => {
@@ -37,3 +37,4 @@ export const getBranches = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+

@@ -1,0 +1,212 @@
+/* Shared styles to make table bodies scrollable while keeping headers and
+   search/filter areas visible. Components can override the CSS vars below
+   to adjust header colors or max heights. */
+
+:root {
+  /* Make the table area use most of the viewport so the page body
+     doesn't need to scroll — adjust the 220px value if your header/search
+     area is taller or shorter on specific pages. */
+  --table-scroll-max-height: calc(100vh - 220px);
+  /* Approximate single row height used for 'show-seven-rows' utility.
+     Components can override --table-row-height if their rows are taller. */
+  --table-row-height: 56px;
+  --table-head-bg: #ffffff;
+  --table-head-color: #111827;
+}
+
+/* Containers that wrap tables in many components */
+.table-wrapper,
+.table-body,
+.payments-table-container .table-wrapper,
+.table-card .table-wrapper,
+.v-card .table-wrapper,
+.scrollable-table-wrapper,
+.table-scroll-container,
+.v-data-table__wrapper,
+[class*="table-wrapper"],
+[class*="table-container"],
+[class*="table-body"],
+[class*="table-card"] {
+  max-height: var(--table-scroll-max-height);
+  overflow-y: auto;
+  overflow-x: hidden !important; /* prevent left-right scrolling inside the page */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure tables inside the scrollable wrappers wrap content vertically
+   instead of forcing horizontal overflow */
+.scrollable-table-wrapper table,
+.table-body table,
+[class*="table-wrapper"] table,
+[class*="table-container"] table {
+  width: 100%;
+  table-layout: auto;
+  min-width: 0; /* allow table to shrink inside its container */
+}
+
+.scrollable-table-wrapper table th,
+.scrollable-table-wrapper table td,
+.table-body table th,
+.table-body table td,
+[class*="table-wrapper"] table th,
+[class*="table-wrapper"] table td {
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+/* Additional fallback: prevent Vuetify's data-table wrapper from creating a
+   horizontal scroll on desktop by default */
+.v-data-table__wrapper {
+  overflow-x: hidden !important;
+}
+
+/* Make thead cells sticky so headers remain visible while scrolling body */
+.table-wrapper thead th,
+.table-body thead th,
+.v-data-table__wrapper thead th,
+.scrollable-table-wrapper thead th,
+.table-scroll-container thead th,
+[class*="table-wrapper"] thead th,
+[class*="table-container"] thead th,
+[class*="table-body"] thead th,
+[class*="table-card"] thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+}
+
+/* Additional safety for dark-themed table headers: if a table already
+   sets a background color on thead, preserve it when sticky */
+.table-wrapper thead,
+.table-body thead,
+.v-data-table__wrapper thead {
+  z-index: 9;
+}
+
+/* Ensure horizontal overflow still works on small screens */
+@media (max-width: 960px) {
+  .table-wrapper,
+  .table-body,
+  .v-data-table__wrapper {
+    /* Allow horizontal scrolling on narrow screens where wrapping would be worse */
+    overflow-x: auto;
+    max-height: none;
+  }
+}
+
+/* When page opts-in, allow horizontal scroll on small screens so tables remain usable on phones */
+@media (max-width: 960px) {
+  body.no-page-scroll .table-wrapper,
+  body.no-page-scroll .v-data-table__wrapper {
+    overflow-x: auto !important;
+  }
+  /* Payments-specific: allow horizontal scroll inside payments table wrapper on small screens */
+  body.no-page-scroll .payments-table-container .table-wrapper {
+    overflow-x: auto !important;
+  }
+}
+
+/* Force a minimum table width on small screens so horizontal scrollbar appears for narrow viewports */
+@media (max-width: 768px) {
+  body.no-page-scroll .table-wrapper table,
+  body.no-page-scroll .v-data-table__wrapper table,
+  .table-wrapper table,
+  .v-data-table__wrapper table {
+    min-width: 720px; /* adjust if your tables have more columns */
+  }
+}
+
+/* Utility class components can add to tune the table area height */
+.scrollable-table-wrapper--short {
+  --table-scroll-max-height: 40vh;
+}
+
+/* Utility: show exactly ~7 rows by constraining the scrollable area to
+   row-height * 7. This keeps headers visible while allowing the inner
+   table area to scroll when there are more rows than fit. */
+.show-seven-rows,
+.scrollable-table-wrapper.show-seven-rows,
+.table-wrapper.show-seven-rows,
+.table-body.show-seven-rows {
+  --table-scroll-max-height: calc(var(--table-row-height, 56px) * 7) !important;
+  max-height: calc(var(--table-row-height, 56px) * 7) !important;
+}
+
+/* Layout rules to remove the browser page scrollbar and keep scrolling
+   inside app regions (tables/dialogs). This hides the page scrollbar so
+   only table bodies (or explicitly scrollable regions) show scrollbars.
+   If you prefer to target specific pages only, we can limit these rules. */
+/* Only hide the page scrollbar when the page explicitly opts in by adding
+   `no-page-scroll` to the document body. This keeps the change scoped to
+   table-heavy pages while preserving normal scroll behavior elsewhere. */
+/* Strongly hide the outer scrollbar when pages opt in. Use html too in case
+   other code toggles a class there. Use !important to override other layout rules. */
+body.no-page-scroll,
+html.no-page-scroll {
+  height: 100% !important;
+  margin: 0 !important;
+  overflow: hidden !important; /* hide the outer scrollbar when pages opt in */
+}
+
+body.no-page-scroll #app,
+body.no-page-scroll .v-application {
+  height: 100%;
+}
+
+/* Keep the main app area fixed and prevent it from creating a page-level scrollbar
+   only when the page opts in */
+body.no-page-scroll .v-main {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* The main content container should fill available space and not overflow the page
+   when opted-in. Inner regions (tables) will handle vertical scrolling. */
+body.no-page-scroll .main-content {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Payments-specific: ensure payments container uses internal scrolling
+   so the outer page doesn't grow. This targets the payments UI wrapper. */
+body.no-page-scroll .payments-table-container {
+  max-height: var(--table-scroll-max-height) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+@media (min-width: 961px) {
+  body.no-page-scroll .payments-table-container .table-wrapper {
+    flex: 1 1 auto !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* A safety fallback on desktop: prefer internal scroll behavior when page is opted-in. */
+  body.no-page-scroll .table-wrapper {
+    overflow-x: hidden !important;
+  }
+}
+
+/* Ensure card content that contains our table wrappers grows and allows table wrapper to control scrolling */
+.table-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.table-card > .table-header {
+  flex: 0 0 auto;
+}
+
+.table-card > .table-body,
+.table-card > .scrollable-table-wrapper,
+.payments-table-container .table-wrapper {
+  flex: 1 1 auto;
+  overflow: hidden;
+}

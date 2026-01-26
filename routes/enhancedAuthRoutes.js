@@ -3,7 +3,7 @@
 // Routes: /login, /logout, /refresh, /verify-token, /me, /auto-logout
 
 import express from 'express';
-import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
+import enhancedAuthMiddleware from '../MIDDLEWARE/enhancedAuth.js';
 import {
   login,
   refreshToken,
@@ -12,7 +12,7 @@ import {
   getCurrentUser,
   autoLogout,
   heartbeat
-} from '../controllers/auth/enhancedAuthController.js';
+} from '../CONTROLLERS/auth/enhancedAuthController.js';
 
 // Legacy authentication (for backward compatibility)
 import {
@@ -21,7 +21,7 @@ import {
   createAdminUser,
   createPasswordHash,
   testDb
-} from '../controllers/auth/loginController.js';
+} from '../CONTROLLERS/auth/loginController.js';
 
 const router = express.Router();
 

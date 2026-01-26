@@ -1,7 +1,7 @@
-import { createConnection } from '../config/database.js'
+import { createConnection } from '../CONFIG/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { decryptApplicantData, decryptStallholderData, decryptSpouseData } from '../services/mysqlDecryptionService.js'
+import { decryptApplicantData, decryptStallholderData, decryptSpouseData } from '../SERVICES/mysqlDecryptionService.js'
 
 // ===== MOBILE LOGIN =====
 export const mobileLogin = async (req, res) => {
@@ -435,3 +435,4 @@ export const mobileLogout = async (req, res) => {
     }
   }
 };
+

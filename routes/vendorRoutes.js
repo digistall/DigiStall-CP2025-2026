@@ -1,12 +1,12 @@
 import express from 'express';
-import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
+import enhancedAuthMiddleware from '../MIDDLEWARE/enhancedAuth.js';
 import {
   createVendor,
   getAllVendors,
   getVendorById,
   updateVendor,
   deleteVendor
-} from '../controllers/vendors/vendorController.js';
+} from '../CONTROLLERS/vendors/vendorController.js';
 
 const router = express.Router();
 

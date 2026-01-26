@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js';
+import { createConnection } from '../../CONFIG/database.js';
 
 /**
  * Get stallholder profile with stall information
@@ -75,3 +75,4 @@ export const getStallholderProfile = async (req, res) => {
 export default {
   getStallholderProfile
 };
+

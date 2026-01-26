@@ -2,7 +2,7 @@
 // Routes for managing subscriptions (System Administrator and Business Owners)
 
 import express from 'express';
-import authMiddleware from '../middleware/auth.js';
+import authMiddleware from '../MIDDLEWARE/auth.js';
 import {
   getAllSubscriptionPlans,
   createBusinessOwnerWithSubscription,
@@ -11,7 +11,7 @@ import {
   getBusinessOwnerSubscription,
   getBusinessOwnerPaymentHistory,
   getSystemAdminDashboardStats
-} from '../controllers/subscriptions/subscriptionController.js';
+} from '../CONTROLLERS/subscriptions/subscriptionController.js';
 
 const router = express.Router();
 
@@ -67,7 +67,7 @@ router.post('/change-plan', async (req, res) => {
     }
     
     // Import createConnection here to avoid circular dependency
-    const { createConnection } = await import('../../config/database.js');
+    const { createConnection } = await import('../../CONFIG/database.js');
     const connection = await createConnection();
     
     try {

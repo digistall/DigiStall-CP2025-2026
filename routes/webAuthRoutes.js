@@ -1,14 +1,14 @@
 import express from 'express'
-import authMiddleware from '../middleware/auth.js'
+import authMiddleware from '../MIDDLEWARE/auth.js'
 import {
   // Unified authentication
   login,
   verifyToken as verifyTokenHandler,
   getCurrentUser
-} from '../controllers/auth/unifiedAuthController.js'
+} from '../CONTROLLERS/auth/unifiedAuthController.js'
 
 // Import logout and heartbeat from enhanced auth controller
-import { logout, heartbeat } from '../controllers/auth/enhancedAuthController.js'
+import { logout, heartbeat } from '../CONTROLLERS/auth/enhancedAuthController.js'
 
 // Legacy authentication (for backward compatibility)
 import {
@@ -17,7 +17,7 @@ import {
   createAdminUser,
   createPasswordHash,
   testDb
-} from '../controllers/auth/loginController.js'
+} from '../CONTROLLERS/auth/loginController.js'
 
 const router = express.Router()
 

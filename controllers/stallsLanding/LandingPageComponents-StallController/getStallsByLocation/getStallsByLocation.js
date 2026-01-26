@@ -1,4 +1,4 @@
-import { createConnection } from "../../../config/database.js";
+import { createConnection } from "../../../CONFIG/database.js";
 
 // Get stalls by location - Uses stored procedure
 export const getStallsByLocation = async (req, res) => {
@@ -36,3 +36,4 @@ export const getStallsByLocation = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+

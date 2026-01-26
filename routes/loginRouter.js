@@ -1,8 +1,8 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
-import { mobileLogin, submitApplication } from '../controllers/login/loginController.js'
-import { mobileStaffLogin, mobileStaffLogout, mobileStaffHeartbeat, mobileStaffAutoLogout } from '../controllers/mobileStaffAuthController.js'
-import { verifyToken } from '../middleware/auth.js'
+import { mobileLogin, submitApplication } from '../CONTROLLERS/login/loginController.js'
+import { mobileStaffLogin, mobileStaffLogout, mobileStaffHeartbeat, mobileStaffAutoLogout } from '../CONTROLLERS/mobileStaffAuthController.js'
+import { verifyToken } from '../MIDDLEWARE/auth.js'
 
 const router = express.Router()
 

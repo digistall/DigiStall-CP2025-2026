@@ -5,7 +5,7 @@ import {
   getStallholderStallsWithDocuments,
   getBranchDocumentRequirements,
   uploadStallholderDocument
-} from '../controllers/user/stallholderDocumentController.js';
+} from '../CONTROLLERS/user/stallholderDocumentController.js';
 
 // Import BLOB document controller for cloud storage
 import {
@@ -18,28 +18,28 @@ import {
   getStallholderDocuments,
   deleteStallholderDocumentBlob,
   updateStallholderDocumentVerificationStatus
-} from '../controllers/documents/stallholderDocumentBlobController.js';
+} from '../CONTROLLERS/documents/stallholderDocumentBlobController.js';
 
 // Import complaint controller
 import {
   submitComplaint,
   getMyComplaints
-} from '../controllers/stallholder/complaintController.js';
+} from '../CONTROLLERS/stallholder/complaintController.js';
 
 // Import profile controller
 import {
   getStallholderProfile
-} from '../controllers/stallholder/profileController.js';
+} from '../CONTROLLERS/stallholder/profileController.js';
 
 // Import payment controller
 import {
   getPaymentRecords,
   getAllPaymentRecords,
   getPaymentSummary
-} from '../controllers/stallholder/paymentController.js';
+} from '../CONTROLLERS/stallholder/paymentController.js';
 
 // Import auth middleware
-import { verifyToken } from '../middleware/auth.js';
+import { verifyToken } from '../MIDDLEWARE/auth.js';
 
 const router = express.Router();
 

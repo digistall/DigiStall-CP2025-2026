@@ -1,7 +1,7 @@
 // ===== ROLE PERMISSIONS MIDDLEWARE =====
 // Enforces role-based permissions and filtering
 
-import { createConnection } from '../config/database.js';
+import { createConnection } from '../CONFIG/database.js';
 
 /**
  * Middleware to enforce VIEW-ONLY access for stall_business_owner role
@@ -240,3 +240,5 @@ export const blockOwnerWrites = (req, res, next) => {
 
   next();
 };
+
+

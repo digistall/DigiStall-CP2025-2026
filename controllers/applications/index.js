@@ -35,3 +35,4 @@ export {
   getAllApplicants,
   getApplicantById,
 };
+

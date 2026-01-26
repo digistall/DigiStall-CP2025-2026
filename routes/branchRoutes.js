@@ -1,5 +1,5 @@
 import express from 'express'
-import authMiddleware from '../middleware/auth.js'
+import authMiddleware from '../MIDDLEWARE/auth.js'
 import {
   createBranch,
   getAllBranches,
@@ -26,7 +26,7 @@ import {
   getAreaById,
   getCities,
   getLocationsByCity
-} from '../controllers/branch/branchController.js'
+} from '../CONTROLLERS/branch/branchController.js'
 
 const router = express.Router()
 
