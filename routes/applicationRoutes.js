@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken } from '../middleware/auth.js'
+import { verifyToken } from '../MIDDLEWARE/auth.js'
 
 // Import mobile application controllers
 import { 
@@ -9,7 +9,7 @@ import {
   updateMobileApplication,
   joinRaffle,
   joinAuction
-} from '../controllers/mobileApplicationController.js'
+} from '../CONTROLLERS/mobileApplicationController.js'
 
 const router = express.Router()
 

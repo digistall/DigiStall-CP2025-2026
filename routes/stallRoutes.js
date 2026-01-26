@@ -1,7 +1,7 @@
 import express from 'express'
-import authMiddleware from '../middleware/auth.js'
-import activityLogger from '../middleware/activityLogger.js'
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js'
+import authMiddleware from '../MIDDLEWARE/auth.js'
+import activityLogger from '../MIDDLEWARE/activityLogger.js'
+import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js'
 import {
   // Core stall management (Admin)
   addStall,
@@ -46,7 +46,7 @@ import {
   cancelAuction,
   selectAuctionWinner,
   autoSelectWinnerForExpiredAuctions
-} from '../controllers/stalls/stallController.js'
+} from '../CONTROLLERS/stalls/stallController.js'
 
 // Import stall image controller
 import {
@@ -56,7 +56,7 @@ import {
   deleteStallImageByFilename,
   setStallPrimaryImage,
   getStallImageCount
-} from '../controllers/stalls/stallImageController.js'
+} from '../CONTROLLERS/stalls/stallImageController.js'
 
 // Import BLOB image controller for cloud storage
 import {
@@ -70,13 +70,13 @@ import {
   setStallPrimaryImageBlob,
   updateStallImageBlob,
   getStallPrimaryImageBlob
-} from '../controllers/stalls/stallImageBlobController.js'
+} from '../CONTROLLERS/stalls/stallImageBlobController.js'
 
 // Import new addStall with images
-import { addStallWithImages } from '../controllers/stalls/stallComponents/addStallWithImages.js'
+import { addStallWithImages } from '../CONTROLLERS/stalls/stallComponents/addStallWithImages.js'
 
 // Import multer configuration
-import upload, { checkImageLimit } from '../config/multerStallImages.js'
+import upload, { checkImageLimit } from '../CONFIG/multerStallImages.js'
 import multer from 'multer'
 
 // Temporary upload for addStall - Configure with large limits for base64 images

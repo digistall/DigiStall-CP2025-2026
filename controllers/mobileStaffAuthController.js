@@ -1,8 +1,8 @@
-import { createConnection } from '../config/database.js';
+import { createConnection } from '../CONFIG/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { decryptStaffData } from '../services/mysqlDecryptionService.js';
+import { decryptStaffData } from '../SERVICES/mysqlDecryptionService.js';
 
 // Get encryption key using same derivation as Web backend
 const getEncryptionKey = () => {
@@ -624,3 +624,4 @@ export default {
     mobileStaffHeartbeat,
     mobileStaffAutoLogout
 };
+

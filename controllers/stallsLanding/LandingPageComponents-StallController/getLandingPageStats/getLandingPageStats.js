@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../config/database.js';
+import { createConnection } from '../../../../CONFIG/database.js';
 
 /**
  * Get landing page statistics - Uses stored procedure
@@ -49,3 +49,4 @@ export const getLandingPageStats = async (req, res) => {
     }
   }
 };
+

@@ -1,6 +1,6 @@
 import express from 'express';
-import authMiddleware from '../middleware/auth.js';
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
+import authMiddleware from '../MIDDLEWARE/auth.js';
+import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js';
 import {
   createEmployee,
   getAllEmployees,
@@ -13,7 +13,7 @@ import {
   resetEmployeePassword,
   getEmployeesByBranch,
   getActiveSessions
-} from '../controllers/employees/employeeController.js';
+} from '../CONTROLLERS/employees/employeeController.js';
 
 const router = express.Router();
 

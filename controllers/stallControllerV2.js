@@ -152,3 +152,4 @@ export const MobileStallControllerV2 = {
 };
 
 export default MobileStallControllerV2;
+

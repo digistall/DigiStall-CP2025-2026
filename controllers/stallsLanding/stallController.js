@@ -1,4 +1,4 @@
-﻿// Parent Controller - Landing Page Stall Controller
+// Parent Controller - Landing Page Stall Controller
 // This controller only imports and re-exports child functions (minimal code)
 
 // Import all child functions
@@ -26,3 +26,4 @@ export {
   getAvailableMarkets,
   getLandingPageStats,
 };
+

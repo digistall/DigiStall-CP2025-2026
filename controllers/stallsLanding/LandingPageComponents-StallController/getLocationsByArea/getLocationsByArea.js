@@ -1,4 +1,4 @@
-﻿import { createConnection } from "../../../config/database.js";
+import { createConnection } from "../../../CONFIG/database.js";
 
 // Get locations by area or branch (supports both for backward compatibility) - Uses stored procedure
 export const getLocationsByArea = async (req, res) => {
@@ -12,7 +12,7 @@ export const getLocationsByArea = async (req, res) => {
     const filterByBranch = branch ? true : false;
 
     if (!filterParam) {
-      console.log("❌ No area or branch parameter provided");
+      console.log("? No area or branch parameter provided");
       return res.status(400).json({
         success: false,
         message: "Area or branch parameter is required",
@@ -34,7 +34,7 @@ export const getLocationsByArea = async (req, res) => {
     }));
     
     console.log(
-      `✅ Found locations in ${filterType} '${filterParam}':`,
+      `? Found locations in ${filterType} '${filterParam}':`,
       locationList.map((l) => l.location)
     );
 
@@ -45,7 +45,7 @@ export const getLocationsByArea = async (req, res) => {
       [filterType]: filterParam, // Include the filter parameter in response
     });
   } catch (error) {
-    console.error("❌ Get locations by area/branch error:", error);
+    console.error("? Get locations by area/branch error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to retrieve locations",
@@ -55,4 +55,5 @@ export const getLocationsByArea = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+
 

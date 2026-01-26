@@ -1,5 +1,5 @@
 import express from "express";
-import { applicantController } from "../controllers/applicantsLanding/applicantController.js";
+import { applicantController } from "../CONTROLLERS/applicantsLanding/applicantController.js";
 
 const router = express.Router();
 

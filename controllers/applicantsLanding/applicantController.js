@@ -1,6 +1,6 @@
-import { createConnection } from "../../config/database.js";
-import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../config/multerApplicantDocuments.js";
-import { encryptData, decryptData } from "../../services/encryptionService.js";
+import { createConnection } from "../../CONFIG/database.js";
+import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../CONFIG/multerApplicantDocuments.js";
+import { encryptData, decryptData } from "../../SERVICES/encryptionService.js";
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -751,3 +751,4 @@ export const applicantController = {
     }
   },
 };
+

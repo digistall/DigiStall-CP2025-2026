@@ -1,4 +1,4 @@
-import { createConnection } from '../config/database.js';
+import { createConnection } from '../CONFIG/database.js';
 import nodemailer from 'nodemailer';
 
 /**
@@ -845,3 +845,4 @@ Naga Stall Management Team
 const emailService = new EmailService();
 
 export default emailService;
+

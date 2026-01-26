@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js';
+import { createConnection } from '../../CONFIG/database.js';
 
 /**
  * Get payment records for a stallholder
@@ -348,3 +348,4 @@ function getPaymentDescription(type, forMonth) {
   
   return description;
 }
+

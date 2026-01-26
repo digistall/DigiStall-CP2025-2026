@@ -1,4 +1,4 @@
-import { createConnection } from '../config/database.js'
+import { createConnection } from '../CONFIG/database.js'
 
 // ===== SUBMIT MOBILE APPLICATION =====
 // Handles both regular applications and raffle joins
@@ -948,3 +948,4 @@ export const joinAuction = async (req, res) => {
     }
   }
 };
+

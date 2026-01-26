@@ -1,4 +1,4 @@
-import { createConnection } from "../../../config/database.js";
+import { createConnection } from "../../../CONFIG/database.js";
 
 // Get all stalls (for landing page) - Uses stored procedure
 export const getAllStalls = async (req, res) => {
@@ -71,3 +71,4 @@ export const getAllStalls = async (req, res) => {
     if (connection) await connection.end();
   }
 };
+

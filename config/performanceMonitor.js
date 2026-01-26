@@ -39,3 +39,5 @@ export function resetStats() {
   queryCount = 0;
   slowQueries = [];
 }
+
+

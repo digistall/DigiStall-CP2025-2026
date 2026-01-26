@@ -3,10 +3,10 @@
 // All routes require authentication and compliance permission
 
 import express from 'express';
-import authMiddleware from '../middleware/auth.js';
-import { authorizePermission } from '../middleware/enhancedAuth.js';
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
-import complianceController from '../controllers/compliances/complianceController.js';
+import authMiddleware from '../MIDDLEWARE/auth.js';
+import { authorizePermission } from '../MIDDLEWARE/enhancedAuth.js';
+import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js';
+import complianceController from '../CONTROLLERS/compliances/complianceController.js';
 
 const router = express.Router();
 
