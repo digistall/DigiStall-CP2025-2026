@@ -1,4 +1,4 @@
-import { eventBus, EVENTS } from '../../../eventBus.js'
+import { eventBus, EVENTS } from '@eventBus'
 
 export default {
   name: 'AppSidebar',

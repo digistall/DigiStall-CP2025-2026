@@ -13,7 +13,7 @@ import SearchFilterBar from "./Components/SearchFilter/SearchFilterBar";
 import NotificationCard from "./Components/NotificationCard";
 import NotificationEmptyState from "./Components/NotificationEmptyState";
 import { generateSampleNotifications } from "./utils/notificationHelpers";
-import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 
 const NotificationsScreen = () => {
   const { theme, isDark } = useTheme();

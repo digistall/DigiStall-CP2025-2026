@@ -14,15 +14,15 @@ import LandingPage from '@public-landing/VIEWS/LandingPage/LandingPage.vue'
 import MainLayout from '@shared/COMPONENTS/MainLayout/MainLayout/MainLayout.vue'
 
 // BUSINESS/SHARED folder (shared by Owner & Manager)
-import Dashboard from '@business-shared/VIEWS/Dashboard/Dashboard.vue'
-import Payment from '@business-shared/VIEWS/Payment/Payment.vue'
-import Applicants from '@business-shared/VIEWS/Applicants/Applicants.vue'
-import Complaints from '@business-shared/VIEWS/Complaints/Complaints.vue'
+import Dashboard from '@business-shared/VIEWS/Dashboard/Dashboard/Dashboard.vue'
+import Payment from '@business-shared/VIEWS/Payment/Payment/Payment.vue'
+import Applicants from '@business-shared/VIEWS/Applicants/Applicants/Applicants.vue'
+import Complaints from '@business-shared/VIEWS/Complaints/Complaints/Complaints.vue'
 import Compliances from '@business-shared/VIEWS/Compliances/Compliance.vue'
-import Vendors from '@business-shared/VIEWS/Vendors/Vendors.vue'
-import Stallholders from '@business-shared/VIEWS/Stallholders/Stallholders.vue'
-import Stalls from '@business-shared/VIEWS/Stalls/Stalls.vue'
-import Employees from '@business-shared/VIEWS/Employees/Employees.vue'
+import Vendors from '@business-shared/VIEWS/Vendors/Vendors/Vendors.vue'
+import Stallholders from '@business-shared/VIEWS/Stallholders/Stallholders/Stallholders.vue'
+import Stalls from '@business-shared/VIEWS/Stalls/Stalls/Stalls.vue'
+import Employees from '@business-shared/VIEWS/Employees/Employees/Employees.vue'
 
 // BUSINESS/OWNER-MANAGER folder (Owner-only features, shared access)
 import BranchManagement from '@owner-manager/VIEWS/Branch/Branch.vue'

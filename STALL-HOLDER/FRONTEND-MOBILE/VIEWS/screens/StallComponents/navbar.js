@@ -32,19 +32,19 @@ const Navbar = ({
   const navItems = [
     {
       id: "Stall",
-      icon: require("../../../assets/Home-Image/StallIcon.png"),
+      icon: require('@shared-assets/Home-Image/StallIcon.png'),
       label: "Stall",
       onPress: onStallPress,
     },
     {
       id: "Documents",
-      icon: require("../../../assets/Home-Image/DocumentIcon.png"),
+      icon: require('@shared-assets/Home-Image/DocumentIcon.png'),
       label: "Documents",
       onPress: onDocumentsPress,
     },
     {
       id: "Payment",
-      icon: require("../../../assets/payment-icon.png"),
+      icon: require('@shared-assets/payment-icon.png'),
       label: "Payment",
       onPress: onPaymentPress,
     },

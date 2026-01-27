@@ -6,7 +6,7 @@ import { mockUser } from "../mockUser";
 import EditProfileModal from "../EditComponents/editProfile";
 import UserStorageService from "../../../../services/UserStorageService";
 import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
-import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../../services/DataDisplayUtils";
+import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 

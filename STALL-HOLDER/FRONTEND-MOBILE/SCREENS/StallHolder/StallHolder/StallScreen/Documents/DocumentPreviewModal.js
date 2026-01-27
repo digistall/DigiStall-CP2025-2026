@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 

@@ -2,7 +2,7 @@ import axios from 'axios'
 import BranchList from './Components/BranchList/BranchList.vue'
 import AddBranchDialog from './Components/AddBranch/AddBranchDialog.vue'
 import AssignManagerDialog from './Components/AssignManager/AssignManagerDialog.vue'
-import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
+import UniversalPopup from '@common/UniversalPopup/UniversalPopup.vue'
 
 export default {
   name: 'BranchManagement',

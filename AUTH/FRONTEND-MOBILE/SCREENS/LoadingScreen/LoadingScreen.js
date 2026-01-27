@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getSafeDisplayValue } from '../../services/DataDisplayUtils';
+import { getSafeDisplayValue } from '@auth-mobile/SERVICES/DataDisplayUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -295,7 +295,7 @@ const LoadingScreen = ({
         >
           <View style={styles.logoBackground}>
             <Image
-              source={require('../../assets/Login-Image/DigiStall-Logo.png')}
+              source={require('@shared-assets/Login-Image/DigiStall-Logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />

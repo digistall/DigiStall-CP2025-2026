@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../../../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
-import ApiService from "../../../../services/ApiService";
+import { useTheme } from "../../@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import ApiService from "@employee-mobile/SERVICES/ApiService";
 
 const { width, height } = Dimensions.get("window");
 

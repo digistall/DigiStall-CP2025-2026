@@ -21,7 +21,7 @@ import ApiService from "../../../../services/ApiService";
 import UserStorageService from "../../../../services/UserStorageService";
 import FavoritesService from "../../../../services/FavoritesService";
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
-import { getSafeUserName } from "../../../../services/DataDisplayUtils";
+import { getSafeUserName } from "../../../services/DataDisplayUtils";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

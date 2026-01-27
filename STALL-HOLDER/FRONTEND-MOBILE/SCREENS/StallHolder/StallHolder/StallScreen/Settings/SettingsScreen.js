@@ -11,13 +11,13 @@ import {
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ProfileDisplay from "./components/ProfileComponents//ProfileComponents/ProfileDisplay";
 import { mockUser } from "./components/ProfileComponents/mockUser";
-import ThemeModal from "../Settings/components/ThemeComponents/ThemeModal";
-import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
-import AboutApp from "../Settings/components/AboutComponents/AboutApp";
-import PrivacyModal from "../Settings/components/PrivacyComponents/PrivacyModal";
-import ChangePassword from "../Settings/components/ChangePasswordComponents/ChangePassword";
-import UserStorageService from "../../../../services/UserStorageService";
-import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import ThemeModal from "@stall-holder-mobile/SCREENS/StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeModal";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import AboutApp from "@stall-holder-mobile/SCREENS/StallHolder/StallScreen/Settings/components/AboutComponents/AboutApp";
+import PrivacyModal from "@stall-holder-mobile/SCREENS/StallHolder/StallScreen/Settings/components/PrivacyComponents/PrivacyModal";
+import ChangePassword from "@stall-holder-mobile/SCREENS/StallHolder/StallScreen/Settings/components/ChangePasswordComponents/ChangePassword";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "@stall-holder-mobile/SERVICES/DataDisplayUtils";
 
 const { width } = Dimensions.get("window");
 

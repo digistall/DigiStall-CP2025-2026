@@ -39,8 +39,8 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment, theme = defaultT
       backgroundColor: "#E8F4FD",
       gradientColors: ["#007DFE", "#0056D6"],
       description: "Pay with your GCash wallet",
-      logo: require("../../../../../../assets/gcash-logo.png"),
-      backgroundImage: require("../../../../../../assets/gcash-logo.png"),
+      logo: require('@shared-assets/gcash-logo.png'),
+      backgroundImage: require('@shared-assets/gcash-logo.png'),
     },
     {
       id: "paymaya",
@@ -50,8 +50,8 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment, theme = defaultT
       backgroundColor: "#E8F8ED",
       gradientColors: ["#00D632", "#00A827"],
       description: "Pay with your PayMaya account",
-      logo: require("../../../../../../assets/maya.png"),
-      backgroundImage: require("../../../../../../assets/maya.png"),
+      logo: require('@shared-assets/maya.png'),
+      backgroundImage: require('@shared-assets/maya.png'),
     },
     {
       id: "bank",
@@ -61,8 +61,8 @@ const PaymentCard = ({ onPaymentMethodSelect, onProceedPayment, theme = defaultT
       backgroundColor: "#FFF2E6",
       gradientColors: ["#FF6B35", "#E55A2B"],
       description: "Pay via bank transfer",
-      logo: require("../../../../../../assets/bank-image.png"),
-      backgroundImage: require("../../../../../../assets/bank-image.png"),
+      logo: require('@shared-assets/bank-image.png'),
+      backgroundImage: require('@shared-assets/bank-image.png'),
     },
   ];
 

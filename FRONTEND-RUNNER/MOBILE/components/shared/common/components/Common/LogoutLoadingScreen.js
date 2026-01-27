@@ -169,7 +169,7 @@ const LogoutLoadingScreen = ({
             <View style={styles.logoBackground}>
               <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                 <Image
-                  source={require('@shared-assets/DigiStall-Logo.png')}
+                  source={require('../../../../assets/Login-Image/DigiStall-Logo.png')}
                   style={styles.logo}
                   resizeMode="contain"
                 />

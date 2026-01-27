@@ -10,7 +10,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import ApiService from "../../../../services/ApiService";
 import UserStorageService from "../../../../services/UserStorageService";
-import LogoutLoadingScreen from "../components/Common/LogoutLoadingScreen";
+import LogoutLoadingScreen from "../../../../components/Common/LogoutLoadingScreen";
 
 // nav bar and sidebar components
 import Header from "./StallComponents/header";

@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useEffect, useRef } from "react";
 import PaymentTable from "./Components/PaymentTable/PaymentTable";
-import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 

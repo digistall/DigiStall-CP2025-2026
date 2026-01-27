@@ -17,7 +17,7 @@ import AboutApp from "./Settings/components/AboutComponents/AboutApp";
 import PrivacyModal from "./Settings/components/PrivacyComponents/PrivacyModal";
 import ChangePassword from "./Settings/components/ChangePasswordComponents/ChangePassword";
 import UserStorageService from "../../../../services/UserStorageService";
-import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../services/DataDisplayUtils";
 
 const { width } = Dimensions.get("window");
 

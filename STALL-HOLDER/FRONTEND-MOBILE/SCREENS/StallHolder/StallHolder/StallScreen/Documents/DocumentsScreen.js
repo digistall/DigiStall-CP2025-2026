@@ -16,10 +16,10 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import API Service
-import ApiService from '../../../../services/ApiService';
-import UserStorageService from '../../../../services/UserStorageService';
-import DocumentUploadHelper from '../../../../services/DocumentUploadHelper';
-import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import DocumentUploadHelper from "@stall-holder-mobile/SERVICES/DocumentUploadHelper";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 import DocumentPreviewModal from './DocumentPreviewModal';
 import AuthenticatedImage from './AuthenticatedImage';
 
@@ -430,7 +430,7 @@ const DocumentsScreen = () => {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
         <Image 
-          source={require('../../../../assets/Home-Image/DocumentIcon.png')} 
+          source={require('@shared-assets/Home-Image/DocumentIcon.png')} 
           style={styles.emptyIcon}
           resizeMode="contain"
         />
