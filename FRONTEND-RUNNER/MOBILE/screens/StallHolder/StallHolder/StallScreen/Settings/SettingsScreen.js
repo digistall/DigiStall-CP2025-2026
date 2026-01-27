@@ -9,15 +9,15 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import ProfileDisplay from "./components/ProfileComponents//ProfileComponents/ProfileDisplay";
+import ProfileDisplay from "./components/ProfileComponents/ProfileComponents/ProfileDisplay";
 import { mockUser } from "./components/ProfileComponents/mockUser";
-import ThemeModal from "./Settings/components/ThemeComponents/ThemeModal";
-import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
-import AboutApp from "./Settings/components/AboutComponents/AboutApp";
-import PrivacyModal from "./Settings/components/PrivacyComponents/PrivacyModal";
-import ChangePassword from "./Settings/components/ChangePasswordComponents/ChangePassword";
-import UserStorageService from "../../../../services/UserStorageService";
-import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../services/DataDisplayUtils";
+import ThemeModal from "./components/ThemeComponents/ThemeModal";
+import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
+import AboutApp from "./components/AboutComponents/AboutApp";
+import PrivacyModal from "./components/PrivacyComponents/PrivacyModal";
+import ChangePassword from "./components/ChangePasswordComponents/ChangePassword";
+import UserStorageService from "../../../../../services/UserStorageService";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../../services/DataDisplayUtils";
 
 const { width } = Dimensions.get("window");
 
