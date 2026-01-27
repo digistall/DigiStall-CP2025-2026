@@ -1,24 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { ThemeProvider } from "./components/ThemeComponents/ThemeContext";
 
-// ===== MVC ROLE-BASED IMPORTS =====
-// All screens imported from role folders via aliases
-
-// AUTH folder
-import { ThemeProvider } from "@stall-holder-mobile/SCREENS/StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
-import LoginScreen from "@auth-mobile/SCREENS/LoginScreen/LoginScreen";
-import LoadingScreen from "@auth-mobile/SCREENS/LoadingScreen/LoadingScreen";
-
-// STALL-HOLDER folder
-import StallHome from "@stall-holder-mobile/SCREENS/StallHolder/StallScreen/StallHome";
-
-// VENDOR folder
-import VendorHome from "@vendor-mobile/SCREENS/Vendor/VendorHome";
-
-// EMPLOYEE folder (Inspector & Collector)
-import InspectorHome from "@employee-mobile/SCREENS/Inspector/InspectorHome";
-import CollectorHome from "@employee-mobile/SCREENS/Collector/CollectorHome";
+// Local screens
+import LoginScreen from "./screens/LoginScreen/LoginScreen";
+import LoadingScreen from "./screens/LoadingScreen/LoadingScreen";
+import StallHome from "./screens/StallHolder/StallHolder/StallScreen/StallHome";
 
 // Local services
 import UserStorageService from './services/UserStorageService';
@@ -27,8 +15,8 @@ import ApiService from './services/ApiService';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [initialRoute, setInitialRoute] = useState('LoginScreen');
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('LoadingScreen');
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     // On app start, check for stored JWT and verify it
@@ -42,31 +30,24 @@ export default function App() {
           } else {
             setInitialRoute('LoginScreen');
           }
+        } else {
+          setInitialRoute('LoginScreen');
         }
       } catch (error) {
         console.error('Error verifying token on startup:', error);
+        setInitialRoute('LoginScreen');
       } finally {
-        setCheckingAuth(false);
+        setIsReady(true);
       }
     };
 
     checkAuth();
   }, []);
 
-  // While checking auth, render nothing (or a splash/loading screen)
-  if (checkingAuth) {
+  if (!isReady) {
     return (
       <ThemeProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="LoginScreen" component={LoginScreen} />
-            <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
-            <Stack.Screen name="StallHome" component={StallHome} />
-            <Stack.Screen name="VendorHome" component={VendorHome} />
-            <Stack.Screen name="InspectorHome" component={InspectorHome} />
-            <Stack.Screen name="CollectorHome" component={CollectorHome} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <LoadingScreen />
       </ThemeProvider>
     );
   }
@@ -81,9 +62,6 @@ export default function App() {
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
           <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
           <Stack.Screen name="StallHome" component={StallHome} />
-          <Stack.Screen name="VendorHome" component={VendorHome} />
-          <Stack.Screen name="InspectorHome" component={InspectorHome} />
-          <Stack.Screen name="CollectorHome" component={CollectorHome} />
         </Stack.Navigator>
       </NavigationContainer>
     </ThemeProvider>

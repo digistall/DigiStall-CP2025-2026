@@ -1,0 +1,167 @@
+import { StyleSheet, Dimensions } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: width * 0.05,
+    paddingVertical: height * 0.02,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  headerTitle: {
+    fontSize: width * 0.055,
+    fontWeight: "bold",
+    color: "#1f2937",
+  },
+  closeButton: {
+    width: width * 0.08,
+    height: width * 0.08,
+    borderRadius: width * 0.04,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButtonText: {
+    fontSize: width * 0.04,
+    color: "#6b7280",
+    fontWeight: "bold",
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: width * 0.05,
+  },
+  subtitle: {
+    fontSize: width * 0.04,
+    color: "#6b7280",
+    marginVertical: height * 0.02,
+    textAlign: "center",
+    lineHeight: width * 0.05,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: height * 0.02,
+    marginBottom: height * 0.04,
+    gap: width * 0.04,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#f3f4f6",
+    paddingVertical: height * 0.018,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: width * 0.04,
+    fontWeight: "500",
+    color: "#6b7280",
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: "#305CDE",
+    paddingVertical: height * 0.018,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#9ca3af",
+  },
+  submitButtonText: {
+    fontSize: width * 0.04,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  progressContainer: {
+    backgroundColor: "#ffffff",
+    marginHorizontal: width * 0.05,
+    marginVertical: height * 0.01,
+    paddingVertical: height * 0.015,
+    paddingHorizontal: width * 0.04,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  progressText: {
+    fontSize: width * 0.035,
+    color: "#6b7280",
+    textAlign: "center",
+    fontWeight: "500",
+    marginBottom: height * 0.008,
+  },
+  requiredText: {
+    color: "#dc2626",
+    fontWeight: "600",
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#10b981",
+    borderRadius: 3,
+  },
+  requiredProgressFill: {
+    height: "100%",
+    backgroundColor: "#dc2626",
+    borderRadius: 3,
+  },
+  validationContainer: {
+    backgroundColor: "#fef2f2",
+    marginHorizontal: width * 0.05,
+    marginVertical: height * 0.01,
+    padding: width * 0.04,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#dc2626",
+  },
+  validationTitle: {
+    fontSize: width * 0.038,
+    fontWeight: "600",
+    color: "#dc2626",
+    marginBottom: height * 0.005,
+  },
+  validationError: {
+    fontSize: width * 0.034,
+    color: "#7f1d1d",
+    lineHeight: width * 0.045,
+  },
+  submissionInfo: {
+    backgroundColor: "#f0f9ff",
+    marginVertical: height * 0.01,
+    padding: width * 0.03,
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: "#0284c7",
+  },
+  submissionInfoText: {
+    fontSize: width * 0.032,
+    color: "#0369a1",
+    fontWeight: "500",
+  },
+});
