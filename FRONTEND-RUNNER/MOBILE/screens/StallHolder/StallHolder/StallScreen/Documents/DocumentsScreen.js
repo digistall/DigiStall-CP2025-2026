@@ -16,10 +16,10 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import API Service
-import ApiService from "../../../../services/ApiService";
-import UserStorageService from "../../../../services/UserStorageService";
-import DocumentUploadHelper from "../../../../services/DocumentUploadHelper";
-import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
+import ApiService from "../../../../../services/ApiService";
+import UserStorageService from "../../../../../services/UserStorageService";
+import DocumentUploadHelper from "../../../../../services/DocumentUploadHelper";
+import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import AuthenticatedImage from './AuthenticatedImage';
 

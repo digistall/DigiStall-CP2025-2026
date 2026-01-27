@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Image, View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import ApiService from "../../../../services/ApiService";
+import ApiService from "../../../../../services/ApiService";
 
 /**
  * AuthenticatedImage Component

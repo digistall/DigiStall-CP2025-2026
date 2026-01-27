@@ -16,12 +16,12 @@ import StallCard from './components/StallCard';
 import StallDetailsModal from './components/StallDetailsModal';
 
 // Import services
-import ApiService from '../../../../services/ApiService';
-import UserStorageService from '../../../../services/UserStorageService';
-import FavoritesService from '../../../../services/FavoritesService';
+import ApiService from '../../../../../services/ApiService';
+import UserStorageService from '../../../../../services/UserStorageService';
+import FavoritesService from '../../../../../services/FavoritesService';
 
 // Import theme
-import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
