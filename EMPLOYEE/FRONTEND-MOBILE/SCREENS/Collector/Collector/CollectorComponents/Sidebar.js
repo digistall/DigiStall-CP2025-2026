@@ -10,7 +10,7 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import UserStorageService from "../../../services/UserStorageService";
+import UserStorageService from "@employee-mobile/SERVICES/UserStorageService";
 
 const { width, height } = Dimensions.get("window");
 
@@ -94,31 +94,31 @@ const Sidebar = ({
     {
       id: "dashboard",
       title: "Dashboard",
-      icon: require("../../../assets/dashboard-icon.png"),
+      icon: require('@shared-assets/dashboard-icon.png'),
       isImage: true,
     },
     {
       id: "payment",
       title: "Payment",
-      icon: require("../../../assets/payment-icon.png"),
+      icon: require('@shared-assets/payment-icon.png'),
       isImage: true,
     },
     {
       id: "vendor",
       title: "Vendor",
-      icon: require("../../../assets/Home-Image/StallIcon.png"),
+      icon: require('@shared-assets/Home-Image/StallIcon.png'),
       isImage: true,
     },
     {
       id: "notifications",
       title: "Notifications",
-      icon: require("../../../assets/Notifications-icon.png"),
+      icon: require('@shared-assets/Notifications-icon.png'),
       isImage: true,
     },
     {
       id: "settings",
       title: "Settings",
-      icon: require("../../../assets/Settings-icon.png"),
+      icon: require('@shared-assets/Settings-icon.png'),
       isImage: true,
     },
   ];

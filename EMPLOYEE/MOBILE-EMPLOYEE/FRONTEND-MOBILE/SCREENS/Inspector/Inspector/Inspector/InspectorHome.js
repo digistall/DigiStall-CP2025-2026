@@ -9,10 +9,10 @@ import {
   PanResponder,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
-import ApiService from "../../services/ApiService";
-import UserStorageService from "../../services/UserStorageService";
-import LogoutLoadingScreen from "../../components/Common/LogoutLoadingScreen";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import ApiService from "@employee-mobile/SERVICES/ApiService";
+import UserStorageService from "@employee-mobile/SERVICES/UserStorageService";
+import LogoutLoadingScreen from "@employee-mobile/COMPONENTS/Common/LogoutLoadingScreen";
 
 // Inspector nav bar and sidebar components
 import Header from "./InspectorComponents/Header";

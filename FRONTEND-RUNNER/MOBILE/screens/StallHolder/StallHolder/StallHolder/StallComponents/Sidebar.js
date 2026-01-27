@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../../services/UserStorageService";
-import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../services/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 

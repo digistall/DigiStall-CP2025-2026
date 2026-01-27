@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
-import ApiService from '../../../../../services/ApiService';
-import { NetworkUtils } from '../../../../../config/networkConfig';
+import ApiService from '@stall-holder-mobile/SERVICES/ApiService';
+import { NetworkUtils } from '@shared-mobile/CONFIG/networkConfig';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

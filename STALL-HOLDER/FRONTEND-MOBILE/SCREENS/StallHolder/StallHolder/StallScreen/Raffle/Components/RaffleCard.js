@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { useTheme } from '../../Settings/components/ThemeComponents/ThemeContext';
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 
 const { width } = Dimensions.get('window');
 

@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { NetworkUtils } from '../../../../../config/networkConfig';
-import ApiService from '../../../../../services/ApiService';
+import { NetworkUtils } from '@shared-mobile/CONFIG/networkConfig';
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

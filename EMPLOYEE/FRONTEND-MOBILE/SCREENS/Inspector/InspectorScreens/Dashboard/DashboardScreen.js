@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
-import UserStorageService from "../../../../services/UserStorageService";
-import { useTheme } from "../../../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext";
+import UserStorageService from "@employee-mobile/SERVICES/UserStorageService";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 

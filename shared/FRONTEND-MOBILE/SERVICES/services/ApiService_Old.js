@@ -1,5 +1,5 @@
 // API Service for mobile app backend integration
-import { API_CONFIG, NetworkUtils } from '../config/networkConfig';
+import { API_CONFIG, NetworkUtils } from '@shared-mobile/CONFIG/networkConfig';
 
 class ApiService {
   // Test basic connectivity before login

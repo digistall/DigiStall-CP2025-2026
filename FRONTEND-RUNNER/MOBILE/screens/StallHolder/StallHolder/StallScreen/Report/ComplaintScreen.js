@@ -16,7 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../components/themeComponents/ThemeContext';
 import ApiService from "../../../../services/ApiService";
 import UserStorageService from "../../../../services/UserStorageService";
 

@@ -17,11 +17,11 @@ import StallCard from './components/StallCard';
 import StallDetailsModal from './components/StallDetailsModal';
 
 // Import services
-import ApiService from '../../../../services/ApiService';
-import UserStorageService from '../../../../services/UserStorageService';
-import FavoritesService from '../../../../services/FavoritesService';
-import { useTheme } from '../Settings/components/ThemeComponents/ThemeContext';
-import { getSafeUserName } from '../../../../services/DataDisplayUtils';
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import FavoritesService from "@stall-holder-mobile/SERVICES/FavoritesService";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import { getSafeUserName } from "@stall-holder-mobile/SERVICES/DataDisplayUtils";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

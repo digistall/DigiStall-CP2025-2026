@@ -4,9 +4,9 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-ico
 import { LinearGradient } from "expo-linear-gradient";
 import { mockUser } from "../mockUser";
 import EditProfileModal from "../EditComponents/editProfile";
-import UserStorageService from "../../../../../../../services/UserStorageService";
-import { useTheme } from "../../../../Settings/components/ThemeComponents/ThemeContext";
-import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../../../../../services/DataDisplayUtils";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "@stall-holder-mobile/SERVICES/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 

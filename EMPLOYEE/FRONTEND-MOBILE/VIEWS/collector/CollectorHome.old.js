@@ -14,7 +14,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import UserStorageService from '../../services/UserStorageService';
+import UserStorageService from '@services/UserStorageService';
 import ApiService from '../../services/ApiService';
 import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
 

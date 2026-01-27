@@ -2,13 +2,13 @@ import { useState, useMemo, useEffect } from "react";
 import { ScrollView, StyleSheet, Dimensions, Text, View, Alert } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
 import AuctionCard from "./Components/AuctionCardComponents/AuctionCard";
 import SearchFilterBar from "../Stall/components/SearchFilter/SearchFilterBar";
 import AuctionReminderModal from "../Auction/Components/AuctionReminderComponent/AuctionReminderModal";
 import { AuctionTimings } from "./Components/shared/constants";
-import UserStorageService from "../../../../services/UserStorageService";
-import ApiService from "../../../../services/ApiService";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
 
 const { width } = Dimensions.get("window");
 

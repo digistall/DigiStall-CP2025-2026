@@ -11,8 +11,8 @@ import {
   StyleSheet,
 } from "react-native";
 import { styles as baseStyles } from "./css/styles";
-import UserStorageService from "../../../services/UserStorageService";
-import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../services/DataDisplayUtils";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import { getSafeUserName, getSafeContactInfo, getUserInitials } from "@stall-holder-mobile/SERVICES/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 
@@ -129,31 +129,31 @@ const Sidebar = ({
     {
       id: "dashboard",
       title: "Dashboard",
-      icon: require("../../../assets/dashboard-icon.png"),
+      icon: require('@shared-assets/dashboard-icon.png'),
       isImage: true,
     },
     {
       id: "reports",
       title: "Complaints", 
-      icon: require("../../../assets/report-icon.png"),
+      icon: require('@shared-assets/report-icon.png'),
       isImage: true,
     },
     {
       id: "payment",
       title: "Payment",
-      icon: require("../../../assets/payment-icon.png"),
+      icon: require('@shared-assets/payment-icon.png'),
       isImage: true,
     },
     {
       id: "notifications",
       title: "Notifications",
-      icon: require("../../../assets/Notifications-icon.png"),
+      icon: require('@shared-assets/Notifications-icon.png'),
       isImage: true,
     },
     {
       id: "settings",
       title: "Settings",
-      icon: require("../../../assets/Settings-icon.png"),
+      icon: require('@shared-assets/Settings-icon.png'),
       isImage: true,
     },
   ];

@@ -1,7 +1,7 @@
 // ===== ENHANCED LOGIN PAGE WITH JWT AUTH =====
-import { useAuthStore } from '../../../stores/authStore'
-import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
-import LoadingScreen from '../../Common/LoadingScreen/LoadingScreen.vue'
+import { useAuthStore } from '@stores/authStore'
+import UniversalPopup from '@common/UniversalPopup/UniversalPopup.vue'
+import LoadingScreen from '@common/LoadingScreen/LoadingScreen.vue'
 
 export default {
   name: 'LoginPage',

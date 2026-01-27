@@ -13,7 +13,7 @@
       <!-- Logo Section -->
       <div class="logo-section" @click="toggleSidebar">
         <div class="logo-container">
-          <img src="../../../assets/DigiStall-Logo.png" alt="Logo" class="logo-icon" />
+          <img src="@assets/DigiStall-Logo.png" alt="Logo" class="logo-icon" />
           <div v-if="isExpanded" class="logo-text">
             <h3>Digi Stall</h3>
           </div>

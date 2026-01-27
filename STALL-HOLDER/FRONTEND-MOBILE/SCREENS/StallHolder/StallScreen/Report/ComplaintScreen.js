@@ -16,9 +16,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { useTheme } from "../Settings/components/ThemeComponents/ThemeContext";
-import ApiService from "../../../../services/ApiService";
-import UserStorageService from "../../../../services/UserStorageService";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
 
 const { width, height } = Dimensions.get("window");
 const MAX_PHOTOS = 1; // Only 1 photo since stored as blob

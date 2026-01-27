@@ -195,7 +195,7 @@ const LoginScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.3)" translucent />
         <ImageBackground
-          source={require('../../assets/Login-Image/background-mobile.png')}
+          source={require('@shared-assets/Login-Image/background-mobile.png')}
           style={styles.backgroundImage}
           resizeMode="cover"
         >
@@ -204,7 +204,7 @@ const LoginScreen = ({ navigation }) => {
           <SafeAreaView style={styles.content} edges={['bottom', 'left', 'right']}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/Login-Image/DigiStall-Logo.png')}
+                source={require('@shared-assets/Login-Image/DigiStall-Logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
@@ -288,7 +288,7 @@ const LoginScreen = ({ navigation }) => {
               {/* Animated Logo */}
               <Animated.View style={[styles.loadingLogoContainer, { transform: [{ scale: pulseAnim }] }]}>
                 <Image
-                  source={require('../../assets/Login-Image/DigiStall-Logo.png')}
+                  source={require('@shared-assets/Login-Image/DigiStall-Logo.png')}
                   style={styles.loadingLogo}
                   resizeMode="contain"
                 />

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from "react-native";
 import { styles } from "./PaymentTableStyles";
 import ViewAllTable from "./ViewAllTable";
-import ApiService from "../../../../../../services/ApiService";
-import UserStorageService from "../../../../../../services/UserStorageService";
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
 import { Ionicons } from "@expo/vector-icons";
 
 // Default theme colors for fallback

@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles as baseStyles } from "./css/styles";
-import UserStorageService from "../../../services/UserStorageService";
-import { getSafeStaffName, getSafeStaffContact, getUserInitials } from "../../../services/DataDisplayUtils";
+import UserStorageService from "@employee-mobile/SERVICES/UserStorageService";
+import { getSafeStaffName, getSafeStaffContact, getUserInitials } from "@employee-mobile/SERVICES/DataDisplayUtils";
 
 const { width, height } = Dimensions.get("window");
 

@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { useTheme } from '../../../StallHolder/StallScreen/Settings/components/ThemeComponents/ThemeContext';
+import { useTheme } from '@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 

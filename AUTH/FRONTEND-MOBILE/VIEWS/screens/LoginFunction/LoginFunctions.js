@@ -6,10 +6,10 @@
 // Step 2 (60%): Loading profile data (after successful auth)
 // Step 3 (80%): Preparing dashboard (saving data)
 // Step 4 (100%): Finalizing (before navigation)
-import ApiService from '../../../services/ApiService';
-import UserStorageService from '../../../services/UserStorageService';
-import { API_CONFIG } from '../../../config/networkConfig';
-import { getSafeUserName, getSafeStaffName } from '../../../services/DataDisplayUtils';
+import ApiService from '@auth-mobile/SERVICES/ApiService';
+import UserStorageService from '@auth-mobile/SERVICES/UserStorageService';
+import { API_CONFIG } from '@shared-mobile/CONFIG/networkConfig';
+import { getSafeUserName, getSafeStaffName } from '@auth-mobile/SERVICES/DataDisplayUtils';
 
 // Unified Mobile login - automatically detects staff or regular user
 export const handleLogin = async (

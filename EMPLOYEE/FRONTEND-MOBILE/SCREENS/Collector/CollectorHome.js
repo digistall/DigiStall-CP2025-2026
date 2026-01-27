@@ -7,9 +7,9 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import ApiService from "../../services/ApiService";
-import UserStorageService from "../../services/UserStorageService";
-import LogoutLoadingScreen from "../../components/Common/LogoutLoadingScreen";
+import ApiService from "@employee-mobile/SERVICES/ApiService";
+import UserStorageService from "@employee-mobile/SERVICES/UserStorageService";
+import LogoutLoadingScreen from "@employee-mobile/COMPONENTS/Common/LogoutLoadingScreen";
 
 // nav bar and sidebar components
 import Header from "./CollectorComponents/header";

@@ -7,15 +7,15 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "./Settings/components/ThemeComponents/ThemeContext";
-import ApiService from "../../../services/ApiService";
-import UserStorageService from "../../../services/UserStorageService";
-import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
+import { useTheme } from "@shared-mobile/COMPONENTS/ThemeComponents/ThemeContext";
+import ApiService from "@stall-holder-mobile/SERVICES/ApiService";
+import UserStorageService from "@stall-holder-mobile/SERVICES/UserStorageService";
+import LogoutLoadingScreen from "@stall-holder-mobile/COMPONENTS/Common/LogoutLoadingScreen";
 
 // nav bar and sidebar components
-import Header from "../StallComponents/header";
-import Navbar from "../StallComponents/navbar";
-import Sidebar from "../StallComponents/Sidebar";
+import Header from "@stall-holder-mobile/SCREENS/StallHolder/StallComponents/header";
+import Navbar from "@stall-holder-mobile/SCREENS/StallHolder/StallComponents/navbar";
+import Sidebar from "@stall-holder-mobile/SCREENS/StallHolder/StallComponents/Sidebar";
 
 // screen components
 import DashboardScreen from "./Dashboard/DashboardScreen";

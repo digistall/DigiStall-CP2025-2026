@@ -10,7 +10,7 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import UserStorageService from "../../../services/UserStorageService";
+import UserStorageService from "@employee-mobile/SERVICES/UserStorageService";
 
 const { width, height } = Dimensions.get("window");
 

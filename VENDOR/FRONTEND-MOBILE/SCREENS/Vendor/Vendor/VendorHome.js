@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import ApiService from '../../services/ApiService';
-import UserStorageService from '../../services/UserStorageService';
-import LogoutLoadingScreen from '../../components/Common/LogoutLoadingScreen';
+import ApiService from '@vendor-mobile/SERVICES/ApiService';
+import UserStorageService from '@vendor-mobile/SERVICES/UserStorageService';
+import LogoutLoadingScreen from '@vendor-mobile/COMPONENTS/Common/LogoutLoadingScreen';
 
 const VendorHome = () => {
   const navigation = useNavigation();
