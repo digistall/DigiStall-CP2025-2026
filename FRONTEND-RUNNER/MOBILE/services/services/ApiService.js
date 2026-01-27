@@ -1,6 +1,6 @@
 // API Service for mobile app backend integration
 // Updated for unified backend structure
-import { API_CONFIG, NetworkUtils } from '../config/networkConfig';
+import { API_CONFIG, NetworkUtils } from '../config/shared/networkConfig';
 import UserStorageService from './UserStorageService';
 
 class ApiService {
