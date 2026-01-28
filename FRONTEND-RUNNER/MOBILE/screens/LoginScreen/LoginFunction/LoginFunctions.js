@@ -101,6 +101,8 @@ export const handleLogin = async (
           navigation.navigate('LoadingScreen', {
             userName: staffName,
             isStallholder: false,
+            isStaff: true,
+            staffType: staffType,
             stallNo: null,
             nextScreen: 'InspectorHome',
             loadingDuration: 2000
@@ -109,6 +111,8 @@ export const handleLogin = async (
           navigation.navigate('LoadingScreen', {
             userName: staffName,
             isStallholder: false,
+            isStaff: true,
+            staffType: staffType,
             stallNo: null,
             nextScreen: 'CollectorHome',
             loadingDuration: 2000
@@ -313,6 +317,8 @@ export const handleStaffLogin = async (
           navigation.navigate('LoadingScreen', {
             userName: staffName,
             isStallholder: false,
+            isStaff: true,
+            staffType: staffType,
             stallNo: null,
             nextScreen: 'InspectorHome',
             loadingDuration: 2000
@@ -321,6 +327,8 @@ export const handleStaffLogin = async (
           navigation.navigate('LoadingScreen', {
             userName: staffName,
             isStallholder: false,
+            isStaff: true,
+            staffType: staffType,
             stallNo: null,
             nextScreen: 'CollectorHome',
             loadingDuration: 2000

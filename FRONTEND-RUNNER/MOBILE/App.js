@@ -13,6 +13,8 @@ import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
 import LoginScreen from './screens/LoginScreen/LoginScreen';
 import LoadingScreen from './screens/LoadingScreen/LoadingScreen';
 import StallHome from './screens/StallHolder/StallHolder/StallScreen/StallHome';
+import InspectorHome from './screens/Inspector/InspectorHome';
+import CollectorHome from './screens/Collector/CollectorHome';
 
 // Services
 import UserStorageService from './services/UserStorageService';
@@ -44,9 +46,20 @@ export default function App() {
       const storedUserData = await UserStorageService.getUserData();
       
       if (storedUserData && storedUserData.token) {
-        console.log('User is authenticated, navigating to StallHome');
-        setUserData(storedUserData);
-        setInitialRoute('StallHome');
+        // Check if it's a staff user (inspector/collector)
+        if (storedUserData.staffType === 'inspector') {
+          console.log('User is authenticated as Inspector, navigating to InspectorHome');
+          setUserData(storedUserData);
+          setInitialRoute('InspectorHome');
+        } else if (storedUserData.staffType === 'collector') {
+          console.log('User is authenticated as Collector, navigating to CollectorHome');
+          setUserData(storedUserData);
+          setInitialRoute('CollectorHome');
+        } else {
+          console.log('User is authenticated as Stallholder, navigating to StallHome');
+          setUserData(storedUserData);
+          setInitialRoute('StallHome');
+        }
       } else {
         console.log('User is not authenticated, navigating to LoginScreen');
         setInitialRoute('LoginScreen');
@@ -89,6 +102,18 @@ export default function App() {
               <Stack.Screen 
                 name="StallHome" 
                 component={StallHome}
+                options={{ gestureEnabled: false }}
+                initialParams={userData ? { userData } : undefined}
+              />
+              <Stack.Screen 
+                name="InspectorHome" 
+                component={InspectorHome}
+                options={{ gestureEnabled: false }}
+                initialParams={userData ? { userData } : undefined}
+              />
+              <Stack.Screen 
+                name="CollectorHome" 
+                component={CollectorHome}
                 options={{ gestureEnabled: false }}
                 initialParams={userData ? { userData } : undefined}
               />
