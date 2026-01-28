@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import RaffleCard from './Components/RaffleCard';
 import SearchFilterBar from './Components/SearchFilter/SearchFilterBar';
-import UserStorageService from '../../../../services/UserStorageService';
-import ApiService from '../../../../services/ApiService';
-import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
+import UserStorageService from '../../../../../services/UserStorageService';
+import ApiService from '../../../../../services/ApiService';
+import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 
 const { width } = Dimensions.get('window');
 

@@ -1,16 +1,5 @@
-const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
+﻿const { getDefaultConfig } = require('expo/metro-config');
 
-const projectRoot = __dirname;
-
-const config = getDefaultConfig(projectRoot);
-
-// Only watch the project directory
-config.watchFolders = [projectRoot];
-
-// Let Metro know about the node modules
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-];
+const config = getDefaultConfig(__dirname);
 
 module.exports = config;

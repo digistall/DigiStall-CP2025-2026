@@ -1,15 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@auth-mobile/*": ["../../AUTH/FRONTEND-MOBILE/*"],
-      "@stall-holder-mobile/*": ["../../STALL-HOLDER/FRONTEND-MOBILE/*"],
-      "@vendor-mobile/*": ["../../VENDOR/FRONTEND-MOBILE/*"],
-      "@employee-mobile/*": ["../../EMPLOYEE/FRONTEND-MOBILE/*"],
-      "@shared-mobile/*": ["../../SHARED/FRONTEND-MOBILE/*"],
-      "@services/*": ["../../SHARED/FRONTEND-MOBILE/SERVICES/*"],
-      "@common/*": ["../../SHARED/FRONTEND-MOBILE/COMPONENTS/common/*"]
-    }
+    "baseUrl": "."
   },
   "exclude": ["node_modules"]
 }

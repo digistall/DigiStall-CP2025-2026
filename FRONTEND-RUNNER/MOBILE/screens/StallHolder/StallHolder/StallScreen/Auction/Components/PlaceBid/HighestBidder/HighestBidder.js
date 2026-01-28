@@ -1,5 +1,5 @@
 import { View, Text } from "react-native";
-import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../../components/ThemeComponents/ThemeContext';
 import { HighestBidderStyles as styles } from "./HighestBidderStyles";
 
 const HighestBidder = ({

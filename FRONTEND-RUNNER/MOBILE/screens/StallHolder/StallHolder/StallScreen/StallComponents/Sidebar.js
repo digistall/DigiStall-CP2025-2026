@@ -141,19 +141,19 @@ const Sidebar = ({
     {
       id: "payment",
       title: "Payment",
-      icon: require('../../assets/payment-icon.png'),
+      icon: require('../../../../../assets/payment-icon.png'),
       isImage: true,
     },
     {
       id: "notifications",
       title: "Notifications",
-      icon: require('../../assets/Notifications-icon.png'),
+      icon: require('../../../../../assets/Notifications-icon.png'),
       isImage: true,
     },
     {
       id: "settings",
       title: "Settings",
-      icon: require('../../assets/Settings-icon.png'),
+      icon: require('../../../../../assets/Settings-icon.png'),
       isImage: true,
     },
   ];

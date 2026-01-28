@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { View, Text, Animated } from "react-native";
-import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../../components/ThemeComponents/ThemeContext';
 import { hasAuctionStarted, getTimeUntilAuctionStart } from "../AuctionUtils";
 import { CountdownTimerStyles as styles } from "./CountdownTimerStyles";
 import { AuctionTimings } from "../../shared/constants";

@@ -7,6 +7,7 @@
     "icon": "./assets/DigiStall-Logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
+    "entryPoint": "./index.js",
     "plugins": [
       "expo-image-picker",
       "expo-document-picker",

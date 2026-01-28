@@ -9,7 +9,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { useTheme } from '../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 import SubmitBid from "./SuccessModal/SuccessBidModal";
 import HighestBidder from "./HighestBidder/HighestBidder";
 import QuickBid from "./QuickBid/QuickBid";

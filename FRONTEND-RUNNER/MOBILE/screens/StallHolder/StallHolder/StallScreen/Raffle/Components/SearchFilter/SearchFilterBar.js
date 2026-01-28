@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import SearchBar from './SearchBar';
 import FilterButton from './FilterButton';
-import { useTheme } from '../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 
 const SearchFilterBar = ({ 
   onSearch, 
