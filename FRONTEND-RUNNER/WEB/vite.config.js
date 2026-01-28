@@ -37,6 +37,7 @@ export default defineConfig({
       '@system-admin': fileURLToPath(new URL('../../SYSTEM-ADMINISTRATOR/FRONTEND-WEB', import.meta.url)),
       '@shared': fileURLToPath(new URL('../../SHARED/FRONTEND-WEB', import.meta.url)),
       // NPM package aliases for MVC folders (resolve to local node_modules)
+      'axios': fileURLToPath(new URL('./node_modules/axios', import.meta.url)),
       'chart.js': fileURLToPath(new URL('./node_modules/chart.js', import.meta.url)),
       'chart.js/auto': fileURLToPath(new URL('./node_modules/chart.js/auto', import.meta.url)),
       'mitt': fileURLToPath(new URL('./node_modules/mitt', import.meta.url)),
