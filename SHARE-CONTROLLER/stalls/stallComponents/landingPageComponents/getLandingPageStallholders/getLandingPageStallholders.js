@@ -1,4 +1,5 @@
 import { createConnection } from '../../../../../CONFIG/database.js';
+import { decryptData } from '../../../../../SERVICES/encryptionService.js';
 
 /**
  * Get landing page stallholders list
@@ -39,13 +40,36 @@ export const getLandingPageStallholders = async (req, res) => {
     
     console.log(`📊 Landing page stallholders fetched: ${stallholders.length} records`);
     
+    // Decrypt and transform data to match frontend expectations
+    // Frontend expects: stallholder_name, business_name, business_type, stall_no, branch_name
+    const decryptedStallholders = stallholders.map(sh => {
+      const decryptedName = decryptData(sh.full_name);
+      console.log(`📊 Decrypting name: ${sh.full_name?.substring(0, 30)}... => ${decryptedName}`);
+      
+      return {
+        stallholder_id: sh.stallholder_id,
+        stallholder_name: decryptedName || 'N/A',
+        business_name: sh.stall_name || 'N/A',
+        business_type: sh.stall_type || 'N/A',
+        stall_no: sh.stall_number || 'N/A',
+        branch_name: sh.branch_name || 'N/A',
+        branch_id: sh.branch_id,
+        compliance_status: sh.compliance_status || 'N/A',
+        payment_status: sh.payment_status,
+        status: sh.status,
+        floor: sh.floor,
+        section: sh.section,
+        monthly_rent: sh.monthly_rent
+      };
+    });
+    
     res.status(200).json({
       success: true,
-      data: stallholders,
+      data: decryptedStallholders,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: stallholders.length
+        total: decryptedStallholders.length
       }
     });
     
@@ -62,4 +86,3 @@ export const getLandingPageStallholders = async (req, res) => {
     }
   }
 };
-
