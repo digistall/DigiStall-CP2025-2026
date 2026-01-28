@@ -430,7 +430,7 @@ const DocumentsScreen = () => {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
         <Image 
-          source={require('../../assets/Home-Image/DocumentIcon.png')} 
+          source={require('../../../../../assets/Home-Image/DocumentIcon.png')} 
           style={styles.emptyIcon}
           resizeMode="contain"
         />

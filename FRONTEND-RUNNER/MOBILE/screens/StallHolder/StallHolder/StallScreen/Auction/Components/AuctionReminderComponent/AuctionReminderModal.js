@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from '../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 
 const { width } = Dimensions.get("window");
 

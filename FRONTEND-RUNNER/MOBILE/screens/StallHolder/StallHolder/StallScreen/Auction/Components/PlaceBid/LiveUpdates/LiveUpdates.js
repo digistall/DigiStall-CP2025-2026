@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, Animated } from "react-native";
-import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../../components/ThemeComponents/ThemeContext';
 import { LiveUpdatesStyles as styles } from "./LiveUpdatesStyles";
 import { AuctionTimings } from "../../shared/constants";
 

@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../../components/ThemeComponents/ThemeContext';
 
 const { width, height } = Dimensions.get("window");
 

@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../../components/ThemeComponents/ThemeContext';
 import { QuickBidStyles as styles } from "./QuickBidStyles";
 
 const QuickBid = ({

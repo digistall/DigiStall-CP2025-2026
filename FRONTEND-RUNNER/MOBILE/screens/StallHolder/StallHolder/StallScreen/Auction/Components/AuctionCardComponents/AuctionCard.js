@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { useTheme } from '../../../../../../components/ThemeComponents/ThemeContext';
+import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 import PreRegisterModal from "../PreRegisterComponent/PreRegisterModal";
 import PlaceBid from "../PlaceBid/PlaceBid";
 import {
