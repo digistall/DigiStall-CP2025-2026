@@ -875,30 +875,63 @@ export const heartbeat = async (req, res) => {
     const philippineTime = getPhilippineTime();
     
     // Update last_login using direct SQL based on userType
+    // Note: is_online column may not exist in all tables, so we use try-catch
     switch (userType) {
       case 'business_employee':
-        await connection.execute(
-          'UPDATE business_employee SET last_login = ?, is_online = 1 WHERE business_employee_id = ?', 
-          [philippineTime, userId]
-        );
+        try {
+          await connection.execute(
+            'UPDATE business_employee SET last_login = ?, is_online = 1 WHERE business_employee_id = ?', 
+            [philippineTime, userId]
+          );
+        } catch (e) {
+          // Fallback if is_online column doesn't exist
+          await connection.execute(
+            'UPDATE business_employee SET last_login = ? WHERE business_employee_id = ?', 
+            [philippineTime, userId]
+          );
+        }
         break;
       case 'business_manager':
-        await connection.execute(
-          'UPDATE business_manager SET last_login = ?, is_online = 1 WHERE business_manager_id = ?', 
-          [philippineTime, userId]
-        );
+        try {
+          await connection.execute(
+            'UPDATE business_manager SET last_login = ?, is_online = 1 WHERE business_manager_id = ?', 
+            [philippineTime, userId]
+          );
+        } catch (e) {
+          // Fallback if is_online column doesn't exist
+          await connection.execute(
+            'UPDATE business_manager SET last_login = ? WHERE business_manager_id = ?', 
+            [philippineTime, userId]
+          );
+        }
         break;
       case 'stall_business_owner':
-        await connection.execute(
-          'UPDATE stall_business_owner SET last_login = ?, is_online = 1 WHERE business_owner_id = ?', 
-          [philippineTime, userId]
-        );
+        try {
+          await connection.execute(
+            'UPDATE stall_business_owner SET last_login = ?, is_online = 1 WHERE business_owner_id = ?', 
+            [philippineTime, userId]
+          );
+        } catch (e) {
+          // Fallback if is_online column doesn't exist
+          await connection.execute(
+            'UPDATE stall_business_owner SET last_login = ? WHERE business_owner_id = ?', 
+            [philippineTime, userId]
+          );
+        }
         break;
       case 'system_administrator':
-        await connection.execute(
-          'UPDATE system_administrator SET last_login = ?, is_online = 1 WHERE system_admin_id = ?', 
-          [philippineTime, userId]
-        );
+        try {
+          await connection.execute(
+            'UPDATE system_administrator SET last_login = ?, is_online = 1 WHERE system_admin_id = ?', 
+            [philippineTime, userId]
+          );
+        } catch (e) {
+          // Fallback if is_online column doesn't exist
+          await connection.execute(
+            'UPDATE system_administrator SET last_login = ? WHERE system_admin_id = ?', 
+            [philippineTime, userId]
+          );
+        }
         break;
       case 'inspector':
         await connection.execute(

@@ -33,6 +33,7 @@ import stallRoutes from './ROUTES/stallRoutes.js';
 import complaintRoutes from './ROUTES/complaintRoutes.js';
 import complianceRoutes from './ROUTES/complianceRoutes.js';
 import stallholderRoutes from './ROUTES/stallholderRoutes.js';
+import stallholdersManagementRoutes from './ROUTES/stallholdersManagementRoutes.js';
 import paymentRoutes from './ROUTES/paymentRoutes.js';
 import employeeRoutes from './ROUTES/employeeRoutes.js';
 import vendorRoutes from './ROUTES/vendorRoutes.js';
@@ -43,6 +44,7 @@ import dashboardSubscriptionRoutes from './ROUTES/dashboardSubscriptionRoutes.js
 // APPLICANTS routes
 import applicationRoutes from './ROUTES/applicationRoutes.js';
 import landingApplicantRoutes from './ROUTES/landingApplicantRoutes.js';
+import applicantRoutes from './ROUTES/applicantRoutes.js';
 
 // EMPLOYEE Mobile routes
 import inspectorRoutes from './ROUTES/inspectorRoutes.js';
@@ -80,6 +82,7 @@ console.log('========================================\n');
 app.use('/api/applications', applicationRoutes);
 app.use('/api/landing-applicants', landingApplicantRoutes);
 app.use('/api/stalls', stallRoutes);  // Some routes are public (landing page)
+app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);  // Applicants management
 
 // AUTH ROUTES
 app.use('/api/auth', webAuthRoutes);  // Web login (email/password)
@@ -89,7 +92,7 @@ app.use('/api/mobile/auth', mobileAuthRoutes);  // Mobile auth
 // LGU-NAGA (Business Owner) ROUTES
 app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
 app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
-app.use('/api/stallholders', enhancedAuthMiddleware.authenticateToken, stallholderRoutes);
+app.use('/api/stallholders', stallholdersManagementRoutes);  // Stallholders management (admin/manager)
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
