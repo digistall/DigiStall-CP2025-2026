@@ -11,7 +11,7 @@ import {
   getBusinessOwnerSubscription,
   getBusinessOwnerPaymentHistory,
   getSystemAdminDashboardStats
-} from '../CONTROLLERS/subscriptions/subscriptionController.js';
+} from '../SHARE-CONTROLLER/subscriptions/subscriptionController.js';
 
 const router = express.Router();
 

@@ -6,7 +6,7 @@ import express from 'express';
 import authMiddleware from '../MIDDLEWARE/auth.js';
 import { authorizePermission } from '../MIDDLEWARE/enhancedAuth.js';
 import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js';
-import complianceController from '../CONTROLLERS/compliances/complianceController.js';
+import complianceController from '../SHARE-CONTROLLER/compliances/complianceController.js';
 
 const router = express.Router();
 

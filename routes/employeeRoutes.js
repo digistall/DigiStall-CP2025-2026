@@ -13,7 +13,7 @@ import {
   resetEmployeePassword,
   getEmployeesByBranch,
   getActiveSessions
-} from '../CONTROLLERS/employees/employeeController.js';
+} from '../SHARE-CONTROLLER/employees/employeeController.js';
 
 const router = express.Router();
 

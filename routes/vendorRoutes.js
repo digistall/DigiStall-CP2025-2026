@@ -6,7 +6,7 @@ import {
   getVendorById,
   updateVendor,
   deleteVendor
-} from '../CONTROLLERS/vendors/vendorController.js';
+} from '../SHARE-CONTROLLER/vendors/vendorController.js';
 
 const router = express.Router();
 

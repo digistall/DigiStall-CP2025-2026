@@ -18,7 +18,7 @@ import DocumentController, {
   reviewStallholderDocument,
   getStallholderDocumentFile,
   getStallholderDocumentBlob
-} from '../CONTROLLERS/stallholders/documentController.js';
+} from '../SHARE-CONTROLLER/stallholders/documentController.js';
 import { authenticateToken } from '../MIDDLEWARE/enhancedAuth.js';
 
 const router = express.Router();
