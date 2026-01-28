@@ -93,8 +93,8 @@ services:
   # Frontend Web Application (Port 80)
   frontend-web:
     build:
-      context: ./FRONTEND-RUNNER/WEB
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: FRONTEND-RUNNER/WEB/Dockerfile.prod
     container_name: digistall-frontend-web
     restart: unless-stopped
     depends_on:
