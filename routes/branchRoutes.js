@@ -26,7 +26,7 @@ import {
   getAreaById,
   getCities,
   getLocationsByCity
-} from '../CONTROLLERS/branch/branchController.js'
+} from '../SHARE-CONTROLLER/branch/branchController.js'
 
 const router = express.Router()
 

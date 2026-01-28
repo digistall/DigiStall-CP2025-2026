@@ -12,7 +12,7 @@ import {
   getCurrentUser,
   autoLogout,
   heartbeat
-} from '../CONTROLLERS/auth/enhancedAuthController.js';
+} from '../SHARE-CONTROLLER/auth/enhancedAuthController.js';
 
 // Legacy authentication (for backward compatibility)
 import {
@@ -21,7 +21,7 @@ import {
   createAdminUser,
   createPasswordHash,
   testDb
-} from '../CONTROLLERS/auth/loginController.js';
+} from '../SHARE-CONTROLLER/auth/loginController.js';
 
 const router = express.Router();
 

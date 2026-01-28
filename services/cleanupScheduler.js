@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { autoCleanupApplicants } from '../controllers/applicants/applicantsComponents/autoCleanup.js';
+import { autoCleanupApplicants } from '../SHARE-CONTROLLER/applicants/applicantsComponents/autoCleanup.js';
 
 class CleanupScheduler {
   constructor() {
