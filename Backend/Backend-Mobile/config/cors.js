@@ -1,9 +1,11 @@
+// CORS Configuration for Mobile Backend
+// Allows requests from mobile apps, web frontend, and production servers
+
 export const corsConfig = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
     
-    // In production, allow all origins or use ALLOWED_ORIGINS env variable
     const isProduction = process.env.NODE_ENV === 'production';
     
     const allowedOrigins = [
@@ -31,35 +33,34 @@ export const corsConfig = {
       'http://68.183.154.125:80',
       'http://68.183.154.125:5000',
       'http://68.183.154.125:5001',
-      'http://68.183.154.125:3001',
       // Production - GoDaddy domain
       'http://digi-stall.com',
       'https://digi-stall.com',
       'http://www.digi-stall.com',
       'https://www.digi-stall.com',
-      // Production/Deployment - add your domains here or use ALLOWED_ORIGINS env
+      // Additional origins from environment
       ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('✅ CORS allowing origin:', origin);
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ Mobile CORS allowing origin:', origin);
       callback(null, true);
     } else {
-      // In production or if origin contains your server IP/domain, allow it
-      // This allows deployed frontend to connect to backend
-      const isDeployedOrigin = origin.includes(process.env.SERVER_IP) || 
-                               origin.includes(process.env.DOMAIN) ||
+      // In production, allow any origin that matches server IP or domain
+      const isDeployedOrigin = origin.includes('68.183.154.125') ||
                                origin.includes('digi-stall') ||
-                               origin.includes('68.183.154.125') ||
-                               origin.match(/^https?:\/\/\d+\.\d+\.\d+\.\d+/) || // Allow any IP address
-                               origin.match(/^https?:\/\/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/)  // Allow any domain
+                               origin.includes(process.env.SERVER_IP || '') ||
+                               origin.includes(process.env.DOMAIN || '') ||
+                               origin.match(/^https?:\/\/\d+\.\d+\.\d+\.\d+/) || // Any IP
+                               origin.match(/^https?:\/\/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/); // Any domain
       
       if (isDeployedOrigin || isProduction) {
-        console.log('✅ CORS allowing deployed origin:', origin);
+        console.log('✅ Mobile CORS allowing deployed origin:', origin);
         callback(null, true);
       } else {
-        console.warn('⚠️ CORS blocked origin:', origin);
-        callback(null, true); // Allow all origins anyway for safety
+        console.warn('⚠️ Mobile CORS blocked origin:', origin);
+        // Allow anyway for safety in production
+        callback(null, true);
       }
     }
   },
