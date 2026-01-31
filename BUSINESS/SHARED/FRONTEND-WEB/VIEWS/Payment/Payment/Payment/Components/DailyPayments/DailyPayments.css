@@ -1,0 +1,259 @@
+.daily-payments {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background-color: #f5f5f5;
+}
+
+/* Search Container */
+.search-container {
+  margin-bottom: 24px;
+}
+
+.search-field {
+  background-color: white;
+  border-radius: 8px;
+}
+
+/* Payments Table Container */
+.payments-table-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.payments-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: white;
+}
+
+.table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Payments Table Styles */
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.payments-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #002181;
+  color: white;
+}
+
+.payments-table thead th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  border-bottom: 2px solid #001557;
+}
+
+.payments-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s;
+}
+
+.payments-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.payments-table tbody tr.clickable-row {
+  cursor: pointer;
+}
+
+.payments-table tbody td {
+  padding: 16px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+/* Cell Specific Styles */
+.id-cell {
+  font-weight: 600;
+  color: #002181;
+}
+
+.name-cell .collector-info,
+.name-cell .vendor-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.name-cell .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #002181;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.name-cell .avatar.vendor-avatar {
+  background-color: #1976d2;
+}
+
+.name-cell .name {
+  font-weight: 500;
+}
+
+.amount-cell {
+  font-weight: 600;
+  color: #2e7d32;
+  white-space: nowrap;
+}
+
+.reference-cell {
+  font-family: monospace;
+  color: #666;
+}
+
+.status-cell {
+  white-space: nowrap;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 64px 24px !important;
+  color: #999;
+}
+
+.empty-state p {
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+/* Floating Action Button */
+.add-payment-btn {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 100;
+}
+
+/* Modal Styles */
+.modal-header {
+  background-color: #002181;
+  color: white;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Detail Item Styles */
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+.status-chip-wrapper {
+  display: inline-block;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .payments-table {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 768px) {
+  .daily-payments {
+    padding: 16px;
+  }
+
+  .payments-table thead th,
+  .payments-table tbody td {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .name-cell .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .add-payment-btn {
+    bottom: 24px;
+    right: 24px;
+  }
+}
+
+/* Scrollbar Styles */
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Transition Animations */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from {
+  transform: translateY(10px);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+}

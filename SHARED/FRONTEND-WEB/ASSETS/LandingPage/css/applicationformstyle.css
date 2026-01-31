@@ -1,0 +1,534 @@
+* {
+    box-sizing: border-box;
+}
+
+/* Step Indicator Styles */
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.step-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: #e5e5e5;
+    color: #999;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.step-dot.active {
+    background-color: #002B5B;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 43, 91, 0.3);
+    transform: scale(1.1);
+}
+
+.step-dot.completed {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Connect the dots with a line */
+.step-dot:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 2px;
+    background-color: #e5e5e5;
+}
+
+.step-dot.completed:not(:last-child)::after {
+    background-color: #28a745;
+}
+
+.step-dot.active:not(:last-child)::after {
+    background-color: #e5e5e5;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    animation: fadeIn 0.3s ease-out;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.form-container {
+    background: rgb(249, 249, 255);
+    padding: 20px 28px;
+    border-radius: 16px;
+    width: 95%;
+    max-width: 600px;
+    min-width: 320px;
+    max-height: 95vh;
+    overflow-y: auto;
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.15),
+        0 10px 10px -5px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: slideUp 0.4s ease-out;
+    margin: auto;
+    position: relative;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.form-container h3 {
+    margin: 0 0 6px 0;
+    font-size: clamp(20px, 4vw, 24px);
+    font-weight: 700;
+    color: #002B5B;
+    text-align: center;
+}
+
+.form-container p {
+    margin: 0 0 12px 0;
+    font-size: clamp(12px, 2.5vw, 14px);
+    color: #666;
+    text-align: center;
+    line-height: 1.5;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+label {
+    font-weight: 600;
+    font-size: clamp(14px, 2.8vw, 16px);
+    color: #333;
+    display: flex;
+    flex-direction: column;
+}
+
+input,
+textarea,
+select {
+    margin-top: 5px;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 2px solid #e5e5e5;
+    font-size: clamp(14px, 2.8vw, 16px);
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.8);
+    outline: none;
+    width: 100%;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: #002B5B;
+    box-shadow: 0 0 0 3px rgba(0, 43, 91, 0.1);
+    transform: translateY(-1px);
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+    border-color: #bbb;
+    transform: translateY(-1px);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 72px;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+.buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+button.btn-next,
+button.btn-close {
+    font-weight: 600;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: clamp(14px, 2.8vw, 16px);
+    transition: all 0.3s ease;
+    min-width: 100px;
+    font-family: inherit;
+    flex: 0 0 auto;
+}
+
+button.btn-next {
+    background-color: #002B5B;
+    color: white;
+    box-shadow: 0 4px 14px rgba(0, 43, 91, 0.3);
+}
+
+button.btn-next:hover {
+    background-color: #12579b;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 43, 91, 0.4);
+}
+
+button.btn-close {
+    background-color: #dc3545;
+    color: white;
+    box-shadow: 0 4px 14px rgba(220, 53, 69, 0.3);
+}
+
+button.btn-close:hover {
+    background-color: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+}
+
+.age-display {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: #666;
+    font-style: italic;
+}
+.age-display {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: #666;
+    font-style: italic;
+}
+
+.children-section {
+    margin: 15px 0;
+}
+
+.children-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.children-label small {
+    display: block;
+    font-weight: normal;
+    color: #666;
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+
+.children-textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.children-textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+@media (max-height: 700px) {
+    .overlay {
+        align-items: flex-start;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+}
+
+@media (min-height: 701px) {
+    .overlay {
+        align-items: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .overlay {
+        padding: 15px;
+    }
+    
+    .form-container {
+        padding: 24px;
+        margin: 10px auto;
+    }
+    
+    .buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    button.btn-next,
+    button.btn-close {
+        width: 100%;
+        min-width: unset;
+    }
+}
+
+@media (max-width: 480px) {
+    .overlay {
+        padding: 10px;
+    }
+    
+    .form-container {
+        padding: 20px;
+        border-radius: 12px;
+        margin: 5px auto;
+        min-width: 280px;
+    }
+    
+    input,
+    textarea,
+    select {
+        padding: 10px 12px;
+    }
+    
+    select {
+        padding-right: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    input,
+    textarea,
+    select {
+        font-size: 16px; 
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .form-container {
+        border-width: 0.5px;
+    }
+}
+
+/* Error Message Styling */
+.error-message-box {
+    background-color: #fee;
+    border: 2px solid #dc3545;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: shakeAndFadeIn 0.5s ease-out;
+}
+
+@keyframes shakeAndFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    25% {
+        transform: translateX(5px);
+    }
+    50% {
+        transform: translateX(-5px);
+    }
+    75% {
+        transform: translateX(2px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.error-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.error-text {
+    color: #721c24;
+    font-size: clamp(13px, 2.6vw, 15px);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* Input Error State */
+.input-error {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+    animation: inputShake 0.3s ease-out;
+}
+
+@keyframes inputShake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px);
+    }
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+.input-error:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2) !important;
+}
+
+/* Age Error State */
+.age-error {
+    color: #dc3545 !important;
+    font-weight: 600;
+}
+
+/* Input Hints */
+.input-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: clamp(11px, 2.2vw, 13px);
+    color: #666;
+    font-weight: normal;
+    font-style: italic;
+}
+
+/* Large Date Picker Styles */
+:deep(.large-date-picker) {
+    font-size: 14px !important;
+}
+
+:deep(.large-date-picker .v-date-picker-header) {
+    padding: 12px !important;
+    font-size: 16px !important;
+}
+
+:deep(.large-date-picker .v-date-picker-month) {
+    padding: 12px !important;
+}
+
+:deep(.large-date-picker .v-btn) {
+    font-size: 14px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    margin: 2px !important;
+}
+
+:deep(.large-date-picker .v-date-picker-month__day) {
+    font-size: 14px !important;
+    width: 40px !important;
+    height: 40px !important;
+}
+
+:deep(.large-date-picker .v-date-picker-years) {
+    font-size: 14px !important;
+}
+
+:deep(.large-date-picker .v-date-picker-years__content) {
+    padding: 12px !important;
+}
+
+/* Make the date picker card normal size */
+:deep(.v-picker) {
+    min-width: 328px !important;
+    max-width: 380px !important;
+}
+
+/* Fix: Ensure date picker menu appears above the form overlay */
+:deep(.v-overlay--active) {
+    z-index: 2000 !important;
+}
+
+:deep(.v-menu > .v-overlay__content) {
+    z-index: 2001 !important;
+}
+
+@media (max-width: 768px) {
+    :deep(.v-picker) {
+        min-width: 300px !important;
+        max-width: 360px !important;
+    }
+    
+    :deep(.large-date-picker .v-btn) {
+        font-size: 14px !important;
+        min-width: 38px !important;
+        height: 38px !important;
+    }
+    
+    :deep(.large-date-picker .v-date-picker-month__day) {
+        font-size: 14px !important;
+        width: 38px !important;
+        height: 38px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    :deep(.v-picker) {
+        min-width: 280px !important;
+        max-width: 320px !important;
+    }
+    
+    :deep(.large-date-picker .v-btn) {
+        font-size: 13px !important;
+        min-width: 36px !important;
+        height: 36px !important;
+        margin: 1px !important;
+    }
+    
+    :deep(.large-date-picker .v-date-picker-month__day) {
+        font-size: 13px !important;
+        width: 36px !important;
+        height: 36px !important;
+    }
+}

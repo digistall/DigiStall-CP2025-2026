@@ -1,0 +1,460 @@
+/* Main Content Styles */
+.v-main {
+  padding-left: 0 !important;
+}
+
+.main-content {
+  background-color: #fafafa;
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+  position: relative;
+}
+
+/* Dashboard Header */
+.dashboard-header {
+  padding: 8px 0;
+}
+
+.dashboard-header h1 {
+  color: rgb(0, 33, 129);
+  margin: 0;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+
+/* Page Header Styles */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  color: rgb(0, 33, 129);
+  margin-bottom: 8px;
+}
+
+/* Metric Cards */
+/* Metric Cards */
+.metric-card {
+  background: white;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  min-height: 120px;
+  position: relative;
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Download Button for Metric Cards */
+.metric-card .download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.metric-card:hover .download-btn {
+  opacity: 1;
+}
+
+.metric-card .download-btn:hover {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.metric-content {
+  position: relative;
+  padding: 16px !important;
+  height: 100%;
+}
+
+.metric-title {
+  position: absolute;
+  top: 8px;
+  left: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  margin-top: 20px;
+}
+
+.metric-icon {
+  flex-shrink: 0;
+}
+
+.metric-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: #7f8c8d;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* Chart Cards */
+.chart-card {
+  border-radius: 12px !important;
+  height: 400px;
+}
+
+.chart-title {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 24px !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  display: flex;
+  align-items: center;
+}
+
+/* Download Button for Chart Cards */
+.chart-download-btn {
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+}
+
+.chart-card:hover .chart-download-btn {
+  opacity: 1;
+}
+
+.chart-download-btn:hover {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.chart-container {
+  height: 300px;
+  position: relative;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.chart-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 1;
+}
+
+/* Data Table Cards */
+.data-table-card {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+/* Fixed height table scroll container - sticky header, scrollable body */
+.table-scroll-container {
+  height: 350px;
+  min-height: 350px;
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  /* Thin scrollbar for Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* Styled scrollbar for Chrome, Safari, Opera */
+.table-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Remove v-table's default overflow to prevent double scrollbar */
+.table-scroll-container .v-table {
+  overflow: visible !important;
+}
+
+.table-scroll-container .v-table__wrapper {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+/* Sticky header for the table */
+.table-scroll-container .custom-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f5f5f5;
+}
+
+/* Empty state inside scroll container */
+.table-scroll-container .empty-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 24px !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+}
+
+/* Custom Table Styles */
+.custom-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.custom-table thead th {
+  background-color: #f5f5f5;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 12px;
+  border-bottom: 2px solid #e0e0e0;
+  white-space: nowrap;
+  /* For sticky header support */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.custom-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.custom-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.custom-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.custom-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Action Buttons */
+.d-flex.gap-1 {
+  gap: 4px;
+}
+
+.d-flex.gap-2 {
+  gap: 8px;
+}
+
+/* Status Chips */
+.v-chip.v-chip--size-small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+  .main-content {
+    padding: 16px;
+  }
+
+  .metric-card {
+    height: 120px;
+    margin-bottom: 16px;
+  }
+
+  .metric-number {
+    font-size: 1.8rem;
+  }
+
+  .chart-card {
+    height: 350px;
+    margin-bottom: 16px;
+  }
+
+  .chart-container {
+    height: 250px;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 12px;
+  }
+
+  .page-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .metric-card {
+    height: 100px;
+  }
+
+  .metric-number {
+    font-size: 1.5rem;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+  }
+
+  .chart-card {
+    height: 300px;
+  }
+
+  .chart-container {
+    height: 200px;
+  }
+
+  .custom-table {
+    font-size: 0.875rem;
+  }
+
+  .custom-table thead th,
+  .custom-table tbody td {
+    padding: 8px 6px;
+  }
+}
+
+/* Animation for loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Custom scrollbar for tables - hidden, scroll container handles scrolling */
+.v-table {
+  max-height: none;
+  overflow: visible !important;
+}
+
+/* Ensure v-table wrapper doesn't add its own scrollbar */
+.v-table .v-table__wrapper {
+  overflow: visible !important;
+  max-height: none;
+}
+
+/* Hide all scrollbars on v-table (backup) */
+.v-table::-webkit-scrollbar,
+.v-table .v-table__wrapper::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+  .main-wrapper {
+    margin-left: 60px; /* Adjusted for mobile sidebar width */
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-wrapper {
+    margin-left: 50px; /* Adjusted for mobile sidebar width */
+  }
+
+  .content-placeholder {
+    padding: 20px;
+    min-height: 300px;
+  }
+
+  .content-placeholder h3 {
+    font-size: 24px;
+  }
+
+  .content-placeholder p {
+    font-size: 14px;
+  }
+}

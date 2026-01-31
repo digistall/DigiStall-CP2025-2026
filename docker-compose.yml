@@ -1,78 +1,100 @@
-# ===== DOCKER COMPOSE - DIGISTALL =====
+# ===== DOCKER COMPOSE - DIGISTALL MVC =====
 # All dependencies are bundled inside Docker images
 # No need to install packages locally - just run: docker-compose up --build
-# Team members can clone and run without installing node_modules
+# MVC Architecture with separate Web and Mobile backend services
 
 services:
   # Backend Web API Server (Port 5000)
   backend-web:
     build:
-      context: ./Backend/Backend-Web
+      context: .
       dockerfile: Dockerfile
     container_name: digistall-backend-web
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      WEB_PORT: 5000
-      # Connect to external database
-      DB_HOST: ${DB_HOST:-db.cjunttcqcwlh.ap-southeast-1.rds.amazonaws.com}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER:-admin}
+      PORT: 3001
+      # Connect to external database (DigitalOcean)
+      DB_HOST: ${DB_HOST:-dbaas-db-2078449-do-user-29954926-0.f.db.ondigitalocean.com}
+      DB_PORT: ${DB_PORT:-25060}
+      DB_USER: ${DB_USER:-doadmin}
       DB_PASSWORD: ${DB_PASSWORD:-}
-      DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
+      DB_NAME: ${DB_NAME:-naga_stall}
       DB_SSL: ${DB_SSL:-true}
+      # Mobile DB config (same database)
+      DB_HOST_MOBILE: ${DB_HOST:-dbaas-db-2078449-do-user-29954926-0.f.db.ondigitalocean.com}
+      DB_PORT_MOBILE: ${DB_PORT:-25060}
+      DB_USER_MOBILE: ${DB_USER:-doadmin}
+      DB_PASSWORD_MOBILE: ${DB_PASSWORD:-}
+      DB_NAME_MOBILE: ${DB_NAME:-naga_stall}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://68.183.154.125}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://68.183.154.125,http://localhost}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-DigiStall2025SecureKeyForEncryption123}
-      # Upload directories (Docker-compatible paths)
+      # Upload directories
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
     ports:
-      - "5000:5000"
+      - "5000:3001"
     volumes:
       - ./uploads:/app/uploads
     networks:
       - digistall-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Backend Mobile API Server (Port 5001)
   backend-mobile:
     build:
-      context: ./Backend/Backend-Mobile
+      context: .
       dockerfile: Dockerfile
     container_name: digistall-backend-mobile
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      MOBILE_PORT: 5001
-      # Connect to external database
-      DB_HOST: ${DB_HOST:-db.cjunttcqcwlh.ap-southeast-1.rds.amazonaws.com}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER:-admin}
+      PORT: 3001
+      # Connect to external database (DigitalOcean)
+      DB_HOST: ${DB_HOST:-dbaas-db-2078449-do-user-29954926-0.f.db.ondigitalocean.com}
+      DB_PORT: ${DB_PORT:-25060}
+      DB_USER: ${DB_USER:-doadmin}
       DB_PASSWORD: ${DB_PASSWORD:-}
-      DB_NAME: ${DB_NAME:-naga_stall_digitalocean}
+      DB_NAME: ${DB_NAME:-naga_stall}
       DB_SSL: ${DB_SSL:-true}
+      # Mobile DB config (same database)
+      DB_HOST_MOBILE: ${DB_HOST:-dbaas-db-2078449-do-user-29954926-0.f.db.ondigitalocean.com}
+      DB_PORT_MOBILE: ${DB_PORT:-25060}
+      DB_USER_MOBILE: ${DB_USER:-doadmin}
+      DB_PASSWORD_MOBILE: ${DB_PASSWORD:-}
+      DB_NAME_MOBILE: ${DB_NAME:-naga_stall}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_change_me}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://68.183.154.125}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://68.183.154.125,http://localhost,https://digi-stall.com}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-DigiStall2025SecureKeyForEncryption123}
-      # Upload directories (Docker-compatible paths)
+      # Upload directories
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
     ports:
-      - "5001:5001"
+      - "5001:3001"
     volumes:
       - ./uploads:/app/uploads
     networks:
       - digistall-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Frontend Web Application
+  # Frontend Web Application (Port 80)
   frontend-web:
     build:
-      context: ./Frontend/Web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: FRONTEND-RUNNER/WEB/Dockerfile.prod
     container_name: digistall-frontend-web
     restart: unless-stopped
     depends_on:
