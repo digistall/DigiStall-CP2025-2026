@@ -1,0 +1,159 @@
+﻿docker-compose :  Image digis
+tall-cp2025-2026-frontend-web
+ Building 
+At line:1 char:1
++ docker-compose build 
+frontend-web 2>&1 | 
+Out-String -Stream | Out-Fil 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ( Image   
+  digistal...d-web Buildin   
+ g :String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+ Image digistall-cp2025-2026-
+backend-web Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.07kB 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile.prod
+#2 transferring dockerfile: 1.39kB 0.1s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:20-alpine
+#3 ...
+
+#4 [auth] library/node:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [auth] library/nginx:pull token for registry-1.docker.io
+#5 DONE 0.0s
+
+#6 [internal] load metadata for docker.io/library/nginx:alpine
+#6 DONE 2.4s
+
+#3 [internal] load metadata for docker.io/library/node:20-alpine
+#3 DONE 2.4s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [production 1/4] FROM docker.io/library/nginx:alpine@sha256:4870c12cd2ca986de501a804b4f506ad3875a0b1874940ba0a2c7f763f1855b2
+#9 resolve docker.io/library/nginx:alpine@sha256:4870c12cd2ca986de501a804b4f506ad3875a0b1874940ba0a2c7f763f1855b2
+#9 resolve docker.io/library/nginx:alpine@sha256:4870c12cd2ca986de501a804b4f506ad3875a0b1874940ba0a2c7f763f1855b2 0.2s done
+#9 DONE 0.2s
+
+#10 [builder 1/6] FROM docker.io/library/node:20-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8
+#10 resolve docker.io/library/node:20-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8 0.2s done
+#10 DONE 0.2s
+
+#8 [internal] load build context
+#8 transferring context: 970.04kB 3.1s done
+#8 DONE 3.5s
+
+#11 [production 2/4] COPY FRONTEND-RUNNER/WEB/nginx.conf /etc/nginx/conf.d/default.conf
+#11 CACHED
+
+#12 [builder 2/6] WORKDIR /app
+#12 CACHED
+
+#13 [builder 3/6] COPY . .
+#13 DONE 82.8s
+
+#14 [builder 4/6] WORKDIR /app/FRONTEND-RUNNER/WEB
+#14 DONE 1.0s
+
+#15 [builder 5/6] RUN npm ci
+#15 37.27 
+#15 37.27 added 289 packages, and audited 290 packages in 31s
+#15 37.27 
+#15 37.27 85 packages are looking for funding
+#15 37.27   run `npm fund` for details
+#15 37.28 
+#15 37.28 3 vulnerabilities (2 moderate, 1 high)
+#15 37.28 
+#15 37.28 To address issues that do not require attention, run:
+#15 37.28   npm audit fix
+#15 37.28 
+#15 37.28 Some issues need review, and may require choosing
+#15 37.28 a different dependency.
+#15 37.28 
+#15 37.28 Run `npm audit` for details.
+#15 37.29 npm notice
+#15 37.29 npm notice New major version of npm available! 10.8.2 -> 11.8.0
+#15 37.29 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.8.0
+#15 37.29 npm notice To update run: npm install -g npm@11.8.0
+#15 37.29 npm notice
+#15 DONE 39.5s
+
+#16 [builder 6/6] RUN npm run build
+#16 2.666 
+#16 2.666 > naga-stall-management@0.0.0 build
+#16 2.666 > vite build
+#16 2.666 
+#16 3.311 vite v7.0.6 building for production...
+#16 3.544 transforming...
+#16 17.15 
+#16 17.15 ../../../assets/background-image.png referenced in ../../../assets/background-image.png didn't resolve at build time, it will remain unchanged to be resolved at runtime
+#16 26.11 [1m[33m[@vue/compiler-sfc][0m[33m the >>> and /deep/ combinators have been deprecated. Use :deep() instead.[0m
+#16 26.11 
+#16 40.14 Γ£ô 934 modules transformed.
+#16 41.98 rendering chunks...
+#16 50.72 computing gzip size...
+#16 51.08 dist/index.html                                             1.24 kB Γöé gzip:   0.58 kB
+#16 51.08 dist/assets/reporting-4eVwx1Hs.png                        270.12 kB
+#16 51.08 dist/assets/vendor-ez48tUZl.png                           310.37 kB
+#16 51.08 dist/assets/materialdesignicons-webfont-Dp5v-WZN.woff2    403.22 kB
+#16 51.08 dist/assets/materialdesignicons-webfont-PXm3-2wK.woff     587.98 kB
+#16 51.08 dist/assets/DigiStall-Logo-C4god58a.png                   869.31 kB
+#16 51.08 dist/assets/materialdesignicons-webfont-B7mPwVP_.ttf    1,307.66 kB
+#16 51.08 dist/assets/materialdesignicons-webfont-CSr8KVlo.eot    1,307.88 kB
+#16 51.08 dist/assets/market-AqF8gFkT.png                         1,661.92 kB
+#16 51.08 dist/assets/stallbackground-DBDtmxJj.png                3,052.19 kB
+#16 51.08 dist/assets/index-BMvm0_HC.css                          1,317.06 kB Γöé gzip: 185.10 kB
+#16 51.08 dist/assets/vuetify-B3DeSAXg.js                            62.49 kB Γöé gzip:  23.23 kB
+#16 51.08 dist/assets/vendor-BoOD1lcs.js                            104.52 kB Γöé gzip:  41.05 kB
+#16 51.08 dist/assets/index-Uj8qeiNe.js                           2,096.21 kB Γöé gzip: 578.61 kB
+#16 51.08 
+#16 51.08 (!) Some chunks are larger than 500 kB after minification. Consider:
+#16 51.08 - Using dynamic import() to code-split the application
+#16 51.08 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+#16 51.08 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+#16 51.08 Γ£ô built in 47.72s
+#16 DONE 51.5s
+
+#17 [production 3/4] COPY --from=builder /app/FRONTEND-RUNNER/WEB/dist /usr/share/nginx/html
+#17 DONE 0.3s
+
+#18 [production 4/4] RUN chown -R nginx:nginx /usr/share/nginx/html &&     chown -R nginx:nginx /var/cache/nginx &&     chown -R nginx:nginx /var/log/nginx &&     touch /var/run/nginx.pid &&     chown -R nginx:nginx /var/run/nginx.pid
+#18 DONE 1.0s
+
+#19 exporting to image
+#19 exporting layers
+#19 exporting layers 1.5s done
+#19 exporting manifest sha256:5b3abe4f118e6a21bca46cd57e0f72affe34ae13e4e5ad7516220bf4d489e5e1 0.1s done
+#19 exporting config sha256:b202bc651482bd556937912d478a414e491b766b6f92fbd2bfa195b8b4d1f010
+#19 exporting config sha256:b202bc651482bd556937912d478a414e491b766b6f92fbd2bfa195b8b4d1f010 0.0s done
+#19 exporting attestation manifest sha256:19568506517a9fdc0e1bfbebc1018f85cc60a8629c9aa5dcb16396f0e79e16b9
+#19 exporting attestation manifest sha256:19568506517a9fdc0e1bfbebc1018f85cc60a8629c9aa5dcb16396f0e79e16b9 0.1s done
+#19 exporting manifest list sha256:8dbab586a885a14fcd810925ff094ea83f4f4d4079b565f4b6665aee4234a7d0 0.1s done
+#19 naming to docker.io/library/digistall-cp2025-2026-frontend-web:latest
+#19 naming to docker.io/library/digistall-cp2025-2026-frontend-web:latest 0.1s done
+#19 unpacking to docker.io/library/digistall-cp2025-2026-frontend-web:latest
+#19 unpacking to docker.io/library/digistall-cp2025-2026-frontend-web:latest 0.6s done
+#19 DONE 2.6s
+
+#20 resolving provenance for metadata file
+#20 DONE 0.3s
+ Image digistall-cp2025-2026-
+frontend-web Built 

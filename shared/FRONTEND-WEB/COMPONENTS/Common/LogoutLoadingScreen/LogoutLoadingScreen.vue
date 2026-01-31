@@ -11,7 +11,7 @@
           <div class="logo-section">
             <div class="logo-glow"></div>
             <img
-              src="../../../assets/DigiStall-Logo.png"
+              src="@shared-assets/DigiStall-Logo.png"
               alt="DigiStall Logo"
               class="digistall-logo pulse-animation"
             />

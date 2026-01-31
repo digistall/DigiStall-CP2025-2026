@@ -5,7 +5,7 @@
         <!-- Logo Section -->
         <div class="logo-section">
           <img
-            src="../../../assets/DigiStall-Logo.png"
+            src="@shared-assets/DigiStall-Logo.png"
             alt="DigiStall Logo"
             class="digistall-logo"
           />
