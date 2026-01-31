@@ -15,7 +15,7 @@ export default defineConfig({
     }),
     devNoCsp() // Remove CSP restrictions in development
   ],
-  define: { 
+  define: {
     'process.env': {},
     __VUE_PROD_DEVTOOLS__: false,
     __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false
@@ -36,6 +36,7 @@ export default defineConfig({
       '@public-landing': fileURLToPath(new URL('../../PUBLIC-LANDINGPAGE/FRONTEND-WEB', import.meta.url)),
       '@system-admin': fileURLToPath(new URL('../../SYSTEM-ADMINISTRATOR/FRONTEND-WEB', import.meta.url)),
       '@shared': fileURLToPath(new URL('../../SHARED/FRONTEND-WEB', import.meta.url)),
+      '@shared-assets': fileURLToPath(new URL('../../SHARED/FRONTEND-WEB/ASSETS', import.meta.url)),
       // NPM package aliases for MVC folders (resolve to local node_modules)
       'axios': fileURLToPath(new URL('./node_modules/axios', import.meta.url)),
       'chart.js': fileURLToPath(new URL('./node_modules/chart.js', import.meta.url)),
