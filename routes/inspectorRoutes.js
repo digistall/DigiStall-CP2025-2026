@@ -6,8 +6,8 @@ import {
   reportStallholderWithPhotos,
   getViolationTypes
 } from '../SHARE-CONTROLLER/inspector/inspectorController.js';
-import { verifyToken } from '../MIDDLEWARE/auth.js';
-import { uploadViolationEvidence } from '../CONFIG/multerViolationEvidence.js';
+import { verifyToken } from '../middleware/auth.js';
+import { uploadViolationEvidence } from '../config/multerViolationEvidence.js';
 
 const router = express.Router();
 

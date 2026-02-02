@@ -1,4 +1,4 @@
-import { createConnection } from '../CONFIG/database.js'
+import { createConnection } from '../config/database.js'
 
 // ===== SUBMIT MOBILE APPLICATION =====
 // Handles both regular applications and raffle joins

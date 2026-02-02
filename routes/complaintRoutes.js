@@ -3,9 +3,9 @@
 // All routes require authentication
 
 import express from 'express';
-import authMiddleware from '../MIDDLEWARE/auth.js';
-import { authorizePermission } from '../MIDDLEWARE/enhancedAuth.js';
-import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js';
+import authMiddleware from '../middleware/auth.js';
+import { authorizePermission } from '../middleware/enhancedAuth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import complaintController from '../SHARE-CONTROLLER/complaints/complaintController.js';
 
 const router = express.Router();

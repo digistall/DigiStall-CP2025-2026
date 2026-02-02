@@ -1,5 +1,5 @@
 // API Service for mobile app backend integration
-import { API_CONFIG } from '../CONFIG/networkConfig';
+import { API_CONFIG } from '../config/networkConfig';
 
 class ApiService {
   // Mobile login function using the credential table
