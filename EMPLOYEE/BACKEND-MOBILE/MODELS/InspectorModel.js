@@ -3,7 +3,7 @@
  * Database abstraction for inspector-related operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * InspectorModel Class

@@ -1,4 +1,4 @@
-import { createConnection } from "../../../CONFIG/database.js";
+import { createConnection } from "../../../config/database.js";
 
 // Get stall by ID - Uses stored procedure
 export const getStallById = async (req, res) => {

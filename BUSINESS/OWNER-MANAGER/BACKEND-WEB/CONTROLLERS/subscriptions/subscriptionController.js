@@ -1,8 +1,8 @@
 // ===== SUBSCRIPTION MANAGEMENT CONTROLLER =====
 // System Administrator manages Stall Business Owner subscriptions
 
-import { createConnection } from '../../CONFIG/database.js';
-import { encryptData } from '../../SERVICES/encryptionService.js';
+import { createConnection } from '../../config/database.js';
+import { encryptData } from '../../services/encryptionService.js';
 import { generateSecurePassword } from '../../UTILS/passwordGenerator.js';
 
 // Get all subscription plans
@@ -181,7 +181,7 @@ export const getAllBusinessOwnersWithSubscription = async (req, res) => {
     );
     
     // Decrypt sensitive fields and add monthly_fee
-    const { decryptData } = await import('../../SERVICES/encryptionService.js');
+    const { decryptData } = await import('../../services/encryptionService.js');
     const decryptedOwners = businessOwners.map(owner => ({
       ...owner,
       full_name: decryptData(owner.owner_full_name),

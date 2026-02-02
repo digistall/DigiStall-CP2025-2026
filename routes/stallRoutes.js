@@ -76,7 +76,7 @@ import {
 import { addStallWithImages } from '../SHARE-CONTROLLER/stalls/stallComponents/addStallWithImages.js'
 
 // Import multer configuration
-import upload, { checkImageLimit } from '../CONFIG/multerStallImages.js'
+import upload, { checkImageLimit } from '../config/multerStallImages.js'
 import multer from 'multer'
 
 // Temporary upload for addStall - Configure with large limits for base64 images

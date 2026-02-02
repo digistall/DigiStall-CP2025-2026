@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Delete applicant with proper cascading delete
 export const deleteApplicant = async (req, res) => {

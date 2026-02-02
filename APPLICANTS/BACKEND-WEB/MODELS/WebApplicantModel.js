@@ -3,7 +3,7 @@
  * Database abstraction for web applicant operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * WebApplicantModel Class

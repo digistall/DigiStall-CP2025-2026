@@ -1,4 +1,4 @@
-import { createConnection } from "../../../../../CONFIG/database.js";
+import { createConnection } from "../../../../../config/database.js";
 
 // Get filtered stalls (supports both area and branch parameters)
 export const getFilteredStalls = async (req, res) => {

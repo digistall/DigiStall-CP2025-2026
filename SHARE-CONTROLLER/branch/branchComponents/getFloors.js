@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js'
-import { getBranchFilter } from '../../../MIDDLEWARE/rolePermissions.js'
+import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
 
 // Get all floors for authenticated user (branch manager, employee, or business owner)
 export const getFloors = async (req, res) => {

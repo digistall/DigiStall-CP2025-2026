@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt'
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Create admin user (only for super admin or initial setup)
 export const createAdminUser = async (req, res) => {

@@ -1,6 +1,6 @@
-import { createConnection } from '../../CONFIG/database.js';
-import { getBranchFilter } from '../../MIDDLEWARE/rolePermissions.js';
-import { encryptData, decryptData, decryptEmployees } from '../../SERVICES/encryptionService.js';
+import { createConnection } from '../../config/database.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { encryptData, decryptData, decryptEmployees } from '../../services/encryptionService.js';
 import { generateSecurePassword } from '../../UTILS/passwordGenerator.js';
 import jwt from 'jsonwebtoken';
 

@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 // Auto-cleanup rejected applicants older than 30 days
 export const autoCleanupApplicants = async (req, res) => {

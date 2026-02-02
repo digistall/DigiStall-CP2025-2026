@@ -3,8 +3,8 @@
  * Employee-related services for web dashboard
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
-import { encryptData, decryptData, decryptEmployees } from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import { encryptData, decryptData, decryptEmployees } from '../../../services/encryptionService.js';
 
 /**
  * Get all employees with decryption

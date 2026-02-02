@@ -67,7 +67,7 @@ router.post('/change-plan', async (req, res) => {
     }
     
     // Import createConnection here to avoid circular dependency
-    const { createConnection } = await import('../../CONFIG/database.js');
+    const { createConnection } = await import('../../config/database.js');
     const connection = await createConnection();
     
     try {
