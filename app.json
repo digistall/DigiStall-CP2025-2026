@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "43e70e1f-df7b-4f68-970c-9a9988440d73"
+      }
+    },
+    "android": {
+      "package": "com.genosexe02.nagastallunifiedbackend"
+    }
+  }
+}

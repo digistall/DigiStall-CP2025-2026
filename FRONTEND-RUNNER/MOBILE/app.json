@@ -7,7 +7,6 @@
     "icon": "./assets/DigiStall-Logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
-    "entryPoint": "./index.js",
     "plugins": [
       "expo-image-picker",
       "expo-document-picker",
@@ -34,7 +33,7 @@
     },
     "android": {
       "package": "com.digistall.mobile",
-      "versionCode": 8,
+      "versionCode": 9,
       "adaptiveIcon": {
         "foregroundImage": "./assets/DigiStall-Logo.png",
         "backgroundColor": "#ffffff"
@@ -51,11 +50,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "genosexe02",
     "extra": {
       "eas": {
-        "projectId": "42703a07-e57d-4308-9260-705cb1cec483"
+        "projectId": "f808ec8b-1dfa-45b0-a416-671193ef1b2b"
       }
-    },
-    "owner": "digistall"
+    }
   }
 }
