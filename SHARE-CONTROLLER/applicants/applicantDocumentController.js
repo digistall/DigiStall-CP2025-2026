@@ -6,13 +6,13 @@
 // Storage: C:/xampp/htdocs/digistall_uploads/applicants/{branch_id}/{applicant_id}/
 // =============================================
 
-import { createConnection } from '../../CONFIG/database.js'
+import { createConnection } from '../../config/database.js'
 import {
   generateApplicantDocumentUrl,
   listApplicantDocuments,
   deleteApplicantDocumentFile,
   deleteAllApplicantDocuments
-} from '../../CONFIG/multerApplicantDocuments.js'
+} from '../../config/multerApplicantDocuments.js'
 import path from 'path'
 import fs from 'fs'
 

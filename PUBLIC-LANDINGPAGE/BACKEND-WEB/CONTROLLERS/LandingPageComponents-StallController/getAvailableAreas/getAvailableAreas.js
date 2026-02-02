@@ -1,4 +1,4 @@
-import { createConnection } from "../../../../../SHARED/CONFIG/database.js";
+import { createConnection } from "../../../../../SHARED/config/database.js";
 
 // Get available areas - Uses stored procedure
 export const getAvailableAreas = async (req, res) => {

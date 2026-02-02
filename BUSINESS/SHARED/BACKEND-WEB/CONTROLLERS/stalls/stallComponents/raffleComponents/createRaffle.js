@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Create a new raffle for a stall
 export const createRaffle = async (req, res) => {

@@ -3,9 +3,9 @@
  * Application-related services for web dashboard
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
-import { encryptData, decryptData } from '../../../SERVICES/encryptionService.js';
-import emailService from '../../../SERVICES/emailService.js';
+import { createConnection } from '../../../config/database.js';
+import { encryptData, decryptData } from '../../../services/encryptionService.js';
+import emailService from '../../../services/emailService.js';
 
 /**
  * Get all applicants with decryption

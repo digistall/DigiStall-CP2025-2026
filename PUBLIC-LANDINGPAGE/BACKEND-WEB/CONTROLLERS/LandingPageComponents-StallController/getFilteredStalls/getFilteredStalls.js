@@ -1,4 +1,4 @@
-import { createConnection } from "../../../../../SHARED/CONFIG/database.js";
+import { createConnection } from "../../../../../SHARED/config/database.js";
 
 // Get filtered stalls (supports both area and branch parameters) - Uses stored procedure
 export const getFilteredStalls = async (req, res) => {

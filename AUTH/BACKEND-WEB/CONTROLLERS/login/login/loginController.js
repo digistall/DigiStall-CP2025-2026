@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { createConnection } from '../../CONFIG/database.js'
-import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB, decryptAES256GCM, decryptObjectFields } from '../../SERVICES/mysqlDecryptionService.js'
+import { createConnection } from '../../config/database.js'
+import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB, decryptAES256GCM, decryptObjectFields } from '../../services/mysqlDecryptionService.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
 export const mobileLogin = async (req, res) => {

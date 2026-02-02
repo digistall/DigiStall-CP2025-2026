@@ -3,8 +3,8 @@
  * Handles system administration operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
-import { encryptData, decryptData } from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import { encryptData, decryptData } from '../../../services/encryptionService.js';
 
 /**
  * Get system dashboard statistics

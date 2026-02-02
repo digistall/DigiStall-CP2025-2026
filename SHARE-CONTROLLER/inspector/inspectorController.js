@@ -1,5 +1,5 @@
-import { createConnection } from '../../CONFIG/database.js';
-import { decryptAES256GCM } from '../../SERVICES/mysqlDecryptionService.js';
+import { createConnection } from '../../config/database.js';
+import { decryptAES256GCM } from '../../services/mysqlDecryptionService.js';
 
 /**
  * Get stallholders by inspector's branch

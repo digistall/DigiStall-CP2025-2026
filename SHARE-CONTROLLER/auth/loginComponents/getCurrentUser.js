@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get current user info
 export const getCurrentUser = async (req, res) => {

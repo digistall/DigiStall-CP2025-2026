@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get participants by stall (for specific stall management)
 export const getParticipantsByStall = async (req, res) => {

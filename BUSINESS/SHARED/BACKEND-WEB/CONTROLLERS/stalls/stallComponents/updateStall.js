@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Update stall using direct SQL (no stored procedure dependency)
 export const updateStall = async (req, res) => {
@@ -43,7 +43,7 @@ export const updateStall = async (req, res) => {
     const areaSqm = parseFloat(updateData.area_sqm || updateData.areaSqm || 0);
     
     // Calculate rental price and rate per sqm
-    // Formula: Monthly Rent = RENTAL RATE (2010) × 2
+    // Formula: Monthly Rent = RENTAL RATE (2010) ï¿½ 2
     let rentalPrice;
     let ratePerSqm = null;
     
@@ -52,7 +52,7 @@ export const updateStall = async (req, res) => {
       if (areaSqm > 0) {
         ratePerSqm = Math.round((rentalPrice / areaSqm) * 100) / 100;
       }
-      console.log(`?? RENTAL RATE 2010: ${baseRate} | Monthly Rent (×2): ${rentalPrice} | Rate/sqm: ${ratePerSqm}`);
+      console.log(`?? RENTAL RATE 2010: ${baseRate} | Monthly Rent (ï¿½2): ${rentalPrice} | Rate/sqm: ${ratePerSqm}`);
     } else {
       rentalPrice = parseFloat(updateData.rental_price || updateData.price || 0) || null;
     }

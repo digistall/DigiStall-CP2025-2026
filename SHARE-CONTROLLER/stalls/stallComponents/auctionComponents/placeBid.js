@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Place bid in auction (triggers timer if first bid)
 export const placeBid = async (req, res) => {

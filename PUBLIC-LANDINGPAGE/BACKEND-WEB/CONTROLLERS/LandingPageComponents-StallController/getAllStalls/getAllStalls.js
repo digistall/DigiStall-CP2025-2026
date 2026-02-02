@@ -1,4 +1,4 @@
-import { createConnection } from "../../../../../SHARED/CONFIG/database.js";
+import { createConnection } from "../../../../../SHARED/config/database.js";
 
 // Get all stalls (for landing page) - Uses stored procedure
 export const getAllStalls = async (req, res) => {

@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get all applicants - using decrypted procedure
 export const getAllApplicants = async (req, res) => {

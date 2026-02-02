@@ -3,7 +3,7 @@
  * Application-related services for mobile
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * Submit a new application

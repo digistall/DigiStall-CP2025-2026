@@ -3,9 +3,9 @@
  * Employee-related services for mobile (Inspector/Collector)
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
-import { decryptAES256GCM } from '../../../SERVICES/mysqlDecryptionService.js';
-import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import { decryptAES256GCM } from '../../../services/mysqlDecryptionService.js';
+import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../../services/encryptionService.js';
 
 /**
  * Get stallholders by branch with decryption
