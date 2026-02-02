@@ -16,48 +16,48 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 // Import shared config
-import { corsConfig } from './CONFIG/cors.js';
-import { createConnection, testConnection } from './CONFIG/database.js';
+import { corsConfig } from './config/cors.js';
+import { createConnection, testConnection } from './config/database.js';
 
 // Import shared middleware
-import authMiddleware from './MIDDLEWARE/auth.js';
-import enhancedAuthMiddleware from './MIDDLEWARE/enhancedAuth.js';
-import { errorHandler } from './MIDDLEWARE/errorHandler.js';
+import authMiddleware from './middleware/auth.js';
+import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 // Import session cleanup service (auto-logout inactive users)
-import { startSessionCleanup } from './SERVICES/sessionCleanupService.js';
+import { startSessionCleanup } from './services/sessionCleanupService.js';
 
 // ===== IMPORT ROUTES =====
 // LGU-NAGA (Business Owner) routes
-import stallRoutes from './ROUTES/stallRoutes.js';
-import complaintRoutes from './ROUTES/complaintRoutes.js';
-import complianceRoutes from './ROUTES/complianceRoutes.js';
-import stallholderRoutes from './ROUTES/stallholderRoutes.js';
-import stallholdersManagementRoutes from './ROUTES/stallholdersManagementRoutes.js';
-import paymentRoutes from './ROUTES/paymentRoutes.js';
-import employeeRoutes from './ROUTES/employeeRoutes.js';
-import vendorRoutes from './ROUTES/vendorRoutes.js';
-import branchRoutes from './ROUTES/branchRoutes.js';
-import subscriptionRoutes from './ROUTES/subscriptionRoutes.js';
-import dashboardSubscriptionRoutes from './ROUTES/dashboardSubscriptionRoutes.js';
+import stallRoutes from './routes/stallRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
+import complianceRoutes from './routes/complianceRoutes.js';
+import stallholderRoutes from './routes/stallholderRoutes.js';
+import stallholdersManagementRoutes from './routes/stallholdersManagementRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
+import branchRoutes from './routes/branchRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import dashboardSubscriptionRoutes from './routes/dashboardSubscriptionRoutes.js';
 
 // APPLICANTS routes
-import applicationRoutes from './ROUTES/applicationRoutes.js';
-import landingApplicantRoutes from './ROUTES/landingApplicantRoutes.js';
-import applicantRoutes from './ROUTES/applicantRoutes.js';
+import applicationRoutes from './routes/applicationRoutes.js';
+import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
+import applicantRoutes from './routes/applicantRoutes.js';
 
 // EMPLOYEE Mobile routes
-import inspectorRoutes from './ROUTES/inspectorRoutes.js';
-import mobileStaffRoutes from './ROUTES/mobileStaffRoutes.js';
+import inspectorRoutes from './routes/inspectorRoutes.js';
+import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
 
 // AUTH routes
-import webAuthRoutes from './ROUTES/webAuthRoutes.js';  // Web auth (email login)
-import mobileAuthRoutes from './ROUTES/authRoutes.js';  // Mobile auth
-import loginRouter from './ROUTES/loginRouter.js';
+import webAuthRoutes from './routes/webAuthRoutes.js';  // Web auth (email login)
+import mobileAuthRoutes from './routes/authRoutes.js';  // Mobile auth
+import loginRouter from './routes/loginRouter.js';
 
 // STALL-HOLDER Mobile routes
-import stallholderMobileRoutes from './ROUTES/stallholderRoutes.js';
-import userRoutes from './ROUTES/userRoutes.js';
+import stallholderMobileRoutes from './routes/stallholderRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
