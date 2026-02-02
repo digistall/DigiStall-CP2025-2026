@@ -19,7 +19,7 @@ import DocumentController, {
   getStallholderDocumentFile,
   getStallholderDocumentBlob
 } from '../SHARE-CONTROLLER/stallholders/documentController.js';
-import { authenticateToken } from '../MIDDLEWARE/enhancedAuth.js';
+import { authenticateToken } from '../middleware/enhancedAuth.js';
 
 const router = express.Router();
 

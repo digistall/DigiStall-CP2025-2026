@@ -2,7 +2,7 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import { mobileLogin, submitApplication } from '../SHARE-CONTROLLER/login/loginController.js'
 import { mobileStaffLogin, mobileStaffLogout, mobileStaffHeartbeat, mobileStaffAutoLogout } from '../SHARE-CONTROLLER/mobileStaffAuthController.js'
-import { verifyToken } from '../MIDDLEWARE/auth.js'
+import { verifyToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
