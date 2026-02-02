@@ -1,5 +1,5 @@
 import express from 'express'
-import authMiddleware from '../MIDDLEWARE/auth.js'
+import authMiddleware from '../middleware/auth.js'
 import {
   getAllApplicants,
   getApplicantById,
@@ -24,7 +24,7 @@ import {
   deleteApplicantDocument,
   deleteAllDocuments
 } from '../SHARE-CONTROLLER/applicants/applicantDocumentController.js'
-import { uploadApplicantDocs } from '../CONFIG/multerApplicantDocuments.js'
+import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
 
 // Import BLOB document controller for cloud storage
 import {

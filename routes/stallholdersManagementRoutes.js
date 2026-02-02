@@ -7,8 +7,8 @@
 
 import express from 'express';
 import StallholderController from '../SHARE-CONTROLLER/stallholders/stallholderController.js';
-import authMiddleware from '../MIDDLEWARE/auth.js';
-import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js';
+import authMiddleware from '../middleware/auth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 
 const router = express.Router();
 
