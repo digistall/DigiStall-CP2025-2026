@@ -50,6 +50,9 @@ import applicantRoutes from './routes/applicantRoutes.js';
 import inspectorRoutes from './routes/inspectorRoutes.js';
 import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
 
+// Mobile Stalls routes
+import mobileStallRoutes from './routes/mobileStallRoutes.js';
+
 // AUTH routes
 import webAuthRoutes from './routes/webAuthRoutes.js';  // Web auth (email login)
 import mobileAuthRoutes from './routes/authRoutes.js';  // Mobile auth
@@ -109,6 +112,7 @@ console.log('✅ EMPLOYEE routes loaded');
 // STALL-HOLDER Mobile ROUTES
 app.use('/api/mobile/stallholder', stallholderMobileRoutes);
 app.use('/api/mobile/user', userRoutes);
+app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
 console.log('✅ STALL-HOLDER routes loaded');
 
 // VENDOR ROUTES
