@@ -19,6 +19,9 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1"
       }
     }
   },

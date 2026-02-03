@@ -4,7 +4,7 @@
     "slug": "digistall",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/DigiStall-Logo.png",
+    "icon": "./assets/DigiStall-Icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "plugins": [
@@ -14,7 +14,14 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24,
+            "extraMavenRepos": [
+              "https://maven.google.com",
+              "https://jcenter.bintray.com"
+            ]
           }
         }
       ]
@@ -33,27 +40,22 @@
     },
     "android": {
       "package": "com.digistall.mobile",
-      "versionCode": 9,
+      "versionCode": 13,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/DigiStall-Logo.png",
+        "foregroundImage": "./assets/DigiStall-Icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "genosexe02",
+    "owner": "naga-stall",
     "extra": {
       "eas": {
-        "projectId": "f808ec8b-1dfa-45b0-a416-671193ef1b2b"
+        "projectId": "e3ae3291-54fd-450f-8de2-e18e97bdde57"
       }
     }
   }
