@@ -12,7 +12,7 @@ class EmailService {
         this.baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
         this.fromEmail = process.env.FROM_EMAIL || 'noreply@nagastallmanagement.com';
         this.fromName = process.env.FROM_NAME || 'Naga Stall Management System';
-        this.mobileAppDownloadUrl = 'https://expo.dev/artifacts/eas/rBeXxdRciCCghHbgNisKim.apk';
+        this.mobileAppDownloadUrl = 'https://expo.dev/artifacts/eas/beiHk62bNL1fKDUFWTPEBu.apk';
     }
 
     /**
