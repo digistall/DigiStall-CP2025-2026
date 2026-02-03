@@ -65,3 +65,7 @@ ssh root@68.183.154.125 "cd /opt/digistall && docker-compose up -d --build backe
 ssh root@68.183.154.125 "docker logs digistall-backend-mobile --tail 50 --follow" ;& Start-Sleep -Seconds 3; Stop-Process -Name ssh
 
 
+docker logs digistall-backend-web --tail 50
+
+docker logs digistall-backend-mobile --tail 20
+

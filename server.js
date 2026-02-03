@@ -106,6 +106,7 @@ console.log('✅ LGU-NAGA routes loaded');
 
 // EMPLOYEE ROUTES (Inspector, Collector)
 app.use('/api/inspector', enhancedAuthMiddleware.authenticateToken, inspectorRoutes);
+app.use('/api/mobile/inspector', inspectorRoutes);  // Mobile inspector routes (no auth middleware - uses verifyToken inside)
 app.use('/api/mobile-staff', enhancedAuthMiddleware.authenticateToken, mobileStaffRoutes);
 console.log('✅ EMPLOYEE routes loaded');
 
