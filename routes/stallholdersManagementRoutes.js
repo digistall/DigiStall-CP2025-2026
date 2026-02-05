@@ -30,6 +30,13 @@ router.get('/', StallholderController.getAllStallholders);
 router.get('/:id', StallholderController.getStallholderById);
 
 /**
+ * @route GET /api/stallholders-management/:id/violations
+ * @desc Get violation history for a specific stallholder
+ * @access Protected
+ */
+router.get('/:id/violations', StallholderController.getViolationHistory);
+
+/**
  * @route POST /api/stallholders-management
  * @desc Create a new stallholder
  * @access Protected (Admin, Manager)
