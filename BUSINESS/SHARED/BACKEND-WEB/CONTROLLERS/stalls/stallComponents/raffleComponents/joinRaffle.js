@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Join raffle when applicant applies (triggers timer if first participant)
 export const joinRaffle = async (req, res) => {

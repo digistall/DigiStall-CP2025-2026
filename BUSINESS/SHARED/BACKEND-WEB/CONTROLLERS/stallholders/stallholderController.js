@@ -1,12 +1,12 @@
-import { createConnection } from '../../CONFIG/database.js';
-import { getBranchFilter } from '../../MIDDLEWARE/rolePermissions.js';
+import { createConnection } from '../../config/database.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
 import ExcelJS from 'exceljs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
-import emailService from '../../SERVICES/emailService.js';
-import { decryptData, decryptStallholders, encryptData } from '../../SERVICES/encryptionService.js';
+import emailService from '../../services/emailService.js';
+import { decryptData, decryptStallholders, encryptData } from '../../services/encryptionService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

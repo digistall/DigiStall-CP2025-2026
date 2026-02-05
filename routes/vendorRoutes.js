@@ -1,5 +1,5 @@
 import express from 'express';
-import enhancedAuthMiddleware from '../MIDDLEWARE/enhancedAuth.js';
+import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
 import {
   createVendor,
   getAllVendors,

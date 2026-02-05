@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 // Get all branch managers
 export const getAllBranchManagers = async (req, res) => {

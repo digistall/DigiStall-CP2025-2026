@@ -1,5 +1,5 @@
 // Update Floor Component
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 export const updateFloor = async (req, res) => {
   let connection

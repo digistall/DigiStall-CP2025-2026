@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken } from '../MIDDLEWARE/auth.js';
+import { verifyToken } from '../middleware/auth.js';
 
 // Import mobile login controller with full data fetching (including spouse, business, stallholder data)
 import { mobileLogin } from '../SHARE-CONTROLLER/login/loginController.js'

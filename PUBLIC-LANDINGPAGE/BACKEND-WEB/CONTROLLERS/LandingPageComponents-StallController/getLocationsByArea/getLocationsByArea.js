@@ -1,4 +1,4 @@
-﻿import { createConnection } from "../../../../../SHARED/CONFIG/database.js";
+import { createConnection } from "../../../../../SHARED/config/database.js";
 
 // Get locations by area or branch (supports both for backward compatibility) - Uses stored procedure
 export const getLocationsByArea = async (req, res) => {

@@ -8,7 +8,7 @@
  */
 
 import crypto from 'crypto';
-import { createConnection } from '../CONFIG/database.js';
+import { createConnection } from '../config/database.js';
 
 // Cache the encryption key to avoid repeated database queries
 let cachedKey = null;

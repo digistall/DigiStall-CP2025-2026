@@ -1,6 +1,6 @@
-import { createConnection } from '../../../CONFIG/database.js'
-import { getBranchFilter } from '../../../MIDDLEWARE/rolePermissions.js'
-import { decryptData } from '../../../SERVICES/encryptionService.js'
+import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
+import { decryptData } from '../../../services/encryptionService.js'
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {

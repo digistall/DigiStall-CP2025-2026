@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get applicants who applied for a specific stall (for detailed stall management)
 export const getApplicantsByStall = async (req, res) => {

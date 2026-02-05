@@ -4,7 +4,7 @@
  * This handles cases where browser/app is closed without proper logout
  */
 
-import { createConnection } from '../CONFIG/database.js';
+import { createConnection } from '../config/database.js';
 
 // Configuration
 const HEARTBEAT_TIMEOUT_MINUTES = 2;  // Mark offline after 2 minutes of no heartbeat

@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js'
-import { getBranchFilter } from '../../../MIDDLEWARE/rolePermissions.js'
+import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
 
 // Get floors with their sections nested (useful for hierarchical display)
 export const getFloorsWithSections = async (req, res) => {

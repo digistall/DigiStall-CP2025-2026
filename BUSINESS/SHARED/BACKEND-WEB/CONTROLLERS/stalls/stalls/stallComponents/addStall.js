@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Add new stall using direct SQL (no stored procedure dependency)
 export const addStall = async (req, res) => {

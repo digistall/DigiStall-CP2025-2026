@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get available stalls for the authenticated branch manager
 export const getAvailableStalls = async (req, res) => {

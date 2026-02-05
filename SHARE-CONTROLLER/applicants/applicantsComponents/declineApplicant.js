@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js';
-import encryptionService from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import encryptionService from '../../../services/encryptionService.js';
 
 // Decline applicant and delete all related data
 // Uses stored procedure: sp_deleteApplicantCascade

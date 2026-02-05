@@ -6,8 +6,8 @@
 // Max: 10 images per stall, 2MB each, PNG/JPG only
 // =============================================
 
-import { createConnection } from '../../CONFIG/database.js'
-import { generateImageUrl, deleteImageFile, countStallImages } from '../../CONFIG/multerStallImages.js'
+import { createConnection } from '../../config/database.js'
+import { generateImageUrl, deleteImageFile, countStallImages } from '../../config/multerStallImages.js'
 import path from 'path'
 
 // =============================================

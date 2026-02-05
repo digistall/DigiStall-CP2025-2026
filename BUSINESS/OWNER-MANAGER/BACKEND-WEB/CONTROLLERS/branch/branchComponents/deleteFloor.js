@@ -1,5 +1,5 @@
 // Delete Floor Component
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 export const deleteFloor = async (req, res) => {
   let connection

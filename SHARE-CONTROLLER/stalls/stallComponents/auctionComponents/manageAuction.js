@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Extend auction timer (emergency purposes)
 export const extendAuctionTimer = async (req, res) => {

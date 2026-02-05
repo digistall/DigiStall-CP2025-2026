@@ -7,7 +7,7 @@
 // Max: 10 images per stall, NO SIZE LIMIT (uses LONGBLOB)
 // =============================================
 
-import { createConnection } from '../../CONFIG/database.js'
+import { createConnection } from '../../config/database.js'
 
 // =============================================
 // UPLOAD STALL IMAGE AS BLOB

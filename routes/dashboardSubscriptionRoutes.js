@@ -1,5 +1,5 @@
 import express from 'express';
-import authMiddleware from '../MIDDLEWARE/auth.js';
+import authMiddleware from '../middleware/auth.js';
 import { subscribeToDashboard, getActiveConnectionsCount } from '../SHARE-CONTROLLER/subscriptions/dashboardSubscription.js';
 
 const router = express.Router();
