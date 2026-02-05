@@ -422,4 +422,56 @@ export const getStallholderById = async (req, res) => {
   }
 };
 
-
+/**
+ * Get sent violation reports by inspector
+ * @route GET /api/mobile/inspector/sent-reports
+ * @access Protected (Inspector only)
+ */
+export const getInspectorSentReports = async (req, res) => {
+  let connection;
+  
+  try {
+    const staffData = req.user;
+    const inspectorId = staffData.staffId || staffData.staff_id || staffData.id;
+    
+    console.log('📋 Fetching sent reports for inspector:', inspectorId);
+    
+    if (!inspectorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Inspector ID not found'
+      });
+    }
+    
+    connection = await createConnection();
+    
+    // Call stored procedure to get inspector's sent reports
+    const [results] = await connection.execute(
+      'CALL sp_getInspectorSentReports(?)',
+      [inspectorId]
+    );
+    
+    const reports = results[0] || [];
+    
+    console.log(`✅ Found ${reports.length} sent reports for inspector ${inspectorId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Sent reports retrieved successfully',
+      data: reports,
+      count: reports.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching sent reports:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch sent reports',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};
