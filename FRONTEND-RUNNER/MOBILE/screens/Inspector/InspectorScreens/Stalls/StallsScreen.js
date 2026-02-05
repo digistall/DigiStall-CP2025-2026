@@ -24,6 +24,7 @@ const SentReportsScreen = ({ onSelectReport }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [reports, setReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [expandedReportId, setExpandedReportId] = useState(null);
 
   useEffect(() => {
     loadReports();
@@ -109,17 +110,20 @@ const SentReportsScreen = ({ onSelectReport }) => {
       month: 'short',
       day: 'numeric'
     });
+    const isExpanded = expandedReportId === item.report_id;
     
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.colors.card }]}
-        onPress={() => onSelectReport && onSelectReport(item)}
+        onPress={() => setExpandedReportId(isExpanded ? null : item.report_id)}
         activeOpacity={0.8}
       >
         <View style={styles.cardHeader}>
           <View style={[styles.stallBadge, { backgroundColor: '#f59e0b' }]}>
             <Ionicons name="receipt" size={20} color="#ffffff" />
-            <Text style={styles.stallBadgeText}>#{item.receipt_number}</Text>
+            <Text style={styles.stallBadgeText}>
+              #{item.report_id}
+            </Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
             <Ionicons name={statusColors.icon} size={14} color={statusColors.text} />
@@ -139,14 +143,22 @@ const SentReportsScreen = ({ onSelectReport }) => {
           <View style={styles.detailRow}>
             <Ionicons name="warning-outline" size={16} color="#dc2626" />
             <Text style={[styles.detailText, { color: theme.colors.text, fontWeight: '600' }]}>
-              {item.violation_name}
+              {item.violation_name || 'Unknown Violation'}
             </Text>
           </View>
           {item.stall_no && (
             <View style={styles.detailRow}>
               <Ionicons name="business-outline" size={16} color={theme.colors.textSecondary} />
               <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-                Stall {item.stall_no}
+                Stall {item.stall_no} {item.stall_location ? `- ${item.stall_location}` : ''}
+              </Text>
+            </View>
+          )}
+          {item.branch_name && (
+            <View style={styles.detailRow}>
+              <Ionicons name="location-outline" size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
+                {item.branch_name}
               </Text>
             </View>
           )}
@@ -161,12 +173,14 @@ const SentReportsScreen = ({ onSelectReport }) => {
           <View style={styles.stallholderInfo}>
             <View style={[styles.miniAvatar, { backgroundColor: '#3b82f6' }]}>
               <Text style={styles.miniAvatarText}>
-                {item.stallholder_name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                {item.stallholder_name ? 
+                  item.stallholder_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 
+                  'NA'}
               </Text>
             </View>
             <View style={styles.stallholderDetails}>
               <Text style={[styles.stallholderName, { color: theme.colors.text }]}>
-                {item.stallholder_name}
+                {item.stallholder_name || 'Unknown'}
               </Text>
               <Text style={[styles.businessType, { color: theme.colors.textSecondary }]}>
                 ID: {item.stallholder_id}
@@ -174,6 +188,104 @@ const SentReportsScreen = ({ onSelectReport }) => {
             </View>
           </View>
         </View>
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <View style={styles.expandedSection}>
+            <View style={styles.cardDivider} />
+            
+            <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, marginBottom: 8 }]}>
+              VIOLATION DETAILS
+            </Text>
+            
+            <View style={styles.expandedRow}>
+              <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                Description:
+              </Text>
+              <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                {item.violation_description || 'No description'}
+              </Text>
+            </View>
+            
+            <View style={styles.expandedRow}>
+              <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                Offense Count:
+              </Text>
+              <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                {item.offense_count || 1}
+              </Text>
+            </View>
+            
+            {item.remarks && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Remarks:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {item.remarks}
+                </Text>
+              </View>
+            )}
+            
+            {item.evidence && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Evidence:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {item.evidence}
+                </Text>
+              </View>
+            )}
+            
+            {item.paid_date && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Paid Date:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {new Date(item.paid_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.expandedRow}>
+              <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                Created:
+              </Text>
+              <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                {new Date(item.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </Text>
+            </View>
+            
+            {item.updated_at && item.updated_at !== item.created_at && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Last Updated:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {new Date(item.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.penaltyRow}>
           <View style={styles.penaltyInfo}>
@@ -190,6 +302,18 @@ const SentReportsScreen = ({ onSelectReport }) => {
               {item.payment_status}
             </Text>
           </View>
+        </View>
+        
+        {/* Expand/Collapse Indicator */}
+        <View style={styles.expandIndicator}>
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={20} 
+            color={theme.colors.textSecondary} 
+          />
+          <Text style={[styles.expandText, { color: theme.colors.textSecondary }]}>
+            {isExpanded ? 'Show Less' : 'Show More'}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -493,6 +617,35 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   paymentText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  expandedSection: {
+    marginTop: 12,
+  },
+  expandedRow: {
+    marginBottom: 12,
+  },
+  expandedLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  expandedValue: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  expandIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    gap: 6,
+  },
+  expandText: {
     fontSize: 12,
     fontWeight: '600',
   },
