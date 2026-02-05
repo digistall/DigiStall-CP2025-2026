@@ -432,9 +432,10 @@ export const getInspectorSentReports = async (req, res) => {
   
   try {
     const staffData = req.user;
-    const inspectorId = staffData.staffId || staffData.staff_id || staffData.id;
+    const inspectorId = staffData.staffId || staffData.staff_id || staffData.userId || staffData.id;
     
     console.log('📋 Fetching sent reports for inspector:', inspectorId);
+    console.log('📋 Staff data:', staffData);
     
     if (!inspectorId) {
       return res.status(400).json({
@@ -453,13 +454,33 @@ export const getInspectorSentReports = async (req, res) => {
     
     const reports = results[0] || [];
     
-    console.log(`✅ Found ${reports.length} sent reports for inspector ${inspectorId}`);
+    console.log('📦 Raw reports count:', reports.length);
+    
+    // Decrypt stallholder names
+    const decryptedReports = reports.map(report => {
+      try {
+        return {
+          ...report,
+          stallholder_name: report.stallholder_name ? 
+            decryptAES256GCM(report.stallholder_name) : 
+            `Stallholder #${report.stallholder_id}`
+        };
+      } catch (decryptError) {
+        console.error('⚠️ Decryption error for report', report.report_id, ':', decryptError.message);
+        return {
+          ...report,
+          stallholder_name: `Stallholder #${report.stallholder_id}`
+        };
+      }
+    });
+    
+    console.log(`✅ Found ${decryptedReports.length} sent reports for inspector ${inspectorId}`);
     
     return res.status(200).json({
       success: true,
       message: 'Sent reports retrieved successfully',
-      data: reports,
-      count: reports.length
+      data: decryptedReports,
+      count: decryptedReports.length
     });
     
   } catch (error) {
