@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,221 +8,313 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../../components/ThemeComponents/ThemeContext";
+import ApiService from "../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
 
-// Mock data for stalls (frontend only)
-const mockStalls = [
-  {
-    stall_id: 1,
-    stall_no: "A-001",
-    stall_location: "Ground Floor, Section A",
-    branch_name: "Naga City Public Market",
-    floor_name: "Ground Floor",
-    section_name: "Section A",
-    stall_status: "Occupied",
-    stallholder_name: "Juan Dela Cruz",
-    business_type: "Dry Goods",
-    rental_price: 5000,
-    stall_size: "2x3 meters",
-  },
-  {
-    stall_id: 2,
-    stall_no: "A-002",
-    stall_location: "Ground Floor, Section A",
-    branch_name: "Naga City Public Market",
-    floor_name: "Ground Floor",
-    section_name: "Section A",
-    stall_status: "Vacant",
-    stallholder_name: null,
-    business_type: null,
-    rental_price: 4500,
-    stall_size: "2x2 meters",
-  },
-  {
-    stall_id: 3,
-    stall_no: "B-015",
-    stall_location: "Ground Floor, Section B",
-    branch_name: "Naga City Public Market",
-    floor_name: "Ground Floor",
-    section_name: "Section B",
-    stall_status: "Occupied",
-    stallholder_name: "Maria Santos",
-    business_type: "Wet Market - Fish",
-    rental_price: 6000,
-    stall_size: "3x3 meters",
-  },
-  {
-    stall_id: 4,
-    stall_no: "B-016",
-    stall_location: "Ground Floor, Section B",
-    branch_name: "Naga City Public Market",
-    floor_name: "Ground Floor",
-    section_name: "Section B",
-    stall_status: "Under Maintenance",
-    stallholder_name: null,
-    business_type: null,
-    rental_price: 5500,
-    stall_size: "3x2 meters",
-  },
-  {
-    stall_id: 5,
-    stall_no: "C-022",
-    stall_location: "2nd Floor, Section C",
-    branch_name: "Naga City Public Market",
-    floor_name: "2nd Floor",
-    section_name: "Section C",
-    stall_status: "Occupied",
-    stallholder_name: "Pedro Reyes",
-    business_type: "Cooked Food",
-    rental_price: 7000,
-    stall_size: "4x3 meters",
-  },
-  {
-    stall_id: 6,
-    stall_no: "C-023",
-    stall_location: "2nd Floor, Section C",
-    branch_name: "Naga City Public Market",
-    floor_name: "2nd Floor",
-    section_name: "Section C",
-    stall_status: "Vacant",
-    stallholder_name: null,
-    business_type: null,
-    rental_price: 6500,
-    stall_size: "3x3 meters",
-  },
-];
-
-const StallsScreen = ({ onSelectStall }) => {
+const SentReportsScreen = ({ onSelectReport }) => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [stalls, setStalls] = useState(mockStalls);
+  const [reports, setReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [expandedReportId, setExpandedReportId] = useState(null);
+
+  useEffect(() => {
+    loadReports();
+  }, []);
+
+  const loadReports = async () => {
+    try {
+      setLoading(true);
+      const response = await ApiService.getInspectorSentReports();
+      
+      if (response.success) {
+        setReports(response.data || []);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to load reports');
+      }
+    } catch (error) {
+      console.error('Error loading reports:', error);
+      Alert.alert('Error', 'Failed to load sent reports');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadReports().finally(() => setRefreshing(false));
   }, []);
 
   const filters = [
     { id: "all", label: "All" },
-    { id: "occupied", label: "Occupied" },
-    { id: "vacant", label: "Vacant" },
-    { id: "maintenance", label: "Maintenance" },
+    { id: "open", label: "Open" },
+    { id: "resolved", label: "Resolved" },
+    { id: "paid", label: "Paid" },
   ];
 
-  const filteredStalls = stalls.filter((item) => {
+  const filteredReports = reports.filter((item) => {
     const matchesSearch = 
-      item.stall_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.stall_location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.receipt_number && item.receipt_number.toString().includes(searchQuery)) ||
       (item.stallholder_name && item.stallholder_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (item.business_type && item.business_type.toLowerCase().includes(searchQuery.toLowerCase()));
+      (item.violation_name && item.violation_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (item.stall_no && item.stall_no.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesFilter = 
       selectedFilter === "all" ||
-      (selectedFilter === "occupied" && item.stall_status === "Occupied") ||
-      (selectedFilter === "vacant" && item.stall_status === "Vacant") ||
-      (selectedFilter === "maintenance" && item.stall_status === "Under Maintenance");
+      (selectedFilter === "open" && item.status === "Open") ||
+      (selectedFilter === "resolved" && item.status === "Resolved") ||
+      (selectedFilter === "paid" && item.payment_status === "Paid");
     
     return matchesSearch && matchesFilter;
   });
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Occupied":
-        return { bg: "#dbeafe", text: "#1d4ed8", icon: "checkmark-circle" };
-      case "Vacant":
-        return { bg: "#d1fae5", text: "#059669", icon: "add-circle" };
-      case "Under Maintenance":
-        return { bg: "#fef3c7", text: "#d97706", icon: "construct" };
+      case "Open":
+        return { bg: "#fef3c7", text: "#d97706", icon: "alert-circle" };
+      case "Resolved":
+        return { bg: "#d1fae5", text: "#059669", icon: "checkmark-circle" };
+      case "Closed":
+        return { bg: "#f3f4f6", text: "#6b7280", icon: "close-circle" };
+      default:
+        return { bg: "#dbeafe", text: "#1d4ed8", icon: "document-text" };
+    }
+  };
+
+  const getPaymentStatusColor = (paymentStatus) => {
+    switch (paymentStatus) {
+      case "Paid":
+        return { bg: "#d1fae5", text: "#059669", icon: "cash" };
+      case "Unpaid":
+        return { bg: "#fee2e2", text: "#dc2626", icon: "close-circle" };
+      case "Partial":
+        return { bg: "#fef3c7", text: "#d97706", icon: "time" };
       default:
         return { bg: "#f3f4f6", text: "#6b7280", icon: "help-circle" };
     }
   };
 
-  const renderStallCard = ({ item }) => {
-    const statusColors = getStatusColor(item.stall_status);
+  const renderReportCard = ({ item }) => {
+    const statusColors = getStatusColor(item.status);
+    const paymentColors = getPaymentStatusColor(item.payment_status);
+    const reportDate = new Date(item.report_date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    const isExpanded = expandedReportId === item.report_id;
     
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.colors.card }]}
-        onPress={() => onSelectStall && onSelectStall(item)}
+        onPress={() => setExpandedReportId(isExpanded ? null : item.report_id)}
         activeOpacity={0.8}
       >
         <View style={styles.cardHeader}>
           <View style={[styles.stallBadge, { backgroundColor: '#f59e0b' }]}>
-            <Ionicons name="business" size={20} color="#ffffff" />
-            <Text style={styles.stallBadgeText}>{item.stall_no}</Text>
+            <Ionicons name="receipt" size={20} color="#ffffff" />
+            <Text style={styles.stallBadgeText}>
+              #{item.report_id}
+            </Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
             <Ionicons name={statusColors.icon} size={14} color={statusColors.text} />
             <Text style={[styles.statusText, { color: statusColors.text }]}>
-              {item.stall_status}
+              {item.status}
             </Text>
           </View>
         </View>
 
         <View style={styles.cardBody}>
           <View style={styles.detailRow}>
-            <Ionicons name="location-outline" size={16} color={theme.colors.textSecondary} />
+            <Ionicons name="calendar-outline" size={16} color={theme.colors.textSecondary} />
             <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-              {item.stall_location}
+              {reportDate}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Ionicons name="resize-outline" size={16} color={theme.colors.textSecondary} />
-            <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-              Size: {item.stall_size}
+            <Ionicons name="warning-outline" size={16} color="#dc2626" />
+            <Text style={[styles.detailText, { color: theme.colors.text, fontWeight: '600' }]}>
+              {item.violation_name || 'Unknown Violation'}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="cash-outline" size={16} color={theme.colors.textSecondary} />
-            <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-              Γé▒{item.rental_price.toLocaleString()}/month
-            </Text>
+          {item.stall_no && (
+            <View style={styles.detailRow}>
+              <Ionicons name="business-outline" size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
+                Stall {item.stall_no} {item.stall_location ? `- ${item.stall_location}` : ''}
+              </Text>
+            </View>
+          )}
+          {item.branch_name && (
+            <View style={styles.detailRow}>
+              <Ionicons name="location-outline" size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
+                {item.branch_name}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardDivider} />
+        
+        <View style={styles.stallholderSection}>
+          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+            STALLHOLDER
+          </Text>
+          <View style={styles.stallholderInfo}>
+            <View style={[styles.miniAvatar, { backgroundColor: '#3b82f6' }]}>
+              <Text style={styles.miniAvatarText}>
+                {item.stallholder_name ? 
+                  item.stallholder_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 
+                  'NA'}
+              </Text>
+            </View>
+            <View style={styles.stallholderDetails}>
+              <Text style={[styles.stallholderName, { color: theme.colors.text }]}>
+                {item.stallholder_name || 'Unknown'}
+              </Text>
+              <Text style={[styles.businessType, { color: theme.colors.textSecondary }]}>
+                ID: {item.stallholder_id}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {item.stall_status === "Occupied" && (
-          <>
+        {/* Expanded Details */}
+        {isExpanded && (
+          <View style={styles.expandedSection}>
             <View style={styles.cardDivider} />
-            <View style={styles.stallholderSection}>
-              <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-                STALLHOLDER
+            
+            <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, marginBottom: 8 }]}>
+              VIOLATION DETAILS
+            </Text>
+            
+            <View style={styles.expandedRow}>
+              <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                Description:
               </Text>
-              <View style={styles.stallholderInfo}>
-                <View style={[styles.miniAvatar, { backgroundColor: '#3b82f6' }]}>
-                  <Text style={styles.miniAvatarText}>
-                    {item.stallholder_name?.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.stallholderDetails}>
-                  <Text style={[styles.stallholderName, { color: theme.colors.text }]}>
-                    {item.stallholder_name}
-                  </Text>
-                  <Text style={[styles.businessType, { color: theme.colors.textSecondary }]}>
-                    {item.business_type}
-                  </Text>
-                </View>
-              </View>
+              <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                {item.violation_description || 'No description'}
+              </Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.reportButton}
-              onPress={() => onSelectStall && onSelectStall(item, 'report')}
-            >
-              <Ionicons name="document-text-outline" size={18} color="#f59e0b" />
-              <Text style={styles.reportButtonText}>Report Violation</Text>
-            </TouchableOpacity>
-          </>
+            
+            <View style={styles.expandedRow}>
+              <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                Offense Count:
+              </Text>
+              <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                {item.offense_count || 1}
+              </Text>
+            </View>
+            
+            {item.remarks && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Remarks:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {item.remarks}
+                </Text>
+              </View>
+            )}
+            
+            {item.evidence && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Evidence:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {item.evidence}
+                </Text>
+              </View>
+            )}
+            
+            {item.paid_date && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Paid Date:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {new Date(item.paid_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.expandedRow}>
+              <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                Created:
+              </Text>
+              <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                {new Date(item.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </Text>
+            </View>
+            
+            {item.updated_at && item.updated_at !== item.created_at && (
+              <View style={styles.expandedRow}>
+                <Text style={[styles.expandedLabel, { color: theme.colors.textSecondary }]}>
+                  Last Updated:
+                </Text>
+                <Text style={[styles.expandedValue, { color: theme.colors.text }]}>
+                  {new Date(item.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </Text>
+              </View>
+            )}
+          </View>
         )}
+
+        <View style={styles.penaltyRow}>
+          <View style={styles.penaltyInfo}>
+            <Text style={[styles.penaltyLabel, { color: theme.colors.textSecondary }]}>
+              Penalty Amount
+            </Text>
+            <Text style={[styles.penaltyAmount, { color: '#dc2626' }]}>
+              ₱{item.penalty_amount ? parseFloat(item.penalty_amount).toLocaleString() : '0'}
+            </Text>
+          </View>
+          <View style={[styles.paymentBadge, { backgroundColor: paymentColors.bg }]}>
+            <Ionicons name={paymentColors.icon} size={14} color={paymentColors.text} />
+            <Text style={[styles.paymentText, { color: paymentColors.text }]}>
+              {item.payment_status}
+            </Text>
+          </View>
+        </View>
+        
+        {/* Expand/Collapse Indicator */}
+        <View style={styles.expandIndicator}>
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={20} 
+            color={theme.colors.textSecondary} 
+          />
+          <Text style={[styles.expandText, { color: theme.colors.textSecondary }]}>
+            {isExpanded ? 'Show Less' : 'Show More'}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -234,7 +326,7 @@ const StallsScreen = ({ onSelectStall }) => {
         <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
         <TextInput
           style={[styles.searchInput, { color: theme.colors.text }]}
-          placeholder="Search stall, location, or stallholder..."
+          placeholder="Search receipt, violation, or stallholder..."
           placeholderTextColor={theme.colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -272,27 +364,36 @@ const StallsScreen = ({ onSelectStall }) => {
 
       {/* Results Count */}
       <Text style={[styles.resultsCount, { color: theme.colors.textSecondary }]}>
-        {filteredStalls.length} stall{filteredStalls.length !== 1 ? 's' : ''} found
+        {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''} found
       </Text>
     </View>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="business-outline" size={64} color={theme.colors.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Stalls Found</Text>
+      <Ionicons name="document-text-outline" size={64} color={theme.colors.textSecondary} />
+      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Reports Found</Text>
       <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-        {searchQuery ? "Try adjusting your search or filters" : "Pull down to refresh"}
+        {searchQuery ? "Try adjusting your search or filters" : "You haven't submitted any violation reports yet"}
       </Text>
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color="#f59e0b" />
+        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading reports...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
-        data={filteredStalls}
-        renderItem={renderStallCard}
-        keyExtractor={(item) => item.stall_id.toString()}
+        data={filteredReports}
+        renderItem={renderReportCard}
+        keyExtractor={(item) => item.report_id.toString()}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
@@ -311,6 +412,14 @@ const StallsScreen = ({ onSelectStall }) => {
 };
 
 const styles = StyleSheet.create({
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
   container: {
     flex: 1,
   },
@@ -461,23 +570,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  reportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    marginTop: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-    backgroundColor: 'rgba(245, 158, 11, 0.05)',
-  },
-  reportButtonText: {
-    color: '#f59e0b',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -492,7 +584,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  penaltyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  penaltyInfo: {
+    flex: 1,
+  },
+  penaltyLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  penaltyAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  paymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
+  },
+  paymentText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  expandedSection: {
+    marginTop: 12,
+  },
+  expandedRow: {
+    marginBottom: 12,
+  },
+  expandedLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  expandedValue: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  expandIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    gap: 6,
+  },
+  expandText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
-export default StallsScreen;
+export default SentReportsScreen;

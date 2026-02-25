@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js'
-import { getBranchFilter } from '../../../MIDDLEWARE/rolePermissions.js'
+import { createConnection } from '../../../config/database.js'
+import { getBranchFilter } from '../../../middleware/rolePermissions.js'
 
 // Get all sections for authenticated user (branch manager, employee, or business owner)
 export const getSections = async (req, res) => {

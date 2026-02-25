@@ -1,5 +1,5 @@
-import { createConnection } from '../../../../CONFIG/database.js';
-import { decryptData } from '../../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../../config/database.js';
+import { decryptData } from '../../../../services/encryptionService.js';
 
 /**
  * Get all participants who joined a raffle for a specific stall

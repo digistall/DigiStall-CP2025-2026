@@ -1,8 +1,8 @@
 // ===== APPLICATION CONTROLLER =====
 // Handles stall application management operations
 
-import { createConnection } from "../../CONFIG/database.js";
-import emailService from "../../SERVICES/emailService.js";
+import { createConnection } from "../../config/database.js";
+import emailService from "../../services/emailService.js";
 
 // Create a new stall application
 export const createApplication = async (req, res) => {

@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 import bcrypt from 'bcrypt';
 
 // Create and assign manager to branch

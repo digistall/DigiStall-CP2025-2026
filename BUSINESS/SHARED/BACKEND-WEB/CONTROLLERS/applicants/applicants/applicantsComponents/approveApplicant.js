@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js';
-import { decryptData, encryptData } from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import { decryptData, encryptData } from '../../../services/encryptionService.js';
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {

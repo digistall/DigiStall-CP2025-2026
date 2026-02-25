@@ -1,6 +1,6 @@
-﻿import { createConnection } from '../../../../SHARED/CONFIG/database.js';
-import { getBranchFilter } from '../../../../SHARED/MIDDLEWARE/rolePermissions.js';
-import { encryptData, decryptData, decryptEmployees } from '../../../../SHARED/SERVICES/encryptionService.js';
+import { createConnection } from '../../../../SHARED/config/database.js';
+import { getBranchFilter } from '../../../../SHARED/middleware/rolePermissions.js';
+import { encryptData, decryptData, decryptEmployees } from '../../../../SHARED/services/encryptionService.js';
 import { generateSecurePassword } from '../../../../SHARED/UTILS/passwordGenerator.js';
 import jwt from 'jsonwebtoken';
 

@@ -1,6 +1,6 @@
-﻿import { createConnection } from '../../../SHARED/CONFIG/database.js';
-import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from '../../../SHARED/CONFIG/multerApplicantDocuments.js';
-import { encryptData, decryptData } from '../../../SHARED/SERVICES/encryptionService.js';
+import { createConnection } from '../../../SHARED/config/database.js';
+import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from '../../../SHARED/config/multerApplicantDocuments.js';
+import { encryptData, decryptData } from '../../../SHARED/services/encryptionService.js';
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {

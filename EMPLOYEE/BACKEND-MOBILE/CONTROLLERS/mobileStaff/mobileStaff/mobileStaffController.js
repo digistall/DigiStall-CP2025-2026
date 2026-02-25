@@ -1,5 +1,5 @@
-import { createConnection } from '../../CONFIG/database.js';
-import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../SERVICES/encryptionService.js';
+import { createConnection } from '../../config/database.js';
+import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../services/encryptionService.js';
 import { generateSecurePassword } from '../../UTILS/passwordGenerator.js';
 
 /**

@@ -3,7 +3,7 @@
 // Routes: /login, /logout, /refresh, /verify-token, /me, /auto-logout
 
 import express from 'express';
-import enhancedAuthMiddleware from '../MIDDLEWARE/enhancedAuth.js';
+import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
 import {
   login,
   refreshToken,

@@ -1,5 +1,5 @@
 import express from 'express'
-import authMiddleware from '../MIDDLEWARE/auth.js'
+import authMiddleware from '../middleware/auth.js'
 import {
   createBranch,
   getAllBranches,

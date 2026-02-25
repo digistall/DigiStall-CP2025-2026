@@ -3,7 +3,7 @@
  * Database abstraction for employee-related operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * EmployeeModel Class

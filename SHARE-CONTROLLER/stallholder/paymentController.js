@@ -1,4 +1,4 @@
-import { createConnection } from '../../CONFIG/database.js';
+import { createConnection } from '../../config/database.js';
 
 /**
  * Get payment records for a stallholder
@@ -12,37 +12,38 @@ export const getPaymentRecords = async (req, res) => {
     const userData = req.user; // From auth middleware
     console.log('🔐 User data from token:', JSON.stringify(userData, null, 2));
     
-    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
-    
-    // If stallholderId is null but we have applicantId, try to look up stallholder_id from database
-    if (!stallholderId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Unable to identify stallholder. Please log out and log in again.',
-        data: []
-      });
-    }
-    
     const { page = 1, limit = 10 } = req.query;
     const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 10)); // Sanitize limit (1-100)
     const pageInt = Math.max(1, parseInt(page) || 1); // Sanitize page (min 1)
     const offsetInt = (pageInt - 1) * limitInt;
     
-    console.log('📋 Fetching payment records for stallholder:', stallholderId, 'page:', pageInt, 'limit:', limitInt);
-    
     connection = await createConnection();
     
-    // If we only have applicantId, try to get stallholder_id using stored procedure
-    if (userData.applicantId && !userData.stallholderId) {
+    // Get the actual stallholder_id from the database using the applicant/user ID
+    let stallholderId = null;
+    const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (lookupId) {
+      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
       const [stallholderResult] = await connection.execute(
         'CALL sp_getStallholderIdByApplicant(?)',
-        [userData.applicantId]
+        [lookupId]
       );
       if (stallholderResult[0] && stallholderResult[0].length > 0) {
         stallholderId = stallholderResult[0][0].stallholder_id;
-        console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
+        console.log('✅ Found stallholder_id:', stallholderId);
       }
     }
+    
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No stallholder record found. Please contact support.',
+        data: []
+      });
+    }
+    
+    console.log('📋 Fetching payment records for stallholder:', stallholderId, 'page:', pageInt, 'limit:', limitInt);
     
     // Get total count of payments using stored procedure
     const [countResult] = await connection.execute(
@@ -121,31 +122,33 @@ export const getAllPaymentRecords = async (req, res) => {
     const userData = req.user; // From auth middleware
     console.log('🔐 User data from token (getAllPaymentRecords):', JSON.stringify(userData, null, 2));
     
-    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    connection = await createConnection();
+    
+    // Get the actual stallholder_id from the database
+    let stallholderId = null;
+    const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (lookupId) {
+      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
+        [lookupId]
+      );
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
+        console.log('✅ Found stallholder_id:', stallholderId);
+      }
+    }
     
     if (!stallholderId) {
       return res.status(400).json({
         success: false,
-        message: 'Unable to identify stallholder. Please log out and log in again.',
+        message: 'No stallholder record found. Please contact support.',
         data: []
       });
     }
     
     console.log('📋 Fetching ALL payment records for stallholder:', stallholderId);
-    
-    connection = await createConnection();
-    
-    // If we only have applicantId, try to get stallholder_id using stored procedure
-    if (userData.applicantId && !userData.stallholderId) {
-      const [stallholderResult] = await connection.execute(
-        'CALL sp_getStallholderIdByApplicant(?)',
-        [userData.applicantId]
-      );
-      if (stallholderResult[0] && stallholderResult[0].length > 0) {
-        stallholderId = stallholderResult[0][0].stallholder_id;
-        console.log('📋 Found stallholder_id from applicant_id:', stallholderId);
-      }
-    }
     
     // Get all payment records using stored procedure
     const [paymentResult] = await connection.execute(
@@ -212,30 +215,32 @@ export const getPaymentSummary = async (req, res) => {
     const userData = req.user; // From auth middleware
     console.log('🔐 User data from token (getPaymentSummary):', JSON.stringify(userData, null, 2));
     
-    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    connection = await createConnection();
+    
+    // Get the actual stallholder_id from the database
+    let stallholderId = null;
+    const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (lookupId) {
+      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
+        [lookupId]
+      );
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
+        console.log('✅ Found stallholder_id:', stallholderId);
+      }
+    }
     
     if (!stallholderId) {
       return res.status(400).json({
         success: false,
-        message: 'Unable to identify stallholder. Please log out and log in again.'
+        message: 'No stallholder record found. Please contact support.'
       });
     }
     
     console.log('📊 Fetching payment summary for stallholder:', stallholderId);
-    
-    connection = await createConnection();
-    
-    // If we only have applicantId, try to get stallholder_id using stored procedure
-    if (userData.applicantId && !userData.stallholderId) {
-      const [stallholderResult] = await connection.execute(
-        'CALL sp_getStallholderIdByApplicant(?)',
-        [userData.applicantId]
-      );
-      if (stallholderResult[0] && stallholderResult[0].length > 0) {
-        stallholderId = stallholderResult[0][0].stallholder_id;
-        console.log('📊 Found stallholder_id from applicant_id:', stallholderId);
-      }
-    }
     
     // Get payment summary statistics using stored procedure
     const [summaryResult] = await connection.execute(

@@ -1,8 +1,8 @@
 // ===== MOBILE USER CONTROLLER =====
 // Simple user management for mobile applications
 
-import { createConnection } from '../../CONFIG/database.js';
-import { decryptApplicantData } from '../../SERVICES/mysqlDecryptionService.js';
+import { createConnection } from '../../config/database.js';
+import { decryptApplicantData } from '../../services/mysqlDecryptionService.js';
 
 // Get user profile
 export const getUserProfile = async (req, res) => {

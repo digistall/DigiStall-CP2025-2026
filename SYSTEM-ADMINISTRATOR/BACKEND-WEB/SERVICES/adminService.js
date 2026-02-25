@@ -3,7 +3,7 @@
  * Business logic for admin operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * Get comprehensive system statistics

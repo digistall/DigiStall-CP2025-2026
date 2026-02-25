@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 // Delete branch manager
 export const deleteBranchManager = async (req, res) => {

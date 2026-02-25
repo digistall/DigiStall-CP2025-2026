@@ -1,5 +1,5 @@
 // Delete Section Component
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 export const deleteSection = async (req, res) => {
   let connection

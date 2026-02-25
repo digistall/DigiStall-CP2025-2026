@@ -1,9 +1,9 @@
 import express from "express";
 import PaymentController from "../SHARE-CONTROLLER/payments/paymentController.js";
 import DailyPaymentController from "../SHARE-CONTROLLER/payments/dailyPaymentController.js";
-import authMiddleware from "../MIDDLEWARE/auth.js";
-import { viewOnlyForOwners } from "../MIDDLEWARE/rolePermissions.js";
-import { authorizePermission } from "../MIDDLEWARE/enhancedAuth.js";
+import authMiddleware from "../middleware/auth.js";
+import { viewOnlyForOwners } from "../middleware/rolePermissions.js";
+import { authorizePermission } from "../middleware/enhancedAuth.js";
 
 const router = express.Router();
 

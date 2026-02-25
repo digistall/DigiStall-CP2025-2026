@@ -1886,6 +1886,55 @@ class ApiService {
     }
   }
 
+  /**
+   * Get inspector's sent violation reports
+   * @returns {Promise} Promise resolving to reports list
+   */
+  static async getInspectorSentReports() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}/api/mobile/inspector/sent-reports`;
+      console.log('🔄 Fetching inspector sent reports from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch sent reports');
+      }
+      
+      console.log(`✅ Loaded ${data.count} sent reports`);
+      return {
+        success: true,
+        data: data.data,
+        count: data.count,
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Inspector Sent Reports Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: []
+      };
+    }
+  }
+
   // ===== COMPLAINT METHODS =====
 
   /**

@@ -1,5 +1,5 @@
-﻿import { createConnection } from '../../../../SHARED/CONFIG/database.js';
-import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../../../SHARED/SERVICES/encryptionService.js';
+import { createConnection } from '../../../../SHARED/config/database.js';
+import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../../../SHARED/services/encryptionService.js';
 import { generateSecurePassword } from '../../../../SHARED/UTILS/passwordGenerator.js';
 
 /**

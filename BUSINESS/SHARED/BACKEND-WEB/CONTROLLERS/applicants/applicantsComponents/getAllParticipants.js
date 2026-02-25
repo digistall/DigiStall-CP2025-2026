@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get all participants (approved applicants who are currently using stalls)
 export const getAllParticipants = async (req, res) => {

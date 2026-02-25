@@ -1,6 +1,6 @@
 import express from 'express';
-import authMiddleware from '../MIDDLEWARE/auth.js';
-import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js';
+import authMiddleware from '../middleware/auth.js';
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import {
   createEmployee,
   getAllEmployees,
