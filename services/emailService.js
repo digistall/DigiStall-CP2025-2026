@@ -839,6 +839,87 @@ Naga Stall Management Team
             };
         }
     }
+
+    /**
+     * Send password reset verification code email
+     * Used for the Forgot Password feature
+     */
+    async sendPasswordResetCodeEmail(resetData) {
+        try {
+            const { email, userName, verificationCode, expiryMinutes } = resetData;
+
+            const subject = `Your Password Reset Code - ${verificationCode}`;
+            
+            const textContent = `
+Hello ${userName || 'User'},
+
+You have requested to reset your password for DigiStall - Naga City Stall Management.
+
+Your verification code is: ${verificationCode}
+
+This code will expire in ${expiryMinutes || 10} minutes.
+
+If you did not request this password reset, please ignore this email.
+
+Best regards,
+DigiStall Team
+            `.trim();
+
+            const htmlContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 24px;">DigiStall</h1>
+                        <p style="margin: 5px 0 0 0; opacity: 0.9;">Naga City Stall Management</p>
+                    </div>
+                    <div style="padding: 30px; background: #f9f9f9;">
+                        <p style="color: #333;">Hello <strong>${userName || 'User'}</strong>,</p>
+                        <p style="color: #555;">You have requested to reset your password. Use the verification code below to proceed:</p>
+                        
+                        <div style="background: white; padding: 25px; border-radius: 10px; margin: 25px 0; text-align: center; border: 2px dashed #1a237e;">
+                            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Your Verification Code</p>
+                            <h2 style="margin: 0; font-size: 36px; letter-spacing: 8px; color: #1a237e; font-family: 'Courier New', monospace;">${verificationCode}</h2>
+                        </div>
+                        
+                        <p style="color: #888; font-size: 14px; text-align: center;">
+                            ⏱️ This code will expire in <strong>${expiryMinutes || 10} minutes</strong>
+                        </p>
+                        
+                        <hr style="border: none; border-top: 1px solid #ddd; margin: 25px 0;">
+                        
+                        <p style="color: #999; font-size: 12px;">
+                            If you did not request this password reset, please ignore this email. Your password will remain unchanged.
+                        </p>
+                        
+                        <p style="color: #333; margin-top: 25px;">Best regards,<br><strong>DigiStall Team</strong></p>
+                    </div>
+                    <div style="background: #1a237e; color: white; padding: 15px; text-align: center; font-size: 12px;">
+                        <p style="margin: 0;">© 2026 DigiStall - Naga City Stall Management System</p>
+                    </div>
+                </div>
+            `;
+
+            const mailOptions = {
+                from: `"${this.fromName}" <${this.fromEmail}>`,
+                to: email,
+                subject: subject,
+                text: textContent,
+                html: htmlContent
+            };
+
+            const result = await this.transporter.sendMail(mailOptions);
+
+            console.log('✅ Password reset code email sent successfully to:', email);
+            return {
+                success: true,
+                messageId: result.messageId,
+                recipient: email
+            };
+
+        } catch (error) {
+            console.error('❌ Error sending password reset code email:', error);
+            throw error;
+        }
+    }
 }
 
 // Create singleton instance
