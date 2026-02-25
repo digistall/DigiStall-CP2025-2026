@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Get all active raffles for a branch manager or employee
 export const getActiveRaffles = async (req, res) => {

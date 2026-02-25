@@ -1,7 +1,7 @@
-import { createConnection } from '../../../CONFIG/database.js'
-import { encryptData } from '../../../SERVICES/encryptionService.js'
+import { createConnection } from '../../../config/database.js'
+import { encryptData } from '../../../services/encryptionService.js'
 import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js'
-import emailService from '../../../SERVICES/emailService.js'
+import emailService from '../../../services/emailService.js'
 
 // Create branch manager with auto-generated credentials and email notification
 export const createBranchManager = async (req, res) => {

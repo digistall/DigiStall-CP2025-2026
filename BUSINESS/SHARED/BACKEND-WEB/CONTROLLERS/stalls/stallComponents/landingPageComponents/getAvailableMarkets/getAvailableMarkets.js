@@ -1,4 +1,4 @@
-import { createConnection } from "../../../../../CONFIG/database.js";
+import { createConnection } from "../../../../../config/database.js";
 
 // Get available markets
 export const getAvailableMarkets = async (req, res) => {

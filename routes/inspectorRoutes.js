@@ -4,10 +4,11 @@ import {
   getStallholderById,
   reportStallholder,
   reportStallholderWithPhotos,
-  getViolationTypes
+  getViolationTypes,
+  getInspectorSentReports
 } from '../SHARE-CONTROLLER/inspector/inspectorController.js';
-import { verifyToken } from '../MIDDLEWARE/auth.js';
-import { uploadViolationEvidence } from '../CONFIG/multerViolationEvidence.js';
+import { verifyToken } from '../middleware/auth.js';
+import { uploadViolationEvidence } from '../config/multerViolationEvidence.js';
 
 const router = express.Router();
 
@@ -31,6 +32,13 @@ router.get('/stallholders/:id', verifyToken, getStallholderById);
  * @access Protected (Inspector only)
  */
 router.get('/violations', verifyToken, getViolationTypes);
+
+/**
+ * @route GET /api/mobile/inspector/sent-reports
+ * @desc Get all violation reports sent by this inspector
+ * @access Protected (Inspector only)
+ */
+router.get('/sent-reports', verifyToken, getInspectorSentReports);
 
 /**
  * @route POST /api/mobile/inspector/report

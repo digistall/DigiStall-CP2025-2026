@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Select winner for raffle (manual selection or auto when timer expires)
 export const selectRaffleWinner = async (req, res) => {

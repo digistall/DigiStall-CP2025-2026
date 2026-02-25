@@ -6,7 +6,7 @@
 // - Automatic token refresh
 // - Role-based access control
 
-import { createConnection } from '../../CONFIG/database.js';
+import { createConnection } from '../../config/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';

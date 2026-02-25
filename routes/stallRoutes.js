@@ -1,7 +1,7 @@
 import express from 'express'
-import authMiddleware from '../MIDDLEWARE/auth.js'
-import activityLogger from '../MIDDLEWARE/activityLogger.js'
-import { viewOnlyForOwners } from '../MIDDLEWARE/rolePermissions.js'
+import authMiddleware from '../middleware/auth.js'
+import activityLogger from '../middleware/activityLogger.js'
+import { viewOnlyForOwners } from '../middleware/rolePermissions.js'
 import {
   // Core stall management (Admin)
   addStall,
@@ -76,7 +76,7 @@ import {
 import { addStallWithImages } from '../SHARE-CONTROLLER/stalls/stallComponents/addStallWithImages.js'
 
 // Import multer configuration
-import upload, { checkImageLimit } from '../CONFIG/multerStallImages.js'
+import upload, { checkImageLimit } from '../config/multerStallImages.js'
 import multer from 'multer'
 
 // Temporary upload for addStall - Configure with large limits for base64 images

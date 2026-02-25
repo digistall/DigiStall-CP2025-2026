@@ -3,7 +3,7 @@
  * Database abstraction for payment-related operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * PaymentModel Class

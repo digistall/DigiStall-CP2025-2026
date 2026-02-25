@@ -3,8 +3,8 @@
  * Authentication-related services for mobile
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
-import { decryptApplicantData, decryptStallholderData, decryptSpouseData, decryptAES256GCM, decryptObjectFields } from '../../../SERVICES/mysqlDecryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import { decryptApplicantData, decryptStallholderData, decryptSpouseData, decryptAES256GCM, decryptObjectFields } from '../../../services/mysqlDecryptionService.js';
 import jwt from 'jsonwebtoken';
 
 /**

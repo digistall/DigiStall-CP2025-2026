@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js';
-import { encryptData, decryptData } from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import { encryptData, decryptData } from '../../../services/encryptionService.js';
 
 // Helper function to check if data is already encrypted
 const isEncrypted = (value) => {

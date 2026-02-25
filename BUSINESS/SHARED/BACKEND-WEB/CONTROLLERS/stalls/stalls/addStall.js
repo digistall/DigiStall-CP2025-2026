@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Add new stall (for branch managers and employees with stalls permission)
 export const addStall = async (req, res) => {

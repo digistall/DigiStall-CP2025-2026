@@ -1,9 +1,9 @@
 // ===== UNIFIED AUTHENTICATION CONTROLLER =====
 // Email-based login with AES-256-GCM encrypted passwords
 
-import { createConnection } from '../../CONFIG/database.js'
+import { createConnection } from '../../config/database.js'
 import jwt from 'jsonwebtoken'
-import { decryptData, encryptData } from '../../SERVICES/encryptionService.js'
+import { decryptData, encryptData } from '../../services/encryptionService.js'
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {

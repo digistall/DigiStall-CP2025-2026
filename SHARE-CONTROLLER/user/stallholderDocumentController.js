@@ -1,7 +1,7 @@
 // ===== MOBILE STALLHOLDER DOCUMENT CONTROLLER =====
 // Handles document requirements and uploads for stallholders in mobile app
 
-import { createConnection } from '../../CONFIG/database.js';
+import { createConnection } from '../../config/database.js';
 
 /**
  * Get all stalls owned by the stallholder with document requirements grouped by branch/business owner

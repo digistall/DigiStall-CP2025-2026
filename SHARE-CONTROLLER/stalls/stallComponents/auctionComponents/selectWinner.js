@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Select winner for auction (manual confirmation or auto when timer expires)
 export const selectAuctionWinner = async (req, res) => {

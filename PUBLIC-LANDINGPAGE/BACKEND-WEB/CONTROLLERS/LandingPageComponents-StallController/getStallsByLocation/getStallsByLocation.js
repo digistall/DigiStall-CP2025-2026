@@ -1,4 +1,4 @@
-import { createConnection } from "../../../../../SHARED/CONFIG/database.js";
+import { createConnection } from "../../../../../SHARED/config/database.js";
 
 // Get stalls by location - Uses stored procedure
 export const getStallsByLocation = async (req, res) => {

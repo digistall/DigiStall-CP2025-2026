@@ -18,12 +18,12 @@ const projectRoot = __dirname;
 dotenv.config({ path: path.join(projectRoot, '.env') });
 
 // Import from SHARED folder (config, middleware)
-import { createConnection, testConnection } from './SHARED/CONFIG/database.js';
-import { corsConfig } from './SHARED/CONFIG/cors.js';
-import { getPerformanceStats } from './SHARED/CONFIG/performanceMonitor.js';
-import authMiddleware from './SHARED/MIDDLEWARE/auth.js';
-import enhancedAuthMiddleware from './SHARED/MIDDLEWARE/enhancedAuth.js';
-import { errorHandler } from './SHARED/MIDDLEWARE/errorHandler.js';
+import { createConnection, testConnection } from './SHARED/config/database.js';
+import { corsConfig } from './SHARED/config/cors.js';
+import { getPerformanceStats } from './SHARED/config/performanceMonitor.js';
+import authMiddleware from './SHARED/middleware/auth.js';
+import enhancedAuthMiddleware from './SHARED/middleware/enhancedAuth.js';
+import { errorHandler } from './SHARED/middleware/errorHandler.js';
 
 // ===== IMPORT ALL BACKEND WEB ROUTES FROM AGGREGATOR =====
 import {

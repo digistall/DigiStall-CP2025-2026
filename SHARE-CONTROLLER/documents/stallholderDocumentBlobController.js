@@ -8,7 +8,7 @@
 // Max: 10MB per document, Images and PDFs allowed
 // =============================================
 
-import { createConnection } from '../../CONFIG/database.js'
+import { createConnection } from '../../config/database.js'
 
 // =============================================
 // UPLOAD STALLHOLDER DOCUMENT AS BLOB

@@ -3,7 +3,7 @@
  * Database abstraction for application-related operations
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * ApplicationModel Class

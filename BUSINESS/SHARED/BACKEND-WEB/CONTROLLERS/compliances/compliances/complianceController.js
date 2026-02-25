@@ -2,9 +2,9 @@
 // Handles all compliance/violation record management operations
 // Includes CRUD operations, filtering, and statistics
 
-import { createConnection } from '../../CONFIG/database.js';
-import { getBranchFilter } from '../../MIDDLEWARE/rolePermissions.js';
-import { decryptObjectFields } from '../../SERVICES/encryptionService.js';
+import { createConnection } from '../../config/database.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { decryptObjectFields } from '../../services/encryptionService.js';
 
 /**
  * Convert evidence BLOB Buffer to base64 string for frontend consumption

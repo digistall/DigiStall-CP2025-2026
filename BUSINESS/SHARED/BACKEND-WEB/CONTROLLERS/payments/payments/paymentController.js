@@ -1,7 +1,7 @@
-import { createConnection } from '../../CONFIG/database.js';
+import { createConnection } from '../../config/database.js';
 import jwt from 'jsonwebtoken';
-import { getBranchFilter } from '../../MIDDLEWARE/rolePermissions.js';
-import { decryptData } from '../../SERVICES/encryptionService.js';
+import { getBranchFilter } from '../../middleware/rolePermissions.js';
+import { decryptData } from '../../services/encryptionService.js';
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {

@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get applicants who applied for stalls in a specific branch (for branch managers)
 export const getApplicantsByBranch = async (req, res) => {

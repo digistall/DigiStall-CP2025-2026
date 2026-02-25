@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get participants by branch (approved applicants in a specific branch)
 export const getParticipantsByBranch = async (req, res) => {

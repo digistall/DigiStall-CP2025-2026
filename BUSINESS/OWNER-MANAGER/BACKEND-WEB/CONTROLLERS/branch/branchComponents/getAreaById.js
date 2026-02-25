@@ -1,4 +1,4 @@
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 // Get area by ID (branch manager by ID) with detailed statistics
 export const getAreaById = async (req, res) => {

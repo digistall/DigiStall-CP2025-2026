@@ -1,5 +1,5 @@
-import { createConnection } from '../../../CONFIG/database.js';
-import encryptionService from '../../../SERVICES/encryptionService.js';
+import { createConnection } from '../../../config/database.js';
+import encryptionService from '../../../services/encryptionService.js';
 
 // Store credentials for mobile app access
 // Uses stored procedures: sp_getApplicantById, sp_checkUsernameExists, sp_createCredential

@@ -3,7 +3,7 @@
  * Stallholder-related services for mobile
  */
 
-import { createConnection } from '../../../CONFIG/database.js';
+import { createConnection } from '../../../config/database.js';
 
 /**
  * Get stallholder profile with stall information

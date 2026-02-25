@@ -1,5 +1,5 @@
 // Update Section Component
-import { createConnection } from '../../../CONFIG/database.js'
+import { createConnection } from '../../../config/database.js'
 
 export const updateSection = async (req, res) => {
   let connection

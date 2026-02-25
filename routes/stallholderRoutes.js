@@ -39,7 +39,7 @@ import {
 } from '../SHARE-CONTROLLER/stallholder/paymentController.js';
 
 // Import auth middleware
-import { verifyToken } from '../MIDDLEWARE/auth.js';
+import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 

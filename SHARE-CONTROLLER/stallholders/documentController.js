@@ -1,4 +1,4 @@
-import { createConnection } from '../../CONFIG/database.js';
+import { createConnection } from '../../config/database.js';
 
 /**
  * Get branch document requirements for a branch manager or business owner

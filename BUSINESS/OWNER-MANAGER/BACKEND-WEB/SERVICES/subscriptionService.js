@@ -3,7 +3,7 @@
  * Business logic for subscription operations
  */
 
-import { createConnection } from '../../../../CONFIG/database.js';
+import { createConnection } from '../../../../config/database.js';
 
 /**
  * Get subscription summary for dashboard

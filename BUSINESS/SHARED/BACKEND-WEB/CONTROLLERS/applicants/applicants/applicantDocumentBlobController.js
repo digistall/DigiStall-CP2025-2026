@@ -7,7 +7,7 @@
 // Max: 5MB per document, Images and PDFs allowed
 // =============================================
 
-import { createConnection } from '../../CONFIG/database.js'
+import { createConnection } from '../../config/database.js'
 
 // =============================================
 // UPLOAD APPLICANT DOCUMENT AS BLOB

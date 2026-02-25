@@ -7,7 +7,7 @@
  * 2. Encrypts sensitive data before storing to database
  */
 
-import { decryptData, isEncrypted, SENSITIVE_FIELDS } from '../SERVICES/encryptionService.js';
+import { decryptData, isEncrypted, SENSITIVE_FIELDS } from '../services/encryptionService.js';
 
 /**
  * Middleware to decrypt sensitive fields in response data

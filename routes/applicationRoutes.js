@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken } from '../MIDDLEWARE/auth.js'
+import { verifyToken } from '../middleware/auth.js'
 
 // Import mobile application controllers
 import { 

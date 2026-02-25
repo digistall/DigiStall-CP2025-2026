@@ -1,4 +1,4 @@
-import { createConnection } from '../../../../CONFIG/database.js'
+import { createConnection } from '../../../../config/database.js'
 
 // Extend raffle timer (emergency purposes)
 export const extendRaffleTimer = async (req, res) => {

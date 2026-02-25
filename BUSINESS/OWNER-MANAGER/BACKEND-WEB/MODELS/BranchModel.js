@@ -3,7 +3,7 @@
  * Database abstraction for branch operations
  */
 
-import { createConnection } from '../../../../CONFIG/database.js';
+import { createConnection } from '../../../../config/database.js';
 
 /**
  * BranchModel Class
