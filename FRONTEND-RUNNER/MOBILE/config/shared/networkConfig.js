@@ -9,16 +9,12 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-     // DigitalOcean Production Server - MOVE TO TOP FOR DEPLOYED APPS
-    // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
+    // LOCAL DEVELOPMENT - at top while production is being updated
+    'http://192.168.100.100:3001',  // Local Backend API
+    'http://localhost:3001',        // Only works on emulator
+    // DigitalOcean Production Server (restore to top after redeploying)
     'http://68.183.154.125:5001',   // Production Backend-Mobile API
     'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
-    // LOCAL DEVELOPMENT - Move these to top for local testing with Expo Go
-    // Your current local IP: 192.168.100.241
-    'http://192.168.100.241:3001',  // Local Backend-Mobile API (primary)
-    'http://localhost:3001',        // Only works on emulator
-    
-   
   ],
   
   // Static file server for images (Apache on port 80)
@@ -41,6 +37,12 @@ export const API_CONFIG = {
     STAFF_AUTO_LOGOUT: '/api/mobile/auth/staff-auto-logout',
     CHANGE_PASSWORD: '/api/mobile/auth/change-password',
     
+    // Forgot Password (Password Reset) endpoints
+    FORGOT_PASSWORD_VERIFY_EMAIL: '/api/mobile/auth/verify-email-exists', // Checks if email exists
+    FORGOT_PASSWORD_SEND_CODE: '/api/mobile/auth/send-reset-code',         // Sends OTP via Nodemailer
+    FORGOT_PASSWORD_VERIFY_CODE: '/api/mobile/auth/verify-reset-code',    // Verifies entered OTP
+    FORGOT_PASSWORD_RESET: '/api/mobile/auth/reset-password',              // Resets password
+
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
     GET_STALLS_BY_TYPE: '/api/mobile/stalls/type',
@@ -236,7 +238,5 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
 // });
 
 console.log('📱 Mobile Network Config Loaded');
-console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
-console.log('🔗 Login endpoint:', `${API_CONFIG.BASE_URL}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);
 console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
 console.log('🔗 Login endpoint:', `${API_CONFIG.BASE_URL}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);

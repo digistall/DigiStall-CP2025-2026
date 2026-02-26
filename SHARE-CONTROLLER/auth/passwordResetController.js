@@ -3,8 +3,10 @@
 
 import { createConnection } from '../../config/database.js'
 import { decryptData, encryptData } from '../../services/encryptionService.js'
+import { decryptAES256GCM } from '../../services/mysqlDecryptionService.js'
 import emailService from '../../services/emailService.js'
 import crypto from 'crypto'
+import bcrypt from 'bcrypt'
 
 // In-memory store for password reset codes (in production, use Redis or database)
 const resetCodes = new Map();
@@ -77,8 +79,63 @@ const userTypes = [
     updateTable: 'collector',
     updateIdField: 'collector_id',
     nameFields: ['first_name', 'last_name']
+  },
+  {
+    // Mobile stallholders/applicants — email in applicant.applicant_email,
+    // password (bcrypt) in credential.password_hash, linked by registrationid
+    // NOTE: applicant_email is AES-256-GCM encrypted (non-deterministic), so
+    //       the stored procedure cannot find by plain email. We use a direct
+    //       query + Node.js-level decryption instead (see findApplicantByEmail).
+    type: 'applicant',
+    procedure: null,                       // not used — see findApplicantByEmail()
+    idField: 'applicant_id',
+    passwordField: 'password_hash',        // in credential table, not applicant
+    updateTable: 'credential',             // UPDATE credential SET password_hash
+    updateIdField: 'registrationid',       // WHERE registrationid = ?
+    nameFields: ['applicant_full_name'],   // single combined name field
+    useBcrypt: true                        // flag: hash with bcrypt, not AES encrypt
   }
 ];
+
+/**
+ * Find an applicant/stallholder by plain-text email.
+ *
+ * Because applicant_email is stored as AES-256-GCM (non-deterministic),
+ * we cannot search via the stored procedure. Instead we fetch all
+ * applicants that have a credential record, decrypt each email at the
+ * Node.js level, and return the first match.
+ *
+ * @param {object} connection - Active MySQL connection
+ * @param {string} plainEmail  - The plain-text email to look for (lowercase)
+ * @returns {object|null}       - The matching applicant row, or null if not found
+ */
+const findApplicantByEmail = async (connection, plainEmail) => {
+  // email_address lives in other_information (encrypted), linked to applicant via applicant_id.
+  // applicant_full_name lives in the applicant table (encrypted).
+  // We only consider applicants that already have a credential record (active mobile users).
+  const [rows] = await connection.execute(
+    `SELECT a.applicant_id, a.applicant_full_name, oi.email_address
+     FROM applicant a
+     INNER JOIN credential c  ON c.applicant_id  = a.applicant_id
+     INNER JOIN other_information oi ON oi.applicant_id = a.applicant_id
+     WHERE oi.email_address IS NOT NULL`
+  );
+
+  const normalised = plainEmail.trim().toLowerCase();
+
+  for (const row of rows) {
+    const decrypted = decryptAES256GCM(row.email_address);
+    if (decrypted && decrypted.trim().toLowerCase() === normalised) {
+      // Normalise the returned object so the rest of the controller
+      // can read applicant_id and applicant_full_name as expected.
+      return {
+        applicant_id: row.applicant_id,
+        applicant_full_name: row.applicant_full_name
+      };
+    }
+  }
+  return null;
+};
 
 /**
  * Verify if an email exists in the system (no email sending - frontend uses EmailJS)
@@ -105,15 +162,27 @@ export const verifyEmailExists = async (req, res) => {
     for (const config of userTypes) {
       try {
         console.log(`🔍 Checking ${config.type}...`);
-        const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [email]);
-        const users = userRows[0] || [];
-        
+
+        let users = [];
+
+        if (config.type === 'applicant') {
+          // applicant_email is AES-256-GCM encrypted — use Node.js-level decryption
+          const matchedApplicant = await findApplicantByEmail(connection, email);
+          if (matchedApplicant) users = [matchedApplicant];
+        } else {
+          const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [email]);
+          users = userRows[0] || [];
+        }
+
         if (users.length > 0) {
           const user = users[0];
           
           // Get user's name for the email
           let userName = 'User';
-          if (config.nameFields.length >= 2) {
+          if (config.nameFields.length === 1) {
+            // Single combined name field (e.g. applicant_full_name)
+            userName = decryptSafe(user[config.nameFields[0]]) || 'User';
+          } else if (config.nameFields.length >= 2) {
             const firstName = decryptSafe(user[config.nameFields[0]]) || '';
             const lastName = decryptSafe(user[config.nameFields[1]]) || '';
             userName = `${firstName} ${lastName}`.trim() || 'User';
@@ -235,12 +304,22 @@ export const resendResetCode = async (req, res) => {
     
     for (const config of userTypes) {
       try {
-        const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [email]);
-        const users = userRows[0] || [];
-        
+        let users = [];
+
+        if (config.type === 'applicant') {
+          // applicant_email is AES-256-GCM encrypted — use Node.js-level decryption
+          const matchedApplicant = await findApplicantByEmail(connection, email);
+          if (matchedApplicant) users = [matchedApplicant];
+        } else {
+          const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [email]);
+          users = userRows[0] || [];
+        }
+
         if (users.length > 0) {
           const user = users[0];
-          if (config.nameFields.length >= 2) {
+          if (config.nameFields.length === 1) {
+            userName = decryptSafe(user[config.nameFields[0]]) || 'User';
+          } else if (config.nameFields.length >= 2) {
             const firstName = decryptSafe(user[config.nameFields[0]]) || '';
             const lastName = decryptSafe(user[config.nameFields[1]]) || '';
             userName = `${firstName} ${lastName}`.trim() || 'User';
@@ -468,9 +547,17 @@ export const resetPassword = async (req, res) => {
     
     for (const config of userTypes) {
       try {
-        const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [email]);
-        const users = userRows[0] || [];
-        
+        let users = [];
+
+        if (config.type === 'applicant') {
+          // applicant_email is AES-256-GCM encrypted — use Node.js-level decryption
+          const matchedApplicant = await findApplicantByEmail(connection, email);
+          if (matchedApplicant) users = [matchedApplicant];
+        } else {
+          const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [email]);
+          users = userRows[0] || [];
+        }
+
         if (users.length > 0) {
           foundUser = users[0];
           foundConfig = config;
@@ -489,18 +576,37 @@ export const resetPassword = async (req, res) => {
       });
     }
     
-    // Encrypt the new password using AES-256-GCM (same as existing system)
-    const encryptedPassword = encryptData(newPassword);
-    
-    console.log('🔐 Password encrypted, updating database...');
-    
-    // Update the password in the database
-    const updateQuery = `UPDATE ${foundConfig.updateTable} SET ${foundConfig.passwordField} = ? WHERE ${foundConfig.updateIdField} = ?`;
-    
-    await connection.execute(updateQuery, [
-      encryptedPassword,
-      foundUser[foundConfig.idField]
-    ]);
+    // Encrypt/hash the new password based on user type
+    let finalPassword;
+    let updateQuery;
+    let updateId;
+
+    if (foundConfig.useBcrypt) {
+      // Mobile applicants/stallholders use bcrypt in the credential table
+      // Must look up registrationid from credential table via applicant_id
+      const [credRows] = await connection.execute(
+        'SELECT registrationid FROM credential WHERE applicant_id = ? LIMIT 1',
+        [foundUser[foundConfig.idField]]
+      );
+      if (!credRows || credRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Credential record not found for this account. Please contact support.'
+        });
+      }
+      finalPassword = await bcrypt.hash(newPassword, 10);
+      updateQuery = `UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE registrationid = ?`;
+      updateId = credRows[0].registrationid;
+      console.log('🔐 Password bcrypt-hashed, updating credential table...');
+    } else {
+      // Web users use AES-256-GCM encryption in their own table
+      finalPassword = encryptData(newPassword);
+      updateQuery = `UPDATE ${foundConfig.updateTable} SET ${foundConfig.passwordField} = ? WHERE ${foundConfig.updateIdField} = ?`;
+      updateId = foundUser[foundConfig.idField];
+      console.log('🔐 Password AES-encrypted, updating database...');
+    }
+
+    await connection.execute(updateQuery, [finalPassword, updateId]);
     
     console.log('✅ Password updated successfully for:', email);
     
