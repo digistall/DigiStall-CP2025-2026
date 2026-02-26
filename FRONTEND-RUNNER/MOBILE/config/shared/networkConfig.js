@@ -9,8 +9,10 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // LOCAL DEVELOPMENT - at top while production is being updated
-    'http://192.168.100.100:3001',  // Local Backend API
+    // LOCAL DEVELOPMENT - at top while in development
+  
+    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
+    'http://192.168.100.241:3001',  // Local Backend API (alternative)
     'http://localhost:3001',        // Only works on emulator
 
     // DigitalOcean Production Server (restore to top after redeploying)
@@ -66,6 +68,7 @@ export const API_CONFIG = {
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
+    GET_INSPECTOR_SENT_REPORTS: '/api/mobile/inspector/sent-reports',
     
     // Stallholder complaint endpoints
     SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
