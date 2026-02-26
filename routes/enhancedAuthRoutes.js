@@ -23,7 +23,17 @@ import {
   testDb
 } from '../SHARE-CONTROLLER/auth/loginController.js';
 
+// Import password reset controller
+import passwordResetController from '../SHARE-CONTROLLER/auth/passwordResetController.js';
+
 const router = express.Router();
+
+// ===== PASSWORD RESET ENDPOINTS (Public) =====
+router.post('/verify-email-exists', passwordResetController.verifyEmailExists);
+router.post('/store-reset-code', passwordResetController.storeResetCode);
+router.post('/resend-reset-code', passwordResetController.resendResetCode);
+router.post('/verify-reset-code', passwordResetController.verifyResetCode);
+router.post('/reset-password', passwordResetController.resetPassword);
 
 // ===== ENHANCED JWT AUTHENTICATION ENDPOINTS =====
 
