@@ -1,6 +1,7 @@
 import { createConnection } from '../../config/database.js';
 import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../services/encryptionService.js';
 import { generateSecurePassword } from '../../UTILS/passwordGenerator.js';
+import emailService from '../../services/emailService.js';
 
 /**
  * Mobile Staff Controller
@@ -498,6 +499,7 @@ export async function resetStaffPassword(req, res) {
     let connection;
     try {
         const { staffType, staffId, newPassword } = req.body;
+        const resetByName = req.user?.firstName ? `${req.user.firstName} ${req.user.lastName || ''}`.trim() : 'Manager';
         
         if (!staffType || !staffId) {
             return res.status(400).json({
@@ -515,22 +517,47 @@ export async function resetStaffPassword(req, res) {
         
         connection = await createConnection();
         
+        // Get staff details first for email notification
+        let staffDetails = null;
+        if (staffType === 'inspector') {
+            const [inspectorRows] = await connection.execute(
+                'CALL getInspectorById(?)',
+                [staffId]
+            );
+            staffDetails = inspectorRows[0]?.[0];
+        } else {
+            const [collectorRows] = await connection.execute(
+                'CALL getCollectorById(?)',
+                [staffId]
+            );
+            staffDetails = collectorRows[0]?.[0];
+        }
+        
+        if (!staffDetails) {
+            return res.status(404).json({
+                success: false,
+                message: `${staffType} with ID ${staffId} not found`
+            });
+        }
+        
         // Generate new password or use provided one
         const password = newPassword || generateSecurePassword();
-        const hashedPassword = await bcrypt.hash(password, 12);
+        
+        // Encrypt password using AES-256-GCM (consistent with system)
+        const encryptedPassword = encryptData(password);
         
         // Update password using appropriate stored procedure based on staff type
         let result;
         if (staffType === 'inspector') {
             const [spResult] = await connection.execute(
                 'CALL sp_resetInspectorPassword(?, ?)',
-                [staffId, hashedPassword]
+                [staffId, encryptedPassword]
             );
             result = spResult[0]?.[0];
         } else {
             const [spResult] = await connection.execute(
                 'CALL sp_resetCollectorPassword(?, ?)',
-                [staffId, hashedPassword]
+                [staffId, encryptedPassword]
             );
             result = spResult[0]?.[0];
         }
@@ -538,19 +565,50 @@ export async function resetStaffPassword(req, res) {
         if (!result || result.affected_rows === 0) {
             return res.status(404).json({
                 success: false,
-                message: `${staffType} with ID ${staffId} not found`
+                message: `Failed to reset password for ${staffType}`
             });
         }
         
         console.log(`✅ Password reset for ${staffType} ID: ${staffId}`);
         
+        // Decrypt staff name and get email for notification
+        let staffName = staffType.charAt(0).toUpperCase() + staffType.slice(1);
+        let staffEmail = staffDetails.email;
+        
+        try {
+            const firstName = decryptData(staffDetails.first_name) || staffDetails.first_name || '';
+            const lastName = decryptData(staffDetails.last_name) || staffDetails.last_name || '';
+            staffName = `${firstName} ${lastName}`.trim() || staffName;
+        } catch (e) {
+            staffName = `${staffDetails.first_name || ''} ${staffDetails.last_name || ''}`.trim() || staffName;
+        }
+        
+        // Send password reset notification via Nodemailer
+        let emailSent = false;
+        try {
+            await emailService.sendEmployeePasswordResetNotification({
+                email: staffEmail,
+                employeeName: staffName,
+                newPassword: password,
+                resetBy: resetByName
+            });
+            emailSent = true;
+            console.log(`✅ Password reset email sent to ${staffEmail}`);
+        } catch (emailError) {
+            console.error('❌ Failed to send password reset email:', emailError);
+            // Don't fail the request if email fails - password was still reset
+        }
+        
         return res.json({
             success: true,
-            message: `Password reset successfully for ${staffType}`,
+            message: emailSent 
+                ? `Password reset successfully. New credentials sent to ${staffEmail}`
+                : `Password reset successfully for ${staffType}. Email notification could not be sent.`,
             data: {
                 staffType,
                 staffId,
-                newPassword: password
+                newPassword: password,
+                emailSent: emailSent
             }
         });
     } catch (error) {

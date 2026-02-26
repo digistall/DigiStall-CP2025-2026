@@ -2,7 +2,9 @@ import { createConnection } from '../../config/database.js';
 import { getBranchFilter } from '../../middleware/rolePermissions.js';
 import { encryptData, decryptData, decryptEmployees } from '../../services/encryptionService.js';
 import { generateSecurePassword } from '../../UTILS/passwordGenerator.js';
+import emailService from '../../services/emailService.js';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 // Helper function to encrypt if value is not null
 const encryptIfNotNull = (value) => {
@@ -534,6 +536,7 @@ export async function resetEmployeePassword(req, res) {
         const { id } = req.params;
         const userBranchId = req.user?.branchId;
         const userId = req.user?.userId || req.user?.businessManagerId;
+        const resetByName = req.user?.firstName ? `${req.user.firstName} ${req.user.lastName || ''}`.trim() : 'Manager';
         
         if (!userBranchId) {
             return res.status(400).json({ 
@@ -557,27 +560,66 @@ export async function resetEmployeePassword(req, res) {
             });
         }
         
-        // Generate new password
-        const newPassword = Math.random().toString(36).substring(2, 10);
-        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        const employee = checkEmployee[0];
         
-        // Call stored procedure (correct name: resetBusinessEmployeePassword)
-        const [[result]] = await connection.execute(
-            'CALL resetBusinessEmployeePassword(?, ?, ?)',
-            [id, hashedPassword, userId]
+        // Generate new password (8 characters alphanumeric)
+        const newPassword = generateSecurePassword ? generateSecurePassword() : Math.random().toString(36).substring(2, 10);
+        
+        // Encrypt password using AES-256-GCM (consistent with system)
+        const encryptedPassword = encryptData(newPassword);
+        
+        // Update password directly in database
+        const [updateResult] = await connection.execute(
+            'UPDATE business_employee SET employee_password = ?, updated_at = NOW() WHERE business_employee_id = ?',
+            [encryptedPassword, id]
         );
 
-        if (result.affected_rows === 0) {
+        if (updateResult.affectedRows === 0) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Failed to reset password' 
             });
         }
+        
+        console.log(`✅ Password reset for employee ID: ${id}`);
+        
+        // Decrypt employee name and email for the notification
+        let employeeName = 'Employee';
+        let employeeEmail = employee.email;
+        
+        try {
+            const firstName = decryptData(employee.first_name) || employee.first_name || '';
+            const lastName = decryptData(employee.last_name) || employee.last_name || '';
+            employeeName = `${firstName} ${lastName}`.trim() || 'Employee';
+        } catch (e) {
+            employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'Employee';
+        }
+        
+        // Send password reset notification via Nodemailer
+        let emailSent = false;
+        try {
+            await emailService.sendEmployeePasswordResetNotification({
+                email: employeeEmail,
+                employeeName: employeeName,
+                newPassword: newPassword,
+                resetBy: resetByName
+            });
+            emailSent = true;
+            console.log(`✅ Password reset email sent to ${employeeEmail}`);
+        } catch (emailError) {
+            console.error('❌ Failed to send password reset email:', emailError);
+            // Don't fail the request if email fails - password was still reset
+        }
 
         res.json({ 
             success: true, 
-            message: 'Password reset successfully',
-            data: { temporaryPassword: newPassword }
+            message: emailSent 
+                ? `Password reset successfully. New credentials sent to ${employeeEmail}`
+                : 'Password reset successfully. Email notification could not be sent.',
+            data: { 
+                temporaryPassword: newPassword,
+                emailSent: emailSent
+            }
         });
     } catch (error) {
         console.error('Error resetting password:', error);
