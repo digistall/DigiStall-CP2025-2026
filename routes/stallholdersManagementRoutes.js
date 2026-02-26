@@ -9,6 +9,7 @@ import express from 'express';
 import StallholderController from '../SHARE-CONTROLLER/stallholders/stallholderController.js';
 import authMiddleware from '../middleware/auth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
+import { activityLogMiddleware } from '../SHARE-CONTROLLER/activityLog/staffActivityLogController.js';
 
 const router = express.Router();
 
@@ -41,21 +42,21 @@ router.get('/:id/violations', StallholderController.getViolationHistory);
  * @desc Create a new stallholder
  * @access Protected (Admin, Manager)
  */
-router.post('/', viewOnlyForOwners, StallholderController.createStallholder);
+router.post('/', activityLogMiddleware('CREATE', 'Stallholders'), viewOnlyForOwners, StallholderController.createStallholder);
 
 /**
  * @route PUT /api/stallholders-management/:id
  * @desc Update a stallholder
  * @access Protected (Admin, Manager)
  */
-router.put('/:id', viewOnlyForOwners, StallholderController.updateStallholder);
+router.put('/:id', activityLogMiddleware('UPDATE', 'Stallholders'), viewOnlyForOwners, StallholderController.updateStallholder);
 
 /**
  * @route DELETE /api/stallholders-management/:id
  * @desc Delete a stallholder
  * @access Protected (Admin, Manager)
  */
-router.delete('/:id', viewOnlyForOwners, StallholderController.deleteStallholder);
+router.delete('/:id', activityLogMiddleware('DELETE', 'Stallholders'), viewOnlyForOwners, StallholderController.deleteStallholder);
 
 /**
  * @route POST /api/stallholders-management/import

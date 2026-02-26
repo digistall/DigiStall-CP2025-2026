@@ -434,7 +434,10 @@ export const mobileStaffLogout = async (req, res) => {
                     [staffId]
                 );
                 if (nameResult.length > 0) {
-                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
+                    // Decrypt names using the same logic as login
+                    const firstName = decryptAES256GCM(nameResult[0].first_name);
+                    const lastName = decryptAES256GCM(nameResult[0].last_name);
+                    staffName = `${firstName} ${lastName}`;
                 }
             } else if (staffType === 'collector') {
                 const [nameResult] = await connection.execute(
@@ -442,7 +445,10 @@ export const mobileStaffLogout = async (req, res) => {
                     [staffId]
                 );
                 if (nameResult.length > 0) {
-                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
+                    // Decrypt names using the same logic as login
+                    const firstName = decryptAES256GCM(nameResult[0].first_name);
+                    const lastName = decryptAES256GCM(nameResult[0].last_name);
+                    staffName = `${firstName} ${lastName}`;
                 }
             }
             
