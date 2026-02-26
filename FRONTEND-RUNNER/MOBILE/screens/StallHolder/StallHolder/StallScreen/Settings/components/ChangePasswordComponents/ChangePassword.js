@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { changePassword } from "../../../../../../../services/AuthService";
 
 const { width } = Dimensions.get("window");
 
@@ -108,9 +109,6 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
     setErrors({});
 
     try {
-      // Import the API service dynamically to avoid circular dependencies
-      const { changePassword } = await import("../../../../../../services/AuthService");
-      
       const result = await changePassword(currentPassword, newPassword);
 
       if (result.success) {
