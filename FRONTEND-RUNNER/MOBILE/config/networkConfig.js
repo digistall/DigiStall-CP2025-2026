@@ -9,13 +9,15 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // LOCAL DEVELOPMENT - Move these to top for local testing with Expo Go
-    // Your current local IP: 192.168.100.241
+    // LOCAL DEVELOPMENT - at top for local testing with Expo Go
+    // Your current local IP: 192.168.100.241 (verified: Feb 26, 2026)
+    
     'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
     'http://192.168.100.241:3002',  // Local Backend-Web API (fallback)
+    'http://192.168.100.241:3001',  // Alternative local port
     'http://localhost:5001',        // Only works on emulator
-    'http://localhost:3002',  
-    'http://localhost:3001',         // Only works on emulator
+    'http://localhost:3002',        // Only works on emulator
+    'http://localhost:3001',        // Only works on emulator
     
     // DigitalOcean Production Server - MOVE TO TOP FOR DEPLOYED APPS
     // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
