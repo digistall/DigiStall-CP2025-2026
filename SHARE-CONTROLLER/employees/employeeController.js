@@ -3,6 +3,8 @@ import { getBranchFilter } from '../../middleware/rolePermissions.js';
 import { encryptData, decryptData, decryptEmployees } from '../../services/encryptionService.js';
 import { generateSecurePassword } from '../../UTILS/passwordGenerator.js';
 import jwt from 'jsonwebtoken';
+import { logStaffActivity } from '../activityLog/staffActivityLogController.js';
+
 
 // Helper function to encrypt if value is not null
 const encryptIfNotNull = (value) => {
@@ -404,7 +406,13 @@ export async function loginEmployee(req, res) {
             });
         }
 
-        const employee = employees[0];
+        let employee = employees[0];
+        
+        // Decrypt employee names for JWT and logging
+        const firstName = decryptData(employee.first_name);
+        const lastName = decryptData(employee.last_name);
+        employee.first_name = firstName;
+        employee.last_name = lastName;
 
         const isValid = await bcrypt.compare(password, employee.employee_password_hash);
         if (!isValid) {
@@ -451,7 +459,28 @@ export async function loginEmployee(req, res) {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
+        // Log login activity
+        try {
+            await logStaffActivity({
+                staffType: 'business_employee',
+                staffId: employee.business_employee_id,
+                staffName: `${employee.first_name} ${employee.last_name}`,
+                branchId: employee.branch_id,
+                actionType: 'LOGIN',
+                actionDescription: `${employee.first_name} ${employee.last_name} logged in via web`,
+                module: 'Auth',
+                ipAddress: ipAddress,
+                userAgent: userAgent,
+                requestMethod: req.method,
+                requestPath: req.originalUrl,
+                status: 'success'
+            });
+        } catch (logError) {
+            console.warn('⚠️ Failed to log employee login activity:', logError.message);
+        }
+
         res.json({
+
             success: true,
             message: 'Employee login successful',
             token,
@@ -519,7 +548,32 @@ export async function logoutEmployee(req, res) {
             console.log(`✅ Logged out employee ${employeeId} at ${philippineTime}`);
         }
         
+        // Log logout activity
+        if (employeeId) {
+            try {
+                // We don't have many fields in req.user here if it's a logout
+                // but we try our best
+                await logStaffActivity({
+                    staffType: req.user?.userType || 'business_employee',
+                    staffId: employeeId,
+                    staffName: req.user?.fullName || 'Business Employee',
+                    branchId: req.user?.branchId || null,
+                    actionType: 'LOGOUT',
+                    actionDescription: 'Employee logged out from web',
+                    module: 'Auth',
+                    ipAddress: req.ip || req.connection?.remoteAddress,
+                    userAgent: req.get('User-Agent'),
+                    requestMethod: req.method,
+                    requestPath: req.originalUrl,
+                    status: 'success'
+                });
+            } catch (logError) {
+                console.warn('⚠️ Failed to log employee logout activity:', logError.message);
+            }
+        }
+
         res.json({ success: true, message: 'Logout successful' });
+
     } catch (error) {
         console.error('Error logging out employee:', error);
         res.json({ success: true, message: 'Logout successful' });

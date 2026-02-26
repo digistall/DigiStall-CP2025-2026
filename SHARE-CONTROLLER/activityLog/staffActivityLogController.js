@@ -128,15 +128,16 @@ export async function getAllStaffActivities(req, res) {
         activities = activities.map(activity => {
             if (activity.staff_name && activity.staff_name !== 'Unknown') {
                  try {
-                     // Check if it's already a single encrypted string in GCM format
-                     if (activity.staff_name.includes(':')) {
-                         activity.staff_name = decryptData(activity.staff_name);
-                     } else {
-                         // Could be multiple encrypted parts separated by spaces (CBC/Legacy format)
-                         const nameParts = activity.staff_name.split(' ');
-                         const decryptedParts = nameParts.map(part => decryptData(part));
-                         activity.staff_name = decryptedParts.join(' ').trim();
-                     }
+                     // Always split by space first to handle multi-part encrypted names (e.g. "First Last")
+                     const nameParts = activity.staff_name.split(' ');
+                     const decryptedParts = nameParts.map(part => {
+                         // Only decrypt if it looks like encrypted data (contains colons)
+                         if (part.includes(':')) {
+                             return decryptData(part);
+                         }
+                         return part;
+                     });
+                     activity.staff_name = decryptedParts.join(' ').trim();
                  } catch (e) {
                      console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
                  }
@@ -386,14 +387,12 @@ export function activityLogMiddleware(actionType, module) {
         res.json = async function(data) {
             // Log the activity after response is sent
             if (req.user) {
-                const staffType = req.user.userType === 'business_employee' ? 'web_employee' : 
-                                 req.user.staffType || req.user.userType;
+                const staffType = req.user.userType;
                 
                 await logStaffActivity({
-                    staffType: staffType === 'inspector' ? 'inspector' : 
-                              staffType === 'collector' ? 'collector' : 'web_employee',
-                    staffId: req.user.userId || req.user.staffId,
-                    staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}`,
+                    staffType: staffType,
+                    staffId: req.user.userId || req.user.staffId || req.user.id,
+                    staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}` || 'System',
                     branchId: req.user.branchId,
                     actionType: actionType,
                     actionDescription: `${req.method} ${req.originalUrl}`,
