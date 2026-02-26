@@ -342,6 +342,93 @@ class ApiService {
     }
   }
 
+  // ===== FORGOT PASSWORD / PASSWORD RESET METHODS =====
+
+  // Step 1a: Verify if the email exists in the system
+  static async forgotPasswordVerifyEmail(email) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.FORGOT_PASSWORD_VERIFY_EMAIL}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, message: data.message || 'Email not found' };
+      }
+      return {
+        success: data.success,
+        message: data.message,
+        userType: data.userType,
+        userName: data.userName,
+      };
+    } catch (error) {
+      console.error('❌ forgotPasswordVerifyEmail Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  // Step 1b: Send OTP code to the user's email via Nodemailer (backend)
+  static async forgotPasswordSendCode(email) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.FORGOT_PASSWORD_SEND_CODE}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, message: data.message || 'Failed to send code' };
+      }
+      return { success: data.success, message: data.message };
+    } catch (error) {
+      console.error('❌ forgotPasswordSendCode Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  // Step 2: Verify the OTP code entered by the user
+  static async forgotPasswordVerifyCode(email, code) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.FORGOT_PASSWORD_VERIFY_CODE}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, message: data.message || 'Invalid code' };
+      }
+      return { success: data.success, message: data.message };
+    } catch (error) {
+      console.error('❌ forgotPasswordVerifyCode Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  // Step 3: Reset the password with the new one
+  static async forgotPasswordReset(email, code, newPassword) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.FORGOT_PASSWORD_RESET}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ email, code, newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, message: data.message || 'Failed to reset password' };
+      }
+      return { success: data.success, message: data.message };
+    } catch (error) {
+      console.error('❌ forgotPasswordReset Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
   // ===== STALL METHODS =====
 
   // Get all stalls

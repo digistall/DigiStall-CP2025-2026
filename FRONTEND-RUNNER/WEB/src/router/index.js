@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore'
 
 // AUTH folder
 import LoginPage from '@auth/VIEWS/Login/LoginPage.vue'
+import ForgotPassword from '@auth/VIEWS/ForgotPassword/ForgotPassword.vue'
 
 // PUBLIC-LANDINGPAGE folder
 import LandingPage from '@public-landing/VIEWS/LandingPage/LandingPage.vue'
@@ -380,6 +381,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'landingPage', component: LandingPage },
     { path: '/login', name: 'login', component: LoginPage },
+    { path: '/forgot-password', name: 'forgotPassword', component: ForgotPassword },
 
     {
       path: '/app',
@@ -526,7 +528,7 @@ router.beforeEach(async (to, from, next) => {
   console.log(`🛡️ Router guard: ${from.path} → ${to.path}`)
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', 'landingPage', 'login']
+  const publicRoutes = ['/', '/login', '/forgot-password', 'landingPage', 'login', 'forgotPassword']
   const isPublicRoute = publicRoutes.includes(to.path) || publicRoutes.includes(to.name)
 
   // Initialize auth store on first navigation

@@ -222,7 +222,8 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('branchId');
       sessionStorage.removeItem('userRole');
       sessionStorage.removeItem('fullName');
-      sessionStorage.clear();
+      // Note: Do NOT use sessionStorage.clear() here as it would wipe the 'page_loaded' flag
+      // used by App.vue to distinguish refresh from tab close
       
       // Clear data cache service if available
       if (window.dataCacheService) {

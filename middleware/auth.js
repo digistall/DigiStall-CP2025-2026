@@ -53,6 +53,9 @@ const authenticateToken = (req, res, next) => {
         userId: decoded.userId,
         username: decoded.username,
         email: decoded.email,
+        firstName: decoded.firstName, // ✅ Add firstName from JWT
+        lastName: decoded.lastName,   // ✅ Add lastName from JWT
+        fullName: decoded.fullName || `${decoded.firstName || ''} ${decoded.lastName || ''}`.trim(), // ✅ Add fullName from JWT
         userType: userType,
         area: decoded.area,
         location: decoded.location,

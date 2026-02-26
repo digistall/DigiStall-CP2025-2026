@@ -10,6 +10,15 @@ import {
 // Import logout and heartbeat from enhanced auth controller
 import { logout, heartbeat } from '../SHARE-CONTROLLER/auth/enhancedAuthController.js'
 
+// Import password reset functions
+import {
+  verifyEmailExists,
+  storeResetCode,
+  resendResetCode,
+  verifyResetCode,
+  resetPassword
+} from '../SHARE-CONTROLLER/auth/passwordResetController.js'
+
 // Legacy authentication (for backward compatibility)
 import {
   adminLogin,
@@ -34,6 +43,13 @@ router.post('/business-manager/login', branchManagerLogin) // POST /api/auth/bus
 router.post('/create-business-owner', createAdminUser)           // POST /api/auth/create-business-owner - Create business owner user
 router.post('/hash-password', createPasswordHash)       // POST /api/auth/hash-password - Create password hash
 router.get('/test-db', testDb)                         // GET /api/auth/test-db - Test database connection
+
+// ===== PASSWORD RESET ENDPOINTS =====
+router.post('/verify-email-exists', verifyEmailExists)  // POST /api/auth/verify-email-exists - Verify email & send code
+router.post('/resend-reset-code', resendResetCode)      // POST /api/auth/resend-reset-code - Resend verification code
+router.post('/store-reset-code', storeResetCode)        // POST /api/auth/store-reset-code - Store password reset code (legacy)
+router.post('/verify-reset-code', verifyResetCode)      // POST /api/auth/verify-reset-code - Verify reset code entered by user
+router.post('/reset-password', resetPassword)           // POST /api/auth/reset-password - Reset user password
 
 // ===== PUBLIC LOGOUT ROUTE =====
 // Logout doesn't require auth - it uses request body to identify user

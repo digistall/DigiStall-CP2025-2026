@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
 // Screens
 import LoginScreen from './screens/LoginScreen/LoginScreen';
 import LoadingScreen from './screens/LoadingScreen/LoadingScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen/ForgotPasswordScreen';
 import StallHome from './screens/StallHolder/StallHolder/StallScreen/StallHome';
 import InspectorHome from './screens/Inspector/InspectorHome';
 import CollectorHome from './screens/Collector/CollectorHome';
@@ -35,9 +36,74 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('LoginScreen');
   const [userData, setUserData] = useState(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     checkAuthStatus();
+    
+    // Auto-logout when app goes to background
+    const subscription = AppState.addEventListener('change', async nextAppState => {
+      if (
+        appState.current.match(/active/) &&
+        nextAppState.match(/inactive|background/)
+      ) {
+        console.log('App has gone to the background - initiating auto-logout');
+        
+        try {
+          const user = await UserStorageService.getUserData();
+          if (user && user.token) {
+            // Need to handle both staff roles and standard users
+            const isStaff = user.staffType === 'inspector' || user.staffType === 'collector';
+            const apiUrl = 'https://digistall.up.railway.app/api'; // Using default or env
+            
+            // Perform synchronous-like beacon logout with fetch using keepalive
+            try {
+              if (isStaff) {
+                fetch(`${apiUrl}/auth/staff/logout`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                  },
+                  body: JSON.stringify({
+                    staffId: user.staffId,
+                    staffType: user.staffType
+                  }),
+                  keepalive: true
+                }).catch(() => {});
+              } else {
+                fetch(`${apiUrl}/auth/mobile/logout`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                  },
+                  body: JSON.stringify({ userId: user.id || user.userId }),
+                  keepalive: true
+                }).catch(() => {});
+              }
+            } catch (apiError) {
+              console.warn('API logout failed during app close:', apiError);
+            }
+            
+            // Clear local user data
+            await UserStorageService.clearUserData();
+            
+            // Navigate back to login screen if possible
+            setInitialRoute('LoginScreen');
+            setUserData(null);
+          }
+        } catch (error) {
+          console.error('Error during auto-logout:', error);
+        }
+      }
+
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const checkAuthStatus = async () => {
@@ -93,6 +159,11 @@ export default function App() {
                 name="LoginScreen" 
                 component={LoginScreen}
                 options={{ gestureEnabled: false }}
+              />
+              <Stack.Screen 
+                name="ForgotPasswordScreen" 
+                component={ForgotPasswordScreen}
+                options={{ gestureEnabled: true }}
               />
               <Stack.Screen 
                 name="LoadingScreen" 
