@@ -17,7 +17,6 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import styles from './LogInCSS/LoginCSS';
 import {
   handleLogin,
-  handleForgotPassword,
 } from './LoginFunction/LoginFunctions';
 
 const LoginScreen = ({ navigation }) => {
@@ -157,7 +156,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleForgotPasswordPress = () => {
-    handleForgotPassword(setErrorModal);
+    navigation.navigate('ForgotPasswordScreen');
   };
 
   const closeErrorModal = () => {

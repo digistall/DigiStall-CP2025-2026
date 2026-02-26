@@ -12,6 +12,7 @@ import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
 // Screens
 import LoginScreen from './screens/LoginScreen/LoginScreen';
 import LoadingScreen from './screens/LoadingScreen/LoadingScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen/ForgotPasswordScreen';
 import StallHome from './screens/StallHolder/StallHolder/StallScreen/StallHome';
 import InspectorHome from './screens/Inspector/InspectorHome';
 import CollectorHome from './screens/Collector/CollectorHome';
@@ -158,6 +159,11 @@ export default function App() {
                 name="LoginScreen" 
                 component={LoginScreen}
                 options={{ gestureEnabled: false }}
+              />
+              <Stack.Screen 
+                name="ForgotPasswordScreen" 
+                component={ForgotPasswordScreen}
+                options={{ gestureEnabled: true }}
               />
               <Stack.Screen 
                 name="LoadingScreen" 
