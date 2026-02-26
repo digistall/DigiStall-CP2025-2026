@@ -45,7 +45,7 @@ export default {
         { value: 'Closed', title: 'Closed' },
       ],
       // API base URL
-      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+      apiBaseUrl: import.meta.env.VITE_API_URL || '/api',
 
       // Success snackbar state
       showSuccessSnackbar: false,
