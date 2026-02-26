@@ -50,8 +50,10 @@
                 size="small"
                 variant="tonal"
               >
-                <v-icon size="14" class="me-1">{{ getRoleIcon(employee) }}</v-icon>
-                {{ employee.display_role || 'Web Employee' }}
+                <v-icon size="14" class="me-1">{{
+                  getRoleIcon(employee)
+                }}</v-icon>
+                {{ employee.display_role || "Web Employee" }}
               </v-chip>
             </div>
 
@@ -66,7 +68,7 @@
             </div>
 
             <div class="table-cell permissions-col">
-              <div 
+              <div
                 class="permissions-list"
                 @mouseenter="showPermissionsPopup(employee, $event)"
                 @mouseleave="hidePermissionsPopup"
@@ -82,7 +84,7 @@
                 >
                   {{ getPermissionText(permission) }}
                 </v-chip>
-                <v-tooltip 
+                <v-tooltip
                   v-if="(employee.permissions || []).length > 2"
                   size="x-small"
                   color="grey"
@@ -105,13 +107,21 @@
             </div>
 
             <div class="table-cell login-col">
-              <div v-if="isEmployeeOnline(employee)">
-                <div class="login-date">{{ formatDate(employee.last_login) }}</div>
-                <div class="login-time">{{ formatTime(employee.last_login) }}</div>
+              <div v-if="employee.last_login">
+                <div class="login-date">
+                  {{ formatDate(employee.last_login) }}
+                </div>
+                <div class="login-time">
+                  {{ formatTime(employee.last_login) }}
+                </div>
               </div>
               <div v-else-if="employee.last_logout">
-                <div class="login-date">{{ formatDate(employee.last_logout) }}</div>
-                <div class="login-time">{{ formatTime(employee.last_logout) }}</div>
+                <div class="login-date">
+                  {{ formatDate(employee.last_logout) }}
+                </div>
+                <div class="login-time">
+                  {{ formatTime(employee.last_logout) }}
+                </div>
               </div>
               <span v-else class="text-grey">Never</span>
             </div>
@@ -120,7 +130,7 @@
       </div>
 
       <!-- Permissions Popup -->
-      <div 
+      <div
         v-if="permissionsPopupVisible && hoveredEmployee"
         class="permissions-popup"
         :style="permissionsPopupStyle"
@@ -133,14 +143,24 @@
         </div>
         <div class="permissions-popup-content">
           <div
-            v-for="permission in (hoveredEmployee.permissions || [])"
+            v-for="permission in hoveredEmployee.permissions || []"
             :key="permission"
             class="permission-item"
           >
-            <v-icon size="14" color="success" class="permission-icon">mdi-check-circle</v-icon>
-            <span class="permission-text">{{ getPermissionText(permission) }}</span>
+            <v-icon size="14" color="success" class="permission-icon"
+              >mdi-check-circle</v-icon
+            >
+            <span class="permission-text">{{
+              getPermissionText(permission)
+            }}</span>
           </div>
-          <div v-if="!hoveredEmployee.permissions || hoveredEmployee.permissions.length === 0" class="no-permissions">
+          <div
+            v-if="
+              !hoveredEmployee.permissions ||
+              hoveredEmployee.permissions.length === 0
+            "
+            class="no-permissions"
+          >
             <v-icon size="14" color="grey" class="me-1">mdi-information</v-icon>
             <span class="text-grey">No permissions assigned</span>
           </div>
@@ -153,22 +173,48 @@
           <!-- Header with Employee Info -->
           <div class="popup-header">
             <div class="employee-avatar-section">
-              <v-avatar size="64" :color="getEmployeeTypeColor(selectedEmployee)" class="employee-avatar">
-                <v-img v-if="selectedEmployee?.avatar" :src="selectedEmployee.avatar" />
+              <v-avatar
+                size="64"
+                :color="getEmployeeTypeColor(selectedEmployee)"
+                class="employee-avatar"
+              >
+                <v-img
+                  v-if="selectedEmployee?.avatar"
+                  :src="selectedEmployee.avatar"
+                />
                 <span v-else class="text-white text-h5 font-weight-bold">
-                  {{ selectedEmployee?.first_name?.charAt(0) }}{{ selectedEmployee?.last_name?.charAt(0) }}
+                  {{ selectedEmployee?.first_name?.charAt(0)
+                  }}{{ selectedEmployee?.last_name?.charAt(0) }}
                 </span>
               </v-avatar>
             </div>
             <div class="employee-info-section">
-              <div class="employee-name-large">{{ selectedEmployee?.first_name }} {{ selectedEmployee?.last_name }}</div>
-              <div class="employee-email-display">{{ selectedEmployee?.email }}</div>
-              <v-chip size="small" color="white" variant="flat" class="mt-1 role-chip-popup">
-                <v-icon size="14" class="me-1">{{ getRoleIcon(selectedEmployee) }}</v-icon>
-                {{ selectedEmployee?.display_role || 'Employee' }}
+              <div class="employee-name-large">
+                {{ selectedEmployee?.first_name }}
+                {{ selectedEmployee?.last_name }}
+              </div>
+              <div class="employee-email-display">
+                {{ selectedEmployee?.email }}
+              </div>
+              <v-chip
+                size="small"
+                color="white"
+                variant="flat"
+                class="mt-1 role-chip-popup"
+              >
+                <v-icon size="14" class="me-1">{{
+                  getRoleIcon(selectedEmployee)
+                }}</v-icon>
+                {{ selectedEmployee?.display_role || "Employee" }}
               </v-chip>
             </div>
-            <v-btn icon variant="flat" size="default" class="close-btn" @click="closeActionsDialog">
+            <v-btn
+              icon
+              variant="flat"
+              size="default"
+              class="close-btn"
+              @click="closeActionsDialog"
+            >
               <v-icon size="24">mdi-close</v-icon>
             </v-btn>
           </div>
@@ -186,7 +232,9 @@
             >
               <v-icon class="me-3" size="20">mdi-pencil-outline</v-icon>
               <span class="action-text">Edit Employee</span>
-              <v-icon class="ms-auto" size="18" color="grey-darken-1">mdi-chevron-right</v-icon>
+              <v-icon class="ms-auto" size="18" color="grey-darken-1"
+                >mdi-chevron-right</v-icon
+              >
             </v-btn>
 
             <!-- Reset Password -->
@@ -198,7 +246,9 @@
             >
               <v-icon class="me-3" size="20">mdi-key-outline</v-icon>
               <span class="action-text">Reset Password</span>
-              <v-icon class="ms-auto" size="18" color="grey-darken-1">mdi-chevron-right</v-icon>
+              <v-icon class="ms-auto" size="18" color="grey-darken-1"
+                >mdi-chevron-right</v-icon
+              >
             </v-btn>
 
             <v-divider class="my-3"></v-divider>
@@ -238,4 +288,3 @@
 <script src="./EmployeeTable.js"></script>
 
 <style scoped src="./EmployeeTable.css"></style>
-

@@ -284,12 +284,12 @@ export const mobileStaffLogin = async (req, res) => {
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
         
-        // Update last_login using stored procedures
+        // Update last_login using direct SQL updates
         if (staffType === 'inspector') {
-            await connection.execute('CALL sp_updateInspectorLastLogin(?)', [staffId]);
+            await connection.execute('UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?', [staffId]);
             console.log(`✅ Updated last_login for inspector ${staffId}`);
         } else {
-            await connection.execute('CALL sp_updateCollectorLastLogin(?)', [staffId]);
+            await connection.execute('UPDATE collector SET last_login = NOW() WHERE collector_id = ?', [staffId]);
             console.log(`✅ Updated last_login for collector ${staffId}`);
         }
         
