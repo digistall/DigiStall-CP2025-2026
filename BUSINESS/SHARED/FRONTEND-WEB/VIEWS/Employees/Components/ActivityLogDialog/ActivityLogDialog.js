@@ -176,7 +176,7 @@ export default {
           log.action_type?.toLowerCase().includes(query) ||
           log.action_description?.toLowerCase().includes(query) ||
           log.module?.toLowerCase().includes(query) ||
-          log.staff_type?.toLowerCase().includes(query)
+          log.user_type?.toLowerCase().includes(query)
         );
       }
       
@@ -189,10 +189,10 @@ export default {
         const token = sessionStorage.getItem('authToken');
         const params = new URLSearchParams();
         
-        if (this.filters.staffType) params.append('staffType', this.filters.staffType);
+        if (this.filters.staffType) params.append('userType', this.filters.staffType);
         if (this.filters.startDate) params.append('startDate', this.filters.startDate);
         if (this.filters.endDate) params.append('endDate', this.filters.endDate);
-        if (this.staffId) params.append('staffId', this.staffId);
+        if (this.staffId) params.append('userId', this.staffId);
         params.append('limit', '500');
 
         const response = await axios.get(
@@ -497,9 +497,9 @@ export default {
           allLogs.forEach(log => {
             wsData.push([
               log.log_id,
-              this.formatStaffType(log.staff_type),
+              this.formatStaffType(log.user_type),
               log.staff_name || 'Unknown',
-              log.staff_id || '-',
+              log.user_id || '-',
               log.action_type || '-',
               log.action_description || '-',
               log.module || '-',
@@ -565,7 +565,7 @@ export default {
     },
 
     getActiveStaff() {
-      const uniqueStaff = new Set(this.filteredLogs.map(log => `${log.staff_type}-${log.staff_id}`));
+      const uniqueStaff = new Set(this.filteredLogs.map(log => `${log.user_type}-${log.user_id}`));
       return uniqueStaff.size;
     },
 

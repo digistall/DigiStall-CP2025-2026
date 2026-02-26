@@ -1,4 +1,5 @@
 import { createConnection } from '../../config/database.js';
+import { decryptData } from '../../services/encryptionService.js';
 
 /**
  * Staff Activity Log Controller
@@ -78,31 +79,100 @@ export async function logStaffActivity(activityData) {
 export async function getAllStaffActivities(req, res) {
     let connection;
     try {
-        const branchId = req.query.branchId || req.user?.branchId || null;
-        const staffType = req.query.staffType || null;
-        const staffId = req.query.staffId ? parseInt(req.query.staffId) : null;
+        let branchId = req.query.branchId;
+        const userType = req.query.userType || req.query.staffType || null;
+        const userId = req.query.userId ? parseInt(req.query.userId) : null;
         const startDate = req.query.startDate || null;
         const endDate = req.query.endDate || null;
         const limit = parseInt(req.query.limit) || 100;
         const offset = parseInt(req.query.offset) || 0;
 
+        // Debug: Log the request details
+        console.log('📋 Activity log request:', {
+            userType: req.user?.userType,
+            userBranchId: req.user?.branchId,
+            queryBranchId: req.query.branchId,
+            filterUserType: userType,
+            filterUserId: userId
+        });
+
+        // If branchId is not explicitly provided in query, use user's branch
+        // For system_administrator and business_owner, we pass null so they can see all branches + null branches.
+        if (!branchId && req.user?.branchId) {
+            // Only force branchId to the user's branch if they are not an admin/owner
+            if (req.user.userType !== 'system_administrator' && req.user.userType !== 'business_owner') {
+                branchId = req.user.branchId;
+            } else {
+                branchId = null; // Let them see everything
+            }
+        }
+
         connection = await createConnection();
 
-        // Use stored procedure for getting activities
+        // Use stored procedure to handle schema mappings correctly
         const [rows] = await connection.execute(
             'CALL sp_getAllStaffActivities(?, ?, ?, ?, ?, ?, ?)',
-            [branchId, staffType, staffId, startDate, endDate, limit, offset]
+            [
+                branchId || null,
+                userType || null,
+                userId || null,
+                startDate || null,
+                endDate || null,
+                limit,
+                offset
+            ]
         );
-        const activities = rows[0];
+        let activities = rows[0];
 
-        // Get total count using stored procedure
-        const [countRows] = await connection.execute(
-            'CALL sp_countStaffActivities(?, ?, ?, ?, ?)',
-            [branchId, staffType, staffId, startDate, endDate]
-        );
-        const total = countRows[0][0].total;
+        // Decrypt the staff names that was joined from the DB
+        activities = activities.map(activity => {
+            if (activity.staff_name && activity.staff_name !== 'Unknown') {
+                 try {
+                     // Check if it's already a single encrypted string in GCM format
+                     if (activity.staff_name.includes(':')) {
+                         activity.staff_name = decryptData(activity.staff_name);
+                     } else {
+                         // Could be multiple encrypted parts separated by spaces (CBC/Legacy format)
+                         const nameParts = activity.staff_name.split(' ');
+                         const decryptedParts = nameParts.map(part => decryptData(part));
+                         activity.staff_name = decryptedParts.join(' ').trim();
+                     }
+                 } catch (e) {
+                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
+                 }
+            }
+            return activity;
+        });
 
-        console.log(`✅ Found ${activities.length} activity logs`);
+        // Get total count
+        let countQuery = 'SELECT COUNT(*) as total FROM staff_activity_log WHERE 1=1';
+        const countParams = [];
+        
+        if (branchId) {
+            countQuery += ' AND branch_id = ?';
+            countParams.push(branchId);
+        }
+        if (userType) {
+            countQuery += ' AND user_type = ?';
+            countParams.push(userType);
+        }
+        if (userId) {
+            countQuery += ' AND user_id = ?';
+            countParams.push(userId);
+        }
+        if (startDate) {
+            countQuery += ' AND created_at >= ?';
+            countParams.push(startDate);
+        }
+        if (endDate) {
+            countQuery += ' AND created_at <= ?';
+            countParams.push(endDate);
+        }
+        
+        const [countResult] = await connection.execute(countQuery, countParams);
+        const total = countResult[0].total;
+
+        console.log(`✅ Found ${activities.length} activity logs for branch ${branchId}`);
 
         res.json({
             success: true,
@@ -144,7 +214,25 @@ export async function getStaffActivityById(req, res) {
             'CALL sp_getStaffActivityById(?, ?, ?, ?)',
             [staffType, parseInt(staffId), limit, offset]
         );
-        const activities = rows[0];
+        let activities = rows[0];
+
+        // Decrypt the staff names that was joined from the DB
+        activities = activities.map(activity => {
+            if (activity.staff_name && activity.staff_name !== 'Unknown') {
+                 try {
+                     if (activity.staff_name.includes(':')) {
+                         activity.staff_name = decryptData(activity.staff_name);
+                     } else {
+                         const nameParts = activity.staff_name.split(' ');
+                         const decryptedParts = nameParts.map(part => decryptData(part));
+                         activity.staff_name = decryptedParts.join(' ').trim();
+                     }
+                 } catch (e) {
+                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
+                 }
+            }
+            return activity;
+        });
 
         // Get count using stored procedure
         const [countRows] = await connection.execute(
