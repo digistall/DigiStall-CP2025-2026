@@ -82,7 +82,7 @@ export default {
       loading: false,
       lastAddedStall: null, // Store the last added stall data for real-time updates
       // API base URL
-      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+      apiBaseUrl: import.meta.env.VITE_API_URL || '/api',
     }
   },
 
