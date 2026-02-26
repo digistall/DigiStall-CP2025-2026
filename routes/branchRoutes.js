@@ -1,5 +1,6 @@
 import express from 'express'
 import authMiddleware from '../middleware/auth.js'
+import { activityLogMiddleware } from '../SHARE-CONTROLLER/activityLog/staffActivityLogController.js'
 import {
   createBranch,
   getAllBranches,
@@ -35,7 +36,7 @@ const router = express.Router()
 router.use(authMiddleware.authenticateToken)
 
 // Branch routes (admin/business_owner for creation/deletion, all roles for reading)
-router.post('/', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), createBranch)    // POST /api/branches - Create new branch
+router.post('/', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), activityLogMiddleware('CREATE', 'Branches'), createBranch)    // POST /api/branches - Create new branch
 router.get('/', getAllBranches)                     // GET /api/branches - Get all branches (admin + branch manager)
 router.delete('/:id', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), deleteBranch)   // DELETE /api/branches/:id - Delete branch
 router.get('/areas', getAreas)                      // GET /api/branches/areas - Get all areas

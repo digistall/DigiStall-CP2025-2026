@@ -363,6 +363,27 @@ export const login = async (req, res) => {
     console.log(`✅ ${detectedUserType} login successful:`, decryptedEmail);
     console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     
+    // Log the login activity
+    try {
+      const { logStaffActivity } = await import('../activityLog/staffActivityLogController.js');
+      await logStaffActivity({
+        staffType: detectedUserType,
+        staffId: user[userConfig.idField],
+        staffName: `${decryptedFirstName} ${decryptedLastName}`.trim(),
+        branchId: user.branch_id || null,
+        actionType: 'LOGIN',
+        actionDescription: `${decryptedFirstName} ${decryptedLastName} logged in via web`,
+        module: 'Auth',
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logError) {
+      console.warn('⚠️ Failed to log login activity:', logError.message);
+    }
+
     res.status(200).json({
       success: true,
       message: `${detectedUserType} login successful`,

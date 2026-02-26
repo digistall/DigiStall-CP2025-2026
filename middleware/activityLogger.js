@@ -224,10 +224,7 @@ export const activityLogger = async (req, res, next) => {
         const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
         
         await connection.execute(`
-          INSERT INTO staff_activity_log 
-          (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-           module, ip_address, user_agent, request_method, request_path, status, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+          CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           staffType,
           staffId,
@@ -286,10 +283,7 @@ export const logActivity = async ({
     connection = await createConnection();
     
     await connection.execute(`
-      INSERT INTO staff_activity_log 
-      (staff_type, staff_id, staff_name, branch_id, action_type, action_description, 
-       module, ip_address, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       staffType,
       staffId,
@@ -299,6 +293,9 @@ export const logActivity = async ({
       description,
       module,
       ipAddress,
+      null, // userAgent
+      null, // method
+      null, // path
       status
     ]);
     

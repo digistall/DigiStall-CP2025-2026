@@ -307,7 +307,7 @@ export default {
     getDeviceIcon(userAgent) {
       if (!userAgent) return { icon: 'mdi-help-circle', color: 'grey' };
       const ua = userAgent.toLowerCase();
-      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('okhttp')) {
         return { icon: 'mdi-cellphone', color: 'success' };
       }
       if (ua.includes('tablet') || ua.includes('ipad')) {
@@ -319,6 +319,7 @@ export default {
     getDeviceType(userAgent) {
       if (!userAgent) return 'Unknown';
       const ua = userAgent.toLowerCase();
+      if (ua.includes('okhttp')) return 'Mobile App';
       if (ua.includes('iphone')) return 'iPhone';
       if (ua.includes('android') && ua.includes('mobile')) return 'Android Phone';
       if (ua.includes('android')) return 'Android';
@@ -366,9 +367,9 @@ export default {
 
     formatDateTime(dateStr) {
       if (!dateStr) return 'N/A';
-      // Database stores UTC, add 8 hours to get Philippine time
-      const utcDate = new Date(dateStr);
-      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000));
+      // The Database connection already has `timezone: 'Z'` or `timezone: '+08:00'`.
+      // Using standard JS Date parsing handles the UTC interpretation properly before passing to Intl.
+      const phDate = new Date(dateStr);
       return new Intl.DateTimeFormat('en-PH', {
         month: 'short',
         day: 'numeric',
@@ -384,9 +385,7 @@ export default {
       if (!dateStr) return '';
       
       const now = new Date();
-      // Database stores UTC, add 8 hours to get Philippine time
-      const utcDate = new Date(dateStr);
-      const phDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000));
+      const phDate = new Date(dateStr);
       
       // Calculate difference in milliseconds
       const diffMs = now - phDate;

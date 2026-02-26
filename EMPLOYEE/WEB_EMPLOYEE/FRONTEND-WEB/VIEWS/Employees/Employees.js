@@ -8,8 +8,6 @@ import ToastNotification from '@SHARED_COMPONENTS/ToastNotification/ToastNotific
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
 import LoadingOverlay from '@SHARED_COMPONENTS/LoadingOverlay/LoadingOverlay.vue';
 import {
-  sendEmployeePasswordResetEmail,
-  generateEmployeePassword,
   sendEmployeeCredentialsEmail,
 } from "./Components/emailService.js";
 import dataCacheService from '@/services/dataCacheService.js';
@@ -926,9 +924,6 @@ export default {
           throw new Error("Authentication required. Please login again.");
         }
 
-        // Generate new password client-side (fallback only). Server will generate final value.
-        const clientGeneratedPassword = generateEmployeePassword();
-
         let response, data;
 
         // Check if this is a mobile staff member (inspector/collector)
@@ -975,25 +970,20 @@ export default {
         data = await response.json();
 
         if (response.ok && data.success) {
-          // Extract password from response (different field names for different endpoints)
-          const newPassword = data?.data?.temporaryPassword || data?.data?.newPassword || clientGeneratedPassword;
-          
-          // Send password reset email
-          console.log("📧 Sending password reset email...");
-          const emailResult = await sendEmployeePasswordResetEmail(
-            this.selectedEmployee.email,
-            `${this.selectedEmployee.first_name} ${this.selectedEmployee.last_name}`,
-            newPassword
-          );
+          // Backend now handles email sending via Nodemailer
+          // Check if email was sent successfully from the response
+          const emailSent = data?.data?.emailSent;
+          const newPassword = data?.data?.temporaryPassword || data?.data?.newPassword;
 
-          if (emailResult.success) {
+          if (emailSent) {
             this.showToast(
-              `✅ Password reset successfully! A notification with the new password has been sent to ${this.selectedEmployee.email}`,
+              `✅ Password reset successfully! New credentials have been sent to ${this.selectedEmployee.email}`,
               "success"
             );
           } else {
+            // Email failed but password was still reset
             this.showToast(
-              `⚠️ Password reset but email delivery failed. Please share the new password manually with the employee.`,
+              `⚠️ Password reset to: ${newPassword}. Email notification could not be sent - please share the password manually.`,
               "warning"
             );
           }

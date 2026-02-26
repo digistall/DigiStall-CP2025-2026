@@ -185,3 +185,58 @@ If you encounter issues:
 **Fixed by**: GitHub Copilot
 **Date**: December 26, 2025
 **Version**: 1.0.0
+
+---
+
+## 🔐 Password Reset Features (February 25–26, 2026)
+
+### Feature 1: Forgot Password (Self-Service on Login Page)
+**Status**: ✅ Implemented & Working
+
+**What was built**:
+- 3-step wizard UI at `/forgot-password` (email → verify code → new password)
+- Backend verifies email exists across all 6 user tables
+- EmailJS sends 6-digit verification code to user's email
+- Backend stores code with 10-minute expiry and max 5 attempt limit
+- New password encrypted with AES-256-GCM before DB storage
+
+**Files Created**:
+- `AUTH/FRONTEND-WEB/VIEWS/ForgotPassword/ForgotPassword.vue`
+- `AUTH/FRONTEND-WEB/VIEWS/ForgotPassword/ForgotPassword.js`
+- `AUTH/FRONTEND-WEB/VIEWS/ForgotPassword/ForgotPassword.css`
+- `SHARE-CONTROLLER/auth/passwordResetController.js`
+- `documents/FORGOT_PASSWORD_SETUP_GUIDE.md`
+
+**Files Modified**:
+- `routes/webAuthRoutes.js` — added 4 new endpoints
+- `FRONTEND-RUNNER/WEB/src/router/index.js` — added `/forgot-password` as public route
+
+---
+
+### Feature 2: Manager Reset Password (Employee Management)
+**Status**: ✅ Implemented & Working
+
+**What was built**:
+- Manager clicks "Reset Password" on any employee
+- Backend generates secure password, encrypts with AES-256-GCM
+- Password saved via direct SQL UPDATE (no stored procedure required)
+- Nodemailer sends new credentials email to employee automatically
+- Works for Web Employees, Inspectors, and Collectors
+
+**Bugs Fixed**:
+- ❌ `PROCEDURE naga_stall.resetBusinessEmployeePassword does not exist` → Replaced CALL with direct `UPDATE` SQL
+- ❌ `bcrypt is not defined` → Added `import bcrypt from 'bcrypt'` to `employeeController.js`
+
+**Files Modified**:
+- `services/emailService.js` — added `sendEmployeePasswordResetNotification()`
+- `SHARE-CONTROLLER/employees/employeeController.js` — fixed reset, added Nodemailer
+- `SHARE-CONTROLLER/mobileStaff/mobileStaffController.js` — fixed reset, added Nodemailer
+- `EMPLOYEE/WEB_EMPLOYEE/FRONTEND-WEB/VIEWS/Employees/Employees.js` — removed EmailJS for reset, uses backend email
+
+**Full Documentation**: [PASSWORD_RESET_IMPLEMENTATION.md](PASSWORD_RESET_IMPLEMENTATION.md)
+
+---
+
+**Fixed by**: GitHub Copilot
+**Date**: February 25–26, 2026
+**Version**: 1.1.0

@@ -284,12 +284,12 @@ export const mobileStaffLogin = async (req, res) => {
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
         
-        // Update last_login using stored procedures
+        // Update last_login using direct SQL updates
         if (staffType === 'inspector') {
-            await connection.execute('CALL sp_updateInspectorLastLogin(?)', [staffId]);
+            await connection.execute('UPDATE inspector SET last_login = NOW() WHERE inspector_id = ?', [staffId]);
             console.log(`✅ Updated last_login for inspector ${staffId}`);
         } else {
-            await connection.execute('CALL sp_updateCollectorLastLogin(?)', [staffId]);
+            await connection.execute('UPDATE collector SET last_login = NOW() WHERE collector_id = ?', [staffId]);
             console.log(`✅ Updated last_login for collector ${staffId}`);
         }
         
@@ -434,7 +434,10 @@ export const mobileStaffLogout = async (req, res) => {
                     [staffId]
                 );
                 if (nameResult.length > 0) {
-                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
+                    // Decrypt names using the same logic as login
+                    const firstName = decryptAES256GCM(nameResult[0].first_name);
+                    const lastName = decryptAES256GCM(nameResult[0].last_name);
+                    staffName = `${firstName} ${lastName}`;
                 }
             } else if (staffType === 'collector') {
                 const [nameResult] = await connection.execute(
@@ -442,7 +445,10 @@ export const mobileStaffLogout = async (req, res) => {
                     [staffId]
                 );
                 if (nameResult.length > 0) {
-                    staffName = `${nameResult[0].first_name} ${nameResult[0].last_name}`;
+                    // Decrypt names using the same logic as login
+                    const firstName = decryptAES256GCM(nameResult[0].first_name);
+                    const lastName = decryptAES256GCM(nameResult[0].last_name);
+                    staffName = `${firstName} ${lastName}`;
                 }
             }
             
