@@ -313,6 +313,24 @@ export default {
       return new Date(date).toLocaleDateString('en-US', options)
     },
 
+    formatDateTime(date) {
+      if (!date) return 'N/A'
+      const d = new Date(date)
+      const dateOptions = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }
+      const timeOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }
+      const dateStr = d.toLocaleDateString('en-US', dateOptions)
+      const timeStr = d.toLocaleTimeString('en-US', timeOptions)
+      return `${dateStr} and ${timeStr}`
+    },
+
     getStatusIcon(status) {
       switch (status) {
         case 'Approved':

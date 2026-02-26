@@ -128,7 +128,10 @@ export const applicantController = {
           message: "Applicant name, contact number, and email address are required",
         });
       }
-
+      console.log("ðŸ”  Creating database connection...");
+      connection = await createConnection();
+      await connection.beginTransaction(); // Start transaction
+      console.log("âœ… Database transaction started");
       console.log("ðŸ” Encrypting sensitive data before storage...");
       
       // Prepare all applicant parameters with toNull conversion AND encryption for sensitive PII fields
@@ -381,6 +384,9 @@ export const applicantController = {
       }
 
       console.log(`ðŸ“„ Saved ${savedDocuments.length} document(s) for applicant ${applicantId} (storage: ${USE_BLOB_STORAGE ? 'BLOB' : 'file'})`);
+
+      await connection.commit();
+      console.log("âœ… Transaction committed successfully");
 
       // Generate response
       if (stall_id) {

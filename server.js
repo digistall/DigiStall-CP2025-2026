@@ -40,7 +40,6 @@ import vendorRoutes from './routes/vendorRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import dashboardSubscriptionRoutes from './routes/dashboardSubscriptionRoutes.js';
-import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
 
 // APPLICANTS routes
 import applicationRoutes from './routes/applicationRoutes.js';
@@ -103,7 +102,6 @@ app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard-subscription', dashboardSubscriptionRoutes);  // SSE for real-time dashboard updates
-app.use('/api/activity-logs', staffActivityLogRoutes);
 console.log('✅ LGU-NAGA routes loaded');
 
 // EMPLOYEE ROUTES (Inspector, Collector)

@@ -4,7 +4,6 @@ import DailyPaymentController from "../SHARE-CONTROLLER/payments/dailyPaymentCon
 import authMiddleware from "../middleware/auth.js";
 import { viewOnlyForOwners } from "../middleware/rolePermissions.js";
 import { authorizePermission } from "../middleware/enhancedAuth.js";
-import { activityLogMiddleware } from "../SHARE-CONTROLLER/activityLog/staffActivityLogController.js";
 
 const router = express.Router();
 
@@ -98,7 +97,6 @@ router.get(
 router.post(
   "/onsite",
   authMiddleware.authenticateToken,
-  activityLogMiddleware('CREATE', 'Payments'),
   viewOnlyForOwners,
   PaymentController.addOnsitePayment
 );
@@ -124,7 +122,6 @@ router.get(
 router.post(
   "/violations/pay",
   authMiddleware.authenticateToken,
-  activityLogMiddleware('PAY_VIOLATION', 'Payments'),
   viewOnlyForOwners,
   PaymentController.processViolationPayment
 );
@@ -190,7 +187,6 @@ router.get(
 router.post(
   "/daily",
   authMiddleware.authenticateToken,
-  activityLogMiddleware('CREATE_DAILY', 'Payments'),
   viewOnlyForOwners,
   DailyPaymentController.addDailyPayment
 );
@@ -202,7 +198,6 @@ router.post(
 router.put(
   "/daily/:receiptId",
   authMiddleware.authenticateToken,
-  activityLogMiddleware('UPDATE_DAILY', 'Payments'),
   viewOnlyForOwners,
   DailyPaymentController.updateDailyPayment
 );
@@ -214,7 +209,6 @@ router.put(
 router.delete(
   "/daily/:receiptId",
   authMiddleware.authenticateToken,
-  activityLogMiddleware('DELETE_DAILY', 'Payments'),
   viewOnlyForOwners,
   DailyPaymentController.deleteDailyPayment
 );

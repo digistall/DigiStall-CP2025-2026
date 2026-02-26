@@ -1,6 +1,5 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
-import { activityLogMiddleware } from '../SHARE-CONTROLLER/activityLog/staffActivityLogController.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import {
   createEmployee,
@@ -52,7 +51,7 @@ router.use(authMiddleware.authenticateToken);
  * @access  Business Manager and Business Owner
  * @body    { firstName, lastName, email, phoneNumber, branchId, permissions, createdByManager }
  */
-router.post('/', activityLogMiddleware('CREATE', 'Employees'), createEmployee);
+router.post('/', createEmployee);
 
 /**
  * @route   GET /api/employees
@@ -84,7 +83,7 @@ router.get('/:id', getEmployeeById);
  * @params  id - Employee ID
  * @body    { firstName, lastName, email, phoneNumber, permissions, status, updatedBy }
  */
-router.put('/:id', activityLogMiddleware('UPDATE', 'Employees'), updateEmployee);
+router.put('/:id', updateEmployee);
 
 /**
  * @route   PUT /api/employees/:id/permissions
@@ -93,7 +92,7 @@ router.put('/:id', activityLogMiddleware('UPDATE', 'Employees'), updateEmployee)
  * @params  id - Employee ID
  * @body    { permissions }
  */
-router.put('/:id/permissions', activityLogMiddleware('UPDATE_PERMISSIONS', 'Employees'), updateEmployeePermissions);
+router.put('/:id/permissions', updateEmployeePermissions);
 
 /**
  * @route   DELETE /api/employees/:id
@@ -102,7 +101,7 @@ router.put('/:id/permissions', activityLogMiddleware('UPDATE_PERMISSIONS', 'Empl
  * @params  id - Employee ID
  * @body    { deletedBy }
  */
-router.delete('/:id', activityLogMiddleware('DELETE', 'Employees'), deleteEmployee);
+router.delete('/:id', deleteEmployee);
 
 // ========================================
 // BRANCH-SPECIFIC OPERATIONS
@@ -128,7 +127,7 @@ router.get('/branch/:branchId', getEmployeesByBranch);
  * @params  id - Employee ID
  * @body    { newPassword, resetBy }
  */
-router.post('/:id/reset-password', activityLogMiddleware('RESET_PASSWORD', 'Employees'), resetEmployeePassword);
+router.post('/:id/reset-password', resetEmployeePassword);
 
 /**
  * @route   POST /api/employees/logout
