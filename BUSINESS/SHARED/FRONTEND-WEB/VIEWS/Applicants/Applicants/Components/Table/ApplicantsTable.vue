@@ -3,14 +3,12 @@
     <v-card elevation="1" class="table-card">
       <!-- Custom Table Header -->
       <div class="table-header">
-        <div
-          class="header-row simplified-layout"
-        >
-          <div class="header-cell id-col">ID</div>
+        <div class="header-row simplified-layout">
           <div class="header-cell name-col">Full Name</div>
           <div class="header-cell email-col">Email Address</div>
           <div class="header-cell phone-col">Phone Number</div>
           <div class="header-cell address-col">Address</div>
+          <div class="header-cell date-col">Date Applied</div>
           <div class="header-cell action-col">Status</div>
         </div>
       </div>
@@ -23,9 +21,6 @@
           class="table-row simplified-layout clickable-row"
           @click="viewMoreInfo(applicant)"
         >
-          <div class="table-cell id-col">
-            {{ applicant.id }}
-          </div>
           <div class="table-cell name-col">
             {{ applicant.fullName }}
           </div>
@@ -40,6 +35,9 @@
               {{ applicant.address }}
             </div>
           </div>
+          <div class="table-cell date-col">
+            {{ formatDateTime(applicant.created_at) }}
+          </div>
           <div class="table-cell action-col" @click.stop>
             <!-- Show Status Badge for Approved/Rejected/Under Review Applicants -->
             <div
@@ -47,16 +45,22 @@
               class="status-display"
             >
               <!-- Re-check tooltip for Rejected status -->
-              <v-tooltip v-if="getEffectiveStatus(applicant) === 'Rejected'" location="bottom">
+              <v-tooltip
+                v-if="getEffectiveStatus(applicant) === 'Rejected'"
+                location="bottom"
+              >
                 <template v-slot:activator="{ props }">
                   <div
                     class="status-badge status-declined-recheck"
                     :class="{
-                      'status-approved': getEffectiveStatus(applicant) === 'Approved',
-                      'status-declined': getEffectiveStatus(applicant) === 'Rejected',
+                      'status-approved':
+                        getEffectiveStatus(applicant) === 'Approved',
+                      'status-declined':
+                        getEffectiveStatus(applicant) === 'Rejected',
                       'status-under-review':
                         getEffectiveStatus(applicant) === 'Under Review',
-                      'status-cancelled': getEffectiveStatus(applicant) === 'Cancelled',
+                      'status-cancelled':
+                        getEffectiveStatus(applicant) === 'Cancelled',
                     }"
                     v-bind="props"
                     @click="handleStatusClick(applicant)"
@@ -82,11 +86,14 @@
                   <div
                     class="status-badge status-under-review-approve"
                     :class="{
-                      'status-approved': getEffectiveStatus(applicant) === 'Approved',
-                      'status-declined': getEffectiveStatus(applicant) === 'Rejected',
+                      'status-approved':
+                        getEffectiveStatus(applicant) === 'Approved',
+                      'status-declined':
+                        getEffectiveStatus(applicant) === 'Rejected',
                       'status-under-review':
                         getEffectiveStatus(applicant) === 'Under Review',
-                      'status-cancelled': getEffectiveStatus(applicant) === 'Cancelled',
+                      'status-cancelled':
+                        getEffectiveStatus(applicant) === 'Cancelled',
                     }"
                     v-bind="props"
                     @click="handleStatusClick(applicant)"
@@ -108,10 +115,14 @@
                 v-else
                 class="status-badge"
                 :class="{
-                  'status-approved': getEffectiveStatus(applicant) === 'Approved',
-                  'status-declined': getEffectiveStatus(applicant) === 'Rejected',
-                  'status-under-review': getEffectiveStatus(applicant) === 'Under Review',
-                  'status-cancelled': getEffectiveStatus(applicant) === 'Cancelled',
+                  'status-approved':
+                    getEffectiveStatus(applicant) === 'Approved',
+                  'status-declined':
+                    getEffectiveStatus(applicant) === 'Rejected',
+                  'status-under-review':
+                    getEffectiveStatus(applicant) === 'Under Review',
+                  'status-cancelled':
+                    getEffectiveStatus(applicant) === 'Cancelled',
                 }"
               >
                 <v-icon
@@ -124,13 +135,17 @@
               </div>
               <div
                 v-if="
-                  applicant.approved_at || applicant.declined_at || applicant.updated_at
+                  applicant.approved_at ||
+                  applicant.declined_at ||
+                  applicant.updated_at
                 "
                 class="status-date"
               >
                 {{
                   formatStatusDate(
-                    applicant.approved_at || applicant.declined_at || applicant.updated_at
+                    applicant.approved_at ||
+                      applicant.declined_at ||
+                      applicant.updated_at,
                   )
                 }}
               </div>
@@ -152,7 +167,11 @@
                 color="black"
                 size="small"
                 class="decline-btn"
-                style="background-color: white; color: black; border-color: black;"
+                style="
+                  background-color: white;
+                  color: black;
+                  border-color: black;
+                "
                 @click="declineApplicant(applicant)"
               >
                 DECLINE
@@ -185,7 +204,10 @@
             <v-tab value="business">Business Information</v-tab>
             <v-tab
               value="stall"
-              v-if="selectedApplicant?.stall_info && applicantType === 'Stall Applicants'"
+              v-if="
+                selectedApplicant?.stall_info &&
+                applicantType === 'Stall Applicants'
+              "
               >Stall Information</v-tab
             >
             <v-tab value="spouse" v-if="selectedApplicant?.spouse_information"
@@ -203,19 +225,25 @@
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Full Name:</span>
-                      <span class="info-value">{{ selectedApplicant?.fullName }}</span>
+                      <span class="info-value">{{
+                        selectedApplicant?.fullName
+                      }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Email Address:</span>
-                      <span class="info-value">{{ selectedApplicant?.email }}</span>
+                      <span class="info-value">{{
+                        selectedApplicant?.email
+                      }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Phone Number:</span>
-                      <span class="info-value">{{ selectedApplicant?.phoneNumber }}</span>
+                      <span class="info-value">{{
+                        selectedApplicant?.phoneNumber
+                      }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
@@ -245,7 +273,9 @@
                   <v-col cols="12">
                     <div class="info-item">
                       <span class="info-label">Address:</span>
-                      <span class="info-value">{{ selectedApplicant?.address }}</span>
+                      <span class="info-value">{{
+                        selectedApplicant?.address
+                      }}</span>
                     </div>
                   </v-col>
                 </v-row>
@@ -254,14 +284,18 @@
 
             <!-- Business Information Tab -->
             <v-tabs-window-item value="business">
-              <div class="info-section" v-if="selectedApplicant?.business_information">
+              <div
+                class="info-section"
+                v-if="selectedApplicant?.business_information"
+              >
                 <h3 class="section-title">Business Details</h3>
                 <v-row>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Nature of Business:</span>
                       <span class="info-value">{{
-                        selectedApplicant.business_information.nature_of_business
+                        selectedApplicant.business_information
+                          .nature_of_business
                       }}</span>
                     </div>
                   </v-col>
@@ -271,7 +305,8 @@
                       <span class="info-value"
                         >₱{{
                           formatCurrency(
-                            selectedApplicant.business_information.capitalization
+                            selectedApplicant.business_information
+                              .capitalization,
                           )
                         }}</span
                       >
@@ -289,13 +324,16 @@
                     <div class="info-item">
                       <span class="info-label">Relative Stall Owner:</span>
                       <span class="info-value">{{
-                        selectedApplicant.business_information.relative_stall_owner
+                        selectedApplicant.business_information
+                          .relative_stall_owner
                       }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12">
                     <div class="info-item">
-                      <span class="info-label">Previous Business Experience:</span>
+                      <span class="info-label"
+                        >Previous Business Experience:</span
+                      >
                       <span class="info-value">{{
                         selectedApplicant.business_information
                           .previous_business_experience
@@ -309,7 +347,10 @@
             <!-- Stall Information Tab -->
             <v-tabs-window-item
               value="stall"
-              v-if="selectedApplicant?.stall_info && applicantType === 'Stall Applicants'"
+              v-if="
+                selectedApplicant?.stall_info &&
+                applicantType === 'Stall Applicants'
+              "
             >
               <div class="info-section">
                 <h3 class="section-title">Stall Application Details</h3>
@@ -351,7 +392,9 @@
                       <span class="info-label">Rental Price:</span>
                       <span class="info-value price"
                         >₱{{
-                          formatCurrency(selectedApplicant.stall_info.rental_price)
+                          formatCurrency(
+                            selectedApplicant.stall_info.rental_price,
+                          )
                         }}</span
                       >
                     </div>
@@ -363,7 +406,9 @@
                         <v-chip
                           size="small"
                           :color="
-                            getStallTypeColor(selectedApplicant.stall_info.price_type)
+                            getStallTypeColor(
+                              selectedApplicant.stall_info.price_type,
+                            )
                           "
                         >
                           {{ selectedApplicant.stall_info.price_type }}
@@ -387,7 +432,7 @@
                           size="small"
                           :color="
                             getApplicationStatusColor(
-                              selectedApplicant.application_status
+                              selectedApplicant.application_status,
                             )
                           "
                         >
@@ -428,7 +473,9 @@
                     <div class="info-item">
                       <span class="info-label">Birth Date:</span>
                       <span class="info-value">{{
-                        formatDate(selectedApplicant.spouse_information.spouse_birthdate)
+                        formatDate(
+                          selectedApplicant.spouse_information.spouse_birthdate,
+                        )
                       }}</span>
                     </div>
                   </v-col>
@@ -436,7 +483,8 @@
                     <div class="info-item">
                       <span class="info-label">Educational Attainment:</span>
                       <span class="info-value">{{
-                        selectedApplicant.spouse_information.spouse_educational_attainment
+                        selectedApplicant.spouse_information
+                          .spouse_educational_attainment
                       }}</span>
                     </div>
                   </v-col>
@@ -444,7 +492,8 @@
                     <div class="info-item">
                       <span class="info-label">Contact Number:</span>
                       <span class="info-value">{{
-                        selectedApplicant.spouse_information.spouse_contact_number
+                        selectedApplicant.spouse_information
+                          .spouse_contact_number
                       }}</span>
                     </div>
                   </v-col>
@@ -469,12 +518,14 @@
                     <div class="info-item">
                       <span class="info-label">Email Address:</span>
                       <span class="info-value">{{
-                        selectedApplicant?.other_information?.email_address || selectedApplicant?.email || 'N/A'
+                        selectedApplicant?.other_information?.email_address ||
+                        selectedApplicant?.email ||
+                        "N/A"
                       }}</span>
                     </div>
                   </v-col>
                 </v-row>
-                
+
                 <!-- Document Images -->
                 <h4 class="subsection-title mt-4 mb-2">Uploaded Documents</h4>
                 <v-row>
@@ -493,23 +544,30 @@
                           <span class="loading-text">Loading...</span>
                         </div>
                         <!-- Image Loaded -->
-                        <img 
-                          v-else-if="applicantDocuments.signature" 
-                          :src="applicantDocuments.signature" 
+                        <img
+                          v-else-if="applicantDocuments.signature"
+                          :src="applicantDocuments.signature"
                           alt="Signature"
                           class="document-image"
                           @error="handleDocumentError('signature')"
-                          @click="openDocumentPreview(applicantDocuments.signature, 'Signature')"
+                          @click="
+                            openDocumentPreview(
+                              applicantDocuments.signature,
+                              'Signature',
+                            )
+                          "
                         />
                         <!-- No Document -->
                         <div v-else class="no-document">
-                          <v-icon size="48" color="grey">mdi-file-document-outline</v-icon>
+                          <v-icon size="48" color="grey"
+                            >mdi-file-document-outline</v-icon
+                          >
                           <span>No signature uploaded</span>
                         </div>
                       </div>
                     </div>
                   </v-col>
-                  
+
                   <!-- House Location Sketch -->
                   <v-col cols="12" md="4">
                     <div class="document-card">
@@ -525,23 +583,30 @@
                           <span class="loading-text">Loading...</span>
                         </div>
                         <!-- Image Loaded -->
-                        <img 
-                          v-else-if="applicantDocuments.house_location" 
-                          :src="applicantDocuments.house_location" 
+                        <img
+                          v-else-if="applicantDocuments.house_location"
+                          :src="applicantDocuments.house_location"
                           alt="House Location"
                           class="document-image"
                           @error="handleDocumentError('house_location')"
-                          @click="openDocumentPreview(applicantDocuments.house_location, 'House Location Sketch')"
+                          @click="
+                            openDocumentPreview(
+                              applicantDocuments.house_location,
+                              'House Location Sketch',
+                            )
+                          "
                         />
                         <!-- No Document -->
                         <div v-else class="no-document">
-                          <v-icon size="48" color="grey">mdi-map-outline</v-icon>
+                          <v-icon size="48" color="grey"
+                            >mdi-map-outline</v-icon
+                          >
                           <span>No house sketch uploaded</span>
                         </div>
                       </div>
                     </div>
                   </v-col>
-                  
+
                   <!-- Valid ID -->
                   <v-col cols="12" md="4">
                     <div class="document-card">
@@ -557,17 +622,24 @@
                           <span class="loading-text">Loading...</span>
                         </div>
                         <!-- Image Loaded -->
-                        <img 
-                          v-else-if="applicantDocuments.valid_id" 
-                          :src="applicantDocuments.valid_id" 
+                        <img
+                          v-else-if="applicantDocuments.valid_id"
+                          :src="applicantDocuments.valid_id"
                           alt="Valid ID"
                           class="document-image"
                           @error="handleDocumentError('valid_id')"
-                          @click="openDocumentPreview(applicantDocuments.valid_id, 'Valid ID')"
+                          @click="
+                            openDocumentPreview(
+                              applicantDocuments.valid_id,
+                              'Valid ID',
+                            )
+                          "
                         />
                         <!-- No Document -->
                         <div v-else class="no-document">
-                          <v-icon size="48" color="grey">mdi-card-account-details-outline</v-icon>
+                          <v-icon size="48" color="grey"
+                            >mdi-card-account-details-outline</v-icon
+                          >
                           <span>No valid ID uploaded</span>
                         </div>
                       </div>
@@ -581,7 +653,9 @@
 
         <v-card-actions class="pa-4 border-t">
           <v-spacer></v-spacer>
-          <v-btn variant="outlined" @click="showInfoDialog = false">Close</v-btn>
+          <v-btn variant="outlined" @click="showInfoDialog = false"
+            >Close</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -590,8 +664,17 @@
     <v-dialog v-model="showConfirmDialog" max-width="420" persistent>
       <v-card class="confirm-dialog-card" rounded="lg">
         <!-- Header with Icon -->
-        <div class="confirm-dialog-header" :class="confirmAction === 'accept' ? 'accept-header' : 'decline-header'">
-          <button class="close-dialog-btn" @click="showConfirmDialog = false" :aria-label="'Close dialog'">
+        <div
+          class="confirm-dialog-header"
+          :class="
+            confirmAction === 'accept' ? 'accept-header' : 'decline-header'
+          "
+        >
+          <button
+            class="close-dialog-btn"
+            @click="showConfirmDialog = false"
+            :aria-label="'Close dialog'"
+          >
             <v-icon color="white" size="20">mdi-close</v-icon>
           </button>
         </div>
@@ -599,15 +682,25 @@
         <!-- Content -->
         <v-card-text class="confirm-dialog-content text-center pt-8 pb-4">
           <h3 class="confirm-dialog-title mb-3">
-            {{ confirmAction === "accept" ? "Accept Applicant" : "Decline Applicant" }}
+            {{
+              confirmAction === "accept"
+                ? "Accept Applicant"
+                : "Decline Applicant"
+            }}
           </h3>
           <p class="confirm-dialog-message">
             Are you sure you want to {{ confirmAction }}
-            <strong class="applicant-name">{{ selectedApplicant?.fullName }}</strong>?
+            <strong class="applicant-name">{{
+              selectedApplicant?.fullName
+            }}</strong
+            >?
           </p>
           <p v-if="confirmAction === 'accept'" class="confirm-dialog-note mt-3">
-            <v-icon size="16" color="success" class="mr-1">mdi-information</v-icon>
-            Login credentials will be generated and sent to the applicant's email.
+            <v-icon size="16" color="success" class="mr-1"
+              >mdi-information</v-icon
+            >
+            Login credentials will be generated and sent to the applicant's
+            email.
           </p>
           <p v-else class="confirm-dialog-note mt-3">
             <v-icon size="16" color="warning" class="mr-1">mdi-alert</v-icon>

@@ -38,9 +38,9 @@
   width: 100%;
 }
 
-/* Simplified Layout (clickable rows without stall and info columns) */
+/* Simplified Layout (Name, Email, Phone, Address, Date, Status) */
 .simplified-layout {
-  grid-template-columns: 0.8fr 2fr 2.5fr 1.5fr 3fr 2fr;
+  grid-template-columns: 2fr 2fr 1.4fr 2.5fr 1.8fr 1.5fr;
   width: 100%;
 }
 
@@ -215,8 +215,19 @@
   color: #0d47a1;
 }
 
-.action-col {
+.action-col,
+.status-col {
   justify-content: center;
+}
+
+.date-col {
+  justify-content: center;
+  text-align: center;
+}
+
+.table-cell.date-col {
+  font-size: 13px;
+  color: #666;
 }
 
 .action-buttons {
@@ -469,8 +480,8 @@
 
   .header-row,
   .table-row {
-    min-width: 900px;
-    grid-template-columns: 60px 180px 200px 120px 250px 80px 140px;
+    min-width: 1000px;
+    grid-template-columns: 180px 200px 120px 250px 120px 160px;
     gap: 8px;
   }
 

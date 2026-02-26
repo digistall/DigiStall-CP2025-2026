@@ -1,5 +1,4 @@
 import { createConnection } from '../../config/database.js';
-import { decryptData } from '../../services/encryptionService.js';
 
 /**
  * Staff Activity Log Controller
@@ -80,7 +79,7 @@ export async function getAllStaffActivities(req, res) {
     let connection;
     try {
         let branchId = req.query.branchId;
-        const userType = req.query.userType || req.query.staffType || null;
+        const userType = req.query.userType || null;
         const userId = req.query.userId ? parseInt(req.query.userId) : null;
         const startDate = req.query.startDate || null;
         const endDate = req.query.endDate || null;
@@ -97,53 +96,43 @@ export async function getAllStaffActivities(req, res) {
         });
 
         // If branchId is not explicitly provided in query, use user's branch
-        // For system_administrator and business_owner, we pass null so they can see all branches + null branches.
+        // For system_administrator, if no branchId specified, query all records
         if (!branchId && req.user?.branchId) {
-            // Only force branchId to the user's branch if they are not an admin/owner
-            if (req.user.userType !== 'system_administrator' && req.user.userType !== 'business_owner') {
-                branchId = req.user.branchId;
-            } else {
-                branchId = null; // Let them see everything
-            }
+            branchId = req.user.branchId;
         }
 
         connection = await createConnection();
 
-        // Use stored procedure to handle schema mappings correctly
-        const [rows] = await connection.execute(
-            'CALL sp_getAllStaffActivities(?, ?, ?, ?, ?, ?, ?)',
-            [
-                branchId || null,
-                userType || null,
-                userId || null,
-                startDate || null,
-                endDate || null,
-                limit,
-                offset
-            ]
-        );
-        let activities = rows[0];
-
-        // Decrypt the staff names that was joined from the DB
-        activities = activities.map(activity => {
-            if (activity.staff_name && activity.staff_name !== 'Unknown') {
-                 try {
-                     // Always split by space first to handle multi-part encrypted names (e.g. "First Last")
-                     const nameParts = activity.staff_name.split(' ');
-                     const decryptedParts = nameParts.map(part => {
-                         // Only decrypt if it looks like encrypted data (contains colons)
-                         if (part.includes(':')) {
-                             return decryptData(part);
-                         }
-                         return part;
-                     });
-                     activity.staff_name = decryptedParts.join(' ').trim();
-                 } catch (e) {
-                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
-                 }
-            }
-            return activity;
-        });
+        // Build direct SQL query instead of using stored procedure
+        // since the stored procedure might not exist
+        let query = 'SELECT * FROM staff_activity_log WHERE 1=1';
+        const params = [];
+        
+        if (branchId) {
+            query += ' AND branch_id = ?';
+            params.push(branchId);
+        }
+        if (userType) {
+            query += ' AND user_type = ?';
+            params.push(userType);
+        }
+        if (userId) {
+            query += ' AND user_id = ?';
+            params.push(userId);
+        }
+        if (startDate) {
+            query += ' AND created_at >= ?';
+            params.push(startDate);
+        }
+        if (endDate) {
+            query += ' AND created_at <= ?';
+            params.push(endDate);
+        }
+        
+        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+        
+        const [activities] = await connection.execute(query, params);
 
         // Get total count
         let countQuery = 'SELECT COUNT(*) as total FROM staff_activity_log WHERE 1=1';
@@ -215,25 +204,7 @@ export async function getStaffActivityById(req, res) {
             'CALL sp_getStaffActivityById(?, ?, ?, ?)',
             [staffType, parseInt(staffId), limit, offset]
         );
-        let activities = rows[0];
-
-        // Decrypt the staff names that was joined from the DB
-        activities = activities.map(activity => {
-            if (activity.staff_name && activity.staff_name !== 'Unknown') {
-                 try {
-                     if (activity.staff_name.includes(':')) {
-                         activity.staff_name = decryptData(activity.staff_name);
-                     } else {
-                         const nameParts = activity.staff_name.split(' ');
-                         const decryptedParts = nameParts.map(part => decryptData(part));
-                         activity.staff_name = decryptedParts.join(' ').trim();
-                     }
-                 } catch (e) {
-                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
-                 }
-            }
-            return activity;
-        });
+        const activities = rows[0];
 
         // Get count using stored procedure
         const [countRows] = await connection.execute(
@@ -387,12 +358,14 @@ export function activityLogMiddleware(actionType, module) {
         res.json = async function(data) {
             // Log the activity after response is sent
             if (req.user) {
-                const staffType = req.user.userType;
+                const staffType = req.user.userType === 'business_employee' ? 'web_employee' : 
+                                 req.user.staffType || req.user.userType;
                 
                 await logStaffActivity({
-                    staffType: staffType,
-                    staffId: req.user.userId || req.user.staffId || req.user.id,
-                    staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}` || 'System',
+                    staffType: staffType === 'inspector' ? 'inspector' : 
+                              staffType === 'collector' ? 'collector' : 'web_employee',
+                    staffId: req.user.userId || req.user.staffId,
+                    staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}`,
                     branchId: req.user.branchId,
                     actionType: actionType,
                     actionDescription: `${req.method} ${req.originalUrl}`,

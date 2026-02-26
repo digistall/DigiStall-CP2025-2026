@@ -1,6 +1,5 @@
 import express from 'express'
 import authMiddleware from '../middleware/auth.js'
-import { activityLogMiddleware } from '../SHARE-CONTROLLER/activityLog/staffActivityLogController.js'
 import {
   getAllApplicants,
   getApplicantById,
@@ -61,16 +60,16 @@ router.get('/my-stall-applicants', getApplicantsByBranchManager)
 router.get('/:id', getApplicantById)
 
 // Update applicant status (for Vue.js management system)
-router.put('/:id/status', activityLogMiddleware('UPDATE', 'Applicants'), updateApplicantStatus)
+router.put('/:id/status', updateApplicantStatus)
 
 // Approval route - this creates credentials in the credential table for mobile app
-router.put('/:id/approve', activityLogMiddleware('APPROVE', 'Applicants'), approveApplicant)
+router.put('/:id/approve', approveApplicant)
 
 // Decline applicant
-router.put('/:id/decline', activityLogMiddleware('DECLINE', 'Applicants'), declineApplicant)
+router.put('/:id/decline', declineApplicant)
 
 // Delete applicant (for auto-cleanup of expired rejected applicants)
-router.delete('/:id', activityLogMiddleware('DELETE', 'Applicants'), deleteApplicant)
+router.delete('/:id', deleteApplicant)
 
 // Auto-cleanup routes
 router.post('/cleanup/auto', autoCleanupApplicants)    // Automatic cleanup of rejected applicants older than 30 days
