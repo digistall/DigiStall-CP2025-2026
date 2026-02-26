@@ -7,10 +7,12 @@ import {
   Dimensions,
   RefreshControl,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import UserStorageService from "../../../../services/UserStorageService";
+import ApiService from "../../../../services/ApiService";
 import { useTheme } from "../../../../components/ThemeComponents/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
@@ -19,9 +21,16 @@ const DashboardScreen = ({ onNavigate }) => {
   const { theme, isDark } = useTheme();
   const [userData, setUserData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalStallholders: 0,
+    totalReportsSent: 0,
+    recentReports: []
+  });
 
   useEffect(() => {
     loadUserData();
+    loadDashboardData();
   }, []);
 
   const loadUserData = async () => {
@@ -31,7 +40,34 @@ const DashboardScreen = ({ onNavigate }) => {
       setUserData(data);
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      console.log('📊 Fetching dashboard data...');
+
+      // Fetch stallholders and sent reports in parallel
+      const [stallholdersResult, reportsResult] = await Promise.all([
+        ApiService.getInspectorStallholders(),
+        ApiService.getInspectorSentReports()
+      ]);
+
+      console.log('✅ Stallholders result:', stallholdersResult);
+      console.log('✅ Reports result:', reportsResult);
+
+      // Update dashboard stats
+      setDashboardStats({
+        totalStallholders: stallholdersResult.count || 0,
+        totalReportsSent: reportsResult.count || 0,
+        recentReports: (reportsResult.data || []).slice(0, 5) // Get last 5 reports
+      });
+
+    } catch (error) {
+      console.error('❌ Error loading dashboard data:', error);
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -39,6 +75,7 @@ const DashboardScreen = ({ onNavigate }) => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadUserData();
+    loadDashboardData();
   }, []);
 
   const getInspectorName = () => {
@@ -90,39 +127,44 @@ const DashboardScreen = ({ onNavigate }) => {
     },
   ];
 
-  // Stats cards (mock data for frontend only)
+  // Stats cards with real data
   const statsData = [
     {
-      id: 'total_inspections',
-      title: 'Total Inspections',
-      value: '0',
-      icon: 'checkmark-circle',
+      id: 'total_stallholders',
+      title: 'Total Stallholders',
+      value: loading ? '...' : dashboardStats.totalStallholders.toString(),
+      icon: 'people',
       color: '#10b981',
       bgColor: '#d1fae5',
     },
     {
-      id: 'pending_reports',
-      title: 'Pending Reports',
-      value: '0',
+      id: 'reports_sent',
+      title: 'Reports Sent',
+      value: loading ? '...' : dashboardStats.totalReportsSent.toString(),
+      icon: 'document-text',
+      color: '#3b82f6',
+      bgColor: '#dbeafe',
+    },
+    {
+      id: 'pending_reviews',
+      title: 'Pending Reviews',
+      value: loading ? '...' : '0',
       icon: 'time',
       color: '#f59e0b',
       bgColor: '#fef3c7',
     },
     {
-      id: 'violations_filed',
-      title: 'Violations Filed',
-      value: '0',
-      icon: 'warning',
-      color: '#ef4444',
-      bgColor: '#fee2e2',
-    },
-    {
-      id: 'resolved',
-      title: 'Resolved',
-      value: '0',
-      icon: 'checkmark-done',
-      color: '#3b82f6',
-      bgColor: '#dbeafe',
+      id: 'this_month',
+      title: 'This Month',
+      value: loading ? '...' : dashboardStats.recentReports.filter(r => {
+        const reportDate = new Date(r.report_date || r.created_at);
+        const now = new Date();
+        return reportDate.getMonth() === now.getMonth() && 
+               reportDate.getFullYear() === now.getFullYear();
+      }).length.toString(),
+      icon: 'calendar',
+      color: '#8b5cf6',
+      bgColor: '#ede9fe',
     },
   ];
 
@@ -203,15 +245,61 @@ const DashboardScreen = ({ onNavigate }) => {
       {/* Recent Activity Section */}
       <View style={[styles.sectionContainer, styles.lastSection]}>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Recent Activity</Text>
-        <View style={[styles.emptyActivity, { backgroundColor: theme.colors.card }]}>
-          <Ionicons name="time-outline" size={48} color={theme.colors.textSecondary} />
-          <Text style={[styles.emptyActivityText, { color: theme.colors.textSecondary }]}>
-            No recent activity
-          </Text>
-          <Text style={[styles.emptyActivitySubtext, { color: theme.colors.textSecondary }]}>
-            Your inspection history will appear here
-          </Text>
-        </View>
+        {loading ? (
+          <View style={[styles.loadingContainer, { backgroundColor: theme.colors.card }]}>
+            <ActivityIndicator size="large" color="#f59e0b" />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+              Loading recent reports...
+            </Text>
+          </View>
+        ) : dashboardStats.recentReports.length > 0 ? (
+          <View style={styles.recentReportsContainer}>
+            {dashboardStats.recentReports.map((report, index) => (
+              <View 
+                key={report.report_id || index} 
+                style={[styles.reportCard, { backgroundColor: theme.colors.card }]}
+              >
+                <View style={styles.reportHeader}>
+                  <View style={[styles.reportIconContainer, { 
+                    backgroundColor: report.status === 'resolved' ? '#d1fae5' : '#fef3c7' 
+                  }]}>
+                    <Ionicons 
+                      name={report.status === 'resolved' ? 'checkmark-circle' : 'alert-circle'} 
+                      size={20} 
+                      color={report.status === 'resolved' ? '#10b981' : '#f59e0b'} 
+                    />
+                  </View>
+                  <View style={styles.reportInfo}>
+                    <Text style={[styles.reportTitle, { color: theme.colors.text }]} numberOfLines={1}>
+                      {report.violation_type || 'Violation Report'}
+                    </Text>
+                    <Text style={[styles.reportSubtitle, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                      {report.stallholder_name || `Stallholder #${report.stallholder_id}`}
+                    </Text>
+                  </View>
+                  <View style={styles.reportDate}>
+                    <Text style={[styles.reportDateText, { color: theme.colors.textSecondary }]}>
+                      {new Date(report.report_date || report.created_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={[styles.emptyActivity, { backgroundColor: theme.colors.card }]}>
+            <Ionicons name="time-outline" size={48} color={theme.colors.textSecondary} />
+            <Text style={[styles.emptyActivityText, { color: theme.colors.textSecondary }]}>
+              No recent activity
+            </Text>
+            <Text style={[styles.emptyActivitySubtext, { color: theme.colors.textSecondary }]}>
+              Your inspection history will appear here
+            </Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -349,6 +437,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 12,
+  },
+  recentReportsContainer: {
+    gap: 12,
+  },
+  reportCard: {
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reportIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  reportInfo: {
+    flex: 1,
+  },
+  reportTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  reportSubtitle: {
+    fontSize: 12,
+  },
+  reportDate: {
+    marginLeft: 8,
+  },
+  reportDateText: {
+    fontSize: 11,
   },
 });
 

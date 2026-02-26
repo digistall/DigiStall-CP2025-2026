@@ -9,18 +9,18 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // DigitalOcean Production Server - MUST BE FIRST FOR DEPLOYED APPS
-    // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
-    'http://68.183.154.125:5001',   // Production Backend-Mobile API
-    'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
-    
-    // Local Development - Only works when running on emulator/same network
-    // Move these to top ONLY for local testing with Expo Go
-    'http://192.168.1.101:5001',
-    'http://192.168.1.101:3002',
-    'http://192.168.100.241:3002',
+    // LOCAL DEVELOPMENT - Move these to top for local testing with Expo Go
+    // Your current local IP: 192.168.100.241
+    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
+    'http://192.168.100.241:3002',  // Local Backend-Web API (fallback)
     'http://localhost:5001',        // Only works on emulator
-    'http://localhost:3002',        // Only works on emulator
+    'http://localhost:3002',  
+    'http://localhost:3001',         // Only works on emulator
+    
+    // DigitalOcean Production Server - MOVE TO TOP FOR DEPLOYED APPS
+    // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
+     'http://68.183.154.125:5001',   // Production Backend-Mobile API
+     'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
   ],
   
   // Static file server for images (Apache on port 80)
@@ -71,6 +71,7 @@ export const API_CONFIG = {
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
+    GET_INSPECTOR_SENT_REPORTS: '/api/mobile/inspector/sent-reports',
     
     // Stallholder complaint endpoints
     SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
