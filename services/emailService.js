@@ -1,5 +1,6 @@
 import { createConnection } from '../config/database.js';
 import nodemailer from 'nodemailer';
+import fetch from 'node-fetch';
 
 /**
  * Email Service for Employee Management
