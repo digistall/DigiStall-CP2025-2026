@@ -1,5 +1,10 @@
+import LoadingOverlay from '../../../../../Common/LoadingOverlay/LoadingOverlay.vue'
+
 export default {
   name: 'AddStallholder',
+  components: {
+    LoadingOverlay,
+  },
   props: {
     isVisible: {
       type: Boolean,

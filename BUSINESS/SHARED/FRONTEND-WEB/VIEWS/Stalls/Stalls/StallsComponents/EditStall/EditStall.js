@@ -1,10 +1,12 @@
 import DeleteStall from '../DeleteStall/DeleteStall.vue'
 import { eventBus, EVENTS } from '../../../../../eventBus.js'
+import LoadingOverlay from '../../../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'EditStall',
   components: {
     DeleteStall,
+    LoadingOverlay,
   },
   props: {
     stallData: {

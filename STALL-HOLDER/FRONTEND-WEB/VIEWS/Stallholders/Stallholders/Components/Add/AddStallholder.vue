@@ -92,6 +92,12 @@
           SUBMIT
         </v-btn>
       </v-card-actions>
+
+      <!-- Loading Overlay -->
+      <LoadingOverlay
+        :loading="isSubmitting"
+        text="Adding stallholder... Please wait"
+      />
     </v-card>
   </v-dialog>
 </template>
