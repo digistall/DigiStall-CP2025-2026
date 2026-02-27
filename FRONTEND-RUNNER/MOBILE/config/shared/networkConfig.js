@@ -9,9 +9,9 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // PRODUCTION - DigitalOcean Server (SHOULD BE FIRST for production builds)
-    'http://68.183.154.125:5000',   // Production Backend-Web API (unified endpoint)
-    'http://68.183.154.125:5001',   // Production Backend-Mobile API (if available)
+    // PRODUCTION - DigitalOcean Server (Mobile backend FIRST)
+    'http://68.183.154.125:5001',   // Production Backend-Mobile API (PRIMARY)
+    'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
     
     // LOCAL DEVELOPMENT - Enable these by moving to top while in development
     'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
