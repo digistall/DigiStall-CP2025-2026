@@ -178,7 +178,7 @@ export default {
           updateData.declined_at = new Date().toISOString()
         }
 
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
         const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/status`, {
           method: 'PUT',
           headers: {
@@ -190,20 +190,21 @@ export default {
 
         console.log('📡 Status update response:', response.status)
 
+        const result = await response.json()
+        console.log('📦 Status update result:', result)
+
         if (!response.ok) {
+          console.error('❌ Server error details:', JSON.stringify(result, null, 2))
           if (response.status === 401) {
             throw new Error('Your session has expired. Please log in again.')
           } else if (response.status === 403) {
             throw new Error('You do not have permission to update this applicant.')
           } else if (response.status === 404) {
-            throw new Error('Applicant not found.')
+            throw new Error(result.message || 'Applicant not found.')
           } else {
-            throw new Error(`Server error: ${response.status}`)
+            throw new Error(result.message || result.error || `Server error: ${response.status}`)
           }
         }
-
-        const result = await response.json()
-        console.log('📦 Status update result:', result)
 
         if (result.success) {
           return { success: true, message: 'Status updated successfully' }
@@ -229,7 +230,7 @@ export default {
           throw new Error('Authentication token not found. Please log in again.')
         }
 
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
         const response = await fetch(
           `${apiBaseUrl}/applicants/${applicantId}/decline`,
           {

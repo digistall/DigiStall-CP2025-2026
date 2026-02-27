@@ -150,17 +150,26 @@ export const approveApplicant = async (req, res) => {
       JOIN stall st ON app.stall_id = st.stall_id
       JOIN section sec ON st.section_id = sec.section_id
       JOIN floor f ON sec.floor_id = f.floor_id
-      WHERE app.applicant_id = ? AND app.application_status = 'Pending'
+      WHERE app.applicant_id = ? AND app.application_status IN ('Pending', 'Under Review')
       ORDER BY app.application_date DESC
       LIMIT 1`,
       [id]
     );
 
     if (applicationRows.length === 0) {
+      // Debug: check what status the application actually has
+      const [debugRows] = await connection.execute(
+        `SELECT application_id, application_status, stall_id FROM application WHERE applicant_id = ?`,
+        [id]
+      );
       console.log(`❌ No pending application found for applicant ID ${id}`);
+      console.log(`🔍 DEBUG - All applications for this applicant:`, debugRows);
+      
+      await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: 'No pending application found for this applicant'
+        message: 'No pending application found for this applicant',
+        debug_applications: debugRows
       });
     }
 
@@ -182,15 +191,14 @@ export const approveApplicant = async (req, res) => {
       [applicant.applicant_id, username, passwordHash]
     );
     
-    // 1.5. Also update applicant table with username (email) and encrypted password
+    // 1.5. Update applicant status to approved
     await connection.execute(
       `UPDATE applicant 
-       SET applicant_username = ?, applicant_password = ?, status = 'approved', updated_at = NOW()
+       SET status = 'approved', updated_at = NOW()
        WHERE applicant_id = ?`,
-      [username, encryptedPassword, applicant.applicant_id]
+      [applicant.applicant_id]
     );
-    console.log(`✅ Applicant username (email: ${username}) and encrypted password stored in applicant table`);
-    console.log(`✅ Credentials stored for applicant ${applicant.applicant_id}`);
+    console.log(`✅ Applicant ${applicant.applicant_id} status updated to approved`);
 
     // 2. Update application status to approved
     await connection.execute(
@@ -202,48 +210,73 @@ export const approveApplicant = async (req, res) => {
     console.log(`✅ Application ${application.application_id} status updated to Approved`);
 
     // 3. Create stallholder record with ENCRYPTED data
-    // Parse full name into first and last name
-    const nameParts = applicant.applicant_full_name ? applicant.applicant_full_name.trim().split(' ') : ['Unknown'];
-    const firstName = nameParts[0] || 'Unknown';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    
-    // Encrypt the name parts for storage
-    const encryptedFirstName = ensureEncrypted(firstName);
-    const encryptedLastName = ensureEncrypted(lastName);
-
     console.log(`🔐 Inserting stallholder with encrypted data...`);
-    
-    const [stallholderResult] = await connection.execute(
-      `INSERT INTO stallholder (
-        mobile_user_id,
-        first_name,
-        last_name,
-        email,
-        contact_number,
-        address,
-        stall_id,
-        branch_id,
-        payment_status,
-        status,
-        move_in_date,
-        created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', CURDATE(), NOW())`,
-      [
-        applicant.applicant_id,
-        encryptedFirstName,                 // Use encrypted first name
-        encryptedLastName,                  // Use encrypted last name
-        applicant.encrypted_email,          // Use encrypted email
-        applicant.encrypted_contact,        // Use encrypted contact
-        applicant.encrypted_address,        // Use encrypted address
-        application.stall_id,
-        application.branch_id
-      ]
+
+    // Check if stallholder already exists
+    const [existingStallholder] = await connection.execute(
+      'SELECT stallholder_id FROM stallholder WHERE applicant_id = ?',
+      [applicant.applicant_id]
     );
 
-    const stallholderId = stallholderResult.insertId;
-    console.log(`✅ Stallholder record created with ID: ${stallholderId}`);
+    let stallholderId;
 
-    // 4. Update the stall to mark as occupied (stallholder_id is in stallholder table, not stall table)
+    if (existingStallholder.length > 0) {
+      stallholderId = existingStallholder[0].stallholder_id;
+      console.log('⚠️ Stallholder already exists, updating...');
+      await connection.execute(
+        `UPDATE stallholder SET 
+          full_name = ?,
+          email = ?,
+          contact_number = ?,
+          address = ?,
+          stall_id = ?,
+          branch_id = ?,
+          payment_status = 'unpaid',
+          status = 'active',
+          move_in_date = CURDATE(),
+          updated_at = NOW()
+        WHERE applicant_id = ?`,
+        [
+          applicant.encrypted_name,
+          applicant.encrypted_email,
+          applicant.encrypted_contact,
+          applicant.encrypted_address,
+          application.stall_id,
+          application.branch_id,
+          applicant.applicant_id
+        ]
+      );
+      console.log('✅ Stallholder record updated');
+    } else {
+      const [stallholderResult] = await connection.execute(
+        `INSERT INTO stallholder (
+          applicant_id,
+          full_name,
+          email,
+          contact_number,
+          address,
+          stall_id,
+          branch_id,
+          payment_status,
+          status,
+          compliance_status,
+          move_in_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
+        [
+          applicant.applicant_id,
+          applicant.encrypted_name,
+          applicant.encrypted_email,
+          applicant.encrypted_contact,
+          applicant.encrypted_address,
+          application.stall_id,
+          application.branch_id
+        ]
+      );
+      stallholderId = stallholderResult.insertId;
+      console.log(`✅ Stallholder record created with ID: ${stallholderId}`);
+    }
+
+    // 4. Update the stall to mark as occupied
     await connection.execute(
       `UPDATE stall 
        SET is_available = 0, status = 'Occupied', updated_at = NOW()
@@ -256,14 +289,14 @@ export const approveApplicant = async (req, res) => {
     await connection.execute(
       `UPDATE application 
        SET application_status = 'Rejected', updated_at = NOW()
-       WHERE stall_id = ? AND application_id != ? AND application_status = 'Pending'`,
+       WHERE stall_id = ? AND application_id != ? AND application_status IN ('Pending', 'Under Review')`,
       [application.stall_id, application.application_id]
     );
     console.log(`✅ Other pending applications for stall ${application.stall_id} rejected`);
 
     await connection.commit();
 
-    console.log(`✅ Applicant ${applicant.applicant_full_name} approved successfully with credentials and stall ownership`);
+    console.log(`✅ Applicant ${applicant.applicant_full_name} approved successfully`);
 
     res.json({
       success: true,

@@ -1,0 +1,38 @@
+# Ignore files for EAS Build
+.expo/
+.expo-shared/
+node_modules/
+dist/
+docs/
+android/
+ios/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Development files
+*.log
+*.lock
+.DS_Store
+.vscode/
+.idea/
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+
+# Scripts
+scripts/
+fix-expo-metro.ps1
+
+# Old/backup files
+**/*_Old.js
+**/*_old.js
+**/*.backup
+**/*.bak
+package.json.sdk53.backup
+build-inspect/

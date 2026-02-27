@@ -1,7 +1,11 @@
 import { eventBus, EVENTS } from '../../../../../eventBus.js'
+import LoadingOverlay from '../../../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'AddAvailableStall',
+  components: {
+    LoadingOverlay,
+  },
   props: {
     showModal: {
       type: Boolean,
@@ -82,7 +86,7 @@ export default {
       loading: false,
       lastAddedStall: null, // Store the last added stall data for real-time updates
       // API base URL
-      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+      apiBaseUrl: import.meta.env.VITE_API_URL || '/api',
     }
   },
 

@@ -2,10 +2,10 @@
 import emailjs from '@emailjs/browser';
 
 // EmailJS Configuration - reusing the same service as applicants
-const EMAILJS_SERVICE_ID = 'service_e2awvdk';
-const EMAILJS_APPROVE_TEMPLATE_ID = 'template_r6kxcnh';
-const EMAILJS_PUBLIC_KEY = 'sTpDE-Oq2-9XH_UZd';
-const SENDER_EMAIL = 'requiem121701@gmail.com';
+const EMAILJS_SERVICE_ID = 'service_am6pozg';
+const EMAILJS_APPROVE_TEMPLATE_ID = 'template_3wccajf';
+const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FjatviG';
+const SENDER_EMAIL = 'digistall@unc.edu.ph';
 const SENDER_NAME = 'Naga Stall Management System';
 
 let isInitialized = false;
