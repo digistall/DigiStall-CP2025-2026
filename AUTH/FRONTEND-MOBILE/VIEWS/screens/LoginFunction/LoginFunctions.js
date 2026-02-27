@@ -218,9 +218,32 @@ export const handleLogin = async (
   }
 };
 
-export const handleForgotPassword = (setErrorModal) => {
+export const handleForgotPassword = (arg1, arg2) => {
+  // Backwards-compatible handler.
+  // If called with navigation first: handleForgotPassword(navigation, setErrorModal?)
+  // Otherwise: handleForgotPassword(setErrorModal)
   console.log('Forgot password pressed');
-  
+
+  let navigation = null;
+  let setErrorModal = null;
+
+  if (arg1 && typeof arg1 === 'object' && typeof arg1.navigate === 'function') {
+    navigation = arg1;
+    setErrorModal = arg2;
+  } else {
+    setErrorModal = arg1;
+  }
+
+  try {
+    if (navigation) {
+      navigation.navigate('ForgotPasswordScreen');
+      return;
+    }
+  } catch (navErr) {
+    console.error('Navigation error:', navErr);
+  }
+
+  // Fallback: show informational modal when navigation isn't available
   if (setErrorModal) {
     setErrorModal({
       visible: true,
