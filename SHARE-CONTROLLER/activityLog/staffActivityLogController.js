@@ -78,31 +78,91 @@ export async function logStaffActivity(activityData) {
 export async function getAllStaffActivities(req, res) {
     let connection;
     try {
-        const branchId = req.query.branchId || req.user?.branchId || null;
-        const staffType = req.query.staffType || null;
-        const staffId = req.query.staffId ? parseInt(req.query.staffId) : null;
+        let branchId = req.query.branchId;
+        const userType = req.query.userType || null;
+        const userId = req.query.userId ? parseInt(req.query.userId) : null;
         const startDate = req.query.startDate || null;
         const endDate = req.query.endDate || null;
         const limit = parseInt(req.query.limit) || 100;
         const offset = parseInt(req.query.offset) || 0;
 
+        // Debug: Log the request details
+        console.log('📋 Activity log request:', {
+            userType: req.user?.userType,
+            userBranchId: req.user?.branchId,
+            queryBranchId: req.query.branchId,
+            filterUserType: userType,
+            filterUserId: userId
+        });
+
+        // If branchId is not explicitly provided in query, use user's branch
+        // For system_administrator, if no branchId specified, query all records
+        if (!branchId && req.user?.branchId) {
+            branchId = req.user.branchId;
+        }
+
         connection = await createConnection();
 
-        // Use stored procedure for getting activities
-        const [rows] = await connection.execute(
-            'CALL sp_getAllStaffActivities(?, ?, ?, ?, ?, ?, ?)',
-            [branchId, staffType, staffId, startDate, endDate, limit, offset]
-        );
-        const activities = rows[0];
+        // Build direct SQL query instead of using stored procedure
+        // since the stored procedure might not exist
+        let query = 'SELECT * FROM staff_activity_log WHERE 1=1';
+        const params = [];
+        
+        if (branchId) {
+            query += ' AND branch_id = ?';
+            params.push(branchId);
+        }
+        if (userType) {
+            query += ' AND user_type = ?';
+            params.push(userType);
+        }
+        if (userId) {
+            query += ' AND user_id = ?';
+            params.push(userId);
+        }
+        if (startDate) {
+            query += ' AND created_at >= ?';
+            params.push(startDate);
+        }
+        if (endDate) {
+            query += ' AND created_at <= ?';
+            params.push(endDate);
+        }
+        
+        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+        
+        const [activities] = await connection.execute(query, params);
 
-        // Get total count using stored procedure
-        const [countRows] = await connection.execute(
-            'CALL sp_countStaffActivities(?, ?, ?, ?, ?)',
-            [branchId, staffType, staffId, startDate, endDate]
-        );
-        const total = countRows[0][0].total;
+        // Get total count
+        let countQuery = 'SELECT COUNT(*) as total FROM staff_activity_log WHERE 1=1';
+        const countParams = [];
+        
+        if (branchId) {
+            countQuery += ' AND branch_id = ?';
+            countParams.push(branchId);
+        }
+        if (userType) {
+            countQuery += ' AND user_type = ?';
+            countParams.push(userType);
+        }
+        if (userId) {
+            countQuery += ' AND user_id = ?';
+            countParams.push(userId);
+        }
+        if (startDate) {
+            countQuery += ' AND created_at >= ?';
+            countParams.push(startDate);
+        }
+        if (endDate) {
+            countQuery += ' AND created_at <= ?';
+            countParams.push(endDate);
+        }
+        
+        const [countResult] = await connection.execute(countQuery, countParams);
+        const total = countResult[0].total;
 
-        console.log(`✅ Found ${activities.length} activity logs`);
+        console.log(`✅ Found ${activities.length} activity logs for branch ${branchId}`);
 
         res.json({
             success: true,

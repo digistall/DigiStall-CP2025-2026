@@ -1,10 +1,12 @@
 import apiClient from '@/services/apiClient'
 import ToastNotification from '../../../../Common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '../../../../../../BUSINESS/SHARED/FRONTEND-WEB/VIEWS/Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'AddStallholder',
   components: {
-    ToastNotification
+    ToastNotification,
+    LoadingOverlay
   },
   props: {
     isVisible: {

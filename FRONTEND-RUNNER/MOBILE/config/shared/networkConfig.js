@@ -9,18 +9,14 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // DigitalOcean Production Server - MUST BE FIRST FOR DEPLOYED APPS
-    // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
-    'http://68.183.154.125:5001',   // Production Backend-Mobile API
-    'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
+    // PRODUCTION - DigitalOcean Server (SHOULD BE FIRST for production builds)
+    'http://68.183.154.125:5000',   // Production Backend-Web API (unified endpoint)
+    'http://68.183.154.125:5001',   // Production Backend-Mobile API (if available)
     
-    // Local Development - Only works when running on emulator/same network
-    // Move these to top ONLY for local testing with Expo Go
-    'http://192.168.1.101:5001',
-    'http://192.168.1.101:3002',
-    'http://192.168.100.241:3002',
-    'http://localhost:5001',        // Only works on emulator
-    'http://localhost:3002',        // Only works on emulator
+    // LOCAL DEVELOPMENT - Enable these by moving to top while in development
+    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
+    'http://192.168.100.241:3001',  // Local Backend API (alternative)
+    'http://localhost:3001',        // Only works on emulator
   ],
   
   // Static file server for images (Apache on port 80)
@@ -42,6 +38,12 @@ export const API_CONFIG = {
     STAFF_HEARTBEAT: '/api/mobile/auth/staff-heartbeat',
     STAFF_AUTO_LOGOUT: '/api/mobile/auth/staff-auto-logout',
     CHANGE_PASSWORD: '/api/mobile/auth/change-password',
+    
+    // Forgot Password / Password Reset endpoints (using unified auth endpoints)
+    FORGOT_PASSWORD_VERIFY_EMAIL: '/api/auth/verify-email-exists',
+    FORGOT_PASSWORD_SEND_CODE: '/api/auth/resend-reset-code',  // Generates code, sends via email, and stores
+    FORGOT_PASSWORD_VERIFY_CODE: '/api/auth/verify-reset-code',
+    FORGOT_PASSWORD_RESET: '/api/auth/reset-password',
     
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
@@ -71,6 +73,7 @@ export const API_CONFIG = {
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
+    GET_INSPECTOR_SENT_REPORTS: '/api/mobile/inspector/sent-reports',
     
     // Stallholder complaint endpoints
     SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',

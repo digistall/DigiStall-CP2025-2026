@@ -104,7 +104,7 @@ export const updateApplicantStatus = async (req, res) => {
         app.application_status,
         app.stall_id,
         s.rental_price,
-        s.stall_no,
+        s.stall_number,
         sec.section_id,
         f.floor_id,
         b.branch_id
@@ -394,7 +394,7 @@ export const updateApplicantStatus = async (req, res) => {
         responseData.mobile_password = finalPassword; // Return the actual password for email
         responseData.stallholder_created = true;
         responseData.stall_id = applicant.stall_id;
-        responseData.stall_no = applicant.stall_no;
+        responseData.stall_no = applicant.stall_number;
       }
 
       res.json({

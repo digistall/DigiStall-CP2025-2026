@@ -263,6 +263,12 @@
             {{ uploadingImages ? 'Uploading Images...' : 'Update Stall' }}
           </v-btn>
         </v-card-actions>
+
+        <!-- Loading Overlay -->
+        <LoadingOverlay
+          :loading="loading || uploadingImages"
+          text="Updating stall... Please wait"
+        />
       </v-card>
 
       <!-- Delete Stall Component -->

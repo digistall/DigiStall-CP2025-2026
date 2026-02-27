@@ -10,6 +10,7 @@ import { createConnection } from '../../config/database.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { decryptData } from '../../services/encryptionService.js';
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
@@ -228,13 +229,16 @@ export const login = async (req, res) => {
       }
     }
     
-    // Create JWT token payload
+    // Create JWT token payload with decrypted names
+    const decryptedFirstName = decryptData(user.first_name);
+    const decryptedLastName = decryptData(user.last_name);
+
     const tokenPayload = {
       userId: user[userIdField],
       userType: userType.toLowerCase(),
       email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
+      firstName: decryptedFirstName,
+      lastName: decryptedLastName,
       branchId: user.branch_id || null,
       permissions: additionalUserInfo.permissions || null,
       role: userType.toLowerCase() // For backward compatibility
@@ -628,10 +632,14 @@ export const logout = async (req, res) => {
                 case 'employee':
                   {
                     const [nameResult] = await connection.execute(
-                      'SELECT CONCAT(first_name, " ", last_name) as name FROM business_employee WHERE business_employee_id = ?', 
+                      'SELECT first_name, last_name FROM business_employee WHERE business_employee_id = ?', 
                       [userId]
                     );
-                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                    if (nameResult[0] && nameResult[0].first_name) {
+                        const firstName = decryptData(nameResult[0].first_name);
+                        const lastName = decryptData(nameResult[0].last_name);
+                        staffName = `${firstName} ${lastName}`;
+                    }
                   }
                   break;
                 case 'business_manager':
@@ -639,10 +647,14 @@ export const logout = async (req, res) => {
                 case 'manager':
                   {
                     const [nameResult] = await connection.execute(
-                      'SELECT CONCAT(first_name, " ", last_name) as name FROM business_manager WHERE business_manager_id = ?', 
+                      'SELECT first_name, last_name FROM business_manager WHERE business_manager_id = ?', 
                       [userId]
                     );
-                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                    if (nameResult[0] && nameResult[0].first_name) {
+                        const firstName = decryptData(nameResult[0].first_name);
+                        const lastName = decryptData(nameResult[0].last_name);
+                        staffName = `${firstName} ${lastName}`;
+                    }
                   }
                   break;
                 case 'stall_business_owner':
@@ -650,10 +662,14 @@ export const logout = async (req, res) => {
                 case 'owner':
                   {
                     const [nameResult] = await connection.execute(
-                      'SELECT CONCAT(first_name, " ", last_name) as name FROM stall_business_owner WHERE business_owner_id = ?', 
+                      'SELECT first_name, last_name FROM stall_business_owner WHERE business_owner_id = ?', 
                       [userId]
                     );
-                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                    if (nameResult[0] && nameResult[0].first_name) {
+                        const firstName = decryptData(nameResult[0].first_name);
+                        const lastName = decryptData(nameResult[0].last_name);
+                        staffName = `${firstName} ${lastName}`;
+                    }
                   }
                   break;
                 case 'system_administrator':
@@ -661,10 +677,14 @@ export const logout = async (req, res) => {
                 case 'system_admin':
                   {
                     const [nameResult] = await connection.execute(
-                      'SELECT CONCAT(first_name, " ", last_name) as name FROM system_administrator WHERE system_admin_id = ?', 
+                      'SELECT first_name, last_name FROM system_administrator WHERE system_admin_id = ?', 
                       [userId]
                     );
-                    if (nameResult[0]?.name) staffName = nameResult[0].name;
+                    if (nameResult[0] && nameResult[0].first_name) {
+                        const firstName = decryptData(nameResult[0].first_name);
+                        const lastName = decryptData(nameResult[0].last_name);
+                        staffName = `${firstName} ${lastName}`;
+                    }
                   }
                   break;
               }
