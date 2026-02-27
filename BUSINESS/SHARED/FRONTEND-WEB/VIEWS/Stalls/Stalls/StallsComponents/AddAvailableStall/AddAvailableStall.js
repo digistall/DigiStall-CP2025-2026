@@ -1,7 +1,11 @@
 import { eventBus, EVENTS } from '../../../../../eventBus.js'
+import LoadingOverlay from "../../../../Common/LoadingOverlay/LoadingOverlay.vue";
 
 export default {
   name: 'AddAvailableStall',
+  components: {
+    LoadingOverlay,
+  },
   props: {
     showModal: {
       type: Boolean,

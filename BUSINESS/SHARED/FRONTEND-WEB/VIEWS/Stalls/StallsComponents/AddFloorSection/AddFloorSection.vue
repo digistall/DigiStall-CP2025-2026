@@ -131,6 +131,12 @@
                         </v-window-item>
                     </v-window>
                 </v-card-text>
+
+                <!-- Loading Overlay -->
+                <LoadingOverlay
+                  :loading="loading"
+                  text="Adding floor/section... Please wait"
+                />
             </v-card>
         </v-dialog>
     </div>

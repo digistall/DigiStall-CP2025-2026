@@ -268,6 +268,12 @@
             Add Stall
           </v-btn>
         </v-card-actions>
+
+        <!-- Loading Overlay -->
+        <LoadingOverlay
+          :loading="loading"
+          text="Adding stall... Please wait"
+        />
       </v-card>
     </v-dialog>
   </div>

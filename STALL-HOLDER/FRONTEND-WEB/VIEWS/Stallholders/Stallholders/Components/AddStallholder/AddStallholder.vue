@@ -309,6 +309,12 @@
           Add Stallholder
         </v-btn>
       </v-card-actions>
+
+      <!-- Loading Overlay -->
+      <LoadingOverlay
+        :loading="saving"
+        text="Adding stallholder... Please wait"
+      />
     </v-card>
 
     <!-- Toast Notification -->
