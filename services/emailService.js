@@ -231,6 +231,51 @@ Note: You may need to enable "Install from unknown sources" in your Android devi
         }
     }
 
+        /**
+         * Send password reset verification code (for forgot-password flow)
+         * @param {{email: string, userName: string, verificationCode: string, expiryMinutes: number}} data
+         */
+        async sendPasswordResetCodeEmail(data) {
+            try {
+                const { email, userName, verificationCode, expiryMinutes = 10 } = data;
+
+                const subject = 'DigiStall Password Reset Code';
+
+                const textContent = `Hello ${userName || 'User'},\n\n` +
+                    `You requested a password reset. Use the following verification code to reset your password:\n\n` +
+                    `Verification Code: ${verificationCode}\n\n` +
+                    `This code will expire in ${expiryMinutes} minutes. If you did not request this, please ignore this email.\n\n` +
+                    `Thanks,\nDigiStall Team`;
+
+                const htmlContent = `
+                    <div style="font-family: Arial, sans-serif; max-width:600px;">
+                        <h2>Password Reset Code</h2>
+                        <p>Hello ${userName || 'User'},</p>
+                        <p>Use the code below to reset your password. This code will expire in <strong>${expiryMinutes} minutes</strong>.</p>
+                        <div style="background:#f5f5f5;padding:16px;border-radius:6px;margin:16px 0;font-family:monospace;font-size:20px;text-align:center;">${verificationCode}</div>
+                        <p>If you did not request this, please ignore this email.</p>
+                        <p>Thanks,<br/>DigiStall Team</p>
+                    </div>
+                `;
+
+                const mailOptions = {
+                    from: `"${this.fromName}" <${this.fromEmail}>`,
+                    to: email,
+                    subject: subject,
+                    text: this.addMobileAppLink(textContent, false),
+                    html: this.addMobileAppLink(htmlContent, true)
+                };
+
+                const result = await this.transporter.sendMail(mailOptions);
+
+                console.log(`✅ Password reset code email sent to ${email}`);
+                return { success: true, messageId: result.messageId, recipient: email };
+            } catch (error) {
+                console.error('Error sending password reset code email:', error);
+                throw error;
+            }
+        }
+
     /**
      * Send custom notification email to employee
      */
