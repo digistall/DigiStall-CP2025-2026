@@ -9,9 +9,12 @@ export const API_CONFIG = {
   // For PRODUCTION builds, the DigitalOcean server should be FIRST
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
-    // LOCAL DEVELOPMENT - at top while production is being updated
-    'http://192.168.100.100:3001',  // Local Backend API
+    // LOCAL DEVELOPMENT - at top while in development
+  
+    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
+    'http://192.168.100.241:3001',  // Local Backend API (alternative)
     'http://localhost:3001',        // Only works on emulator
+
     // DigitalOcean Production Server (restore to top after redeploying)
     'http://68.183.154.125:5001',   // Production Backend-Mobile API
     'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
@@ -37,12 +40,6 @@ export const API_CONFIG = {
     STAFF_AUTO_LOGOUT: '/api/mobile/auth/staff-auto-logout',
     CHANGE_PASSWORD: '/api/mobile/auth/change-password',
     
-    // Forgot Password (Password Reset) endpoints
-    FORGOT_PASSWORD_VERIFY_EMAIL: '/api/mobile/auth/verify-email-exists', // Checks if email exists
-    FORGOT_PASSWORD_SEND_CODE: '/api/mobile/auth/send-reset-code',         // Sends OTP via Nodemailer
-    FORGOT_PASSWORD_VERIFY_CODE: '/api/mobile/auth/verify-reset-code',    // Verifies entered OTP
-    FORGOT_PASSWORD_RESET: '/api/mobile/auth/reset-password',              // Resets password
-
     // Stall endpoints
     GET_ALL_STALLS: '/api/mobile/stalls',
     GET_STALLS_BY_TYPE: '/api/mobile/stalls/type',
@@ -71,6 +68,7 @@ export const API_CONFIG = {
     GET_VIOLATION_TYPES: '/api/mobile/inspector/violations',
     SUBMIT_VIOLATION_REPORT: '/api/mobile/inspector/report',
     SUBMIT_VIOLATION_REPORT_WITH_PHOTOS: '/api/mobile/inspector/report-with-photos',
+    GET_INSPECTOR_SENT_REPORTS: '/api/mobile/inspector/sent-reports',
     
     // Stallholder complaint endpoints
     SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
@@ -238,5 +236,7 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
 // });
 
 console.log('📱 Mobile Network Config Loaded');
+console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
+console.log('🔗 Login endpoint:', `${API_CONFIG.BASE_URL}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);
 console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
 console.log('🔗 Login endpoint:', `${API_CONFIG.BASE_URL}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);

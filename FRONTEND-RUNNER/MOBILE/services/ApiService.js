@@ -1986,7 +1986,7 @@ class ApiService {
         throw new Error('Authentication token not found');
       }
       
-      const url = `${server}/api/mobile/inspector/sent-reports`;
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_INSPECTOR_SENT_REPORTS}`;
       console.log('🔄 Fetching inspector sent reports from:', url);
       
       const response = await fetch(url, {
