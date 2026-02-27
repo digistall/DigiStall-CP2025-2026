@@ -489,7 +489,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
                     {violation.description}
                   </Text>
                   <Text style={[styles.penaltyAmount, { color: '#f59e0b' }]}>
-                    Penalty: Γé▒{parseFloat(violation.default_penalty).toFixed(2)}
+                    Penalty: ₱{parseFloat(violation.default_penalty).toFixed(2)}
                   </Text>
                 </View>
               </View>

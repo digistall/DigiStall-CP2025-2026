@@ -32,6 +32,10 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://68.183.154.125}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://68.183.154.125,http://localhost}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-DigiStall2025SecureKeyForEncryption123}
+      # EmailJS Configuration (for forgot password emails)
+      EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID:-}
+      EMAILJS_TEMPLATE_ID: ${EMAILJS_TEMPLATE_ID:-}
+      EMAILJS_PUBLIC_KEY: ${EMAILJS_PUBLIC_KEY:-}
       # Upload directories
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
@@ -75,6 +79,10 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-DigiStall2025SecureKeyForEncryption123}
+      # EmailJS Configuration (for forgot password emails)
+      EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID:-}
+      EMAILJS_TEMPLATE_ID: ${EMAILJS_TEMPLATE_ID:-}
+      EMAILJS_PUBLIC_KEY: ${EMAILJS_PUBLIC_KEY:-}
       # Upload directories
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
