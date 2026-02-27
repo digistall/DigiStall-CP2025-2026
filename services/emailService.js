@@ -238,9 +238,43 @@ Note: You may need to enable "Install from unknown sources" in your Android devi
         async sendPasswordResetCodeEmail(data) {
             try {
                 const { email, userName, verificationCode, expiryMinutes = 10 } = data;
-
                 const subject = 'DigiStall Password Reset Code';
 
+                // If EmailJS is configured (same template used by web), prefer sending via EmailJS
+                if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process.env.EMAILJS_PUBLIC_KEY) {
+                    try {
+                        const payload = {
+                            service_id: process.env.EMAILJS_SERVICE_ID,
+                            template_id: process.env.EMAILJS_TEMPLATE_ID,
+                            user_id: process.env.EMAILJS_PUBLIC_KEY,
+                            template_params: {
+                                user_name: userName || 'User',
+                                to_email: email,
+                                verification_code: verificationCode,
+                                expiry_minutes: expiryMinutes
+                            }
+                        };
+
+                        const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!res.ok) {
+                            const body = await res.text();
+                            throw new Error(`EmailJS send failed: ${res.status} ${body}`);
+                        }
+
+                        console.log(`✅ Password reset code email sent via EmailJS to ${email}`);
+                        return { success: true, via: 'emailjs', recipient: email };
+                    } catch (err) {
+                        console.warn('EmailJS send failed, falling back to transporter:', err.message);
+                        // continue to transporter fallback
+                    }
+                }
+
+                // Fallback: send using configured transporter (SMTP or dev logger)
                 const textContent = `Hello ${userName || 'User'},\n\n` +
                     `You requested a password reset. Use the following verification code to reset your password:\n\n` +
                     `Verification Code: ${verificationCode}\n\n` +
