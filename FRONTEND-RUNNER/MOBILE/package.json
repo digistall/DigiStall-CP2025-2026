@@ -11,6 +11,7 @@
     "network-setup": "node scripts/find-ip.js"
   },
   "dependencies": {
+    "@emailjs/react-native": "^0.3.1",
     "@expo/metro-runtime": "~5.0.5",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-picker/picker": "2.11.1",
