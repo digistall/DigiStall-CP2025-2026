@@ -113,11 +113,11 @@ export async function getAllStaffActivities(req, res) {
             params.push(branchId);
         }
         if (userType) {
-            query += ' AND user_type = ?';
+            query += ' AND staff_type = ?';
             params.push(userType);
         }
         if (userId) {
-            query += ' AND user_id = ?';
+            query += ' AND staff_id = ?';
             params.push(userId);
         }
         if (startDate) {
@@ -143,11 +143,11 @@ export async function getAllStaffActivities(req, res) {
             countParams.push(branchId);
         }
         if (userType) {
-            countQuery += ' AND user_type = ?';
+            countQuery += ' AND staff_type = ?';
             countParams.push(userType);
         }
         if (userId) {
-            countQuery += ' AND user_id = ?';
+            countQuery += ' AND staff_id = ?';
             countParams.push(userId);
         }
         if (startDate) {
