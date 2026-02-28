@@ -20,20 +20,26 @@ const generateVerificationCode = () => {
 
 /**
  * Send email via EmailJS (client-side)
+ * Uses the "Approve Account" template which expects:
+ *   {{to_email}} – recipient email address
+ *   {{name}}     – sender / system name
+ *   {{message}}  – the email body content
  */
 const sendEmailViaEmailJS = async (email, userName, verificationCode) => {
   try {
     const templateParams = {
       to_email: email,
-      user_name: userName,
-      verification_code: verificationCode,
-      expiry_minutes: 10
+      name: userName || 'DigiStall',
+      message: `Your password reset code is: ${verificationCode}\n\nThis code will expire in 10 minutes. If you did not request a password reset, please ignore this message.`,
     };
+
+    console.log('📧 Sending EmailJS with params:', { to_email: email, name: templateParams.name });
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost', // Required for EmailJS from non-browser environments
       },
       body: JSON.stringify({
         service_id: EMAILJS_SERVICE_ID,
@@ -48,6 +54,7 @@ const sendEmailViaEmailJS = async (email, userName, verificationCode) => {
       throw new Error(`EmailJS error: ${response.status} ${errorText}`);
     }
 
+    console.log('✅ EmailJS sent successfully');
     return { success: true };
   } catch (error) {
     console.error('❌ EmailJS send failed:', error);
