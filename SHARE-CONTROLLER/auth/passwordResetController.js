@@ -82,7 +82,7 @@ const userTypes = [
   },
   {
     // Mobile stallholders/applicants — email in applicant.applicant_email,
-    // password (bcrypt) in credential.password_hash, linked by registrationid
+    // password (bcrypt) in credential.password_hash, linked by credential_id
     // NOTE: applicant_email is AES-256-GCM encrypted (non-deterministic), so
     //       the stored procedure cannot find by plain email. We use a direct
     //       query + Node.js-level decryption instead (see findApplicantByEmail).
@@ -91,7 +91,7 @@ const userTypes = [
     idField: 'applicant_id',
     passwordField: 'password_hash',        // in credential table, not applicant
     updateTable: 'credential',             // UPDATE credential SET password_hash
-    updateIdField: 'registrationid',       // WHERE registrationid = ?
+    updateIdField: 'credential_id',        // WHERE credential_id = ?
     nameFields: ['applicant_full_name'],   // single combined name field
     useBcrypt: true                        // flag: hash with bcrypt, not AES encrypt
   }
@@ -583,9 +583,9 @@ export const resetPassword = async (req, res) => {
 
     if (foundConfig.useBcrypt) {
       // Mobile applicants/stallholders use bcrypt in the credential table
-      // Must look up registrationid from credential table via applicant_id
+      // Must look up credential_id from credential table via applicant_id
       const [credRows] = await connection.execute(
-        'SELECT registrationid FROM credential WHERE applicant_id = ? LIMIT 1',
+        'SELECT credential_id FROM credential WHERE applicant_id = ? LIMIT 1',
         [foundUser[foundConfig.idField]]
       );
       if (!credRows || credRows.length === 0) {
@@ -595,8 +595,8 @@ export const resetPassword = async (req, res) => {
         });
       }
       finalPassword = await bcrypt.hash(newPassword, 10);
-      updateQuery = `UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE registrationid = ?`;
-      updateId = credRows[0].registrationid;
+      updateQuery = `UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE credential_id = ?`;
+      updateId = credRows[0].credential_id;
       console.log('🔐 Password bcrypt-hashed, updating credential table...');
     } else {
       // Web users use AES-256-GCM encryption in their own table

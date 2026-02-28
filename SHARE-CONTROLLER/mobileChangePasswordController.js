@@ -72,7 +72,7 @@ export const mobileChangePassword = async (req, res) => {
     if (userType === 'stallholder' || userType === 'applicant') {
       // For stallholders, get credentials from credential table
       const [credentialResult] = await connection.execute(
-        'SELECT registrationid, password_hash FROM credential WHERE registrationid = ?',
+        'SELECT credential_id, password_hash FROM credential WHERE credential_id = ?',
         [userId]
       );
       
@@ -117,7 +117,7 @@ export const mobileChangePassword = async (req, res) => {
       
       // Update password in credential table
       await connection.execute(
-        'UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE registrationid = ?',
+        'UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE credential_id = ?',
         [hashedPassword, userId]
       );
       
