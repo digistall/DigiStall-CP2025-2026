@@ -1,12 +1,16 @@
 {
   "expo": {
+    "name": "DigiStall",
+    "slug": "digistall",
+    "version": "1.0.0",
     "extra": {
       "eas": {
-        "projectId": "43e70e1f-df7b-4f68-970c-9a9988440d73"
+        "projectId": "4bf8fb59-6f33-44c7-837e-e1bf92ef5b49"
       }
     },
     "android": {
-      "package": "com.genosexe02.nagastallunifiedbackend"
+      "package": "com.genosexe02.nagastallunifiedbackend",
+      "versionCode": 1
     }
   }
 }
