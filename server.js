@@ -62,6 +62,9 @@ import loginRouter from './routes/loginRouter.js';
 import stallholderMobileRoutes from './routes/stallholderRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
+// Activity Log routes
+import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -115,6 +118,10 @@ app.use('/api/mobile/stallholder', stallholderMobileRoutes);
 app.use('/api/mobile/user', userRoutes);
 app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
 console.log('✅ STALL-HOLDER routes loaded');
+
+// ACTIVITY LOG ROUTES
+app.use('/api/activity-logs', staffActivityLogRoutes);
+console.log('✅ ACTIVITY LOG routes loaded');
 
 // VENDOR ROUTES
 console.log('✅ VENDOR routes loaded');
