@@ -595,7 +595,7 @@ export const resetPassword = async (req, res) => {
         });
       }
       finalPassword = await bcrypt.hash(newPassword, 10);
-      updateQuery = `UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE credential_id = ?`;
+      updateQuery = `UPDATE credential SET password_hash = ? WHERE credential_id = ?`;
       updateId = credRows[0].credential_id;
       console.log('🔐 Password bcrypt-hashed, updating credential table...');
     } else {
