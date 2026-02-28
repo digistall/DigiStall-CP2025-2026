@@ -1,4 +1,5 @@
 import { createConnection } from '../../config/database.js';
+import { decryptData } from '../../services/encryptionService.js';
 
 /**
  * Dashboard Subscription Controller
@@ -122,9 +123,22 @@ export const subscribeToDashboard = async (req, res) => {
         LIMIT 5
       `, [req.user?.userId || 1]);
       
-      const recentPaymentsHash = calculateHash(recentPayments);
+      // Decrypt stallholder names if encrypted
+      const decryptedPayments = recentPayments.map(payment => {
+        if (payment.stallholder_name && typeof payment.stallholder_name === 'string' && payment.stallholder_name.includes(':')) {
+          try {
+            payment.stallholder_name = decryptData(payment.stallholder_name);
+          } catch (error) {
+            console.error(`Failed to decrypt stallholder name for payment ID ${payment.payment_id}:`, error.message);
+            // Keep encrypted name if decryption fails
+          }
+        }
+        return payment;
+      });
+      
+      const recentPaymentsHash = calculateHash(decryptedPayments);
       if (lastDataHashes.get(`${connectionId}-recentPayments`) !== recentPaymentsHash) {
-        updates.recentPayments = recentPayments;
+        updates.recentPayments = decryptedPayments;
         lastDataHashes.set(`${connectionId}-recentPayments`, recentPaymentsHash);
         hasChanges = true;
       }
