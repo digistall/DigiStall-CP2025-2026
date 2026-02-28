@@ -117,7 +117,7 @@ export const mobileChangePassword = async (req, res) => {
       
       // Update password in credential table
       await connection.execute(
-        'UPDATE credential SET password_hash = ?, updated_at = NOW() WHERE registrationid = ?',
+        'UPDATE credential SET password_hash = ? WHERE credential_id = ?',
         [hashedPassword, userId]
       );
       
