@@ -40,7 +40,6 @@
     },
     "android": {
       "package": "com.digistall.mobile",
-      "versionCode": 13,
       "adaptiveIcon": {
         "foregroundImage": "./assets/DigiStall-Icon.png",
         "backgroundColor": "#ffffff"
@@ -52,10 +51,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "naga-stall",
+    "owner": "digistall",
     "extra": {
       "eas": {
-        "projectId": "e3ae3291-54fd-450f-8de2-e18e97bdde57"
+        "projectId": "4bf8fb59-6f33-44c7-837e-e1bf92ef5b49"
       }
     }
   }
