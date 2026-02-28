@@ -184,10 +184,12 @@ export default {
       if (updates.recentPayments) {
         this.recentPayments = updates.recentPayments.map(p => ({
           id: p.payment_id,
-          amount: p.amount_paid,
-          date: p.payment_date,
+          stallholder: p.stallholder_name || 'Unknown',
+          amount: parseFloat(p.amount_paid) || 0,
+          date: this.formatDate(p.payment_date),
+          paymentType: p.payment_type || 'rental',
+          status: this.getPaymentDisplayStatus(p.payment_status),
           method: p.payment_method,
-          stallholderName: p.stallholder_name,
           stallNumber: p.stall_number
         }))
       }
@@ -591,9 +593,8 @@ export default {
           dailyTotals[dateKey] = 0
         }
         
-        // Aggregate actual payment data
-        if (this.recentPayments && this.recentPayments.length > 0) {
-          // We need to fetch all payments for accurate trends
+        // Aggregate actual payment data - always fetch for accurate trends
+        try {
           const response = await fetch(`${this.apiBaseUrl}/payments/onsite`, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -619,6 +620,8 @@ export default {
               })
             }
           }
+        } catch (fetchError) {
+          console.warn('⚠️ Could not fetch payment trends data:', fetchError.message)
         }
         
         // Convert to array format for chart

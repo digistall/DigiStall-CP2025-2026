@@ -91,7 +91,7 @@ export const subscribeToDashboard = async (req, res) => {
         SELECT 
           COUNT(*) as totalPayments,
           COALESCE(SUM(amount), 0) as totalAmount
-        FROM payment 
+        FROM payments 
         WHERE DATE(payment_date) = CURDATE()
         AND branch_id = (SELECT branch_id FROM business_manager WHERE business_manager_id = ? LIMIT 1)
       `, [req.user?.userId || 1]);
@@ -110,13 +110,15 @@ export const subscribeToDashboard = async (req, res) => {
           p.amount as amount_paid,
           p.payment_date,
           p.payment_method,
+          p.payment_type,
+          p.payment_status,
           s.full_name as stallholder_name,
           st.stall_number
-        FROM payment p
+        FROM payments p
         LEFT JOIN stallholder s ON p.stallholder_id = s.stallholder_id
-        LEFT JOIN stall st ON p.stall_id = st.stall_id
+        LEFT JOIN stall st ON s.stall_id = st.stall_id
         WHERE p.branch_id = (SELECT branch_id FROM business_manager WHERE business_manager_id = ? LIMIT 1)
-        ORDER BY p.payment_date DESC
+        ORDER BY p.payment_date DESC, p.created_at DESC
         LIMIT 5
       `, [req.user?.userId || 1]);
       
