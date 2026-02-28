@@ -291,7 +291,7 @@
                                 </v-chip>
                               </td>
                               <td class="text-success font-weight-bold">
-                                ₱{{ payment.amount.toLocaleString() }}
+                                ₱{{ (payment.amount || 0).toLocaleString() }}
                               </td>
                               <td class="text-grey-600">{{ payment.date }}</td>
                               <td>
