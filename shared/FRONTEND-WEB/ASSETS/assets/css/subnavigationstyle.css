@@ -1,0 +1,456 @@
+/* SubNavigation Component Styles - Professional Stall Business Design */
+.sub-navigation {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid rgba(0, 33, 129, 0.08);
+  border-bottom: 1px solid rgba(0, 33, 129, 0.08);
+  position: relative;
+  z-index: 99998;
+}
+
+.sub-navigation.expanded {
+  border-bottom: none;
+  z-index: 100000;
+}
+
+.loading-branches,
+.error-branches {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.retry-btn {
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 33, 129, 0.25);
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 33, 129, 0.35);
+}
+
+.sub-nav-container {
+  width: 100%;
+  padding: 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* Professional Branch Buttons - Stall Business Theme */
+.sub-nav-item {
+  background: white;
+  border: 2px solid #e2e8f0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 12px 24px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  min-width: 120px;
+  white-space: nowrap;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+/* Hover effect with subtle animation */
+.sub-nav-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 33, 129, 0.05),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.sub-nav-item:hover::before {
+  left: 100%;
+}
+
+.sub-nav-item:hover {
+  border-color: #002181;
+  color: #002181;
+  transform: translateY(-3px);
+}
+
+/* Active state with professional blue theme */
+.sub-nav-item.active {
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  border-color: transparent;
+  color: white;
+  transform: translateY(-3px);
+}
+
+.sub-nav-item.active:hover {
+  background: linear-gradient(135deg, #001a66 0%, #1565c0 100%);
+  color: white;
+}
+
+/* Add subtle pulse animation for active button */
+.sub-nav-item.active::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  transform: translate(-50%, -50%) scale(0);
+  animation: subtlePulse 2s infinite;
+}
+
+@keyframes subtlePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Stalls Container - Clean Professional Design - 2 Rows Limit */
+.stalls-container {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  max-width: 100%;
+  border-top: 1px solid rgba(0, 33, 129, 0.08);
+  animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 750px; /* Allow for approximately 3 rows of stalls */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 100000;
+  box-shadow: 0 4px 20px rgba(0, 33, 129, 0.12);
+}
+
+.stalls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+}
+
+.stalls-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.stalls-title i {
+  font-size: 1.2rem;
+}
+
+.stalls-title span {
+  color: #fbbf24;
+}
+
+.close-stalls-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-stalls-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
+}
+
+.close-stalls-btn i {
+  font-size: 18px;
+  color: white;
+}
+
+.stalls-list-wrapper {
+  flex: 1;
+  overflow-y: hidden; /* Changed from auto to hidden for 2-row limit */
+  overflow-x: hidden;
+  padding: 0 24px 20px 24px; /* Remove top padding, keep sides and bottom */
+  max-height: 420px; /* Limit to 2 rows */
+}
+
+.stalls-list-wrapper::-webkit-scrollbar {
+  width: 5px;
+}
+
+.stalls-list-wrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #002181, #1976d2);
+  border-radius: 3px;
+}
+
+.stalls-list-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 750px;
+    transform: translateY(0);
+  }
+}
+
+/* Stalls Slide Transition */
+.stalls-slide-enter-active {
+  animation: slideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stalls-slide-leave-active {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    max-height: 750px;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Scrollable container for branch buttons */
+.scrollable-container {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 12px;
+  padding: 8px 4px;
+  scrollbar-width: none; /* Hide scrollbar */
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollable-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* When content overflows, switch to flex-start for scrolling */
+.scrollable-container.overflow-scrolling {
+  justify-content: flex-start;
+}
+
+/* Bottom navigation arrows */
+.bottom-nav-arrows {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.bottom-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 12px rgba(0, 33, 129, 0.25);
+  font-size: 16px;
+}
+
+.bottom-arrow:hover {
+  background: linear-gradient(135deg, #001a66 0%, #1565c0 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 18px rgba(0, 33, 129, 0.35);
+}
+
+.bottom-arrow:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 33, 129, 0.3);
+}
+
+.bottom-arrow i {
+  font-size: 14px;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-15px);
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .sub-nav-container {
+    padding: 1rem 1.5rem;
+  }
+  
+  .scrollable-container {
+    gap: 10px;
+  }
+  
+  .bottom-arrow {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .sub-nav-item {
+    font-size: 13px;
+    padding: 10px 20px;
+    min-width: 100px;
+  }
+  
+  .stalls-header {
+    padding: 14px 20px;
+  }
+  
+  .stalls-list-wrapper {
+    padding: 0 20px 16px 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sub-nav-container {
+    padding: 0.75rem 1rem;
+  }
+  
+  .scrollable-container {
+    gap: 8px;
+  }
+  
+  .bottom-arrow {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .sub-nav-item {
+    font-size: 12px;
+    padding: 8px 16px;
+    min-width: 80px;
+    border-radius: 10px;
+  }
+
+  .stalls-container {
+    max-height: 750px;
+  }
+  
+  .stalls-header {
+    padding: 12px 16px;
+  }
+  
+  .stalls-title {
+    font-size: 1rem;
+  }
+  
+  .stalls-list-wrapper {
+    padding: 0 16px 16px 16px;
+    max-height: 380px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sub-nav-container {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .scrollable-container {
+    gap: 6px;
+  }
+  
+  .bottom-arrow {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .sub-nav-item {
+    font-size: 11px;
+    padding: 6px 12px;
+    min-width: 70px;
+    border-radius: 8px;
+  }
+  
+  .stalls-container {
+    max-height: 450px;
+  }
+  
+  .stalls-header {
+    padding: 10px 12px;
+  }
+  
+  .stalls-title {
+    font-size: 0.9rem;
+  }
+  
+  .stalls-list-wrapper {
+    padding: 0 12px 12px 12px;
+    max-height: 350px;
+  }
+}
