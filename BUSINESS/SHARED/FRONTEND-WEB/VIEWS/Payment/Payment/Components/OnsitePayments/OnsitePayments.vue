@@ -433,108 +433,215 @@
     </v-dialog>
 
     <!-- Payment Tracker Modal -->
-    <v-dialog v-model="showTrackerModal" max-width="680px" scrollable>
+    <v-dialog v-model="showTrackerModal" max-width="1100px">
       <v-card v-if="selectedStall" class="tracker-card">
         <v-card-title class="modal-header">
           <span class="modal-title">Payment Details</span>
           <v-btn icon variant="text" @click="showTrackerModal = false">
-            <v-icon>mdi-close</v-icon>
+            <v-icon color="white">mdi-close</v-icon>
           </v-btn>
         </v-card-title>
-        <v-card-text class="pa-0" style="max-height: 75vh; overflow-y: auto;">
-          <!-- Stall Summary Info -->
-          <div class="stall-info-header">
-            <div class="stall-info-row">
-              <div class="stall-info-item">
-                <span class="info-label">Receipt Number:</span>
-                <span class="info-value receipt-value">{{ latestReceiptNo || '—' }}</span>
-              </div>
-              <div class="stall-info-item">
-                <span class="info-label">Payment Date:</span>
-                <span class="info-value">{{ latestPaymentDate || '—' }}</span>
+        <v-card-text class="pa-0">
+          <div class="tracker-two-col">
+            <!-- LEFT: Stall Details -->
+            <div class="tracker-details-panel">
+              <div class="detail-cards-wrapper">
+                <div class="detail-card">
+                  <span class="detail-card-label">RECEIPT NUMBER</span>
+                  <span class="detail-card-value receipt-mono">{{ latestReceiptNo || '—' }}</span>
+                </div>
+                <div class="detail-card">
+                  <span class="detail-card-label">
+                    <v-icon size="14" color="#6b7280" class="mr-1">mdi-calendar</v-icon>PAYMENT DATE
+                  </span>
+                  <span class="detail-card-value">{{ latestPaymentDate || '—' }}</span>
+                </div>
+                <div class="detail-card">
+                  <span class="detail-card-label">STALLHOLDER NAME</span>
+                  <span class="detail-card-value stallholder-name-value">
+                    {{ selectedStall.name }}
+                    <v-chip color="#002181" variant="flat" size="x-small" class="ml-2">{{ selectedStall.stallNo }}</v-chip>
+                  </span>
+                </div>
+                <div class="detail-card detail-card-row">
+                  <div class="detail-card-half">
+                    <span class="detail-card-label">
+                      <v-icon size="14" color="#6b7280" class="mr-1">mdi-home-outline</v-icon>SECTION
+                    </span>
+                    <span class="detail-card-value">{{ selectedStall.sectionName || 'N/A' }}</span>
+                  </div>
+                  <div class="detail-card-half">
+                    <span class="detail-card-label">
+                      <v-icon size="14" color="#6b7280" class="mr-1">mdi-map-marker-outline</v-icon>FLOOR
+                    </span>
+                    <span class="detail-card-value">{{ selectedStall.floorName || 'N/A' }}</span>
+                  </div>
+                </div>
+                <div class="detail-card">
+                  <span class="detail-card-label">STALL LOCATION</span>
+                  <span class="detail-card-value">{{ selectedStall.stallLocation || 'N/A' }}</span>
+                </div>
+                <div class="detail-card detail-card-rental">
+                  <span class="detail-card-label rental-label">
+                    <v-icon size="16" color="white" class="mr-1">mdi-currency-usd</v-icon>MONTHLY RENTAL
+                  </span>
+                  <span class="detail-card-value rental-value">{{ formatCurrency(selectedStall.monthlyRental) }}</span>
+                </div>
               </div>
             </div>
-            <div class="stall-info-row">
-              <div class="stall-info-item">
-                <span class="info-label">Stallholder Name:</span>
-                <span class="info-value">{{ selectedStall.name }}</span>
-              </div>
-              <div class="stall-info-item">
-                <span class="info-label">Stall Number:</span>
-                <span class="info-value">
-                  <v-chip color="#002181" variant="flat" size="x-small">{{ selectedStall.stallNo }}</v-chip>
-                </span>
+
+            <!-- RIGHT: Monthly Payment Tracker -->
+            <div class="tracker-timeline-panel">
+              <div class="tracker-section">
+                <div class="tracker-title">
+                  <div class="tracker-title-icon">
+                    <v-icon size="18" color="white">mdi-calendar-clock</v-icon>
+                  </div>
+                  <span>Monthly Payment Tracker</span>
+                </div>
+
+                <div v-if="trackerLoading" class="tracker-loading">
+                  <v-progress-circular indeterminate color="#002181" size="28"></v-progress-circular>
+                  <span>Loading payment history...</span>
+                </div>
+
+                <div v-else-if="paymentTracker.length === 0" class="tracker-empty">
+                  <v-icon size="36" color="grey">mdi-calendar-blank</v-icon>
+                  <p>No payment history yet</p>
+                </div>
+
+                <div v-else class="tracker-grid">
+                  <div
+                    v-for="(entry, index) in paymentTracker"
+                    :key="index"
+                    class="tracker-grid-card"
+                    :class="`tracker-${entry.status.toLowerCase()}`"
+                    @click="openEntryDetail(entry)"
+                    style="cursor: pointer;"
+                  >
+                    <div class="tracker-card-top">
+                      <div class="tracker-icon-wrap">
+                        <v-icon size="14" :color="getTrackerStatusConfig(entry.status).iconColor">
+                          {{ getTrackerStatusConfig(entry.status).icon }}
+                        </v-icon>
+                      </div>
+                      <div class="tracker-date-block">
+                        <span class="tracker-due-label">{{ entry.dueDateFormatted }}</span>
+                        <span v-if="entry.receiptNo" class="tracker-receipt-no">{{ entry.receiptNo }}</span>
+                      </div>
+                    </div>
+                    <div class="tracker-card-bottom">
+                      <span class="tracker-amount">{{ formatCurrency(entry.amount) }}</span>
+                      <v-chip
+                        :color="getTrackerStatusConfig(entry.status).color"
+                        variant="flat"
+                        size="x-small"
+                      >
+                        {{ entry.status }}
+                      </v-chip>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="stall-info-row">
-              <div class="stall-info-item">
-                <span class="info-label">Section:</span>
-                <span class="info-value">{{ selectedStall.sectionName || 'N/A' }}</span>
-              </div>
-              <div class="stall-info-item">
-                <span class="info-label">Floor:</span>
-                <span class="info-value">{{ selectedStall.floorName || 'N/A' }}</span>
-              </div>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- Entry Detail Modal -->
+    <v-dialog v-model="showEntryDetail" max-width="480px">
+      <v-card v-if="selectedEntry" class="entry-detail-card">
+        <v-card-title class="entry-detail-header" :class="`entry-header-${selectedEntry.status.toLowerCase()}`">
+          <div class="entry-header-left">
+            <div class="entry-header-icon">
+              <v-icon size="20" color="white">
+                {{ getTrackerStatusConfig(selectedEntry.status).icon }}
+              </v-icon>
             </div>
-            <div class="stall-info-row">
-              <div class="stall-info-item">
-                <span class="info-label">Stall Location:</span>
-                <span class="info-value">{{ selectedStall.stallLocation || 'N/A' }}</span>
+            <div>
+              <span class="entry-header-title">{{ getEntryMonthLabel(selectedEntry) }}</span>
+              <span class="entry-header-status">{{ selectedEntry.status }}</span>
+            </div>
+          </div>
+          <v-btn icon variant="text" size="small" @click="showEntryDetail = false">
+            <v-icon color="white" size="20">mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text class="entry-detail-body">
+          <!-- Payment Info (if paid/advance) -->
+          <div v-if="selectedEntry.hasPaid" class="entry-info-section">
+            <div class="entry-info-title">
+              <v-icon size="16" color="#002181" class="mr-1">mdi-receipt-text</v-icon>
+              Transaction Details
+            </div>
+            <div class="entry-info-grid">
+              <div class="entry-info-item">
+                <span class="entry-info-label">Receipt Number</span>
+                <span class="entry-info-value mono">{{ selectedEntry.receiptNo || '\u2014' }}</span>
               </div>
-              <div class="stall-info-item">
-                <span class="info-label">Monthly Rental:</span>
-                <span class="info-value amount">{{ formatCurrency(selectedStall.monthlyRental) }}</span>
+              <div class="entry-info-item">
+                <span class="entry-info-label">Payment Date</span>
+                <span class="entry-info-value">{{ formatDateTime(selectedEntry.paymentDate, selectedEntry.paymentTime) }}</span>
+              </div>
+              <div class="entry-info-item">
+                <span class="entry-info-label">Collected By</span>
+                <span class="entry-info-value">{{ selectedEntry.collectedBy || '\u2014' }}</span>
+              </div>
+              <div class="entry-info-item">
+                <span class="entry-info-label">Payment For</span>
+                <span class="entry-info-value">{{ getEntryMonthLabel(selectedEntry) }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Monthly Payment Tracker -->
-          <div class="tracker-section">
-            <div class="tracker-title">
-              <v-icon size="18" color="#002181" class="mr-1">mdi-calendar-clock</v-icon>
-              Monthly Payment Tracker
+          <!-- Unpaid Info (overdue/pending) -->
+          <div v-else class="entry-info-section">
+            <div class="entry-info-title">
+              <v-icon size="16" color="#002181" class="mr-1">mdi-information-outline</v-icon>
+              Payment Information
             </div>
-
-            <div v-if="trackerLoading" class="tracker-loading">
-              <v-progress-circular indeterminate color="#002181" size="28"></v-progress-circular>
-              <span>Loading payment history...</span>
-            </div>
-
-            <div v-else-if="paymentTracker.length === 0" class="tracker-empty">
-              <v-icon size="36" color="grey">mdi-calendar-blank</v-icon>
-              <p>No payment history yet</p>
-            </div>
-
-            <div v-else class="tracker-list">
-              <div
-                v-for="(entry, index) in paymentTracker"
-                :key="index"
-                class="tracker-entry"
-                :class="`tracker-${entry.status.toLowerCase()}`"
-              >
-                <div class="tracker-left">
-                  <div class="tracker-icon-wrap">
-                    <v-icon size="16" :color="getTrackerStatusConfig(entry.status).iconColor">
-                      {{ getTrackerStatusConfig(entry.status).icon }}
-                    </v-icon>
-                  </div>
-                  <div class="tracker-date-block">
-                    <span class="tracker-due-label">{{ entry.dueDateFormatted }}</span>
-                    <span v-if="entry.receiptNo" class="tracker-receipt-no">{{ entry.receiptNo }}</span>
-                  </div>
-                </div>
-                <div class="tracker-right">
-                  <span class="tracker-amount">{{ formatCurrency(entry.amount) }}</span>
-                  <v-chip
-                    :color="getTrackerStatusConfig(entry.status).color"
-                    variant="flat"
-                    size="x-small"
-                  >
-                    {{ entry.status }}
-                  </v-chip>
-                </div>
+            <div class="entry-info-grid">
+              <div class="entry-info-item">
+                <span class="entry-info-label">Due Date</span>
+                <span class="entry-info-value">{{ selectedEntry.dueDateFormatted }}</span>
+              </div>
+              <div class="entry-info-item">
+                <span class="entry-info-label">Status</span>
+                <span class="entry-info-value">
+                  <v-chip :color="getTrackerStatusConfig(selectedEntry.status).color" variant="flat" size="x-small">{{ selectedEntry.status }}</v-chip>
+                </span>
               </div>
             </div>
+          </div>
+
+          <!-- Amount Breakdown -->
+          <div class="entry-info-section">
+            <div class="entry-info-title">
+              <v-icon size="16" color="#002181" class="mr-1">mdi-calculator</v-icon>
+              Amount Breakdown
+            </div>
+            <div class="entry-breakdown">
+              <div
+                v-for="(item, i) in getEntryBreakdown(selectedEntry)"
+                :key="i"
+                class="breakdown-row"
+                :class="{ 'breakdown-total': item.isTotal, 'breakdown-discount': item.isDiscount, 'breakdown-fee': item.isFee }"
+              >
+                <span class="breakdown-label">{{ item.label }}</span>
+                <span class="breakdown-value">{{ item.value }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div v-if="selectedEntry.notes" class="entry-info-section">
+            <div class="entry-info-title">
+              <v-icon size="16" color="#002181" class="mr-1">mdi-note-text</v-icon>
+              Notes
+            </div>
+            <div class="entry-notes">{{ selectedEntry.notes }}</div>
           </div>
         </v-card-text>
       </v-card>
