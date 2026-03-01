@@ -167,7 +167,6 @@ export const getApplicantsByBranchManager = async (req, res) => {
     }
 
     // Build query with multi-branch support - data is already encrypted in app format
-    // UNION query to include BOTH stall applicants AND general applicants (no stall)
     let query = `
       SELECT DISTINCT
         a.applicant_id,
@@ -194,11 +193,11 @@ export const getApplicantsByBranchManager = async (req, res) => {
         sp.spouse_educational_attainment,
         sp.spouse_contact_number,
         sp.spouse_occupation,
-        -- Application details (NULL for general applicants)
+        -- Application details
         app.application_id,
         app.application_date,
         app.application_status as current_application_status,
-        -- Stall details (NULL for general applicants)
+        -- Stall details
         s.stall_id,
         s.stall_number,
         s.rental_price,
@@ -208,19 +207,17 @@ export const getApplicantsByBranchManager = async (req, res) => {
         s.status as stall_status,
         s.raffle_auction_deadline,
         s.deadline_active,
-        -- Branch location details (NULL for general applicants)
+        -- Branch location details
         sec.section_name,
         f.floor_name,
         b.branch_id,
-        b.branch_name,
-        -- Flag to identify general applicants
-        CASE WHEN app.stall_id IS NULL THEN 'general' ELSE 'stall' END as applicant_type
+        b.branch_name
       FROM applicant a
-      LEFT JOIN application app ON a.applicant_id = app.applicant_id
-      LEFT JOIN stall s ON app.stall_id = s.stall_id
-      LEFT JOIN section sec ON s.section_id = sec.section_id
-      LEFT JOIN floor f ON sec.floor_id = f.floor_id
-      LEFT JOIN branch b ON f.branch_id = b.branch_id
+      INNER JOIN application app ON a.applicant_id = app.applicant_id
+      INNER JOIN stall s ON app.stall_id = s.stall_id
+      INNER JOIN section sec ON s.section_id = sec.section_id
+      INNER JOIN floor f ON sec.floor_id = f.floor_id
+      INNER JOIN branch b ON f.branch_id = b.branch_id
       LEFT JOIN business_information bi ON a.applicant_id = bi.applicant_id
       LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
       LEFT JOIN spouse sp ON a.applicant_id = sp.applicant_id
@@ -229,20 +226,18 @@ export const getApplicantsByBranchManager = async (req, res) => {
     // No encryption params needed - data is encrypted in application format (iv:tag:data)
     let params = [];
 
-    // Apply branch filter - ONLY return applicants who have stall applications (exclude general applicants)
-    // General applicants (without stalls) are now handled by getGeneralApplicants endpoint
+    // Apply branch filter
     if (branchFilter === null) {
-      // System administrator - no branch filter, but still require stall_id
-      query += " WHERE app.stall_id IS NOT NULL";
+      // System administrator - no branch filter
+      query += " WHERE 1=1";
     } else {
-      // Filter by accessible branches AND require stall_id (no general applicants)
+      // Filter by accessible branches
       const placeholders = branchFilter.map(() => '?').join(',');
-      query += ` WHERE b.branch_id IN (${placeholders}) AND app.stall_id IS NOT NULL`;
+      query += ` WHERE b.branch_id IN (${placeholders})`;
       params = [...params, ...branchFilter];
     }
 
     if (application_status) {
-      // Filter by application status (stall applicants only)
       query += " AND LOWER(app.application_status) = LOWER(?)";
       params.push(application_status);
     }
@@ -296,8 +291,7 @@ export const getApplicantsByBranchManager = async (req, res) => {
           applicant_birthdate: row.applicant_birthdate,
           applicant_civil_status: row.applicant_civil_status,
           applicant_educational_attainment: row.applicant_educational_attainment,
-          applicant_status: row.applicant_status,
-          status: row.applicant_status,
+          application_status: 'Pending',
           applied_date: row.application_date,
           created_at: row.created_at,
           updated_at: row.updated_at,
@@ -325,33 +319,26 @@ export const getApplicantsByBranchManager = async (req, res) => {
         });
       }
 
-      // Add application details to the applicant (skip null applications for general applicants)
-      if (row.application_id !== null) {
-        applicantsMap.get(row.applicant_id).applications.push({
-          application_id: row.application_id,
-          application_date: row.application_date,
-          application_status: row.current_application_status,
-          stall: {
-            stall_id: row.stall_id,
-            stall_no: row.stall_number,  // Map stall_number to stall_no for frontend compatibility
-            rental_price: row.rental_price,
-            price_type: row.price_type,
-            stall_location: row.stall_location,
-            is_available: row.is_available,
-            stall_status: row.stall_status,
-            section_name: row.section_name,
-            floor_name: row.floor_name,
-            branch_name: row.branch_name,
-            raffle_auction_deadline: row.raffle_auction_deadline,
-            deadline_active: row.deadline_active
-          }
-        });
-      }
-
-      // For general applicants (no application), store their status directly
-      if (row.application_id === null) {
-        applicantsMap.get(row.applicant_id).applicant_status = row.applicant_status;
-      }
+      // Add application details to the applicant
+      applicantsMap.get(row.applicant_id).applications.push({
+        application_id: row.application_id,
+        application_date: row.application_date,
+        application_status: row.current_application_status,
+        stall: {
+          stall_id: row.stall_id,
+          stall_no: row.stall_number,  // Map stall_number to stall_no for frontend compatibility
+          rental_price: row.rental_price,
+          price_type: row.price_type,
+          stall_location: row.stall_location,
+          is_available: row.is_available,
+          stall_status: row.stall_status,
+          section_name: row.section_name,
+          floor_name: row.floor_name,
+          branch_name: row.branch_name,
+          raffle_auction_deadline: row.raffle_auction_deadline,
+          deadline_active: row.deadline_active
+        }
+      });
     });
 
     // Convert Map to Array
