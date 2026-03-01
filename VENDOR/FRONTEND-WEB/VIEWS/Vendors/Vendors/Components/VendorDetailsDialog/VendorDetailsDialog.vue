@@ -32,7 +32,7 @@
             <div class="info-section-title">Personal Information</div>
             <v-row>
               <v-col cols="12" md="6">
-                <div class="info-label">FULL NAME:</div>
+                <div class="info-label">Full name (Surname, Firstname Middle Name):</div>
                 <div class="info-value">{{ fullName }}</div>
 
                 <div class="info-label mt-4">PHONE NUMBER:</div>
