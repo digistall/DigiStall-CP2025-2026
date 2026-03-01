@@ -27,6 +27,7 @@ import NotificationsScreen from "./Notifications/NotificationsScreen";
 import DocumentsScreen from "./Documents/DocumentsScreen";
 import TabbedStallScreen from "./Stall/TabbedStallScreen";
 import PaymentScreen from "./Payment/PaymentScreen";
+import OwnedStallsScreen from "./OwnedStalls/OwnedStallsScreen";
 
 const { width, height } = Dimensions.get("window");
 
@@ -133,6 +134,7 @@ const StallHome = ({ navigation }) => {
       notifications: "Notifications",
       documents: "Documents",
       payment: "Payment",
+      "owned-stalls": "Owned Stalls",
     };
     return titles[currentScreen] || "Stall Management";
   };
@@ -158,6 +160,7 @@ const StallHome = ({ navigation }) => {
     "stall",
     "documents",
     "reports",
+    "owned-stalls",
   ];
 
   // Determine if need to wrap in ScrollView
@@ -180,6 +183,8 @@ const StallHome = ({ navigation }) => {
         return <DocumentsScreen />;
       case "payment":
         return <PaymentScreen />;
+      case "owned-stalls":
+        return <OwnedStallsScreen />;
       default:
         return <TabbedStallScreen />;
     }
