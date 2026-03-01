@@ -133,6 +133,12 @@ const Sidebar = ({
       isImage: true,
     },
     {
+      id: "owned-stalls",
+      title: "Owned Stalls",
+      icon: require('../../../../../assets/Home-Image/StallIcon.png'),
+      isImage: true,
+    },
+    {
       id: "reports",
       title: "Complaints", 
       icon: require('../../../../../assets/report-icon.png'),

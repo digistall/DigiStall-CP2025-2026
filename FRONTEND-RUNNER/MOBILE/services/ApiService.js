@@ -1115,6 +1115,64 @@ class ApiService {
     }
   }
 
+  // ===== STALLHOLDER OWNED STALLS METHODS =====
+
+  /**
+   * Get all stalls owned/rented by the stallholder across all branches
+   * Token is fetched internally from storage (matches pattern used by other working methods)
+   * @returns {Promise} - Response with stalls grouped by branch
+   */
+  static async getOwnedStalls() {
+    try {
+      const token = await UserStorageService.getAuthToken();
+      if (!token) {
+        return { success: false, message: 'Authentication token not found. Please log in again.', data: { stalls: [], grouped_by_branch: [], branches: [], total_stalls: 0, total_monthly_rent: 0 } };
+      }
+
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_OWNED_STALLS}`;
+      
+      console.log('🏪 Fetching owned stalls from:', url);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch owned stalls');
+      }
+
+      console.log('✅ Owned stalls fetched:', data.data?.total_stalls || 0, 'stalls');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Owned Stalls API Error:', error);
+      const errorMessage = error.name === 'AbortError' 
+        ? 'Request timed out. Please check your connection.'
+        : (error.message || 'Network error occurred');
+      return {
+        success: false,
+        message: errorMessage,
+        data: { stalls: [], grouped_by_branch: [], branches: [], total_stalls: 0, total_monthly_rent: 0 }
+      };
+    }
+  }
+
   // ===== STALLHOLDER DOCUMENT METHODS =====
 
   /**
