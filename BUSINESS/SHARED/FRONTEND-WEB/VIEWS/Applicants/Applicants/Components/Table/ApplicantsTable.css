@@ -11,6 +11,22 @@
   width: 100%;
 }
 
+/* General Applicants Info Banner */
+.general-applicants-banner {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  color: #1565c0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.general-applicants-banner strong {
+  color: #0d47a1;
+}
+
 .table-header {
   background: rgb(0, 33, 129);
   color: white;

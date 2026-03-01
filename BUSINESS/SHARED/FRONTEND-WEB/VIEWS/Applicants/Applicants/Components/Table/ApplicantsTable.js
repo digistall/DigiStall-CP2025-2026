@@ -363,7 +363,7 @@ export default {
       }
     },
 
-    getStatusText(status) {
+    getStatusText(status, applicant = null) {
       switch (status) {
         case 'Approved':
           return 'APPROVED'
@@ -417,29 +417,48 @@ export default {
 
     // Get the effective status for display (considering multiple status sources)
     getEffectiveStatus(applicant) {
-      // Priority: application_status > applicant.status > derived status
-      if (applicant.application_status && applicant.application_status !== 'Pending') {
-        return applicant.application_status
+      // General applicants haven't selected a stall yet — always show as Pending
+      // until they pick a stall and move to the Stall Applicants category
+      if (applicant?.is_general_applicant) {
+        return 'Pending'
       }
-      
+
+      // Helper to normalize any status string to proper Title Case
+      const normalize = (s) => {
+        if (!s) return null
+        const lower = s.toLowerCase()
+        if (lower === 'approved') return 'Approved'
+        if (lower === 'rejected') return 'Rejected'
+        if (lower === 'pending') return 'Pending'
+        if (lower === 'under review') return 'Under Review'
+        if (lower === 'cancelled') return 'Cancelled'
+        // Return as-is for unknown values
+        return s
+      }
+
+      // Priority 1: application_status (normalized)
+      if (applicant.application_status) {
+        const normalized = normalize(applicant.application_status)
+        if (normalized && normalized !== 'Pending') return normalized
+      }
+
+      // Priority 2: status field (normalized)
       if (applicant.status) {
-        // Normalize status to proper case
-        const statusLower = applicant.status.toLowerCase()
-        if (statusLower === 'approved') return 'Approved'
-        if (statusLower === 'rejected') return 'Rejected'
+        const normalized = normalize(applicant.status)
+        if (normalized && normalized !== 'Pending') return normalized
       }
-      
-      // Check for approved indicators
+
+      // Priority 3: derived from credential/approval indicators
       if (applicant.has_credentials || applicant.applicant_username || applicant.stallholder_id || applicant.approved_at) {
         return 'Approved'
       }
-      
-      // Check for declined indicators  
+
       if (applicant.declined_at) {
         return 'Rejected'
       }
-      
-      return applicant.application_status || 'Pending'
+
+      // Fallback — normalize whatever is stored
+      return normalize(applicant.application_status) || normalize(applicant.status) || 'Pending'
     },
 
     // Handle status badge click for re-check or approve
