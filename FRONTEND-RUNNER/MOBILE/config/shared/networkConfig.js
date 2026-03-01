@@ -14,8 +14,8 @@ export const API_CONFIG = {
     'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
     
     // LOCAL DEVELOPMENT - Enable these by moving to top while in development
-    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
-    'http://192.168.100.241:3001',  // Local Backend API (alternative)
+    'http://192.168.100.100:3001',  // Local Backend API
+    'http://192.168.100.100:5001',  // Local Backend-Mobile API
     'http://localhost:3001',        // Only works on emulator
   ],
   
