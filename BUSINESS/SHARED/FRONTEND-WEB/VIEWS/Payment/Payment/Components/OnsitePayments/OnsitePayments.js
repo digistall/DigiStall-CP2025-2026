@@ -36,6 +36,10 @@ export default {
       latestReceiptNo: null,
       latestPaymentDate: null,
 
+      // Entry detail modal
+      showEntryDetail: false,
+      selectedEntry: null,
+
       // Add payment modal
       showAddModal: false,
       formValid: false,
@@ -424,7 +428,17 @@ export default {
           }),
           amount,
           status,
-          receiptNo: monthPayment?.receiptNo || null
+          receiptNo: monthPayment?.receiptNo || null,
+          // Store full payment record for detail modal
+          paymentId: monthPayment?.id || null,
+          paymentDate: monthPayment?.paymentDate || null,
+          paymentTime: monthPayment?.paymentTime || null,
+          paymentForMonth: monthPayment?.paymentForMonth || null,
+          collectedBy: monthPayment?.collectedBy || null,
+          paymentStatus: monthPayment?.status || null,
+          notes: monthPayment?.notes || null,
+          monthlyRental: rental,
+          hasPaid: !!monthPayment
         })
 
         month++
@@ -442,6 +456,54 @@ export default {
         'Pending': { color: '#9ca3af', iconColor: '#9ca3af', icon: 'mdi-clock-outline' }
       }
       return map[status] || { color: '#9ca3af', iconColor: '#9ca3af', icon: 'mdi-help-circle' }
+    },
+
+    // =========================================================
+    // ENTRY DETAIL MODAL
+    // =========================================================
+    openEntryDetail(entry) {
+      this.selectedEntry = entry
+      this.showEntryDetail = true
+    },
+
+    getEntryMonthLabel(entry) {
+      if (!entry) return ''
+      const date = new Date(entry.year, entry.month)
+      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    },
+
+    formatDateTime(dateStr, timeStr) {
+      if (!dateStr) return '\u2014'
+      const d = new Date(dateStr)
+      const datePart = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      if (timeStr) {
+        return `${datePart} at ${timeStr}`
+      }
+      return datePart
+    },
+
+    getEntryBreakdown(entry) {
+      if (!entry) return []
+      const rental = entry.monthlyRental || 0
+      const items = []
+      items.push({ label: 'Base Monthly Rental', value: this.formatCurrency(rental) })
+
+      if (entry.status === 'Advance') {
+        const discount = rental * ADVANCE_DISCOUNT
+        items.push({ label: `Advance Discount (${ADVANCE_DISCOUNT * 100}%)`, value: `- ${this.formatCurrency(discount)}`, isDiscount: true })
+        items.push({ label: 'Total Paid', value: this.formatCurrency(entry.amount), isTotal: true })
+      } else if (entry.status === 'Overdue') {
+        const fee = rental * LATE_FEE_RATE
+        items.push({ label: `Late Fee (${LATE_FEE_RATE * 100}%)`, value: `+ ${this.formatCurrency(fee)}`, isFee: true })
+        items.push({ label: 'Total Due', value: this.formatCurrency(entry.amount), isTotal: true })
+      } else if (entry.status === 'Paid') {
+        items.push({ label: 'Total Paid', value: this.formatCurrency(entry.amount), isTotal: true })
+      } else {
+        const discount = rental * ADVANCE_DISCOUNT
+        items.push({ label: `Early Payment Discount (${ADVANCE_DISCOUNT * 100}%)`, value: `- ${this.formatCurrency(discount)}`, isDiscount: true })
+        items.push({ label: 'Amount if Paid Early', value: this.formatCurrency(entry.amount), isTotal: true })
+      }
+      return items
     },
 
     // =========================================================
