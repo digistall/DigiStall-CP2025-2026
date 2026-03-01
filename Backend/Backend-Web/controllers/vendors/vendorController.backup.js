@@ -2,7 +2,7 @@ import { createConnection } from "../../config/database.js";
 
 /**
  * Vendor Controller
- * Handles creation and management of Vendor accounts with correct parameter mapping
+ * Handles creation and management of Vendor accounts
  */
 
 /**
@@ -24,19 +24,16 @@ export async function createVendor(req, res) {
       address,
       vendorIdentifier,
       status,
-      // Spouse info - now requires first/middle/last names
-      spouseFirstName,
-      spouseMiddleName,
-      spouseLastName,
+      // Spouse info
+      spouseFullName,
       spouseAge,
       spouseBirthdate,
       spouseEducation,
       spouseContact,
       spouseOccupation,
-      // Child info - now requires first/middle/last names (no age)
-      childFirstName,
-      childMiddleName,
-      childLastName,
+      // Child info
+      childFullName,
+      childAge,
       childBirthdate,
       // Business info
       businessName,
@@ -44,6 +41,8 @@ export async function createVendor(req, res) {
       businessDescription,
       vendingTimeStart,
       vendingTimeEnd,
+      // Location info
+      locationName,
     } = req.body;
 
     // Validate required fields
@@ -141,22 +140,25 @@ export async function createVendor(req, res) {
 /**
  * Get all vendors
  * GET /api/vendors
+ * Query params: branchId (optional), collectorId (optional)
  */
 export async function getAllVendors(req, res) {
   let connection;
   try {
+    const { branchId, collectorId } = req.query;
+
     connection = await createConnection();
 
     // Set session timezone to Philippine time
     await connection.execute(`SET time_zone = '+08:00'`);
 
+    let vendors;
+
     // Return all vendors with relations using stored procedure
     const [result] = await connection.execute(
       "CALL getAllVendorsWithRelations()"
     );
-    const vendors = result[0] || [];
-
-    console.log(`✅ Fetched ${vendors.length} vendors`);
+    vendors = result[0] || [];
 
     res.json({
       success: true,
@@ -203,8 +205,6 @@ export async function getVendorById(req, res) {
       });
     }
 
-    console.log(`✅ Fetched vendor: ${vendor.full_name}`);
-
     res.json({
       success: true,
       data: vendor,
@@ -241,19 +241,16 @@ export async function updateVendor(req, res) {
       address,
       vendorIdentifier,
       status,
-      // Spouse info - now requires first/middle/last names
-      spouseFirstName,
-      spouseMiddleName,
-      spouseLastName,
+      // Spouse info
+      spouseFullName,
       spouseAge,
       spouseBirthdate,
       spouseEducation,
       spouseContact,
       spouseOccupation,
-      // Child info - now requires first/middle/last names (no age)
-      childFirstName,
-      childMiddleName,
-      childLastName,
+      // Child info
+      childFullName,
+      childAge,
       childBirthdate,
       // Business info
       businessName,
@@ -261,6 +258,8 @@ export async function updateVendor(req, res) {
       businessDescription,
       vendingTimeStart,
       vendingTimeEnd,
+      // Location info
+      locationName,
     } = req.body;
 
     connection = await createConnection();
@@ -338,10 +337,10 @@ export async function deleteVendor(req, res) {
 
     console.log(`🗑️ Deleting vendor with relations: ${id}`);
 
-    // Delete vendor using stored procedure (soft delete by default)
+    // Delete vendor using stored procedure (soft delete, keep relations)
     await connection.execute("CALL deleteVendorWithRelations(?, ?)", [
       id,
-      false, // false = soft delete, true = hard delete
+      false,
     ]);
 
     console.log("✅ Vendor deleted successfully");
