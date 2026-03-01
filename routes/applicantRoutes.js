@@ -4,7 +4,6 @@ import {
   getAllApplicants,
   getApplicantById,
   getApplicantsByBranchManager,
-  getGeneralApplicants,
   approveApplicant,
   updateApplicantStatus,
   declineApplicant,
@@ -56,9 +55,6 @@ router.get('/participants/stall/:stall_id', getParticipantsByStall)       // GET
 
 // Get applicants for the authenticated branch manager (Management System Vue.js)
 router.get('/my-stall-applicants', getApplicantsByBranchManager)
-
-// Get general applicants (applicants without specific stall applications)
-router.get('/general', getGeneralApplicants)
 
 // Get individual applicant by ID (MUST be after specific routes)
 router.get('/:id', getApplicantById)

@@ -87,10 +87,10 @@
 
 .form-container {
     background: rgb(249, 249, 255);
-    padding: 24px 56px;
+    padding: 20px 28px;
     border-radius: 16px;
-    width: 98%;
-    max-width: 1000px;
+    width: 95%;
+    max-width: 600px;
     min-width: 320px;
     max-height: 95vh;
     overflow-y: auto;

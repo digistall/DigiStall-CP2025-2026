@@ -35,11 +35,8 @@ export default {
       showDropdown: false,
       applicantTypes: [
         { value: 'stall', label: 'Stall Applicants' },
-        { value: 'general', label: 'General Applicants' },
         { value: 'vendor', label: 'Vendor Applicants' },
       ],
-      // General applicants data (applicants without specific stall applications)
-      generalApplicants: [],
       // Modal states for approve/decline
       showApproveModal: false,
       showDeclineModal: false,
@@ -217,12 +214,9 @@ export default {
   computed: {
     // Get current applicants based on selected type
     currentApplicants() {
-      if (this.currentApplicantType === 'Vendor Applicants') {
-        return this.vendorApplicants
-      } else if (this.currentApplicantType === 'General Applicants') {
-        return this.generalApplicants
-      }
-      return this.stallApplicants
+      return this.currentApplicantType === 'Vendor Applicants'
+        ? this.vendorApplicants
+        : this.stallApplicants
     },
 
     filteredApplicants() {
@@ -331,8 +325,6 @@ export default {
       // Fetch data based on type
       if (type.label === 'Stall Applicants') {
         this.fetchStallApplicants()
-      } else if (type.label === 'General Applicants') {
-        this.fetchGeneralApplicants()
       }
 
       console.log('Switched to:', type.label)
@@ -847,86 +839,6 @@ export default {
       }
     },
 
-    // Fetch general applicants (those without specific stall applications)
-    async fetchGeneralApplicants() {
-      if (this.currentApplicantType !== 'General Applicants') return
-
-      this.loading = true
-      this.error = null
-
-      try {
-        console.log('🎯 Fetching general applicants...')
-
-        const token =
-          sessionStorage.getItem('authToken') ||
-          localStorage.getItem('token') ||
-          localStorage.getItem('authToken')
-
-        if (!token) {
-          throw new Error('Authentication token not found. Please log in again.')
-        }
-
-        // Use the general applicants endpoint
-        const response = await fetch(`${API_BASE_URL}/applicants/general`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Your session has expired. Please log in again.')
-          }
-          throw new Error(`Server error: ${response.status}`)
-        }
-
-        const result = await response.json()
-        console.log('📦 General Applicants Response:', result)
-
-        if (result.success) {
-          // Transform the API data to match our component structure
-          this.generalApplicants = (result.data || []).map((applicant) => ({
-            id: `#${String(applicant.applicant_id).padStart(4, '0')}`,
-            applicant_id: applicant.applicant_id,
-            fullName: applicant.applicant_full_name || 'N/A',
-            email: applicant.email_address || 'N/A',
-            phoneNumber: applicant.applicant_contact_number || 'N/A',
-            address: applicant.applicant_address || 'N/A',
-            type: 'general',
-            status: this.capitalizeStatus(applicant.status),
-            application_status: this.capitalizeStatus(applicant.status),
-            applicant_birthdate: applicant.applicant_birthdate,
-            applicant_civil_status: applicant.applicant_civil_status,
-            applicant_educational_attainment: applicant.applicant_educational_attainment,
-            created_at: applicant.created_at,
-            username: applicant.username,
-          }))
-
-          console.log(`✅ Successfully fetched ${this.generalApplicants.length} general applicants`)
-        } else {
-          throw new Error(result.message || 'Failed to fetch general applicants')
-        }
-      } catch (error) {
-        console.error('❌ Error fetching general applicants:', error)
-        this.error = error.message
-        this.generalApplicants = []
-
-        if (this.$toast) {
-          this.$toast.error(`Failed to load general applicants: ${error.message}`)
-        }
-      } finally {
-        this.loading = false
-      }
-    },
-
-    // Helper to capitalize status
-    capitalizeStatus(status) {
-      if (!status) return 'Pending'
-      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
-    },
-
     // Transform API response data to component format
     transformApplicantData(apiData) {
       // Debug: Log the API data structure
@@ -1038,14 +950,10 @@ export default {
           transformedData.stall_info = null
         }
       } else {
-        // No stall applications - general applicant
-        // Use the applicant's own status (approved/pending/rejected) so the badge shows correctly
-        const rawStatus = apiData.applicant_status || apiData.status || 'pending'
-        const normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase()
+        // No applications yet
         transformedData.application_id = null
         transformedData.application_date = null
-        transformedData.application_status = normalizedStatus  // e.g. 'Approved', 'Pending'
-        transformedData.status = normalizedStatus  // Also set status for getEffectiveStatus fallback
+        transformedData.application_status = 'No Application'
         transformedData.stall_info = null
       }
 
