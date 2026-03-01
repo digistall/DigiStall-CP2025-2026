@@ -36,6 +36,7 @@ export default {
       applicantTypes: [
         { value: 'stall', label: 'Stall Applicants' },
         { value: 'vendor', label: 'Vendor Applicants' },
+        { value: 'general', label: 'General Applicants' },
       ],
       // Modal states for approve/decline
       showApproveModal: false,
@@ -202,6 +203,8 @@ export default {
       ],
       // Dynamic data for stall applicants - fetched from database
       stallApplicants: [],
+      // Dynamic data for general applicants - fetched from database
+      generalApplicants: [],
       // Loading and error states
       loading: false,
       error: null,
@@ -214,9 +217,13 @@ export default {
   computed: {
     // Get current applicants based on selected type
     currentApplicants() {
-      return this.currentApplicantType === 'Vendor Applicants'
-        ? this.vendorApplicants
-        : this.stallApplicants
+      if (this.currentApplicantType === 'Vendor Applicants') {
+        return this.vendorApplicants
+      } else if (this.currentApplicantType === 'General Applicants') {
+        return this.generalApplicants
+      } else {
+        return this.stallApplicants
+      }
     },
 
     filteredApplicants() {
@@ -325,6 +332,8 @@ export default {
       // Fetch data based on type
       if (type.label === 'Stall Applicants') {
         this.fetchStallApplicants()
+      } else if (type.label === 'General Applicants') {
+        this.fetchGeneralApplicants()
       }
 
       console.log('Switched to:', type.label)
@@ -836,6 +845,203 @@ export default {
         }
       } finally {
         this.loading = false
+      }
+    },
+
+    // Fetch general applicants from database (applicants without stall applications)
+    async fetchGeneralApplicants() {
+      if (this.currentApplicantType !== 'General Applicants') return
+
+      this.loading = true
+      this.error = null
+
+      try {
+        console.log('🎯 Fetching general applicants...')
+
+        // Check if we have a token (check multiple storage locations)
+        const token =
+          sessionStorage.getItem('authToken') ||
+          localStorage.getItem('token') ||
+          localStorage.getItem('authToken')
+
+        if (!token) {
+          throw new Error('Authentication token not found. Please log in again.')
+        }
+
+        console.log('🔑 Token found, making API request for general applicants...')
+
+        // Use the general applicants endpoint
+        const response = await fetch(`${API_BASE_URL}/applicants/general`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        console.log('📡 Response status:', response.status)
+
+        // Handle different error responses
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Clear all possible token storage locations
+            localStorage.removeItem('token')
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('userInfo')
+            localStorage.removeItem('user')
+            sessionStorage.removeItem('authToken')
+            sessionStorage.removeItem('currentUser')
+            sessionStorage.removeItem('userType')
+            sessionStorage.removeItem('branchManagerId')
+            sessionStorage.removeItem('adminId')
+            throw new Error('Your session has expired. Please log in again.')
+          } else if (response.status === 403) {
+            throw new Error('You do not have permission to view these applicants.')
+          } else if (response.status === 404) {
+            throw new Error('General applicants endpoint not found.')
+          } else {
+            throw new Error(`Server error: ${response.status}`)
+          }
+        }
+
+        const result = await response.json()
+        console.log('📦 API Response:', result)
+
+        if (result.success) {
+          // Check if we have applicants data
+          if (!result.data || result.data.length === 0) {
+            console.warn('⚠️ No general applicants found')
+            this.generalApplicants = []
+            return
+          }
+
+          // Transform the API data to match our component structure
+          this.generalApplicants = result.data.map((applicant) => {
+            try {
+              return this.transformGeneralApplicantData(applicant)
+            } catch (transformError) {
+              console.error('❌ Error transforming general applicant:', applicant, transformError)
+              // Return a basic object so one bad record doesn't break everything
+              return {
+                id: `#${String(applicant.applicant_id).padStart(4, '0')}`,
+                applicant_id: applicant.applicant_id,
+                fullName: applicant.applicant_full_name || '',
+                email: applicant.email_address || '',
+                phoneNumber: applicant.applicant_contact_number || '',
+                address: applicant.applicant_address || '',
+                type: 'general',
+                application_status: applicant.status || 'Pending',
+                error: 'Data transformation error',
+              }
+            }
+          })
+
+          console.log(`✅ Successfully fetched ${this.generalApplicants.length} general applicants`)
+
+          // Show success message if toast is available
+          if (this.$toast) {
+            this.$toast.success(`Loaded ${this.generalApplicants.length} general applicant(s)`)
+          }
+        } else {
+          throw new Error(result.message || 'Failed to fetch general applicants')
+        }
+      } catch (error) {
+        console.error('❌ Error fetching general applicants:', error)
+        this.error = error.message
+
+        // Set empty array on error
+        this.generalApplicants = []
+
+        // Show error message to user
+        const errorMessage =
+          error.message.includes('Authentication') || error.message.includes('session')
+            ? error.message
+            : `Failed to load general applicants: ${error.message}`
+
+        if (this.$toast) {
+          this.$toast.error(errorMessage)
+        } else {
+          console.error('📢', errorMessage)
+        }
+
+        // Redirect to login if authentication error
+        if (
+          error.message.includes('log in again') ||
+          error.message.includes('session has expired')
+        ) {
+          setTimeout(() => {
+            // Redirect to login page
+            this.$router.push('/login')
+          }, 2000)
+        }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // Transform general applicant data from API to component format
+    transformGeneralApplicantData(apiData) {
+      console.log('🔍 Transform General Applicant Debug - API Data:', apiData)
+
+      return {
+        id: `#${String(apiData.applicant_id).padStart(4, '0')}`,
+        applicant_id: apiData.applicant_id,
+        fullName: apiData.applicant_full_name || 'N/A',
+        email: apiData.email_address || 'N/A',
+        phoneNumber: apiData.applicant_contact_number || 'N/A',
+        address: apiData.applicant_address || 'N/A',
+        type: 'general',
+        
+        // Personal information
+        applicant_birthdate: apiData.applicant_birthdate || null,
+        applicant_civil_status: apiData.applicant_civil_status || null,
+        applicant_educational_attainment: apiData.applicant_educational_attainment || null,
+        
+        // Status information - use actual database status
+        application_status: apiData.status || 'Pending',
+        status: apiData.status || 'Pending',
+
+        // Business Information
+        business_information: apiData.business_information
+          ? {
+              nature_of_business: apiData.business_information.nature_of_business || 'Not specified',
+              capitalization: apiData.business_information.capitalization || 0,
+              source_of_capital: apiData.business_information.source_of_capital || 'Not specified',
+              previous_business_experience: apiData.business_information.previous_business_experience || 'None',
+              relative_stall_owner: apiData.business_information.relative_stall_owner || 'No',
+            }
+          : null,
+
+        // Spouse Information
+        spouse_information: apiData.spouse
+          ? {
+              spouse_full_name: apiData.spouse.spouse_full_name || '',
+              spouse_birthdate: apiData.spouse.spouse_birthdate || null,
+              spouse_educational_attainment: apiData.spouse.spouse_educational_attainment || '',
+              spouse_contact_number: apiData.spouse.spouse_contact_number || '',
+              spouse_occupation: apiData.spouse.spouse_occupation || '',
+            }
+          : null,
+
+        // Other Information
+        other_information: {
+          email_address: apiData.email_address || '',
+        },
+        
+        // Dates
+        created_at: apiData.created_at || null,
+        updated_at: apiData.updated_at || null,
+        applied_date: apiData.created_at || null,
+        
+        // No stall info for general applicants
+        stall_info: null,
+        all_applications: [],
+        
+        // Username if available
+        username: apiData.username || null,
+
+        // Flag to identify as general applicant
+        is_general_applicant: true,
       }
     },
 
