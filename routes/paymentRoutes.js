@@ -213,4 +213,18 @@ router.delete(
   DailyPaymentController.deleteDailyPayment
 );
 
+// ============================================================================
+// STALL PAYMENT TRACKER ROUTE
+// ============================================================================
+
+/**
+ * @route GET /api/payments/tracker/:stallholderId
+ * @description Get stall payment tracker (stallholder info + full rental payment history)
+ */
+router.get(
+  "/tracker/:stallholderId",
+  authMiddleware.authenticateToken,
+  PaymentController.getPaymentTracker
+);
+
 export default router;
