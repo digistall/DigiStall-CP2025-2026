@@ -1,70 +1,215 @@
 <template>
   <div class="onsite-payments">
-    <!-- Search Bar -->
-    <div class="search-container">
-      <v-text-field
-        v-model="searchQuery"
-        placeholder="Search by ID, name, receipt number..."
-        variant="outlined"
-        density="comfortable"
-        prepend-inner-icon="mdi-magnify"
-        clearable
-        hide-details
-        class="search-field"
-      ></v-text-field>
+    <!-- Search & Filter Section -->
+    <div class="search-filter-section mb-6">
+      <v-row align="center">
+        <!-- Search Bar -->
+        <v-col cols="12" md="6" lg="4">
+          <v-text-field
+            v-model="searchQuery"
+            label="Search Stallholders"
+            placeholder="Search by stall number, name, location..."
+            variant="outlined"
+            clearable
+            hide-details
+            prepend-inner-icon="mdi-magnify"
+            class="search-field"
+          ></v-text-field>
+        </v-col>
+
+        <!-- Spacer -->
+        <v-col cols="12" md="4" lg="6" class="d-none d-md-block"></v-col>
+
+        <!-- Filter Button -->
+        <v-col cols="12" md="2" lg="2" class="text-right">
+          <div class="filter-container" ref="filterContainer">
+            <v-btn
+              variant="outlined"
+              prepend-icon="mdi-filter-variant"
+              @click="toggleFilter"
+              class="filter-btn"
+              :class="{ 'filter-active': showFilterPanel }"
+            >
+              Filter
+              <v-icon
+                :icon="showFilterPanel ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                size="small"
+                class="ml-1"
+              ></v-icon>
+            </v-btn>
+
+            <!-- Filter Dropdown Panel -->
+            <transition name="slide-down">
+              <div v-show="showFilterPanel" class="filter-dropdown">
+                <v-card elevation="8" class="filter-card">
+                  <div class="filter-header">
+                    <div class="d-flex align-center">
+                      <v-icon icon="mdi-filter-variant" size="small" class="mr-2"></v-icon>
+                      <span class="filter-title">FILTER OPTIONS</span>
+                    </div>
+                    <v-btn
+                      icon="mdi-close"
+                      variant="text"
+                      size="small"
+                      class="close-btn"
+                      @click="showFilterPanel = false"
+                    ></v-btn>
+                  </div>
+
+                  <div class="filter-content">
+                    <!-- Stall Number Sort -->
+                    <div class="filter-group">
+                      <div class="filter-label">STALL NUMBER</div>
+                      <div class="status-buttons">
+                        <v-btn
+                          v-for="option in stallNumberSortOptions"
+                          :key="option.value"
+                          :variant="filters.stallNumberSort === option.value ? 'flat' : 'outlined'"
+                          :color="filters.stallNumberSort === option.value ? 'primary' : 'default'"
+                          class="status-btn"
+                          @click="filters.stallNumberSort = filters.stallNumberSort === option.value ? null : option.value"
+                        >
+                          {{ option.title }}
+                        </v-btn>
+                      </div>
+                    </div>
+
+                    <!-- Section -->
+                    <div class="filter-group">
+                      <div class="filter-label">SECTION</div>
+                      <v-select
+                        v-model="filters.section"
+                        :items="sectionFilterOptions"
+                        placeholder="All Sections"
+                        variant="outlined"
+                        density="compact"
+                        clearable
+                        hide-details
+                        class="filter-select"
+                      ></v-select>
+                    </div>
+
+                    <!-- Floor -->
+                    <div class="filter-group">
+                      <div class="filter-label">FLOOR</div>
+                      <v-select
+                        v-model="filters.floor"
+                        :items="floorFilterOptions"
+                        placeholder="All Floors"
+                        variant="outlined"
+                        density="compact"
+                        clearable
+                        hide-details
+                        class="filter-select"
+                      ></v-select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="filter-group">
+                      <div class="filter-label">STATUS</div>
+                      <div class="status-buttons">
+                        <v-btn
+                          :variant="!filters.status ? 'flat' : 'outlined'"
+                          :color="!filters.status ? 'primary' : 'default'"
+                          class="status-btn"
+                          @click="filters.status = null"
+                        >
+                          All
+                        </v-btn>
+                        <v-btn
+                          v-for="status in statusFilterOptions"
+                          :key="status"
+                          :variant="filters.status === status ? 'flat' : 'outlined'"
+                          :color="filters.status === status ? 'primary' : 'default'"
+                          class="status-btn"
+                          @click="filters.status = status"
+                        >
+                          {{ status }}
+                        </v-btn>
+                      </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="filter-actions">
+                      <v-btn
+                        variant="outlined"
+                        color="grey"
+                        class="action-btn clear-btn"
+                        @click="clearFilters"
+                      >
+                        Clear All
+                      </v-btn>
+                      <v-btn
+                        variant="flat"
+                        color="primary"
+                        class="action-btn apply-btn"
+                        @click="applyFilters"
+                      >
+                        Apply Filters
+                      </v-btn>
+                    </div>
+                  </div>
+                </v-card>
+              </div>
+            </transition>
+          </div>
+        </v-col>
+      </v-row>
     </div>
 
-    <!-- Payments Table -->
+    <!-- Stall Payment Tracker Table -->
     <div class="payments-table-container">
       <v-card class="payments-card" elevation="0">
         <div class="table-wrapper">
           <table class="payments-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Stallholder Name</th>
                 <th>Stall Number</th>
-                <th>Amount</th>
-                <th>Payment Date</th>
-                <th>Collected By</th>
-                <th>Receipt No.</th>
-                <th>Status</th>
+                <th>Stallholder Name</th>
+                <th>Monthly Rental</th>
+                <th>Section</th>
+                <th>Floor</th>
+                <th>Stall Location</th>
+                <th class="center-th">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-if="filteredPayments.length === 0">
-                <td colspan="8" class="empty-state">
-                  <v-icon size="48" color="grey">mdi-inbox</v-icon>
-                  <p>No onsite payments recorded</p>
+              <tr v-if="filteredStalls.length === 0">
+                <td colspan="7" class="empty-state">
+                  <v-icon size="48" color="grey">mdi-store-off</v-icon>
+                  <p>No stalls with stallholders found</p>
                 </td>
               </tr>
               <tr
-                v-for="payment in filteredPayments"
-                :key="payment.id"
+                v-for="stall in filteredStalls"
+                :key="stall.id"
                 class="clickable-row"
-                @click="viewPayment(payment)"
+                @click="viewStallTracker(stall)"
               >
-                <td class="id-cell">{{ payment.id }}</td>
+                <td class="stall-cell">
+                  <v-chip color="#002181" variant="flat" size="small">
+                    {{ stall.stallNo }}
+                  </v-chip>
+                </td>
                 <td class="name-cell">
                   <div class="stallholder-info">
                     <div class="avatar">
-                      {{ (payment.stallholderName || "N/A").charAt(0) }}
+                      {{ (stall.name || 'N/A').charAt(0).toUpperCase() }}
                     </div>
-                    <span class="name">{{ payment.stallholderName || "N/A" }}</span>
+                    <span class="name">{{ stall.name || 'N/A' }}</span>
                   </div>
                 </td>
-                <td class="stall-cell">
-                  <v-chip color="#002181" variant="flat" size="small">
-                    {{ payment.stallNo }}
-                  </v-chip>
-                </td>
-                <td class="amount-cell">{{ formatCurrency(payment.amount) }}</td>
-                <td class="date-cell">{{ formatDate(payment.paymentDate) }}</td>
-                <td class="collector-cell">{{ payment.collectedBy }}</td>
-                <td class="receipt-cell">{{ payment.receiptNo }}</td>
-                <td class="status-cell">
-                  <v-chip :color="payment.statusColor" variant="flat" size="small">
-                    {{ payment.status }}
+                <td class="amount-cell">{{ formatCurrency(stall.monthlyRental) }}</td>
+                <td class="section-cell">{{ stall.sectionName || 'N/A' }}</td>
+                <td class="floor-cell">{{ stall.floorName || 'N/A' }}</td>
+                <td class="location-cell">{{ stall.stallLocation || 'N/A' }}</td>
+                <td class="status-cell center-td">
+                  <v-chip
+                    :color="getStatusConfig(stall).color"
+                    variant="flat"
+                    size="small"
+                  >
+                    {{ getStatusConfig(stall).label }}
                   </v-chip>
                 </td>
               </tr>
@@ -287,53 +432,107 @@
       </v-card>
     </v-dialog>
 
-    <!-- View Payment Modal -->
-    <v-dialog v-model="showViewModal" max-width="600px">
-      <v-card>
+    <!-- Payment Tracker Modal -->
+    <v-dialog v-model="showTrackerModal" max-width="680px" scrollable>
+      <v-card v-if="selectedStall" class="tracker-card">
         <v-card-title class="modal-header">
           <span class="modal-title">Payment Details</span>
-          <v-btn icon variant="text" @click="showViewModal = false">
+          <v-btn icon variant="text" @click="showTrackerModal = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
-        <v-card-text class="pa-6">
-          <div v-if="selectedPayment" class="payment-details">
-            <div class="detail-group">
-              <div class="detail-item">
-                <span class="detail-label">Payment ID:</span>
-                <span class="detail-value">{{ selectedPayment.id }}</span>
+        <v-card-text class="pa-0" style="max-height: 75vh; overflow-y: auto;">
+          <!-- Stall Summary Info -->
+          <div class="stall-info-header">
+            <div class="stall-info-row">
+              <div class="stall-info-item">
+                <span class="info-label">Receipt Number:</span>
+                <span class="info-value receipt-value">{{ latestReceiptNo || '—' }}</span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Stallholder Name:</span>
-                <span class="detail-value">{{ selectedPayment.stallholderName }}</span>
+              <div class="stall-info-item">
+                <span class="info-label">Payment Date:</span>
+                <span class="info-value">{{ latestPaymentDate || '—' }}</span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Stall Number:</span>
-                <span class="detail-value">{{ selectedPayment.stallNo }}</span>
+            </div>
+            <div class="stall-info-row">
+              <div class="stall-info-item">
+                <span class="info-label">Stallholder Name:</span>
+                <span class="info-value">{{ selectedStall.name }}</span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Amount:</span>
-                <span class="detail-value amount">{{
-                  formatCurrency(selectedPayment.amount)
-                }}</span>
+              <div class="stall-info-item">
+                <span class="info-label">Stall Number:</span>
+                <span class="info-value">
+                  <v-chip color="#002181" variant="flat" size="x-small">{{ selectedStall.stallNo }}</v-chip>
+                </span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Payment Date:</span>
-                <span class="detail-value">{{
-                  formatDate(selectedPayment.paymentDate)
-                }}</span>
+            </div>
+            <div class="stall-info-row">
+              <div class="stall-info-item">
+                <span class="info-label">Section:</span>
+                <span class="info-value">{{ selectedStall.sectionName || 'N/A' }}</span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Collected By:</span>
-                <span class="detail-value">{{ selectedPayment.collectedBy }}</span>
+              <div class="stall-info-item">
+                <span class="info-label">Floor:</span>
+                <span class="info-value">{{ selectedStall.floorName || 'N/A' }}</span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Receipt Number:</span>
-                <span class="detail-value">{{ selectedPayment.receiptNo }}</span>
+            </div>
+            <div class="stall-info-row">
+              <div class="stall-info-item">
+                <span class="info-label">Stall Location:</span>
+                <span class="info-value">{{ selectedStall.stallLocation || 'N/A' }}</span>
               </div>
-              <div v-if="selectedPayment.notes" class="detail-item full-width">
-                <span class="detail-label">Notes:</span>
-                <span class="detail-value">{{ selectedPayment.notes }}</span>
+              <div class="stall-info-item">
+                <span class="info-label">Monthly Rental:</span>
+                <span class="info-value amount">{{ formatCurrency(selectedStall.monthlyRental) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Payment Tracker -->
+          <div class="tracker-section">
+            <div class="tracker-title">
+              <v-icon size="18" color="#002181" class="mr-1">mdi-calendar-clock</v-icon>
+              Monthly Payment Tracker
+            </div>
+
+            <div v-if="trackerLoading" class="tracker-loading">
+              <v-progress-circular indeterminate color="#002181" size="28"></v-progress-circular>
+              <span>Loading payment history...</span>
+            </div>
+
+            <div v-else-if="paymentTracker.length === 0" class="tracker-empty">
+              <v-icon size="36" color="grey">mdi-calendar-blank</v-icon>
+              <p>No payment history yet</p>
+            </div>
+
+            <div v-else class="tracker-list">
+              <div
+                v-for="(entry, index) in paymentTracker"
+                :key="index"
+                class="tracker-entry"
+                :class="`tracker-${entry.status.toLowerCase()}`"
+              >
+                <div class="tracker-left">
+                  <div class="tracker-icon-wrap">
+                    <v-icon size="16" :color="getTrackerStatusConfig(entry.status).iconColor">
+                      {{ getTrackerStatusConfig(entry.status).icon }}
+                    </v-icon>
+                  </div>
+                  <div class="tracker-date-block">
+                    <span class="tracker-due-label">{{ entry.dueDateFormatted }}</span>
+                    <span v-if="entry.receiptNo" class="tracker-receipt-no">{{ entry.receiptNo }}</span>
+                  </div>
+                </div>
+                <div class="tracker-right">
+                  <span class="tracker-amount">{{ formatCurrency(entry.amount) }}</span>
+                  <v-chip
+                    :color="getTrackerStatusConfig(entry.status).color"
+                    variant="flat"
+                    size="x-small"
+                  >
+                    {{ entry.status }}
+                  </v-chip>
+                </div>
               </div>
             </div>
           </div>
