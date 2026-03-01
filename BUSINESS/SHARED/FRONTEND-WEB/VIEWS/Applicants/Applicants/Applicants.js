@@ -950,10 +950,14 @@ export default {
           transformedData.stall_info = null
         }
       } else {
-        // No applications yet
+        // No stall applications - general applicant
+        // Use the applicant's own status (approved/pending/rejected) so the badge shows correctly
+        const rawStatus = apiData.applicant_status || apiData.status || 'pending'
+        const normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase()
         transformedData.application_id = null
         transformedData.application_date = null
-        transformedData.application_status = 'No Application'
+        transformedData.application_status = normalizedStatus  // e.g. 'Approved', 'Pending'
+        transformedData.status = normalizedStatus  // Also set status for getEffectiveStatus fallback
         transformedData.stall_info = null
       }
 

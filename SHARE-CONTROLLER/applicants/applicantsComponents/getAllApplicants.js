@@ -6,13 +6,13 @@ export const getAllApplicants = async (req, res) => {
   try {
     connection = await createConnection();
 
-    const [applicants] = await connection.execute('CALL getAllApplicantsDecrypted()');
+    const [applicants] = await connection.execute('CALL sp_getAllApplicantsDecrypted()');
 
     res.json({
       success: true,
       message: 'Applicants retrieved successfully',
-      data: applicants,
-      count: applicants.length
+      data: applicants[0] || applicants,
+      count: (applicants[0] || applicants).length
     });
 
   } catch (error) {
