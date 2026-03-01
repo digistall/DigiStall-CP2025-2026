@@ -1,7 +1,7 @@
 # General Applicants Stall Display Fix
 
 **Date:** March 1, 2026  
-**Branch:** `Mobile/Stallholder/Payment`  
+**Branch:** `Mobile/Stallholder/StallFetch`  
 **Issue:** General applicants (registered via landing page) could not see any stalls in the mobile app  
 **Status:** ✅ RESOLVED
 
