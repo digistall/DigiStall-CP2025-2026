@@ -22,9 +22,6 @@
                     <input type="file" accept="image/*" @change="onFileChange('applicantSignature', $event)" required
                         :class="{ 'input-error': errors.applicantSignature }" />
                     <small class="input-hint">Upload image of your signature</small>
-                    <div v-if="previews.applicantSignature" class="image-preview-wrapper">
-                        <img :src="previews.applicantSignature" alt="Signature Preview" class="image-preview" />
-                    </div>
                 </label>
 
                 <label>
@@ -32,9 +29,6 @@
                     <input type="file" accept="image/*" @change="onFileChange('applicantLocation', $event)" required
                         :class="{ 'input-error': errors.applicantLocation }" />
                     <small class="input-hint">Upload sketch or map of your house location</small>
-                    <div v-if="previews.applicantLocation" class="image-preview-wrapper">
-                        <img :src="previews.applicantLocation" alt="House Sketch Preview" class="image-preview" />
-                    </div>
                 </label>
 
                 <label>
@@ -42,9 +36,6 @@
                     <input type="file" accept="image/*" @change="onFileChange('applicantValidID', $event)" required
                         :class="{ 'input-error': errors.applicantValidID }" />
                     <small class="input-hint">Upload clear photo of government-issued ID</small>
-                    <div v-if="previews.applicantValidID" class="image-preview-wrapper">
-                        <img :src="previews.applicantValidID" alt="Valid ID Preview" class="image-preview" />
-                    </div>
                 </label>
 
                 <label>
@@ -99,11 +90,6 @@ export default {
                 applicantLocation: false,
                 applicantValidID: false,
                 emailAddress: false
-            },
-            previews: {
-                applicantSignature: null,
-                applicantLocation: null,
-                applicantValidID: null
             }
         };
     },
@@ -146,11 +132,6 @@ export default {
                 this[field] = file;
                 // Clear error for this field when file is selected
                 this.errors[field] = false;
-                // Generate image preview URL
-                if (this.previews[field]) {
-                    URL.revokeObjectURL(this.previews[field]);
-                }
-                this.previews[field] = URL.createObjectURL(file);
             }
         },
         goNext() {
@@ -189,24 +170,4 @@ export default {
 
 <style scoped>
 @import '@/assets/LandingPage/css/applicationformstyle.css';
-
-.image-preview-wrapper {
-    margin-top: 10px;
-    border: 2px dashed #c0c0c0;
-    border-radius: 8px;
-    padding: 8px;
-    background-color: #f9f9f9;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    max-height: 220px;
-    overflow: hidden;
-}
-
-.image-preview {
-    max-width: 100%;
-    max-height: 200px;
-    object-fit: contain;
-    border-radius: 6px;
-}
 </style>

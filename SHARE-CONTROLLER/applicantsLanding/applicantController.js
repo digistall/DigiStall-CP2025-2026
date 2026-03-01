@@ -1,25 +1,6 @@
 import { createConnection } from "../../config/database.js";
 import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../config/multerApplicantDocuments.js";
 import { encryptData, decryptData } from "../../services/encryptionService.js";
-import emailService from "../../services/emailService.js";
-
-// ── Credential generation helpers (same format as updateApplicantStatus.js) ──
-// Username format: YY-XXXXX  (e.g. "26-48291")
-const generateUsername = () => {
-  const year = new Date().getFullYear().toString().slice(-2);
-  const randomDigits = Math.floor(10000 + Math.random() * 90000).toString();
-  return `${year}-${randomDigits}`;
-};
-
-// Password format: 3 lowercase letters + 3 digits  (e.g. "abc123")
-const generatePassword = () => {
-  const letters = 'abcdefghijklmnopqrstuvwxyz';
-  const numbers = '0123456789';
-  let password = '';
-  for (let i = 0; i < 3; i++) password += letters.charAt(Math.floor(Math.random() * letters.length));
-  for (let i = 0; i < 3; i++) password += numbers.charAt(Math.floor(Math.random() * numbers.length));
-  return password;
-};
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -401,30 +382,11 @@ export const applicantController = {
 
       console.log(`📄 Saved ${savedDocuments.length} document(s) for applicant ${applicantId} (storage: ${USE_BLOB_STORAGE ? 'BLOB' : 'file'})`);
 
-      // ─────────────────────────────────────────────────────────────────────
-      // BRANCHING LOGIC:
-      //   • stall_id present  → status stays "Pending", admin reviews manually
-      //   • stall_id absent   → auto-approve, create credentials, send email
-      // ─────────────────────────────────────────────────────────────────────
+      // Generate response
       if (stall_id) {
-        // ── Specific-stall application: Pending, send confirmation email ──
-        console.log("📋 Specific-stall application – status set to Pending");
-
-        // Send confirmation email (non-blocking)
-        emailService.sendApplicationConfirmationEmail({
-          applicant_email: email_address,
-          applicant_name: applicant_full_name,
-          stall_id: stall_id,
-          stall_location: "selected stall",
-          application_id: applicationId,
-          application_date: application_date || new Date().toISOString().split("T")[0],
-        }).catch(emailErr =>
-          console.error("⚠️ Confirmation email failed (non-critical):", emailErr.message)
-        );
-
         res.status(201).json({
           success: true,
-          message: "Stall application submitted successfully. Your application is pending admin review.",
+          message: "Stall application submitted successfully",
           data: {
             applicant_id: applicantId,
             application_id: applicationId,
@@ -435,56 +397,10 @@ export const applicantController = {
             application_status: "Pending",
           },
         });
-
       } else {
-        // ── General application: Auto-approve + generate credentials ──
-        console.log("✅ General application – auto-approving applicant...");
-
-        const username = generateUsername();
-        const plainPassword = generatePassword();
-
-        // Hash password with bcrypt
-        const bcrypt = await import("bcrypt");
-        const passwordHash = await bcrypt.hash(plainPassword, 10);
-
-        // Check if a credential record already exists (safety guard)
-        const [existingCred] = await connection.execute(
-          "SELECT credential_id FROM credential WHERE applicant_id = ?",
-          [applicantId]
-        );
-
-        if (existingCred.length === 0) {
-          await connection.execute(
-            `INSERT INTO credential (applicant_id, username, password_hash, created_at)
-             VALUES (?, ?, ?, NOW())`,
-            [applicantId, username, passwordHash]
-          );
-          console.log(`✅ Credentials created for applicant ${applicantId} – username: ${username}`);
-        } else {
-          console.warn(`⚠️ Credential record already existed for applicant ${applicantId}, skipping insert`);
-        }
-
-        // Mark applicant status as approved in applicant table
-        await connection.execute(
-          `UPDATE applicant SET status = 'approved', updated_at = NOW() WHERE applicant_id = ?`,
-          [applicantId]
-        );
-        console.log(`✅ Applicant ${applicantId} status updated to approved`);
-
-        // Send credentials email (non-blocking)
-        emailService.sendApplicantCredentialsEmail({
-          email: email_address,
-          applicantName: applicant_full_name,
-          username,
-          password: plainPassword,
-          applicantId,
-        }).catch(emailErr =>
-          console.error("⚠️ Credentials email failed (non-critical):", emailErr.message)
-        );
-
         res.status(201).json({
           success: true,
-          message: "General application submitted and automatically approved. Login credentials have been sent to your email.",
+          message: "General application submitted successfully. A stall will be assigned upon approval.",
           data: {
             applicant_id: applicantId,
             application_id: null,
@@ -492,8 +408,7 @@ export const applicantController = {
             applicant_contact_number,
             stall_id: null,
             documents: savedDocuments,
-            application_status: "Approved",
-            credentials_sent: true,
+            application_status: "Pending",
           },
         });
       }
@@ -643,7 +558,7 @@ export const applicantController = {
     let connection;
     try {
       connection = await createConnection();
-      const [[applicants]] = await connection.execute("CALL getAllApplicants()");
+      const [[applicants]] = await connection.execute("CALL getApplicantComplete(NULL)");
       
       // Decrypt sensitive fields for each applicant
       const decryptedApplicants = (applicants || []).map(applicant => ({

@@ -21,7 +21,7 @@
             <!-- Full Name -->
             <v-col cols="12" md="6">
               <div class="form-group">
-                <label class="form-label">Full name (Surname, Firstname Middle Name):</label>
+                <label class="form-label">Full Name:</label>
                 <v-text-field
                   v-model="formData.fullName"
                   :rules="nameRules"

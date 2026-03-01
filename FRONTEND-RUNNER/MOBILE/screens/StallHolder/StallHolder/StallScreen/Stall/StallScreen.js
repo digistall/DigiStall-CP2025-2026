@@ -152,9 +152,8 @@ const StallScreen = () => {
         console.log('No Fixed Price stalls available:', response.message);
         setStallsData([]);
         
-        // Show informative message if no applications exist (but NOT for general applicants who have full access)
-        const isGeneralApplicant = response.data?.is_general_applicant;
-        if (response.data?.restriction_message && !isGeneralApplicant) {
+        // Show informative message if no applications exist
+        if (response.data?.restriction_message) {
           Alert.alert(
             'No Stalls Available',
             'You need to apply to your first stall to see more stalls in that area. Please check with your branch manager or admin to get started.',
