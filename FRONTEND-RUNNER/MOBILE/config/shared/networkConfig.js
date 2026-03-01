@@ -4,20 +4,31 @@
 // IMPORTANT: This configuration supports multiple network environments
 // It will automatically try different endpoints until one works
 
+// ===== AUTO-DETECT ENVIRONMENT =====
+// __DEV__ is a React Native global:
+//   true  → Expo Go / development mode  → use LOCAL backend
+//   false → APK / production build       → use DigitalOcean backend
+const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+
+// Server lists by environment
+const PRODUCTION_SERVERS = [
+  'http://68.183.154.125:5001',   // DigitalOcean Backend-Mobile API (PRIMARY)
+  'http://68.183.154.125:5000',   // DigitalOcean Backend-Web API (fallback)
+];
+
+const DEVELOPMENT_SERVERS = [
+  'http://192.168.1.105:5001',    // Local Backend-Mobile API (primary)
+  'http://192.168.1.105:5000',    // Local Backend-Web API (fallback)
+  'http://192.168.1.105:3001',    // Local single-server fallback
+  'http://localhost:3001',        // Only works on emulator
+];
+
 export const API_CONFIG = {
-  // Multiple possible server endpoints (in order of preference)
-  // For PRODUCTION builds, the DigitalOcean server should be FIRST
-  // For LOCAL development, you can temporarily move localhost entries to top
-  SERVERS: [
-    // PRODUCTION - DigitalOcean Server (Mobile backend FIRST)
-    'http://68.183.154.125:5001',   // Production Backend-Mobile API (PRIMARY)
-    'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
-    
-    // LOCAL DEVELOPMENT - Enable these by moving to top while in development
-    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
-    'http://192.168.100.241:3001',  // Local Backend API (alternative)
-    'http://localhost:3001',        // Only works on emulator
-  ],
+  // Server endpoints are ordered automatically based on environment
+  // Expo Go (dev) → local servers first, APK (prod) → DigitalOcean first
+  SERVERS: IS_DEV
+    ? [...DEVELOPMENT_SERVERS, ...PRODUCTION_SERVERS]   // Dev: try local first, fallback to production
+    : [...PRODUCTION_SERVERS, ...DEVELOPMENT_SERVERS],  // Prod: try DigitalOcean first, fallback to local
   
   // Static file server for images (Apache on port 80)
   // Must match one of the server IPs above
@@ -79,6 +90,9 @@ export const API_CONFIG = {
     // Stallholder complaint endpoints
     SUBMIT_COMPLAINT: '/api/mobile/stallholder/complaint',
     GET_MY_COMPLAINTS: '/api/mobile/stallholder/complaints',
+    
+    // Stallholder owned stalls endpoint
+    GET_OWNED_STALLS: '/api/mobile/stallholder/owned-stalls',
     
     // Stallholder payment endpoints
     GET_PAYMENT_RECORDS: '/api/mobile/stallholder/payments',
@@ -242,7 +256,6 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
 // });
 
 console.log('📱 Mobile Network Config Loaded');
+console.log(`🔧 Environment: ${IS_DEV ? 'DEVELOPMENT (Expo Go → Local Backend)' : 'PRODUCTION (APK → DigitalOcean)'}`);
+console.log('🌐 Server priority:', API_CONFIG.SERVERS.map(s => s.replace('http://', '')).join(' → '));
 console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
-console.log('🔗 Login endpoint:', `${API_CONFIG.BASE_URL}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);
-console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
-console.log('🔗 Login endpoint:', `${API_CONFIG.BASE_URL}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);

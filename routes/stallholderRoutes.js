@@ -38,6 +38,11 @@ import {
   getPaymentSummary
 } from '../SHARE-CONTROLLER/stallholder/paymentController.js';
 
+// Import owned stall controller
+import {
+  getOwnedStalls
+} from '../SHARE-CONTROLLER/stallholder/ownedStallController.js';
+
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
 
@@ -188,6 +193,17 @@ router.post('/complaint', verifyToken, submitComplaint);
  * @access Protected (Stallholder only)
  */
 router.get('/complaints', verifyToken, getMyComplaints);
+
+// =============================================
+// STALLHOLDER OWNED STALLS ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/owned-stalls
+ * @desc Get all stalls owned/rented by the stallholder across all branches
+ * @access Protected (Stallholder only)
+ */
+router.get('/owned-stalls', verifyToken, getOwnedStalls);
 
 // =============================================
 // STALLHOLDER PAYMENT ROUTES
