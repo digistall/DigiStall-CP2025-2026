@@ -246,9 +246,9 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
             <SectionHeader title="Personal Information" styles={styles} />
             <View style={styles.section}>
               <InputField
-                label="Full name (Surname, Firstname Middle Name)"
+                label="Full Name"
                 {...bind("fullName")}
-                placeholder="Enter your full name (Surname, Firstname Middle Name)"
+                placeholder="Enter your full name"
                 editable={false}
                 styles={styles}
                 placeholderColor={theme.colors.textTertiary}

@@ -12,13 +12,6 @@
             :full-page="false"
           />
           
-          <!-- Loading Overlay for General Applicants -->
-          <LoadingOverlay 
-            :loading="loading && currentApplicantType === 'General Applicants'" 
-            text="Loading general applicants..."
-            :full-page="false"
-          />
-          
           <v-row>
             <v-col cols="12">
               <!-- Page Title with Dropdown -->
@@ -65,7 +58,7 @@
                 @close="toast.show = false"
               />
 
-              <!-- Error State for Stall Applicants -->
+              <!-- Error State -->
               <div
                 v-if="error && currentApplicantType === 'Stall Applicants'"
                 class="text-center py-8"
@@ -73,19 +66,6 @@
                 <v-icon color="error" size="64">mdi-alert-circle</v-icon>
                 <p class="mt-4 text-h6 error--text">{{ error }}</p>
                 <v-btn @click="refreshStallApplicants" color="primary" class="mt-4">
-                  <v-icon left>mdi-refresh</v-icon>
-                  Retry
-                </v-btn>
-              </div>
-
-              <!-- Error State for General Applicants -->
-              <div
-                v-if="error && currentApplicantType === 'General Applicants'"
-                class="text-center py-8"
-              >
-                <v-icon color="error" size="64">mdi-alert-circle</v-icon>
-                <p class="mt-4 text-h6 error--text">{{ error }}</p>
-                <v-btn @click="fetchGeneralApplicants" color="primary" class="mt-4">
                   <v-icon left>mdi-refresh</v-icon>
                   Retry
                 </v-btn>
