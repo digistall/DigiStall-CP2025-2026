@@ -157,19 +157,35 @@ export const getStallsByType = async (req, res) => {
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
     const appliedAreas = appliedAreasRows[0]
 
+    // Check if applicant is a general (auto-approved) applicant with no specific applications
+    // These users should be able to browse ALL available stalls
+    let isGeneralApplicant = false
     if (appliedAreas.length === 0) {
-      return res.json({
-        success: true,
-        message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
-        data: {
-          stalls: [],
-          type: type,
-          total_count: 0,
-          available_count: 0,
-          applied_count: 0,
-          restriction_message: 'Stalls are restricted to areas where you have applications'
-        }
-      })
+      // Check if applicant exists and has approved status (general applicant)
+      const [applicantCheck] = await connection.execute(
+        'SELECT status FROM applicant WHERE applicant_id = ?',
+        [applicant_id]
+      )
+      
+      if (applicantCheck.length > 0 && applicantCheck[0].status === 'approved') {
+        // General applicant - allow browsing all stalls
+        isGeneralApplicant = true
+        console.log(`✅ General applicant ${applicant_id} - allowing access to all stalls`)
+      } else {
+        // Not approved or not found - restrict access
+        return res.json({
+          success: true,
+          message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
+          data: {
+            stalls: [],
+            type: type,
+            total_count: 0,
+            available_count: 0,
+            applied_count: 0,
+            restriction_message: 'Stalls are restricted to areas where you have applications'
+          }
+        })
+      }
     }
 
     // Get stalls by type using stored procedure (without area restriction for now)

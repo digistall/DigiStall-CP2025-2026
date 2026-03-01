@@ -11,6 +11,7 @@ import { searchApplicants } from './applicantsComponents/searchApplicants.js'
 import { getApplicantsByBranch } from './applicantsComponents/getApplicantsByBranch.js'
 import { getApplicantsByStall } from './applicantsComponents/getApplicantsByStall.js'
 import { getApplicantsByBranchManager } from './applicantsComponents/getApplicantsByBranchManager.js'
+import { getGeneralApplicants } from './applicantsComponents/getGeneralApplicants.js'
 import { approveApplicant } from './applicantsComponents/approveApplicant.js'
 import { declineApplicant } from './applicantsComponents/declineApplicant.js'
 import { updateApplicantStatus } from './applicantsComponents/updateApplicantStatus.js'
@@ -33,6 +34,7 @@ export {
   getApplicantsByBranch,      // For viewing applicants in a specific branch
   getApplicantsByStall,       // For detailed stall applicant management
   getApplicantsByBranchManager, // For branch managers to see their assigned applicants
+  getGeneralApplicants,       // For general applicants (no stall applications)
   approveApplicant,           // Approve applicant and store credentials
   declineApplicant,           // Decline applicant and delete all data
   updateApplicantStatus,      // Update applicant status (for frontend compatibility)

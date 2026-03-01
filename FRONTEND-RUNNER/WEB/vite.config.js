@@ -77,6 +77,10 @@ export default defineConfig({
       protocol: 'ws',
       host: 'localhost'
     },
+    watch: {
+      // Watch aliased MVC role-based folders outside of src/
+      ignored: ['!**/BUSINESS/**', '!**/AUTH/**', '!**/EMPLOYEE/**', '!**/SHARED/**', '!**/STALL-HOLDER/**', '!**/VENDOR/**', '!**/APPLICANTS/**', '!**/SYSTEM-ADMINISTRATOR/**', '!**/SHARE-CONTROLLER/**'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
