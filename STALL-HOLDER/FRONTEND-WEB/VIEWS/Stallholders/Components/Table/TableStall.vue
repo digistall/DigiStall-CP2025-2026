@@ -5,7 +5,7 @@
       <div class="table-header">
         <div class="header-row simplified-layout">
           <div class="header-cell id-col">ID</div>
-          <div class="header-cell name-col">Full name (Surname, Firstname Middle Name)</div>
+          <div class="header-cell name-col">Full Name</div>
           <div class="header-cell business-col">Business</div>
           <div class="header-cell email-col">Email Address</div>
           <div class="header-cell phone-col">Phone Number</div>
@@ -146,7 +146,7 @@
                 <v-row>
                   <v-col cols="12" md="6">
                     <div class="info-item">
-                      <span class="info-label">Full name (Surname, Firstname Middle Name):</span>
+                      <span class="info-label">Full Name:</span>
                       <span class="info-value">{{ selectedStallholder?.stallholder_name }}</span>
                     </div>
                   </v-col>

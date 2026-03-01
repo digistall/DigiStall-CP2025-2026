@@ -215,9 +215,8 @@ const TabbedStallScreen = () => {
         setStallsData([]);
         setAvailableFilters(['ALL']);
         
-        // Show informative message if no stalls found (but NOT for general applicants who have full access)
-        const isGeneralApplicant = response.data?.is_general_applicant;
-        if (activeTab === 'Fixed Price' && response.data?.restriction_message && !isGeneralApplicant) {
+        // Show informative message if no stalls found
+        if (activeTab === 'Fixed Price' && response.data?.restriction_message) {
           Alert.alert(
             'No Stalls Available',
             'You need to apply to your first stall to see more stalls in that area. Please check with your branch manager or admin to get started.',

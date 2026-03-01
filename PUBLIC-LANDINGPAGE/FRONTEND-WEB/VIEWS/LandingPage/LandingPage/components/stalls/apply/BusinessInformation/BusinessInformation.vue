@@ -51,10 +51,10 @@
 
                 <label>
                     Previous Business Experience:
-                    <input type="text" v-model="previousBusiness"
-                        placeholder="Describe your previous business experience (leave blank if none)"
+                    <input type="text" v-model="previousBusiness" required
+                        placeholder="Describe your previous business experience"
                         :class="{ 'input-error': errors.previousBusiness }" />
-                    <small class="input-hint">Example: "Sold vegetables at Naga City Market for 5 years" — leave blank if none</small>
+                    <small class="input-hint">Example: "Sold vegetables at Naga City Market for 5 years"</small>
                 </label>
 
                 <label>
@@ -186,11 +186,12 @@ export default {
             this.clearErrors();
 
             // Check required fields
-            if (!this.natureOfBusiness || !this.businessCapitalization || !this.sourceOfCapital) {
+            if (!this.natureOfBusiness || !this.businessCapitalization || !this.sourceOfCapital || !this.previousBusiness) {
                 const missingFields = [];
                 if (!this.natureOfBusiness) missingFields.push('natureOfBusiness');
                 if (!this.businessCapitalization) missingFields.push('businessCapitalization');
                 if (!this.sourceOfCapital) missingFields.push('sourceOfCapital');
+                if (!this.previousBusiness) missingFields.push('previousBusiness');
 
                 this.showError("Please fill in all required business information fields.", missingFields);
                 return;
@@ -216,7 +217,7 @@ export default {
                 natureOfBusiness: finalBusinessType,
                 businessCapitalization: this.businessCapitalization,
                 sourceOfCapital: this.sourceOfCapital,
-                previousBusiness: this.previousBusiness || 'None',
+                previousBusiness: this.previousBusiness,
                 applicantRelative: this.applicantRelative
             };
             this.$emit('next', businessData);

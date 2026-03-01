@@ -295,7 +295,7 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
           </InfoSection>
 
           <InfoSection title="Personal Information">
-            <InfoRow label="Full name (Surname, Firstname Middle Name)" value={profileData.fullName} />
+            <InfoRow label="Full Name" value={profileData.fullName} />
             <InfoRow label="Birth Date" value={profileData.birthDate} />
             <InfoRow label="Civil Status" value={profileData.civilStatus} />
             <InfoRow label="Education" value={profileData.education} />
