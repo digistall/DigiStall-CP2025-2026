@@ -104,10 +104,15 @@ const PaymentController = {
             sh.payment_status,
             sh.move_in_date as contract_start_date,
             sh.full_name as businessName,
-            sh.full_name as business_name
+            sh.full_name as business_name,
+            sec.section_name as sectionName,
+            f.floor_name as floorName,
+            f.floor_number as floorNumber
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          LEFT JOIN section sec ON s.section_id = sec.section_id
+          LEFT JOIN floor f ON s.floor_id = f.floor_id
           WHERE sh.branch_id = ?
           ORDER BY sh.stallholder_id
         `;
@@ -135,10 +140,15 @@ const PaymentController = {
             sh.payment_status,
             sh.move_in_date as contract_start_date,
             sh.full_name as businessName,
-            sh.full_name as business_name
+            sh.full_name as business_name,
+            sec.section_name as sectionName,
+            f.floor_name as floorName,
+            f.floor_number as floorNumber
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
+          LEFT JOIN section sec ON s.section_id = sec.section_id
+          LEFT JOIN floor f ON s.floor_id = f.floor_id
           ORDER BY sh.stallholder_id
         `;
         params = [];
@@ -1294,6 +1304,104 @@ const PaymentController = {
       res.status(500).json({
         success: false,
         message: 'Failed to fetch penalty payments',
+        error: error.message
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
+  },
+
+  /**
+   * Get stall payment tracker data for a specific stallholder
+   * Returns stallholder/stall info + all rental payments to build monthly timeline
+   * @route GET /api/payments/tracker/:stallholderId
+   */
+  getPaymentTracker: async (req, res) => {
+    let connection;
+    try {
+      connection = await createConnection();
+
+      const { stallholderId } = req.params;
+
+      if (!stallholderId) {
+        return res.status(400).json({ success: false, message: 'Stallholder ID is required' });
+      }
+
+      // Get stallholder + stall details
+      const [shResult] = await connection.execute(`
+        SELECT
+          sh.stallholder_id as id,
+          sh.full_name as name,
+          sh.move_in_date as moveInDate,
+          sh.payment_status,
+          sh.status as contractStatus,
+          sh.branch_id,
+          s.stall_number as stallNo,
+          s.stall_location as stallLocation,
+          s.rental_price as monthlyRental,
+          b.branch_name as branchName,
+          sec.section_name as sectionName,
+          f.floor_name as floorName,
+          f.floor_number as floorNumber
+        FROM stallholder sh
+        LEFT JOIN stall s ON sh.stall_id = s.stall_id
+        LEFT JOIN branch b ON sh.branch_id = b.branch_id
+        LEFT JOIN section sec ON s.section_id = sec.section_id
+        LEFT JOIN floor f ON s.floor_id = f.floor_id
+        WHERE sh.stallholder_id = ?
+      `, [parseInt(stallholderId)]);
+
+      if (!shResult || shResult.length === 0) {
+        return res.status(404).json({ success: false, message: 'Stallholder not found' });
+      }
+
+      const stallholder = shResult[0];
+
+      // Decrypt name
+      if (stallholder.name && typeof stallholder.name === 'string' && stallholder.name.includes(':')) {
+        try { stallholder.name = decryptData(stallholder.name); } catch (e) { /* keep encrypted */ }
+      }
+
+      // Get all rental payments for this stallholder ordered by date
+      const [payments] = await connection.execute(`
+        SELECT
+          p.payment_id as id,
+          p.amount,
+          p.payment_date as paymentDate,
+          p.payment_time as paymentTime,
+          p.payment_for_month as paymentForMonth,
+          p.reference_number as receiptNo,
+          p.collected_by as collectedBy,
+          p.payment_status as status,
+          p.notes
+        FROM payments p
+        WHERE p.stallholder_id = ?
+          AND p.payment_type = 'rental'
+          AND p.payment_method = 'onsite'
+        ORDER BY p.payment_date ASC
+      `, [parseInt(stallholderId)]);
+
+      // Decrypt collectedBy in payments
+      const decryptedPayments = payments.map(p => {
+        if (p.collectedBy && typeof p.collectedBy === 'string' && p.collectedBy.includes(':')) {
+          try { p.collectedBy = decryptData(p.collectedBy); } catch (e) { /* keep */ }
+        }
+        return p;
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          stallholder,
+          payments: decryptedPayments
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error fetching payment tracker:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch payment tracker',
         error: error.message
       });
     } finally {
