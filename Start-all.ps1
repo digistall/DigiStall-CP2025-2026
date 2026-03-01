@@ -5,14 +5,18 @@
 # NEW MVC role-based folder structure
 # ============================================
 # Usage:
-#   .\Start-all.ps1           - Start all services
-#   .\Start-all.ps1 -Backend  - Start only backend
-#   .\Start-all.ps1 -Web      - Start only frontend web
-#   .\Start-all.ps1 -Mobile   - Start only mobile app
+#   .\Start-all.ps1              - Start all services
+#   .\Start-all.ps1 -Backend     - Start both backends (web + mobile)
+#   .\Start-all.ps1 -BackendWeb  - Start only web backend (port 5000)
+#   .\Start-all.ps1 -BackendMobile - Start only mobile backend (port 5001)
+#   .\Start-all.ps1 -Web         - Start only frontend web
+#   .\Start-all.ps1 -Mobile      - Start only mobile app
 # ============================================
 
 param(
     [switch]$Backend,
+    [switch]$BackendWeb,
+    [switch]$BackendMobile,
     [switch]$Web,
     [switch]$Mobile,
     [switch]$Help
@@ -27,22 +31,29 @@ if ($Help) {
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Usage:" -ForegroundColor White
-    Write-Host "  .\Start-all.ps1           - Start all services" -ForegroundColor Gray
-    Write-Host "  .\Start-all.ps1 -Backend  - Start only backend server" -ForegroundColor Gray
-    Write-Host "  .\Start-all.ps1 -Web      - Start only frontend web" -ForegroundColor Gray
-    Write-Host "  .\Start-all.ps1 -Mobile   - Start only mobile app" -ForegroundColor Gray
-    Write-Host "  .\Start-all.ps1 -Help     - Show this help" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1              - Start all services (4 terminals)" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1 -Backend     - Start both backends (web + mobile)" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1 -BackendWeb  - Start only web backend (port 5000)" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1 -BackendMobile - Start only mobile backend (port 5001)" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1 -Web         - Start only frontend web" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1 -Mobile      - Start only mobile app" -ForegroundColor Gray
+    Write-Host "  .\Start-all.ps1 -Help        - Show this help" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Services:" -ForegroundColor White
-    Write-Host "  Backend:  http://localhost:3001  (node server.js)" -ForegroundColor Gray
-    Write-Host "  Web:      http://localhost:5173  (npm run dev)" -ForegroundColor Gray
-    Write-Host "  Mobile:   Expo QR Code           (npx expo start)" -ForegroundColor Gray
+    Write-Host "  Backend Web:    http://localhost:5000  (node server.js - for web frontend)" -ForegroundColor Gray
+    Write-Host "  Backend Mobile: http://localhost:5001  (node server.js - for mobile app)" -ForegroundColor Gray
+    Write-Host "  Frontend Web:   http://localhost:5173  (npm run dev)" -ForegroundColor Gray
+    Write-Host "  Frontend Mobile: Expo QR Code          (npx expo start)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Environment:" -ForegroundColor White
+    Write-Host "  Expo Go  -> Connects to LOCAL backend  (192.168.1.105:5001)" -ForegroundColor Gray
+    Write-Host "  APK      -> Connects to DIGITALOCEAN   (68.183.154.125:5001)" -ForegroundColor Gray
     Write-Host ""
     exit
 }
 
 # If no specific flag, start all
-$startAll = -not ($Backend -or $Web -or $Mobile)
+$startAll = -not ($Backend -or $BackendWeb -or $BackendMobile -or $Web -or $Mobile)
 
 Clear-Host
 Write-Host "============================================" -ForegroundColor Cyan
@@ -79,28 +90,52 @@ if (Test-Path "$projectRoot\.env") {
 Write-Host ""
 
 # ============================================
-# 1. Start MVC Backend Server (Node.js - Port 3001)
+# 1. Start Backend Web Server (Port 5000)
 # ============================================
-if ($startAll -or $Backend) {
-    Write-Host "[1] Starting MVC Backend Server (port 3001)..." -ForegroundColor Yellow
+if ($startAll -or $Backend -or $BackendWeb) {
+    Write-Host "[1] Starting Backend Web Server (port 5000)..." -ForegroundColor Yellow
     Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
-        `$Host.UI.RawUI.WindowTitle = 'DigiStall - MVC Backend (3001)'
+        `$Host.UI.RawUI.WindowTitle = 'DigiStall - Backend WEB (5000)'
         cd '$projectRoot'
         Write-Host '========================================' -ForegroundColor Green
-        Write-Host '  MVC BACKEND SERVER - Port 3001' -ForegroundColor Green
-        Write-Host '  Using: server.js (NEW MVC Structure)' -ForegroundColor Green
+        Write-Host '  BACKEND WEB SERVER - Port 5000' -ForegroundColor Green
+        Write-Host '  For: Web Frontend (Vue.js)' -ForegroundColor Green
+        Write-Host '  Using: server.js (MVC Structure)' -ForegroundColor Green
         Write-Host '========================================' -ForegroundColor Green
         Write-Host ''
+        `$env:PORT = '5000'
+        `$env:NODE_ENV = 'development'
         node server.js
 "@
     Start-Sleep -Seconds 2
 }
 
 # ============================================
-# 2. Start Frontend Web (Vue.js/Vite - Port 5173)
+# 2. Start Backend Mobile Server (Port 5001)
+# ============================================
+if ($startAll -or $Backend -or $BackendMobile) {
+    Write-Host "[2] Starting Backend Mobile Server (port 5001)..." -ForegroundColor Yellow
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
+        `$Host.UI.RawUI.WindowTitle = 'DigiStall - Backend MOBILE (5001)'
+        cd '$projectRoot'
+        Write-Host '========================================' -ForegroundColor Green
+        Write-Host '  BACKEND MOBILE SERVER - Port 5001' -ForegroundColor Green
+        Write-Host '  For: Mobile App (Expo / APK)' -ForegroundColor Green
+        Write-Host '  Using: server.js (MVC Structure)' -ForegroundColor Green
+        Write-Host '========================================' -ForegroundColor Green
+        Write-Host ''
+        `$env:PORT = '5001'
+        `$env:NODE_ENV = 'development'
+        node server.js
+"@
+    Start-Sleep -Seconds 2
+}
+
+# ============================================
+# 3. Start Frontend Web (Vue.js/Vite - Port 5173)
 # ============================================
 if ($startAll -or $Web) {
-    Write-Host "[2] Starting Frontend Web (port 5173)..." -ForegroundColor Yellow
+    Write-Host "[3] Starting Frontend Web (port 5173)..." -ForegroundColor Yellow
     Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
         `$Host.UI.RawUI.WindowTitle = 'DigiStall - Frontend Web (5173)'
         cd '$projectRoot\FRONTEND-RUNNER\WEB'
@@ -115,10 +150,10 @@ if ($startAll -or $Web) {
 }
 
 # ============================================
-# 3. Start Frontend Mobile (Expo)
+# 4. Start Frontend Mobile (Expo)
 # ============================================
 if ($startAll -or $Mobile) {
-    Write-Host "[3] Starting Frontend Mobile (Expo)..." -ForegroundColor Yellow
+    Write-Host "[4] Starting Frontend Mobile (Expo)..." -ForegroundColor Yellow
     
     # Check if FRONTEND-RUNNER/MOBILE has node_modules
     if (-not (Test-Path "$projectRoot\FRONTEND-RUNNER\MOBILE\node_modules")) {
@@ -156,21 +191,30 @@ Write-Host "   MVC System Started Successfully!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Services:" -ForegroundColor White
-if ($startAll -or $Backend) {
-    Write-Host "  [Backend]  http://localhost:3001  (NEW MVC Structure)" -ForegroundColor Cyan
+if ($startAll -or $Backend -or $BackendWeb) {
+    Write-Host "  [Backend Web]    http://localhost:5000  (for Web Frontend)" -ForegroundColor Cyan
+}
+if ($startAll -or $Backend -or $BackendMobile) {
+    Write-Host "  [Backend Mobile] http://localhost:5001  (for Mobile App)" -ForegroundColor Cyan
 }
 if ($startAll -or $Web) {
-    Write-Host "  [Web]      http://localhost:5173  (Original UI Preserved)" -ForegroundColor Cyan
+    Write-Host "  [Frontend Web]   http://localhost:5173  (Vue.js UI)" -ForegroundColor Cyan
 }
 if ($startAll -or $Mobile) {
-    Write-Host "  [Mobile]   Scan QR code in Expo terminal" -ForegroundColor Cyan
+    Write-Host "  [Frontend Mobile] Scan QR code in Expo terminal" -ForegroundColor Cyan
 }
 Write-Host ""
 Write-Host "Architecture:" -ForegroundColor White
-Write-Host "  - Backend uses new MVC role-based folders" -ForegroundColor DarkGray
+Write-Host "  - Backend Web (5000)  = same server.js, different port" -ForegroundColor DarkGray
+Write-Host "  - Backend Mobile (5001) = same server.js, different port" -ForegroundColor DarkGray
+Write-Host "  - Matches production (DigitalOcean: 5000/5001)" -ForegroundColor DarkGray
 Write-Host "  - Frontend runs from FRONTEND-RUNNER/" -ForegroundColor DarkGray
-Write-Host "  - Views distributed in role folders (MVC)" -ForegroundColor DarkGray
 Write-Host "  - Database: DigitalOcean MySQL (cloud)" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "Mobile Backend Routing:" -ForegroundColor White
+Write-Host "  - Expo Go (dev)  -> Local backend  (192.168.1.105:5001)" -ForegroundColor DarkGray
+Write-Host "  - APK (prod)     -> DigitalOcean    (68.183.154.125:5001)" -ForegroundColor DarkGray
+Write-Host "  - Auto-detected via __DEV__ flag (no manual config needed)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Tips:" -ForegroundColor White
 Write-Host "  - Use Ctrl+C in each terminal to stop" -ForegroundColor DarkGray
