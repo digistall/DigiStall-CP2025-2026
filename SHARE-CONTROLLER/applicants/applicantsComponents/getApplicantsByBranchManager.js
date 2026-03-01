@@ -229,21 +229,21 @@ export const getApplicantsByBranchManager = async (req, res) => {
     // No encryption params needed - data is encrypted in application format (iv:tag:data)
     let params = [];
 
-    // Apply branch filter - general applicants (no branch) are always included
+    // Apply branch filter - ONLY return applicants who have stall applications (exclude general applicants)
+    // General applicants (without stalls) are now handled by getGeneralApplicants endpoint
     if (branchFilter === null) {
-      // System administrator - no branch filter
-      query += " WHERE 1=1";
+      // System administrator - no branch filter, but still require stall_id
+      query += " WHERE app.stall_id IS NOT NULL";
     } else {
-      // Filter by accessible branches OR include general applicants (no stall/branch)
+      // Filter by accessible branches AND require stall_id (no general applicants)
       const placeholders = branchFilter.map(() => '?').join(',');
-      query += ` WHERE (b.branch_id IN (${placeholders}) OR b.branch_id IS NULL)`;
+      query += ` WHERE b.branch_id IN (${placeholders}) AND app.stall_id IS NOT NULL`;
       params = [...params, ...branchFilter];
     }
 
     if (application_status) {
-      // For general applicants, use applicant status instead of application status
-      query += " AND (LOWER(app.application_status) = LOWER(?) OR (app.application_id IS NULL AND LOWER(a.status) = LOWER(?)))";
-      params.push(application_status);
+      // Filter by application status (stall applicants only)
+      query += " AND LOWER(app.application_status) = LOWER(?)";
       params.push(application_status);
     }
 
