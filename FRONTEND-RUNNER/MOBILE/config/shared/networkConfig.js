@@ -5,10 +5,10 @@
 // It will automatically try different endpoints until one works
 
 // ===== AUTO-DETECT ENVIRONMENT =====
-// __DEV__ is a React Native global:
+// _DEV_ is a React Native global:
 //   true  → Expo Go / development mode  → use LOCAL backend
 //   false → APK / production build       → use DigitalOcean backend
-const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+const IS_DEV = typeof _DEV_ !== 'undefined' ? _DEV_ : false;
 
 // Server lists by environment
 const PRODUCTION_SERVERS = [

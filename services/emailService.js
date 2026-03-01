@@ -1,6 +1,5 @@
 import { createConnection } from '../config/database.js';
 import nodemailer from 'nodemailer';
-import fetch from 'node-fetch';
 
 /**
  * Email Service for Employee Management
@@ -883,6 +882,162 @@ Naga Stall Management Team
 
         } catch (error) {
             console.error('Error sending manager welcome email:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send credentials email to a general applicant after auto-approval.
+     * Triggered when the user applies via "Apply for a Stall" (no specific stall selected).
+     * Uses EmailJS for real email delivery (same as password reset flow).
+     * @param {{email: string, applicantName: string, username: string, password: string, applicantId: number}} data
+     */
+    async sendApplicantCredentialsEmail(data) {
+        try {
+            const { email, applicantName, username, password, applicantId } = data;
+
+            // ── Build the message body ──
+            const messageBody = `Congratulations! Your general stall application has been received and automatically approved.
+
+You are now a registered applicant candidate and will be considered for stall assignment.
+
+=== YOUR LOGIN CREDENTIALS ===
+Username: ${username}
+Password: ${password}
+Applicant ID: #${applicantId}
+
+Use these credentials to log in to the DigiStall Mobile App and track your application status.
+
+IMPORTANT:
+- Please change your password after your first login for security purposes.
+- Keep your credentials safe and do not share them with anyone.
+- You will be notified once a stall is assigned to you.
+
+📱 DOWNLOAD DIGISTALL MOBILE APP:
+${this.mobileAppDownloadUrl}
+
+If you have any questions, please contact our office.
+
+Best regards,
+Naga Stall Management Team`;
+
+            // ── Try EmailJS first (same credentials as password reset) ──
+            // These are hardcoded in the mobile app, so we use them here too
+            const EMAILJS_SERVICE_ID = 'service_am6pozg';
+            const EMAILJS_TEMPLATE_ID = 'template_3wccajf';
+            const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FJatviG';
+
+            try {
+                const templateParams = {
+                    to_email: email,
+                    name: applicantName || 'Applicant',
+                    message: messageBody,
+                };
+
+                console.log('📧 Sending applicant credentials via EmailJS to:', email);
+
+                const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'origin': 'http://localhost', // Required for EmailJS from non-browser environments
+                    },
+                    body: JSON.stringify({
+                        service_id: EMAILJS_SERVICE_ID,
+                        template_id: EMAILJS_TEMPLATE_ID,
+                        user_id: EMAILJS_PUBLIC_KEY,
+                        template_params: templateParams
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`EmailJS error: ${response.status} ${errorText}`);
+                }
+
+                console.log(`✅ Applicant credentials email sent via EmailJS to ${email}`);
+                return {
+                    success: true,
+                    via: 'emailjs',
+                    recipient: email
+                };
+
+            } catch (emailjsError) {
+                console.warn('⚠️ EmailJS send failed, falling back to transporter:', emailjsError.message);
+                // Fall through to transporter below
+            }
+
+            // ── Fallback: use SMTP transporter (will simulate in dev mode) ──
+            const subject = 'Your DigiStall Application Has Been Approved – Login Credentials Inside';
+
+            const textContent = `Dear ${applicantName},
+
+${messageBody}`;
+
+            const htmlContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #002181 0%, #003399 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                        <h1 style="margin: 0; font-size: 24px;">🏪 Naga Stall Management</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Application Approved!</p>
+                    </div>
+
+                    <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                        <p style="font-size: 16px; color: #333;">Dear <strong>${applicantName}</strong>,</p>
+
+                        <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left: 4px solid #4CAF50; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                            <p style="margin: 0 0 8px 0; font-weight: bold; color: #2e7d32; font-size: 16px;">🎉 Your application has been approved!</p>
+                            <p style="margin: 0; color: #555;">You are now a registered applicant candidate and will be considered for stall assignment.</p>
+                        </div>
+
+                        <div style="background: #f8f9fa; border: 2px dashed #002181; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                            <p style="margin: 0 0 15px 0; font-weight: bold; color: #002181; font-size: 18px;">🔐 Your Login Credentials</p>
+                            <div style="background: white; padding: 15px; border-radius: 6px; display: inline-block; min-width: 260px;">
+                                <p style="margin: 0 0 10px 0; text-align: left;"><strong>Applicant ID:</strong> <span style="color: #002181; font-family: monospace; font-size: 15px;">#${applicantId}</span></p>
+                                <p style="margin: 0 0 10px 0; text-align: left;"><strong>Username:</strong> <span style="color: #002181; font-family: monospace; font-size: 15px;">${username}</span></p>
+                                <p style="margin: 0; text-align: left;"><strong>Password:</strong> <span style="color: #002181; font-family: monospace; font-size: 15px;">${password}</span></p>
+                            </div>
+                        </div>
+
+                        <div style="background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; margin: 20px 0; border-radius: 8px;">
+                            <p style="margin: 0; color: #e65100; font-weight: bold;">⚠️ Important Security Notice</p>
+                            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #bf360c;">
+                                <li>Please change your password after your first login</li>
+                                <li>Keep your credentials safe and confidential</li>
+                                <li>You will be notified once a stall is assigned to you</li>
+                            </ul>
+                        </div>
+
+                        <p style="color: #666; font-size: 14px;">If you have any questions, please contact our office.</p>
+
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+
+                        <p style="color: #888; font-size: 12px; text-align: center;">
+                            Best regards,<br>
+                            <strong>Naga Stall Management Team</strong>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            const mailOptions = {
+                from: `"${this.fromName}" <${this.fromEmail}>`,
+                to: email,
+                subject: subject,
+                text: this.addMobileAppLink(textContent, false),
+                html: this.addMobileAppLink(htmlContent, true)
+            };
+
+            const result = await this.transporter.sendMail(mailOptions);
+
+            console.log(`📧 Applicant credentials email sent to ${email}`);
+            return {
+                success: true,
+                messageId: result.messageId,
+                recipient: email
+            };
+
+        } catch (error) {
+            console.error('Error sending applicant credentials email:', error);
             throw error;
         }
     }
