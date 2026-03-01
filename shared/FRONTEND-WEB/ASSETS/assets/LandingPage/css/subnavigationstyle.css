@@ -1,0 +1,295 @@
+/* SubNavigation Component Styles - Professional Design */
+.sub-navigation {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.loading-areas,
+.error-areas {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.retry-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.25);
+}
+
+.sub-nav-container {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+/* Navigation wrapper for the scrollable area */
+.nav-wrapper {
+  flex: 1;
+  overflow: hidden;
+  max-width: calc(100% - 80px); /* Account for arrow buttons */
+}
+
+/* Navigation arrow buttons */
+.nav-arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.25);
+  font-size: 20px;
+  z-index: 10;
+}
+
+.nav-arrow:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.35);
+}
+
+.nav-arrow:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+.nav-arrow i {
+  font-size: 18px;
+}
+
+.left-arrow {
+  margin-right: 8px;
+}
+
+.right-arrow {
+  margin-left: 8px;
+}
+
+/* Professional Area Buttons */
+.sub-nav-item {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #e9ecef;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 12px 24px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+  min-width: 120px;
+  white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
+}
+
+/* Hover effect with subtle animation */
+.sub-nav-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.sub-nav-item:hover::before {
+  left: 100%;
+}
+
+.sub-nav-item:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-color: #007bff;
+  color: #007bff;
+  transform: translateY(-2px);
+}
+
+/* Active state with professional blue theme */
+.sub-nav-item.active {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border-color: #0056b3;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.sub-nav-item.active:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  border-color: #004085;
+  color: white;
+}
+
+/* Add subtle pulse animation for active button */
+.sub-nav-item.active::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transform: translate(-50%, -50%) scale(0);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+.stalls-container {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  border: 1px solid #e9ecef;
+}
+
+/* Scrollable container for area buttons */
+.scrollable-container {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  scrollbar-width: none; /* Hide scrollbar for arrow navigation */
+  justify-content: flex-start;
+  align-items: center;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar completely for arrow navigation */
+.scrollable-container.arrow-navigation {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollable-container.arrow-navigation::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* When using arrow navigation, always use flex-start */
+.scrollable-container.arrow-navigation {
+  justify-content: flex-start;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .sub-nav-container {
+    padding: 1rem 1.5rem;
+  }
+  
+  .scrollable-container {
+    gap: 0.75rem;
+  }
+
+  .sub-nav-item {
+    font-size: 15px;
+    padding: 10px 20px;
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sub-nav-container {
+    padding: 0.75rem 1rem;
+  }
+  
+  .scrollable-container {
+    gap: 0.5rem;
+  }
+
+  .sub-nav-item {
+    font-size: 14px;
+    padding: 8px 16px;
+    min-width: 80px;
+    border-radius: 8px;
+  }
+
+  .stalls-container {
+    margin: 1rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sub-nav-container {
+    padding: 0.5rem;
+  }
+  
+  .scrollable-container {
+    gap: 0.4rem;
+    justify-content: flex-start !important; /* Force left alignment on mobile */
+  }
+
+  .sub-nav-item {
+    font-size: 13px;
+    padding: 6px 12px;
+    min-width: 70px;
+  }
+}

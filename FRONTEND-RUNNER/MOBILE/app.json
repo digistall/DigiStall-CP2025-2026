@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "DigiStall",
+    "slug": "digistall",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/DigiStall-Icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "plugins": [
+      "expo-image-picker",
+      "expo-document-picker",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24,
+            "extraMavenRepos": [
+              "https://maven.google.com",
+              "https://jcenter.bintray.com"
+            ]
+          }
+        }
+      ]
+    ],
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.digistall.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.digistall.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/DigiStall-Icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "digistall",
+    "extra": {
+      "eas": {
+        "projectId": "4bf8fb59-6f33-44c7-837e-e1bf92ef5b49"
+      }
+    }
+  }
+}

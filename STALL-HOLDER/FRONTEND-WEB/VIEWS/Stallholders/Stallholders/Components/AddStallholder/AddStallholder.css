@@ -1,0 +1,192 @@
+/* Add Stallholder Modal Styles */
+.toolbar-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Tab Styling */
+.v-tabs {
+  background-color: #f5f5f5;
+}
+
+.v-tab {
+  text-transform: none;
+  font-weight: 500;
+}
+
+.v-tab--active {
+  background-color: rgba(25, 118, 210, 0.1);
+}
+
+/* Form Styling */
+.v-form {
+  width: 100%;
+}
+
+.v-tabs-items {
+  background-color: transparent;
+}
+
+.v-tab-item {
+  padding: 0;
+}
+
+/* Input Field Styling */
+.v-text-field,
+.v-select,
+.v-textarea {
+  margin-bottom: 8px;
+}
+
+.v-text-field .v-input__prepend-inner,
+.v-select .v-input__prepend-inner,
+.v-textarea .v-input__prepend-inner {
+  margin-right: 8px;
+}
+
+/* Required field styling */
+.v-text-field.v-input--is-focused.primary--text,
+.v-select.v-input--is-focused.primary--text {
+  color: #1976d2 !important;
+}
+
+/* Tab Content Spacing */
+.v-container {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+/* Card Actions */
+.v-card__actions {
+  background-color: #fafafa;
+}
+
+/* Button Styling */
+.v-btn {
+  text-transform: none;
+  font-weight: 500;
+}
+
+.v-btn--disabled {
+  opacity: 0.6 !important;
+}
+
+/* Loading State */
+.v-btn--loading {
+  pointer-events: none;
+}
+
+/* Snackbar positioning */
+.v-snackbar {
+  z-index: 9999;
+}
+
+/* Success feedback */
+.v-snackbar.success {
+  color: white;
+}
+
+/* Error feedback */
+.v-snackbar.error {
+  color: white;
+}
+
+/* Form validation */
+.v-messages__message {
+  color: #d32f2f;
+  font-size: 12px;
+}
+
+/* Tab transition */
+.v-tabs-items .v-tab-item {
+  transition: all 0.3s ease;
+}
+
+/* Select dropdown styling */
+.v-select .v-select__selection {
+  color: #2c3e50;
+}
+
+.v-list-item__title {
+  font-weight: 500;
+}
+
+.v-list-item__subtitle {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+/* Number input styling */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Date input styling */
+input[type="date"] {
+  font-family: inherit;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .v-dialog {
+    margin: 0;
+  }
+  
+  .v-card {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .v-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-title {
+    font-size: 16px;
+  }
+  
+  .v-tab {
+    font-size: 12px;
+    min-width: 80px;
+  }
+  
+  .v-tab .v-icon {
+    font-size: 16px;
+  }
+  
+  .v-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* Focus states */
+.v-text-field--outlined.v-input--is-focused fieldset,
+.v-select--outlined.v-input--is-focused fieldset,
+.v-textarea--outlined.v-input--is-focused fieldset {
+  border-color: #1976d2;
+  border-width: 2px;
+}
+
+/* Hover states */
+.v-text-field--outlined:not(.v-input--is-focused):hover fieldset,
+.v-select--outlined:not(.v-input--is-focused):hover fieldset,
+.v-textarea--outlined:not(.v-input--is-focused):hover fieldset {
+  border-color: rgba(0, 0, 0, 0.87);
+}
+
+/* Tab indicator */
+.v-tabs-slider-wrapper {
+  background-color: #1976d2;
+}

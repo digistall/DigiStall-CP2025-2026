@@ -1,0 +1,292 @@
+/* Top Navigation Bar Styles - FIXED POSITION */
+.v-app-bar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 1060 !important;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: white !important;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.title-text {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+  margin-left: 0 !important;
+  padding-left: 100px;
+}
+
+.profile-container {
+  position: relative;
+}
+
+.profile-btn {
+  margin-right: 16px;
+}
+
+/* Profile Popup Styles - Exact Match */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  background: transparent;
+}
+
+.profile-popup {
+  position: fixed;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border: 1px solid #ddd;
+  min-width: 300px;
+  overflow: hidden;
+}
+
+.popup-arrow {
+  display: none;
+}
+
+.popup-content {
+  position: relative;
+  z-index: 2;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+/* Profile Info Section - Updated to match image design */
+.profile-info {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  cursor: default;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.profile-info:hover {
+  background: white;
+}
+
+.profile-avatar-container {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.profile-details {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Username as main title - larger, bold */
+.profile-username {
+  font-weight: 600;
+  font-size: 16px;
+  color: #212121;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+/* Full name with badge container */
+.profile-name-with-badge {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-fullname {
+  font-size: 14px;
+  color: #616161;
+  font-weight: 400;
+}
+
+.profile-role-badge {
+  background-color: #002181;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-location {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #757575;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.location-icon {
+  margin-right: 4px;
+  color: #757575;
+}
+
+.profile-email {
+  font-size: 13px;
+  color: #757575;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.profile-contact {
+  font-size: 13px;
+  color: #757575;
+  line-height: 1.3;
+  margin-top: 3px;
+}
+
+.profile-contact::before {
+  content: '📞';
+  margin-right: 5px;
+  font-size: 12px;
+}
+
+/* Badge - Hidden */
+.profile-badge {
+  display: none !important;
+}
+
+/* Loading and Error States */
+.profile-loading {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  color: #757575;
+  font-size: 14px;
+}
+
+.profile-error {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  background: #ffebee;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+/* Menu Items - Updated to match image design */
+.popup-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 14px;
+  font-weight: 400;
+  color: #616161;
+  background: white;
+  border-top: none;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.popup-item:first-of-type {
+  margin-top: 0;
+}
+
+.popup-item:hover {
+  background: #f5f5f5;
+}
+
+.item-icon {
+  margin-right: 12px;
+  color: #757575;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.popup-item span {
+  flex: 1;
+  text-align: left;
+}
+
+.popup-item:hover .item-icon {
+  color: #616161;
+}
+
+/* Logout Item - Red Color Match */
+.logout-item {
+  color: #e53935;
+}
+
+.logout-item .item-icon {
+  color: #e53935;
+}
+
+.logout-item:hover {
+  background: #f5f5f5;
+  color: #e53935;
+}
+
+.logout-item:hover .item-icon {
+  color: #e53935;
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+  .title-text {
+    font-size: 20px;
+  }
+
+  .profile-popup {
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 600px) {
+  .title-text {
+    font-size: 18px;
+  }
+
+  .profile-btn {
+    margin-right: 8px;
+  }
+
+  .profile-popup {
+    min-width: 240px;
+    right: 8px !important;
+  }
+
+  .profile-info {
+    padding: 14px 14px 18px 14px;
+  }
+
+  .popup-item {
+    padding: 12px 14px;
+  }
+}
