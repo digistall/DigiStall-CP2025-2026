@@ -1,14 +1,6 @@
 <template>
   <div class="applicants-table">
     <v-card elevation="1" class="table-card">
-      <!-- General Applicants Info Banner -->
-      <div v-if="applicantType === 'General Applicants'" class="general-applicants-banner">
-        <v-icon color="info" class="mr-2">mdi-information</v-icon>
-        <span>
-          <strong>General Applicants:</strong> These applicants submitted a general application and have not selected any specific stall yet. The system provided them with credentials to log in and choose their preferred stall. Once they select a stall, their application will be automatically moved to the appropriate stall category for review.   
-        </span>
-      </div>
-
       <!-- Custom Table Header -->
       <div class="table-header">
         <div class="header-row simplified-layout">
@@ -16,7 +8,7 @@
           <div class="header-cell email-col">Email Address</div>
           <div class="header-cell phone-col">Phone Number</div>
           <div class="header-cell address-col">Address</div>
-          <div class="header-cell date-col">{{ applicantType === 'General Applicants' ? 'Date Registered' : 'Date Applied' }}</div>
+          <div class="header-cell date-col">Date Applied</div>
           <div class="header-cell action-col">Status</div>
         </div>
       </div>
@@ -79,7 +71,7 @@
                       :color="getStatusColor(getEffectiveStatus(applicant))"
                       class="mr-1"
                     ></v-icon>
-                    {{ getStatusText(getEffectiveStatus(applicant), applicant) }}
+                    {{ getStatusText(getEffectiveStatus(applicant)) }}
                   </div>
                 </template>
                 <span>Click to re-check this applicant</span>
@@ -112,7 +104,7 @@
                       :color="getStatusColor(getEffectiveStatus(applicant))"
                       class="mr-1"
                     ></v-icon>
-                    {{ getStatusText(getEffectiveStatus(applicant), applicant) }}
+                    {{ getStatusText(getEffectiveStatus(applicant)) }}
                   </div>
                 </template>
                 <span>Click to approve this applicant</span>
@@ -139,7 +131,7 @@
                   :color="getStatusColor(getEffectiveStatus(applicant))"
                   class="mr-1"
                 ></v-icon>
-                {{ getStatusText(getEffectiveStatus(applicant), applicant) }}
+                {{ getStatusText(getEffectiveStatus(applicant)) }}
               </div>
               <div
                 v-if="

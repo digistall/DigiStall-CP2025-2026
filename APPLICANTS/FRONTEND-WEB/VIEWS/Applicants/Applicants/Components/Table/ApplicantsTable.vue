@@ -1,14 +1,6 @@
 <template>
   <div class="applicants-table">
     <v-card elevation="1" class="table-card">
-      <!-- General Applicants Info Banner -->
-      <div v-if="applicantType === 'General Applicants'" class="general-applicants-banner">
-        <v-icon color="info" class="mr-2">mdi-information</v-icon>
-        <span>
-          <strong>General Applicants:</strong> These applicants submitted a general application and have not selected any specific stall yet. The system provided them with credentials to log in and choose their preferred stall. Once they select a stall, their application will be automatically moved to the appropriate stall category for review.         
-        </span>
-      </div>
-
       <!-- Custom Table Header -->
       <div class="table-header">
         <div
@@ -75,7 +67,7 @@
                       :color="getStatusColor(getEffectiveStatus(applicant))"
                       class="mr-1"
                     ></v-icon>
-                    {{ getStatusText(getEffectiveStatus(applicant), applicant) }}
+                    {{ getStatusText(getEffectiveStatus(applicant)) }}
                   </div>
                 </template>
                 <span>Click to re-check this applicant</span>
@@ -105,7 +97,7 @@
                       :color="getStatusColor(getEffectiveStatus(applicant))"
                       class="mr-1"
                     ></v-icon>
-                    {{ getStatusText(getEffectiveStatus(applicant), applicant) }}
+                    {{ getStatusText(getEffectiveStatus(applicant)) }}
                   </div>
                 </template>
                 <span>Click to approve this applicant</span>
@@ -128,7 +120,7 @@
                   :color="getStatusColor(getEffectiveStatus(applicant))"
                   class="mr-1"
                 ></v-icon>
-                {{ getStatusText(getEffectiveStatus(applicant), applicant) }}
+                {{ getStatusText(getEffectiveStatus(applicant)) }}
               </div>
               <div
                 v-if="

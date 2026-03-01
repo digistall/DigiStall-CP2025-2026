@@ -18,42 +18,24 @@ export const getAllStalls = async (req, res) => {
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
     const appliedAreas = appliedAreasRows[0]
 
-    // Check if applicant is a general (auto-approved) applicant with no specific applications
-    // These users should be able to browse ALL available stalls
-    let isGeneralApplicant = false
-    let areaList = null
-
     if (appliedAreas.length === 0) {
-      // Check if applicant exists and has approved status (general applicant)
-      const [applicantCheck] = await connection.execute(
-        'SELECT status FROM applicant WHERE applicant_id = ?',
-        [applicant_id]
-      )
-      
-      if (applicantCheck.length > 0 && applicantCheck[0].status === 'approved') {
-        // General applicant - allow browsing all stalls
-        isGeneralApplicant = true
-        console.log(`✅ General applicant ${applicant_id} - allowing access to all stalls`)
-      } else {
-        // Not approved or not found - restrict access
-        return res.json({
-          success: true,
-          message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
-          data: {
-            all_stalls: [],
-            stalls_by_type: { 'Fixed Price': [], 'Raffle': [], 'Auction': [] },
-            stalls_by_area: {},
-            total_count: 0,
-            type_counts: { fixed: 0, raffle: 0, auction: 0 },
-            applied_areas: [],
-            restriction_message: 'Stalls are restricted to areas where you have applications'
-          }
-        })
-      }
-    } else {
-      // Build area list for stored procedure (quoted values for IN clause)
-      areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
+      return res.json({
+        success: true,
+        message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
+        data: {
+          all_stalls: [],
+          stalls_by_type: { 'Fixed Price': [], 'Raffle': [], 'Auction': [] },
+          stalls_by_area: {},
+          total_count: 0,
+          type_counts: { fixed: 0, raffle: 0, auction: 0 },
+          applied_areas: [],
+          restriction_message: 'Stalls are restricted to areas where you have applications'
+        }
+      })
     }
+
+    // Build area list for stored procedure (quoted values for IN clause)
+    const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
 
     // Get available stalls using stored procedure
     const [stallsRows] = await connection.execute('CALL sp_getAvailableStallsForApplicant(?, ?)', [applicant_id, areaList])
@@ -110,9 +92,7 @@ export const getAllStalls = async (req, res) => {
 
     res.json({
       success: true,
-      message: isGeneralApplicant 
-        ? 'All available stalls retrieved successfully. Browse and select a stall to apply!'
-        : `Stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
+      message: `Stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
       data: {
         all_stalls: formattedStalls,
         stalls_by_type: stallsByType,
@@ -124,13 +104,10 @@ export const getAllStalls = async (req, res) => {
           auction: stallsByType['Auction'].length
         },
         applied_areas: appliedAreas,
-        is_general_applicant: isGeneralApplicant,
-        restriction_info: isGeneralApplicant 
-          ? null  // No restriction for general applicants
-          : {
-              message: 'Stalls are restricted to areas where you have applications',
-              areas_with_access: appliedAreas.map(area => area.area)
-            }
+        restriction_info: {
+          message: 'Stalls are restricted to areas where you have applications',
+          areas_with_access: appliedAreas.map(area => area.area)
+        }
       }
     })
 
@@ -180,50 +157,24 @@ export const getStallsByType = async (req, res) => {
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
     const appliedAreas = appliedAreasRows[0]
 
-    // Check if applicant is a general (auto-approved) applicant with no specific applications
-    // These users should be able to browse ALL available stalls
-    let isGeneralApplicant = false
     if (appliedAreas.length === 0) {
-      // Check if applicant exists and has approved status (general applicant)
-      const [applicantCheck] = await connection.execute(
-        'SELECT status FROM applicant WHERE applicant_id = ?',
-        [applicant_id]
-      )
-      
-      if (applicantCheck.length > 0 && applicantCheck[0].status === 'approved') {
-        // General applicant - allow browsing all stalls
-        isGeneralApplicant = true
-        console.log(`✅ General applicant ${applicant_id} - allowing access to all stalls`)
-      } else {
-        // Not approved or not found - restrict access
-        return res.json({
-          success: true,
-          message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
-          data: {
-            stalls: [],
-            type: type,
-            total_count: 0,
-            available_count: 0,
-            applied_count: 0,
-            restriction_message: 'Stalls are restricted to areas where you have applications'
-          }
-        })
-      }
+      return res.json({
+        success: true,
+        message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
+        data: {
+          stalls: [],
+          type: type,
+          total_count: 0,
+          available_count: 0,
+          applied_count: 0,
+          restriction_message: 'Stalls are restricted to areas where you have applications'
+        }
+      })
     }
 
-    // Get stalls by type - use stored procedure for both general and regular applicants
-    let stalls = []
-    if (isGeneralApplicant) {
-      // Use stored procedure for general applicants - get ALL available stalls of this type (no area restriction)
-      console.log(`🔄 General applicant - fetching ALL ${type} stalls via stored procedure...`)
-      const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForGeneralApplicant(?, ?)', [type, applicant_id])
-      stalls = stallsRows[0]
-      console.log(`✅ Found ${stalls.length} ${type} stalls for general applicant`)
-    } else {
-      // Use stored procedure for regular applicants (area-restricted)
-      const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
-      stalls = stallsRows[0]
-    }
+    // Get stalls by type using stored procedure (without area restriction for now)
+    const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
+    const stalls = stallsRows[0]
 
     // Get raffle participation status for this applicant (workaround until stored procedure is updated)
     const [raffleParticipations] = await connection.execute(
@@ -332,9 +283,7 @@ export const getStallsByType = async (req, res) => {
 
     res.json({
       success: true,
-      message: isGeneralApplicant 
-        ? `All available ${type} stalls retrieved successfully. Browse and select a stall to apply!`
-        : `${type} stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
+      message: `${type} stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
       data: {
         stalls: formattedStalls,
         type: type,
@@ -342,13 +291,10 @@ export const getStallsByType = async (req, res) => {
         available_count: formattedStalls.filter(s => s.canApply).length,
         applied_count: formattedStalls.filter(s => s.isApplied).length,
         applied_areas: appliedAreas,
-        is_general_applicant: isGeneralApplicant,
-        restriction_info: isGeneralApplicant 
-          ? null  // No restriction for general applicants
-          : {
-              message: 'Stalls are restricted to areas where you have applications',
-              areas_with_access: appliedAreas.map(area => area.area)
-            }
+        restriction_info: {
+          message: 'Stalls are restricted to areas where you have applications',
+          areas_with_access: appliedAreas.map(area => area.area)
+        }
       }
     })
 
