@@ -2,6 +2,7 @@ import ComplianceTable from './ComplianceComponents/ComplianceTable/ComplianceTa
 import ComplianceSearch from './ComplianceComponents/ComplianceSearch/ComplianceSearch.vue'
 import ViewCompliance from './ComplianceComponents/ViewCompliance/ViewCompliance.vue'
 import LoadingOverlay from '@common/LoadingOverlay/LoadingOverlay.vue'
+import CrudLoadingOverlay from '../Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 import apiClient from '@services/apiClient'
 import axios from 'axios'
 
@@ -15,6 +16,7 @@ export default {
     ComplianceSearch,
     ViewCompliance,
     LoadingOverlay,
+    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -23,6 +25,7 @@ export default {
       selectedCompliance: {},
       showViewComplianceModal: false,
       complianceList: [], // Compliance data from backend
+      crudLoading: { visible: false, operation: 'generic', entity: 'compliance record', message: '', subMessage: '' },
       isLoading: false,
       error: null,
     }
@@ -53,9 +56,17 @@ export default {
       // Open edit modal or navigate to edit page
     },
 
+    showCrudLoading(operation, entity, message, subMessage) {
+      this.crudLoading = { visible: true, operation: operation || 'generic', entity: entity || 'compliance record', message: message || '', subMessage: subMessage || '' }
+    },
+    hideCrudLoading() {
+      this.crudLoading.visible = false
+    },
+
     async handleDeleteCompliance(compliance) {
       console.log("Delete compliance:", compliance)
       if (confirm(`Are you sure you want to delete compliance record ${compliance.id}?`)) {
+        this.showCrudLoading('delete', 'compliance record')
         try {
           const token = sessionStorage.getItem('authToken')
           await axios.delete(`${API_BASE_URL}/compliances/${compliance.compliance_id}`, {
@@ -71,6 +82,8 @@ export default {
         } catch (error) {
           console.error("Error deleting compliance:", error)
           alert(error.response?.data?.message || "Failed to delete compliance record")
+        } finally {
+          this.hideCrudLoading()
         }
       }
     },

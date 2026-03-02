@@ -143,6 +143,16 @@
       :operationType="popup.operationType"
       @close="popup.show = false"
     />
+
+    <!-- CRUD Loading Overlay -->
+    <CrudLoadingOverlay
+      :visible="crudLoading.visible"
+      :operation="crudLoading.operation"
+      :entity="crudLoading.entity"
+      :message="crudLoading.message"
+      :sub-message="crudLoading.subMessage"
+      :full-page="true"
+    />
   </div>
 </template>
 

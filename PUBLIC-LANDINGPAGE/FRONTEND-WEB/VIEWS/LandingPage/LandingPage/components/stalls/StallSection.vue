@@ -19,7 +19,7 @@
         <h1 class="hero-title animate-on-scroll animate-delay-1">
           Manage Your <span class="highlight">Stall Business</span>
         </h1>
-        <h2 class="hero-subtitle animate-on-scroll animate-delay-2">Like a Pro</h2>
+        <h2 class="hero-subtitle animate-on-scroll animate-delay-2">With Ease</h2>
         <p class="hero-description animate-on-scroll animate-delay-3">
           The complete digital solution for stall rental business owners. 
           Track payments, manage tenants, monitor compliance — all in one powerful platform.

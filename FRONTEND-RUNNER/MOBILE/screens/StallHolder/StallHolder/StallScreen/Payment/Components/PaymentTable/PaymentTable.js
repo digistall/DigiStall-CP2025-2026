@@ -5,6 +5,8 @@ import ViewAllTable from "./ViewAllTable";
 import ApiService from "../../../../../../../services/ApiService";
 import UserStorageService from "../../../../../../../services/UserStorageService";
 import { Ionicons } from "@expo/vector-icons";
+import CrudLoadingOverlay from "../../../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../../../hooks/useLoading";
 
 // Default theme colors for fallback
 const defaultTheme = {
@@ -21,6 +23,7 @@ const defaultTheme = {
 
 const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = false }) => {
   const colors = theme?.colors || defaultTheme.colors;
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   const [showViewAllModal, setShowViewAllModal] = useState(false);
   const [paymentRecords, setPaymentRecords] = useState([]);
   const [allPaymentRecords, setAllPaymentRecords] = useState([]);
@@ -266,9 +269,14 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
   );
 
   const handleViewAllPress = async () => {
-    // Fetch all records when opening the modal
-    await fetchAllPaymentRecords();
-    setShowViewAllModal(true);
+    // Fetch all records when opening the modal with loading indicator
+    startLoading('fetch', 'payment records');
+    try {
+      await fetchAllPaymentRecords();
+      setShowViewAllModal(true);
+    } finally {
+      stopLoading();
+    }
   };
 
   const handleCloseModal = () => {
@@ -423,6 +431,9 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
         selectedPaymentMethod={selectedPaymentMethod}
         theme={theme}
       />
+
+      {/* CRUD Loading Overlay */}
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </View>
   );
 };

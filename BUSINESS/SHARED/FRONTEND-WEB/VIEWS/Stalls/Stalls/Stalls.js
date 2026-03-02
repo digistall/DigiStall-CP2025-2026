@@ -6,6 +6,7 @@ import RaffleParticipantsModal from './RaffleComponents/RaffleParticipantsModal/
 import AuctionParticipantsModal from './AuctionComponents/AuctionParticipantsModal/AuctionParticipantsModal.vue'
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
+import CrudLoadingOverlay from '../../Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 import { eventBus, EVENTS } from '../../../eventBus.js'
 import dataCacheService from '../../../services/dataCacheService.js'
 
@@ -20,6 +21,7 @@ export default {
     AuctionParticipantsModal,
     ToastNotification,
     LoadingOverlay,
+    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -31,6 +33,14 @@ export default {
       displayStalls: [],
       loading: false,
       error: null,
+      // CRUD operation loading state
+      crudLoading: {
+        visible: false,
+        operation: 'generic',
+        entity: 'stall',
+        message: '',
+        subMessage: '',
+      },
       // API configuration
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
       // Current user info
@@ -958,6 +968,14 @@ export default {
       }
 
       console.log(`Message (${color}): ${messageText}`)
+    },
+
+    // --- CRUD Loading Helpers ---
+    showCrudLoading(operation, entity = 'stall', message = '', subMessage = '') {
+      this.crudLoading = { visible: true, operation, entity, message, subMessage }
+    },
+    hideCrudLoading() {
+      this.crudLoading = { ...this.crudLoading, visible: false }
     },
 
     // Modal event handlers

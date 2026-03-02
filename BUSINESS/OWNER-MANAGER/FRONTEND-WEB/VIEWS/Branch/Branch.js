@@ -3,6 +3,7 @@ import BranchList from './Components/BranchList/BranchList.vue'
 import AddBranchDialog from './Components/AddBranch/AddBranchDialog.vue'
 import AssignManagerDialog from './Components/AssignManager/AssignManagerDialog.vue'
 import UniversalPopup from '@common/UniversalPopup/UniversalPopup.vue'
+import CrudLoadingOverlay from '@/components/Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 
 export default {
   name: 'BranchManagement',
@@ -11,6 +12,7 @@ export default {
     AddBranchDialog,
     AssignManagerDialog,
     UniversalPopup,
+    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -21,6 +23,7 @@ export default {
       showDeleteDialog: false,
       branchToDelete: null,
       selectedBranch: null,
+      crudLoading: { visible: false, operation: 'generic', entity: 'branch', message: '', subMessage: '' },
       popup: {
         show: false,
         message: '',
@@ -156,6 +159,7 @@ export default {
 
     async confirmDelete() {
       if (!this.branchToDelete) return
+      this.crudLoading = { visible: true, operation: 'delete', entity: 'branch', message: '', subMessage: '' }
 
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -174,6 +178,8 @@ export default {
         console.error('Error deleting branch:', error)
         this.showNotification('Error deleting branch', 'error')
         this.showDeleteDialog = false
+      } finally {
+        this.crudLoading.visible = false
       }
     },
 

@@ -22,11 +22,14 @@ import DocumentUploadHelper from "../../../../../services/DocumentUploadHelper";
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import AuthenticatedImage from './AuthenticatedImage';
+import CrudLoadingOverlay from "../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../hooks/useLoading";
 
 const { width, height } = Dimensions.get("window");
 
 const DocumentsScreen = () => {
   const { theme, isDark } = useTheme();
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   
   // State for tabs and data
   const [activeTabIndex, setActiveTabIndex] = useState(0);
@@ -263,6 +266,7 @@ const DocumentsScreen = () => {
   const performUpload = async (file, documentTypeId, stallholderId) => {
     try {
       setUploading(true);
+      startLoading('upload', 'document');
 
       // Note: Token is optional for document uploads (backend endpoint is public)
       // We'll still try to get the token for future-proofing when auth is added
@@ -303,6 +307,7 @@ const DocumentsScreen = () => {
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
+      stopLoading();
     }
   };
 
@@ -398,6 +403,8 @@ const DocumentsScreen = () => {
         return;
       }
 
+      startLoading('delete', 'document');
+
       const response = await ApiService.deleteStallholderDocument(
         selectedDocument.document_id
       );
@@ -412,6 +419,8 @@ const DocumentsScreen = () => {
     } catch (error) {
       console.error('❌ Error deleting document:', error);
       Alert.alert('Error', 'Failed to delete document');
+    } finally {
+      stopLoading();
     }
   };
 
@@ -722,6 +731,7 @@ const DocumentsScreen = () => {
           {renderTabContent()}
         </>
       )}
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </View>
   );
 };
