@@ -266,10 +266,77 @@ export const applicantController = {
         applicationId = applicationResult.insertId;
         console.log("✅ Application created with ID:", applicationId);
       } else {
-        console.log("👤 General application (no specific stall)");
+        console.log("👤 General application (no specific stall) - auto-approving...");
+
+        // ── Auto-approve: set applicant status to 'approved' ──
+        await connection.execute(
+          `UPDATE applicant SET status = 'approved' WHERE applicant_id = ?`,
+          [applicantId]
+        );
+        console.log("✅ Applicant status set to 'approved'");
+
+        // ── Generate credentials ──
+        const year = new Date().getFullYear().toString().slice(-2);
+        const randomDigits = Math.floor(10000 + Math.random() * 90000).toString();
+        const generatedUsername = `${year}-${randomDigits}`;
+
+        const letters = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '0123456789';
+        let generatedPassword = '';
+        for (let i = 0; i < 3; i++) generatedPassword += letters.charAt(Math.floor(Math.random() * letters.length));
+        for (let i = 0; i < 3; i++) generatedPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
+
+        console.log("🔑 Generated credentials - Username:", generatedUsername);
+
+        // ── Hash password (bcrypt-style simple SHA via crypto, or store plain for now) ──
+        const crypto = await import('crypto');
+        const hashedPassword = crypto.createHash('sha256').update(generatedPassword).digest('hex');
+
+        // ── Save credentials to credential table ──
+        const [existingCred] = await connection.execute(
+          `SELECT credential_id FROM credential WHERE applicant_id = ?`,
+          [applicantId]
+        );
+
+        if (existingCred.length === 0) {
+          await connection.execute(
+            `INSERT INTO credential (applicant_id, username, password_hash) VALUES (?, ?, ?)`,
+            [applicantId, generatedUsername, hashedPassword]
+          );
+          console.log("✅ Credentials saved to database");
+        } else {
+          await connection.execute(
+            `UPDATE credential SET username = ?, password_hash = ? WHERE applicant_id = ?`,
+            [generatedUsername, hashedPassword, applicantId]
+          );
+          console.log("✅ Credentials updated in database");
+        }
+
+        // Decrypt email for response
+        const decryptedEmail = decryptSafe(encryptIfNotNull(email_address)) || email_address;
+
+        return res.status(201).json({
+          success: true,
+          message: "General application submitted successfully. Your credentials have been prepared for email delivery.",
+          data: {
+            applicant_id: applicantId,
+            application_id: null,
+            applicant_full_name,
+            applicant_contact_number,
+            stall_id: null,
+            documents: [], // No documents for general applications
+            application_status: "Approved",
+            // Return credentials so frontend can send email via EmailJS
+            credentials: {
+              username: generatedUsername,
+              password: generatedPassword, // plain-text for email only
+              email: email_address,
+            },
+          },
+        });
       }
 
-      // Step 3: Save document files if base64 data provided
+      // Step 3: Save document files if base64 data provided (stall-specific applications)
       const savedDocuments = [];
       const effectiveBranchId = branch_id || '1'; // Default to branch 1 if not specified
       
@@ -382,36 +449,20 @@ export const applicantController = {
 
       console.log(`📄 Saved ${savedDocuments.length} document(s) for applicant ${applicantId} (storage: ${USE_BLOB_STORAGE ? 'BLOB' : 'file'})`);
 
-      // Generate response
-      if (stall_id) {
-        res.status(201).json({
-          success: true,
-          message: "Stall application submitted successfully",
-          data: {
-            applicant_id: applicantId,
-            application_id: applicationId,
-            applicant_full_name,
-            applicant_contact_number,
-            stall_id: stall_id,
-            documents: savedDocuments,
-            application_status: "Pending",
-          },
-        });
-      } else {
-        res.status(201).json({
-          success: true,
-          message: "General application submitted successfully. A stall will be assigned upon approval.",
-          data: {
-            applicant_id: applicantId,
-            application_id: null,
-            applicant_full_name,
-            applicant_contact_number,
-            stall_id: null,
-            documents: savedDocuments,
-            application_status: "Pending",
-          },
-        });
-      }
+      // Generate response (stall-specific application only - general apps already returned above)
+      res.status(201).json({
+        success: true,
+        message: "Stall application submitted successfully",
+        data: {
+          applicant_id: applicantId,
+          application_id: applicationId,
+          applicant_full_name,
+          applicant_contact_number,
+          stall_id: stall_id,
+          documents: savedDocuments,
+          application_status: "Pending",
+        },
+      });
     } catch (error) {
       console.error("❌ Error creating stall application:", error);
       console.error("❌ Error stack:", error.stack);
