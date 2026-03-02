@@ -2348,6 +2348,53 @@ class ApiService {
       };
     }
   }
+
+  /**
+   * Get monthly payment status for stallholder (current month)
+   */
+  static async getMonthlyPaymentStatus() {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_MONTHLY_PAYMENT_STATUS}`;
+      console.log('🔄 Fetching monthly payment status from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch monthly payment status');
+      }
+      
+      console.log('✅ Monthly payment status fetched successfully');
+      return {
+        success: true,
+        data: data.data || {},
+        message: data.message
+      };
+      
+    } catch (error) {
+      console.error('❌ Get Monthly Payment Status Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        data: {}
+      };
+    }
+  }
 }
 
 export default ApiService;
