@@ -23,7 +23,7 @@ export default {
   emits: ['close'],
   data() {
     return {
-      currentStep: 1,
+      currentStep: 0,
       personalInfo: null,
       spouseInfo: null,
       businessInfo: null,
@@ -439,7 +439,7 @@ export default {
     },
 
     goToPreviousStep() {
-      if (this.currentStep > 1) {
+      if (this.currentStep > 0) {
         // If going back from step 3 and user is single, skip step 2
         if (this.currentStep === 3 && this.personalInfo?.civilStatus === 'Single') {
           this.currentStep = 1
@@ -456,7 +456,7 @@ export default {
     },
 
     resetForm() {
-      this.currentStep = 1
+      this.currentStep = 0
       this.personalInfo = null
       this.spouseInfo = null
       this.businessInfo = null
