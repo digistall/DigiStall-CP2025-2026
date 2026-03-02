@@ -14,11 +14,28 @@ export const getAllStalls = async (req, res) => {
       })
     }
 
+    // Check if this is a general applicant (approved status but no stall applications)
+    const [applicantStatusRows] = await connection.execute(
+      `SELECT a.applicant_id, a.status, 
+              (SELECT COUNT(*) FROM application app WHERE app.applicant_id = a.applicant_id) as application_count
+       FROM applicant a 
+       WHERE a.applicant_id = ?`,
+      [applicant_id]
+    )
+    
+    const applicantInfo = applicantStatusRows[0]
+    const isGeneralApplicant = applicantInfo && 
+                               applicantInfo.status === 'approved' && 
+                               applicantInfo.application_count === 0
+    
+    console.log(`📋 Applicant ${applicant_id} - Status: ${applicantInfo?.status}, Apps: ${applicantInfo?.application_count}, IsGeneral: ${isGeneralApplicant}`)
+
     // First, get the areas where this applicant has applied using stored procedure
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
     const appliedAreas = appliedAreasRows[0]
 
-    if (appliedAreas.length === 0) {
+    // If general applicant with no applications, allow them to browse ALL stalls
+    if (appliedAreas.length === 0 && !isGeneralApplicant) {
       return res.json({
         success: true,
         message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
@@ -34,12 +51,55 @@ export const getAllStalls = async (req, res) => {
       })
     }
 
-    // Build area list for stored procedure (quoted values for IN clause)
-    const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
+    let availableStalls
+    let responseMessage
 
-    // Get available stalls using stored procedure
-    const [stallsRows] = await connection.execute('CALL sp_getAvailableStallsForApplicant(?, ?)', [applicant_id, areaList])
-    const availableStalls = stallsRows[0]
+    // For general applicants, get ALL available stalls (no area restriction)
+    if (isGeneralApplicant) {
+      console.log('🌐 General applicant detected - fetching ALL available stalls')
+      
+      // Get all available stalls for general applicants using direct query
+      // Note: stall_image is stored in separate stall_images table, fetched separately
+      // Note: status can be 'Available' or 'Active' for available stalls
+      const [allStallsRows] = await connection.execute(`
+        SELECT 
+          s.stall_id,
+          s.stall_number,
+          s.stall_location,
+          s.size as stall_size,
+          s.monthly_rent as rental_price,
+          s.price_type,
+          s.description,
+          s.status,
+          b.branch_id,
+          b.branch_name,
+          b.area,
+          b.location,
+          f.floor_name,
+          f.floor_level,
+          sec.section_name,
+          sec.section,
+          'available' as application_status
+        FROM stall s
+        LEFT JOIN section sec ON s.section_id = sec.section_id
+        LEFT JOIN floor f ON sec.floor_id = f.floor_id
+        LEFT JOIN branch b ON f.branch_id = b.branch_id
+        WHERE s.is_available = 1 
+          AND (s.status = 'Available' OR s.status = 'Active')
+        ORDER BY b.area, s.stall_number
+      `)
+      
+      availableStalls = allStallsRows
+      responseMessage = 'All available stalls retrieved for general applicant'
+    } else {
+      // Build area list for stored procedure (quoted values for IN clause)
+      const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
+
+      // Get available stalls using stored procedure
+      const [stallsRows] = await connection.execute('CALL sp_getAvailableStallsForApplicant(?, ?)', [applicant_id, areaList])
+      availableStalls = stallsRows[0]
+      responseMessage = `Stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`
+    }
 
     // Format stalls for mobile app - using correct column names from stored procedure
     const formattedStalls = availableStalls.map(stall => ({
@@ -92,7 +152,7 @@ export const getAllStalls = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
+      message: responseMessage,
       data: {
         all_stalls: formattedStalls,
         stalls_by_type: stallsByType,
@@ -104,10 +164,10 @@ export const getAllStalls = async (req, res) => {
           auction: stallsByType['Auction'].length
         },
         applied_areas: appliedAreas,
-        restriction_info: {
-          message: 'Stalls are restricted to areas where you have applications',
-          areas_with_access: appliedAreas.map(area => area.area)
-        }
+        is_general_applicant: isGeneralApplicant,
+        restriction_info: isGeneralApplicant 
+          ? { message: 'General applicant - browsing all available stalls', areas_with_access: ['All Areas'] }
+          : { message: 'Stalls are restricted to areas where you have applications', areas_with_access: appliedAreas.map(area => area.area) }
       }
     })
 
@@ -153,11 +213,27 @@ export const getStallsByType = async (req, res) => {
       })
     }
 
+    // Check if this is a general applicant (approved status but no stall applications)
+    const [applicantStatusRows] = await connection.execute(
+      `SELECT a.applicant_id, a.status, 
+              (SELECT COUNT(*) FROM application app WHERE app.applicant_id = a.applicant_id) as application_count
+       FROM applicant a 
+       WHERE a.applicant_id = ?`,
+      [applicant_id]
+    )
+    
+    const applicantInfo = applicantStatusRows[0]
+    const isGeneralApplicant = applicantInfo && 
+                               applicantInfo.status === 'approved' && 
+                               applicantInfo.application_count === 0
+    
+    console.log(`📋 getStallsByType - Applicant ${applicant_id} - Status: ${applicantInfo?.status}, Apps: ${applicantInfo?.application_count}, IsGeneral: ${isGeneralApplicant}`)
+
     // First, get the areas where this applicant has applied using stored procedure
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
     const appliedAreas = appliedAreasRows[0]
 
-    if (appliedAreas.length === 0) {
+    if (appliedAreas.length === 0 && !isGeneralApplicant) {
       return res.json({
         success: true,
         message: 'No applications found. Please apply to a stall first to see available stalls in that area.',
@@ -172,35 +248,49 @@ export const getStallsByType = async (req, res) => {
       })
     }
 
-    // Get stalls by type using stored procedure (without area restriction for now)
-    const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
-    const stalls = stallsRows[0]
-
-    // Get raffle participation status for this applicant (workaround until stored procedure is updated)
-    const [raffleParticipations] = await connection.execute(
-      `SELECT DISTINCT r.stall_id 
-       FROM raffle_participants rp 
-       INNER JOIN raffle r ON rp.raffle_id = r.raffle_id 
-       WHERE rp.applicant_id = ?`,
-      [applicant_id]
-    )
-    const joinedRaffleStallIds = new Set(raffleParticipations.map(r => r.stall_id))
-    console.log('🎰 Raffle participations found:', joinedRaffleStallIds.size, 'stalls')
-
-    // Get auction participation status for this applicant
+    let stalls
+    let joinedRaffleStallIds = new Set()
     let joinedAuctionStallIds = new Set()
-    try {
-      const [auctionParticipations] = await connection.execute(
-        `SELECT DISTINCT a.stall_id 
-         FROM auction_participants ap 
-         INNER JOIN auction a ON ap.auction_id = a.auction_id 
-         WHERE ap.applicant_id = ?`,
+
+    // For general applicants, use the dedicated stored procedure (no area restriction)
+    // sp_getStallsByTypeForGeneralApplicant already computes application_status internally
+    if (isGeneralApplicant) {
+      console.log(`🌐 General applicant - calling sp_getStallsByTypeForGeneralApplicant('${type}', ${applicant_id})`)
+      const [spRows] = await connection.execute(
+        'CALL sp_getStallsByTypeForGeneralApplicant(?, ?)',
+        [type, applicant_id]
+      )
+      stalls = spRows[0]
+      console.log(`✅ ${type} stalls found for general applicant: ${stalls.length}`)
+    } else {
+      // Regular applicants: use area-restricted stored procedure
+      const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
+      stalls = stallsRows[0]
+
+      // Get raffle/auction participation status (only needed for regular applicants; SP handles it for general)
+      const [raffleParticipations] = await connection.execute(
+        `SELECT DISTINCT r.stall_id 
+         FROM raffle_participants rp 
+         INNER JOIN raffle r ON rp.raffle_id = r.raffle_id 
+         WHERE rp.applicant_id = ?`,
         [applicant_id]
       )
-      joinedAuctionStallIds = new Set(auctionParticipations.map(a => a.stall_id))
-      console.log('🔨 Auction participations found:', joinedAuctionStallIds.size, 'stalls')
-    } catch (auctionError) {
-      console.log('⚠️ Could not fetch auction participations (table may not exist):', auctionError.message)
+      joinedRaffleStallIds = new Set(raffleParticipations.map(r => r.stall_id))
+      console.log('🎰 Raffle participations found:', joinedRaffleStallIds.size, 'stalls')
+
+      try {
+        const [auctionParticipations] = await connection.execute(
+          `SELECT DISTINCT a.stall_id 
+           FROM auction_participants ap 
+           INNER JOIN auction a ON ap.auction_id = a.auction_id 
+           WHERE ap.applicant_id = ?`,
+          [applicant_id]
+        )
+        joinedAuctionStallIds = new Set(auctionParticipations.map(a => a.stall_id))
+        console.log('🔨 Auction participations found:', joinedAuctionStallIds.size, 'stalls')
+      } catch (auctionError) {
+        console.log('⚠️ Could not fetch auction participations (table may not exist):', auctionError.message)
+      }
     }
 
     // For each stall, fetch images from stall_images table (images stored as BLOB)
@@ -226,13 +316,19 @@ export const getStallsByType = async (req, res) => {
 
     // Format for mobile app
     const formattedStalls = stallsWithImages.map(stall => {
-      // Determine the actual status based on raffle/auction participation
-      const hasJoinedRaffle = joinedRaffleStallIds.has(stall.stall_id)
-      const hasJoinedAuction = joinedAuctionStallIds.has(stall.stall_id)
+      // For general applicants, the stored procedure already computes application_status correctly
+      // For regular applicants, we need to check the participation Sets
+      let hasJoinedRaffle = joinedRaffleStallIds.has(stall.stall_id)
+      let hasJoinedAuction = joinedAuctionStallIds.has(stall.stall_id)
+      
+      // If the SP returned joined_raffle or joined_auction, use that (for general applicants)
+      if (stall.application_status === 'joined_raffle') hasJoinedRaffle = true
+      if (stall.application_status === 'joined_auction') hasJoinedAuction = true
       
       let actualStatus = stall.application_status
-      if (hasJoinedRaffle) actualStatus = 'joined_raffle'
-      else if (hasJoinedAuction) actualStatus = 'joined_auction'
+      // Only override if the Sets indicate participation (for regular applicants)
+      if (hasJoinedRaffle && actualStatus !== 'joined_raffle') actualStatus = 'joined_raffle'
+      else if (hasJoinedAuction && actualStatus !== 'joined_auction') actualStatus = 'joined_auction'
       
       // Debug log for joined status
       if (hasJoinedRaffle || hasJoinedAuction) {
@@ -283,7 +379,9 @@ export const getStallsByType = async (req, res) => {
 
     res.json({
       success: true,
-      message: `${type} stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
+      message: isGeneralApplicant 
+        ? `All ${type} stalls retrieved for general applicant` 
+        : `${type} stalls retrieved successfully from your applied areas: ${appliedAreas.map(a => a.area).join(', ')}`,
       data: {
         stalls: formattedStalls,
         type: type,
@@ -291,10 +389,10 @@ export const getStallsByType = async (req, res) => {
         available_count: formattedStalls.filter(s => s.canApply).length,
         applied_count: formattedStalls.filter(s => s.isApplied).length,
         applied_areas: appliedAreas,
-        restriction_info: {
-          message: 'Stalls are restricted to areas where you have applications',
-          areas_with_access: appliedAreas.map(area => area.area)
-        }
+        is_general_applicant: isGeneralApplicant,
+        restriction_info: isGeneralApplicant
+          ? { message: 'General applicant - browsing all available stalls', areas_with_access: ['All Areas'] }
+          : { message: 'Stalls are restricted to areas where you have applications', areas_with_access: appliedAreas.map(area => area.area) }
       }
     })
 
