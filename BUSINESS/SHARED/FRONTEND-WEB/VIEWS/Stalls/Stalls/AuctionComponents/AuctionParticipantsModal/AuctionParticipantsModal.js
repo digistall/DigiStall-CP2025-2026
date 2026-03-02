@@ -45,13 +45,6 @@ export default {
         }
       },
       immediate: true
-    },
-    stall: {
-      handler(newVal) {
-        if (newVal && this.show) {
-          this.fetchParticipants()
-        }
-      }
     }
   },
   methods: {
