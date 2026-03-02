@@ -76,7 +76,7 @@
                 </label>
 
                 <div class="buttons">
-                    <button type="button" class="btn-close" @click="$emit('close')">Close</button>
+                    <button type="button" class="btn-close" @click="$emit('previous')">Back</button>
                     <button type="button" class="btn-next" @click="goNext">Next</button>
                 </div>
             </form>
@@ -86,7 +86,7 @@
 
 <script>
 export default {
-    emits: ['close', 'next'],
+    emits: ['close', 'previous', 'next'],
     props: {
         stall: Object,
         savedData: {
