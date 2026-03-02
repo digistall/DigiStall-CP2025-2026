@@ -50,11 +50,11 @@
                 </label>
 
                 <label>
-                    Previous Business Experience:
-                    <input type="text" v-model="previousBusiness" required
-                        placeholder="Describe your previous business experience"
+                    Current Business Experience:
+                    <input type="text" v-model="previousBusiness"
+                        placeholder="Describe your current business experience (leave blank if none)"
                         :class="{ 'input-error': errors.previousBusiness }" />
-                    <small class="input-hint">Example: "Sold vegetables at Naga City Market for 5 years"</small>
+                    <small class="input-hint">Optional — defaults to "None" if left blank</small>
                 </label>
 
                 <label>
@@ -186,12 +186,11 @@ export default {
             this.clearErrors();
 
             // Check required fields
-            if (!this.natureOfBusiness || !this.businessCapitalization || !this.sourceOfCapital || !this.previousBusiness) {
+            if (!this.natureOfBusiness || !this.businessCapitalization || !this.sourceOfCapital) {
                 const missingFields = [];
                 if (!this.natureOfBusiness) missingFields.push('natureOfBusiness');
                 if (!this.businessCapitalization) missingFields.push('businessCapitalization');
                 if (!this.sourceOfCapital) missingFields.push('sourceOfCapital');
-                if (!this.previousBusiness) missingFields.push('previousBusiness');
 
                 this.showError("Please fill in all required business information fields.", missingFields);
                 return;
