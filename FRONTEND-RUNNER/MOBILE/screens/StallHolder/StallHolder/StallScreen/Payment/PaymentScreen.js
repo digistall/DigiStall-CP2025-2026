@@ -6,8 +6,10 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import PaymentTable from "./Components/PaymentTable/PaymentTable";
+import MonthlyPaymentIndicator from "./Components/MonthlyPaymentIndicator/MonthlyPaymentIndicator";
+import MonthlyPaymentHistory from "./Components/MonthlyPaymentHistory/MonthlyPaymentHistory";
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,11 +19,18 @@ const { width } = Dimensions.get("window");
 const PaymentScreen = ({ navigation, onBack }) => {
   const { theme, isDark } = useTheme();
   
+  // State for monthly history modal
+  const [showMonthlyHistory, setShowMonthlyHistory] = useState(false);
+  // Stagger rendering so MonthlyPaymentIndicator and PaymentTable don't race
+  const [showPaymentTable, setShowPaymentTable] = useState(false);
+  
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const tableSlideAnim = useRef(new Animated.Value(20)).current;
+  const tableFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Entrance animations
@@ -59,7 +68,34 @@ const PaymentScreen = ({ navigation, onBack }) => {
         }),
       ])
     ).start();
+
+    // Delay PaymentTable mount so it doesn't race with MonthlyPaymentIndicator
+    const timer = setTimeout(() => {
+      setShowPaymentTable(true);
+      Animated.parallel([
+        Animated.timing(tableFadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(tableSlideAnim, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 600);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  const handleViewAllMonths = () => {
+    setShowMonthlyHistory(true);
+  };
+
+  const handleCloseMonthlyHistory = () => {
+    setShowMonthlyHistory(false);
+  };
 
   const gradientColors = isDark 
     ? ['#001050', '#002181', '#001a66']
@@ -129,23 +165,47 @@ const PaymentScreen = ({ navigation, onBack }) => {
           </LinearGradient>
         </Animated.View>
 
-        {/* Payment Records Table */}
+        {/* Monthly Payment Status Indicator */}
         <Animated.View
           style={{
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }],
           }}
         >
-          <PaymentTable 
-            selectedPaymentMethod={null}
+          <MonthlyPaymentIndicator 
             theme={theme}
             isDark={isDark}
+            onViewAllMonths={handleViewAllMonths}
           />
         </Animated.View>
+
+        {/* Payment Records Table - staggered mount to avoid race condition */}
+        {showPaymentTable && (
+          <Animated.View
+            style={{
+              opacity: tableFadeAnim,
+              transform: [{ translateY: tableSlideAnim }],
+            }}
+          >
+            <PaymentTable 
+              selectedPaymentMethod={null}
+              theme={theme}
+              isDark={isDark}
+            />
+          </Animated.View>
+        )}
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Monthly Payment History Modal */}
+      <MonthlyPaymentHistory
+        visible={showMonthlyHistory}
+        onClose={handleCloseMonthlyHistory}
+        theme={theme}
+        isDark={isDark}
+      />
     </View>
   );
 };

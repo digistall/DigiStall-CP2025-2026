@@ -83,6 +83,7 @@ export const API_CONFIG = {
     GET_PAYMENT_RECORDS: '/api/mobile/stallholder/payments',
     GET_ALL_PAYMENT_RECORDS: '/api/mobile/stallholder/payments/all',
     GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
+    GET_MONTHLY_PAYMENT_STATUS: '/api/mobile/stallholder/payments/monthly-status',
     
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint
