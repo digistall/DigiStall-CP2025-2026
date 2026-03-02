@@ -18,12 +18,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from "../../../../components/ThemeComponents/ThemeContext";
 import ApiService from "../../../../services/ApiService";
+import CrudLoadingOverlay from "../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../hooks/useLoading";
 
 const { width, height } = Dimensions.get("window");
 const MAX_PHOTOS = 5;
 
 const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSuccess, onCancel }) => {
   const { theme, isDark } = useTheme();
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   
   // Violation types from API
   const [violationTypes, setViolationTypes] = useState([]);
@@ -245,6 +248,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
           text: "Submit",
           onPress: async () => {
             setIsSubmitting(true);
+            startLoading('submit', 'violation report');
             
             try {
               // Call the API
@@ -267,6 +271,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
               }
               
               setIsSubmitting(false);
+              stopLoading();
               
               if (response.success) {
                 const successMessage = evidencePhotos.length > 0
@@ -302,6 +307,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
               }
             } catch (error) {
               setIsSubmitting(false);
+              stopLoading();
               Alert.alert("Error", "An unexpected error occurred. Please try again.");
               console.error('Submit error:', error);
             }
@@ -636,6 +642,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </KeyboardAvoidingView>
   );
 };

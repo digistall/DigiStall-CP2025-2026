@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, Dimensions, Text, View, Alert } from "react-nat
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
+import CrudLoadingOverlay from "../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../hooks/useLoading";
 import AuctionCard from "./Components/AuctionCardComponents/AuctionCard";
 import SearchFilterBar from "../Stall/components/SearchFilter/SearchFilterBar";
 import AuctionReminderModal from "../Auction/Components/AuctionReminderComponent/AuctionReminderModal";
@@ -14,6 +16,7 @@ const { width } = Dimensions.get("window");
 
 const AuctionScreen = () => {
   const { theme } = useTheme();
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   const [showReminder, setShowReminder] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("ALL");
@@ -124,6 +127,7 @@ const AuctionScreen = () => {
   // This creates an auction_participants record (no application record)
   const handlePreRegister = async (stallId) => {
     console.log('🔔 Pre-registering for auction - stall:', stallId);
+    startLoading('submit', 'auction registration');
     
     try {
       // Get user data from storage
@@ -173,6 +177,8 @@ const AuctionScreen = () => {
     } catch (error) {
       console.error('❌ Error pre-registering for auction:', error);
       Alert.alert('Error', 'Failed to pre-register for auction. Please try again.');
+    } finally {
+      stopLoading();
     }
   };
 
@@ -334,6 +340,7 @@ const AuctionScreen = () => {
           </>
         )}
       </SafeAreaView>
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </SafeAreaProvider>
   );
 };

@@ -1,9 +1,13 @@
 import axios from 'axios'
+import CrudLoadingOverlay from '@/components/Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 export default {
   name: 'MySubscription',
+  components: {
+    CrudLoadingOverlay,
+  },
   data() {
     return {
       subscription: null,
@@ -17,6 +21,7 @@ export default {
       selectedPlanForConfirm: null,
       showPaymentDialog: false,
       selectedPayment: null,
+      crudLoading: { visible: false, operation: 'generic', entity: 'subscription', message: '', subMessage: '' },
       headers: [
         { title: 'Payment ID', value: 'payment_id', sortable: true },
         { title: 'Receipt #', value: 'receipt_number', sortable: true },
@@ -122,6 +127,7 @@ export default {
       const plan = this.selectedPlanForConfirm
       
       this.selectingPlanId = plan.plan_id
+      this.crudLoading = { visible: true, operation: 'edit', entity: 'subscription plan', message: '', subMessage: '' }
       
       try {
         const token = sessionStorage.getItem('authToken')
@@ -149,6 +155,7 @@ export default {
         alert('❌ Error updating subscription plan. Please contact support.')
       } finally {
         this.selectingPlanId = null
+        this.crudLoading.visible = false
       }
     },
     

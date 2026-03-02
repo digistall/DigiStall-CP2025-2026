@@ -2,6 +2,7 @@ import ComplaintsTable from './ComplaintsComponents/ComplaintsTable/ComplaintsTa
 import ComplaintsSearch from './ComplaintsComponents/ComplaintsSearch/ComplaintsSearch.vue'
 import ViewComplaints from './ComplaintsComponents/ViewComplaints/ViewComplaints.vue'
 import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
+import CrudLoadingOverlay from '../../Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 import apiClient from '../../../services/apiClient'
 
 export default {
@@ -11,6 +12,7 @@ export default {
     ComplaintsSearch,
     ViewComplaints,
     LoadingOverlay,
+    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -18,6 +20,7 @@ export default {
       activeFilter: 'all',
       selectedComplaints: {},
       showViewComplaintsModal: false,
+      crudLoading: { visible: false, operation: 'generic', entity: 'complaint', message: '', subMessage: '' },
       complaintsList: [], // Complaints data
       isLoading: false,
       error: null,
@@ -48,9 +51,17 @@ export default {
       // Open edit modal or navigate to edit page
     },
 
+    showCrudLoading(operation, entity, message, subMessage) {
+      this.crudLoading = { visible: true, operation: operation || 'generic', entity: entity || 'complaint', message: message || '', subMessage: subMessage || '' }
+    },
+    hideCrudLoading() {
+      this.crudLoading.visible = false
+    },
+
     async handleDeleteComplaints(complaints) {
       console.log('Delete complaints:', complaints)
       if (confirm(`Are you sure you want to delete complaint record ${complaints.id}?`)) {
+        this.showCrudLoading('delete', 'complaint')
         try {
           await apiClient.delete(`/complaints/${complaints.complaint_id}`)
 
@@ -59,6 +70,8 @@ export default {
         } catch (error) {
           console.error('Failed to delete complaint:', error)
           alert('Failed to delete complaint: ' + (error.response?.data?.message || error.message))
+        } finally {
+          this.hideCrudLoading()
         }
       }
     },
@@ -71,6 +84,7 @@ export default {
     // Handle resolve complaint
     async handleResolveComplaint(resolveData) {
       console.log('Resolving complaint:', resolveData)
+      this.showCrudLoading('submit', 'complaint resolution')
 
       try {
         const response = await apiClient.put(`/complaints/${resolveData.complaint_id}/resolve`, {
@@ -93,6 +107,8 @@ export default {
       } catch (error) {
         console.error('❌ Error resolving complaint:', error)
         alert('Failed to resolve complaint: ' + (error.response?.data?.message || error.message))
+      } finally {
+        this.hideCrudLoading()
       }
     },
 

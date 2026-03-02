@@ -22,6 +22,8 @@ import UserStorageService from '../../../../../services/UserStorageService';
 import FavoritesService from '../../../../../services/FavoritesService';
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 import { getSafeUserName } from "../../../../../services/DataDisplayUtils";
+import CrudLoadingOverlay from "../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../hooks/useLoading";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,6 +38,7 @@ const CARD_WIDTH = isTablet
 
 const TabbedStallScreen = () => {
   const { theme, isDark } = useTheme();
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   const [activeTab, setActiveTab] = useState('Fixed Price'); // Default to Fixed Price
   const [stallsData, setStallsData] = useState([]);
   const [filteredStalls, setFilteredStalls] = useState([]);
@@ -305,6 +308,7 @@ const TabbedStallScreen = () => {
 
     try {
       setApplying(stallId);
+      startLoading('submit', 'stall application');
       
       let response;
       
@@ -410,6 +414,7 @@ const TabbedStallScreen = () => {
       Alert.alert('Error', 'Failed to submit application. Please check your connection and try again.');
     } finally {
       setApplying(null);
+      stopLoading();
       console.log('🎯 ====== HANDLE STALL APPLICATION END ======');
     }
   };
@@ -542,6 +547,7 @@ const TabbedStallScreen = () => {
         isFavorite={selectedStall ? favoriteIds.includes(Number(selectedStall.id)) : false}
         onToggleFavorite={handleToggleFavorite}
       />
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </View>
   );
 };

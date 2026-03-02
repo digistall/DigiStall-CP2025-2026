@@ -16,11 +16,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 import { changePassword } from "../../../../../../../services/AuthService";
+import CrudLoadingOverlay from "../../../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../../../hooks/useLoading";
 
 const { width } = Dimensions.get("window");
 
 const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
   const { theme } = useTheme();
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   
   // Form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -106,6 +109,7 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
     }
 
     setIsLoading(true);
+    startLoading('save', 'password');
     setErrors({});
 
     try {
@@ -140,6 +144,7 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
       setErrors({ submit: error.message || "An error occurred. Please try again." });
     } finally {
       setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -386,6 +391,7 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
         </TouchableOpacity>
       </ScrollView>
       </KeyboardAvoidingView>
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </View>
   );
 };

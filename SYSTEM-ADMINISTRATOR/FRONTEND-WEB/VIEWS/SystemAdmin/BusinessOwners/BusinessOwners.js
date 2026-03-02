@@ -3,6 +3,7 @@ import BusinessOwnersTable from './Components/Table/BusinessOwnersTable.vue'
 import CreateBusinessOwnerDialog from './Components/Dialogs/CreateBusinessOwnerDialog.vue'
 import RecordPaymentDialog from './Components/Dialogs/RecordPaymentDialog.vue'
 import UniversalPopup from '../../Common/UniversalPopup/UniversalPopup.vue'
+import CrudLoadingOverlay from '@/components/Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '')
 
@@ -12,7 +13,8 @@ export default {
     BusinessOwnersTable,
     CreateBusinessOwnerDialog,
     RecordPaymentDialog,
-    UniversalPopup
+    UniversalPopup,
+    CrudLoadingOverlay
   },
   data() {
     return {
@@ -21,6 +23,7 @@ export default {
       loading: false,
       creating: false,
       recording: false,
+      crudLoading: { visible: false, operation: 'generic', entity: 'business owner', message: '', subMessage: '' },
       showCreateDialog: false,
       showPaymentDialog: false,
       selectedOwner: null,
@@ -101,6 +104,7 @@ export default {
     },
     async createBusinessOwner() {
       this.creating = true
+      this.crudLoading = { visible: true, operation: 'add', entity: 'business owner', message: '', subMessage: '' }
       try {
         const token = sessionStorage.getItem('authToken')
         
@@ -118,6 +122,7 @@ export default {
         this.showPopup(error.response?.data?.message || 'Failed to create business owner', 'error')
       } finally {
         this.creating = false
+        this.crudLoading.visible = false
       }
     },
     showRecordPayment(owner) {
@@ -143,6 +148,7 @@ export default {
     },
     async recordPayment() {
       this.recording = true
+      this.crudLoading = { visible: true, operation: 'save', entity: 'payment', message: '', subMessage: '' }
       try {
         const token = sessionStorage.getItem('authToken')
         
@@ -166,6 +172,7 @@ export default {
         this.showPopup(error.response?.data?.message || 'Failed to record payment', 'error')
       } finally {
         this.recording = false
+        this.crudLoading.visible = false
       }
     },
     viewPaymentHistory(owner) {

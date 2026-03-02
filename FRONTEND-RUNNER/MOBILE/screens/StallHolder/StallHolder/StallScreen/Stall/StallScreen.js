@@ -22,6 +22,8 @@ import FavoritesService from '../../../../../services/FavoritesService';
 
 // Import theme
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
+import CrudLoadingOverlay from "../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../hooks/useLoading";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -44,6 +46,7 @@ const StallScreen = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null); // Track which stall is being applied to
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   const [availableFilters, setAvailableFilters] = useState(['ALL']); // Dynamic filters based on data
   const [favoriteIds, setFavoriteIds] = useState([]); // Track favorite stall IDs
   
@@ -226,6 +229,7 @@ const StallScreen = () => {
   const submitApplication = async (stall) => {
     try {
       setApplying(stall.id);
+      startLoading('submit', 'stall application');
       
       let response;
       const applicantId = userData.user.applicant_id;
@@ -302,6 +306,7 @@ const StallScreen = () => {
       Alert.alert('Error', 'Failed to submit application. Please try again.');
     } finally {
       setApplying(null);
+      stopLoading();
     }
   };
 
@@ -423,6 +428,7 @@ const StallScreen = () => {
           onToggleFavorite={handleToggleFavorite}
         />
       </SafeAreaView>
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </SafeAreaProvider>
   );
 };

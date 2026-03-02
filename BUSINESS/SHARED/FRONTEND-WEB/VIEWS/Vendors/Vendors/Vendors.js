@@ -4,6 +4,7 @@ import EditVendorDialog from './Components/EditVendorDialog/EditVendorDialog.vue
 import SearchVendor from './Components/Search/SearchVendor.vue'
 import TableVendor from './Components/Table/TableVendor.vue'
 import LoadingOverlay from '@SHARED_COMPONENTS/LoadingOverlay/LoadingOverlay.vue'
+import CrudLoadingOverlay from '../../Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 
 export default {
   name: 'Vendors',
@@ -14,10 +15,12 @@ export default {
     SearchVendor,
     TableVendor,
     LoadingOverlay,
+    CrudLoadingOverlay,
   },
   data() {
     return {
       loading: false,
+      crudLoading: { visible: false, operation: 'generic', entity: 'vendor', message: '', subMessage: '' },
       addDialog: false,
       detailsDialog: false,
       detailsData: null,
@@ -162,9 +165,17 @@ export default {
       this.addDialog = true
     },
 
+    showCrudLoading(operation, entity, message, subMessage) {
+      this.crudLoading = { visible: true, operation: operation || 'generic', entity: entity || 'vendor', message: message || '', subMessage: subMessage || '' }
+    },
+    hideCrudLoading() {
+      this.crudLoading.visible = false
+    },
+
     // receive new row and add to table
     async handleSave(payload) {
       this.loading = true
+      this.showCrudLoading('add', 'vendor')
       try {
         const token = localStorage.getItem('authToken')
         const response = await fetch(`${this.apiBaseUrl}/vendors`, {
@@ -192,6 +203,7 @@ export default {
         this.showNotification('Failed to create vendor: ' + error.message, 'error')
       } finally {
         this.loading = false
+        this.hideCrudLoading()
       }
     },
 
@@ -241,6 +253,7 @@ export default {
     // called when Edit dialog submits
     async handleEditUpdate(payload) {
       this.loading = true
+      this.showCrudLoading('edit', 'vendor')
       try {
         const token = localStorage.getItem('authToken')
         const response = await fetch(`${this.apiBaseUrl}/vendors/${this.editTargetId}`, {
@@ -267,6 +280,7 @@ export default {
         this.showNotification('Failed to update vendor: ' + error.message, 'error')
       } finally {
         this.loading = false
+        this.hideCrudLoading()
       }
     },
 

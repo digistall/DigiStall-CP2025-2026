@@ -5,6 +5,7 @@ import ApproveApplicants from './Components/ApproveApplicants/ApproveApplicants.
 import DeclineApplicants from './Components/DeclineApplicants/DeclineApplicants.vue'
 import ToastNotification from '@SHARED_COMPONENTS/ToastNotification/ToastNotification.vue'
 import LoadingOverlay from '@SHARED_COMPONENTS/LoadingOverlay/LoadingOverlay.vue'
+import CrudLoadingOverlay from '../../Common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 
 // Use environment variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -18,6 +19,7 @@ export default {
     DeclineApplicants,
     ToastNotification,
     LoadingOverlay,
+    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -41,6 +43,7 @@ export default {
       showApproveModal: false,
       showDeclineModal: false,
       selectedApplicant: null,
+      crudLoading: { visible: false, operation: 'generic', entity: 'applicant', message: '', subMessage: '' },
       // Sample data for vendor applicants with detailed information
       vendorApplicants: [
         {
@@ -403,6 +406,7 @@ export default {
     // Handle re-check applicant action (for rejected applicants) - FIXED TO USE BACKEND API
     async handleRecheck(applicant) {
       console.log('🔄 Re-checking rejected applicant:', applicant)
+      this.crudLoading = { visible: true, operation: 'edit', entity: 'applicant', message: 'Re-checking applicant...', subMessage: '' }
 
       // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
       const applicantId = applicant.applicant_id || 
@@ -473,6 +477,8 @@ export default {
         if (this.$toast) {
           this.$toast.error(`❌ Failed to update status: ${error.message}`)
         }
+      } finally {
+        this.crudLoading.visible = false
       }
     },
 

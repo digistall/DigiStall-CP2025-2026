@@ -19,6 +19,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../../../../components/ThemeComponents/ThemeContext';
 import ApiService from "../../../../../services/ApiService";
 import UserStorageService from "../../../../../services/UserStorageService";
+import CrudLoadingOverlay from "../../../../../components/Common/CrudLoadingOverlay";
+import useLoading from "../../../../../hooks/useLoading";
 
 const { width, height } = Dimensions.get("window");
 const MAX_PHOTOS = 1; // Only 1 photo since stored as blob
@@ -76,6 +78,7 @@ const ComplaintScreen = () => {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { startLoading, stopLoading, overlayProps } = useLoading();
   
   // Photo evidence state
   const [evidencePhoto, setEvidencePhoto] = useState(null);
@@ -230,6 +233,7 @@ const ComplaintScreen = () => {
 
   const submitComplaint = async () => {
     setIsSubmitting(true);
+    startLoading('submit', 'complaint');
     
     try {
       // Get stallholder data from fullUserData
@@ -250,6 +254,7 @@ const ComplaintScreen = () => {
       const response = await ApiService.submitComplaint(complaintData, evidencePhoto);
       
       setIsSubmitting(false);
+      stopLoading();
       
       if (response.success) {
         Alert.alert(
@@ -273,6 +278,7 @@ const ComplaintScreen = () => {
       }
     } catch (error) {
       setIsSubmitting(false);
+      stopLoading();
       console.error('Submit error:', error);
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
     }
@@ -529,6 +535,7 @@ const ComplaintScreen = () => {
           </Text>
         </View>
       </ScrollView>
+      <CrudLoadingOverlay {...overlayProps} theme={theme} />
     </KeyboardAvoidingView>
   );
 };

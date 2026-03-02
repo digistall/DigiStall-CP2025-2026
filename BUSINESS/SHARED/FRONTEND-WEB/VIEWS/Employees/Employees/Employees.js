@@ -7,6 +7,7 @@ import ResetPasswordDialog from "./Components/ResetPasswordDialog/ResetPasswordD
 import ToastNotification from '../../Common/ToastNotification/ToastNotification.vue';
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue';
+import CrudLoadingOverlay from '../../Common/CrudLoadingOverlay/CrudLoadingOverlay.vue';
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
@@ -26,11 +27,20 @@ export default {
     ToastNotification,
     ActivityLogDialog,
     LoadingOverlay,
+    CrudLoadingOverlay,
   },
   data() {
     return {
       saving: false,
       loading: false,
+      // CRUD operation loading state
+      crudLoading: {
+        visible: false,
+        operation: 'generic',
+        entity: 'employee',
+        message: '',
+        subMessage: '',
+      },
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,
@@ -486,6 +496,13 @@ export default {
 
     async saveEmployee(employeeData) {
       this.saving = true;
+      this.crudLoading = {
+        visible: true,
+        operation: this.isEditMode ? 'edit' : 'add',
+        entity: 'employee',
+        message: this.isEditMode ? 'Updating employee...' : 'Adding employee...',
+        subMessage: 'Please wait while we process your request',
+      };
 
       try {
         // Get authentication token first
@@ -621,6 +638,7 @@ export default {
         this.showToast(`❌ ${error.message}`, "error");
       } finally {
         this.saving = false;
+        this.crudLoading = { ...this.crudLoading, visible: false };
       }
     },
 
@@ -749,6 +767,13 @@ export default {
       if (!this.selectedEmployee) return;
 
       this.saving = true;
+      this.crudLoading = {
+        visible: true,
+        operation: 'save',
+        entity: 'permissions',
+        message: 'Saving permissions...',
+        subMessage: '',
+      };
 
       try {
         // Get authentication token
@@ -791,6 +816,7 @@ export default {
         );
       } finally {
         this.saving = false;
+        this.crudLoading = { ...this.crudLoading, visible: false };
       }
     },
 
@@ -1021,6 +1047,13 @@ export default {
 
     async confirmFireEmployee({ employee, reason }) {
       this.saving = true;
+      this.crudLoading = {
+        visible: true,
+        operation: 'delete',
+        entity: 'employee',
+        message: 'Terminating employee...',
+        subMessage: 'Please wait while we process this action',
+      };
       
       try {
         const token = sessionStorage.getItem("authToken");
@@ -1082,6 +1115,7 @@ export default {
         );
       } finally {
         this.saving = false;
+        this.crudLoading = { ...this.crudLoading, visible: false };
       }
     },
 
