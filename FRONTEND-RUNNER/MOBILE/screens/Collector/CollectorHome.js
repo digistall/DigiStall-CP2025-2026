@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   ScrollView,
   StatusBar,
   StyleSheet,
   Dimensions,
+  AppState,
+  PanResponder,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import ApiService from "../../services/ApiService";
@@ -24,6 +26,8 @@ import NotificationsScreen from "./CollectorScreen/Notifications/NotificationsSc
 import SettingsScreen from "./CollectorScreen/Settings/SettingsScreen";
 
 const { width, height } = Dimensions.get("window");
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+const HEARTBEAT_INTERVAL = 60 * 1000; // 1 minute
 
 // Default theme (can be replaced with theme context later)
 const defaultTheme = {
@@ -47,11 +51,139 @@ const CollectorHome = ({ navigation }) => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Activity tracking for auto-logout and heartbeat
+  const lastActivityRef = useRef(Date.now());
+  const heartbeatIntervalRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
+
+  // Record user activity
+  const recordActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+
+  // PanResponder to track touch activity
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => {
+        recordActivity();
+        return false; // Don't capture the gesture
+      },
+      onMoveShouldSetPanResponder: () => {
+        recordActivity();
+        return false;
+      },
+    })
+  ).current;
+
+  // Send heartbeat to server
+  const sendHeartbeat = useCallback(async () => {
+    try {
+      const userData = await UserStorageService.getUserData();
+      const token = await UserStorageService.getAuthToken();
+      const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
+
+      if (token && staffId) {
+        await ApiService.staffHeartbeat(token, staffId, 'collector');
+      }
+    } catch (error) {
+      // Silent fail for heartbeat
+    }
+  }, []);
+
+  // Auto-logout due to inactivity
+  const performAutoLogout = useCallback(async () => {
+    if (isLoggingOut) return;
+
+    console.log('Collector auto-logout triggered due to inactivity');
+    setIsLoggingOut(true);
+
+    try {
+      const userData = await UserStorageService.getUserData();
+      const token = await UserStorageService.getAuthToken();
+      const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
+
+      if (token && staffId) {
+        await ApiService.staffAutoLogout(token, staffId, 'collector');
+      }
+
+      await UserStorageService.clearUserData();
+    } catch (error) {
+      console.error('Collector auto-logout error:', error);
+      await UserStorageService.clearUserData();
+    } finally {
+      setIsLoggingOut(false);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LoginScreen', params: { reason: 'inactivity' } }],
+      });
+    }
+  }, [isLoggingOut, navigation]);
+
+  // Check activity and manage heartbeat/auto-logout
+  useEffect(() => {
+    // Send initial heartbeat
+    sendHeartbeat();
+
+    // Set up heartbeat interval (check every minute)
+    heartbeatIntervalRef.current = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityRef.current;
+
+      if (timeSinceActivity < INACTIVITY_TIMEOUT) {
+        // User has been active, send heartbeat
+        sendHeartbeat();
+      } else {
+        // User has been inactive for 15+ minutes, auto-logout
+        console.log('Collector inactivity detected:', Math.round(timeSinceActivity / 1000), 'seconds');
+        performAutoLogout();
+      }
+    }, HEARTBEAT_INTERVAL);
+
+    // Handle app state changes
+    const appStateSubscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App came to foreground - check if should auto-logout
+        const timeSinceActivity = Date.now() - lastActivityRef.current;
+        if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+          performAutoLogout();
+        } else {
+          recordActivity();
+          sendHeartbeat();
+        }
+      } else if (appStateRef.current === 'active' && nextAppState.match(/inactive|background/)) {
+        // App going to background - send auto-logout API to mark offline immediately
+        try {
+          const userData = await UserStorageService.getUserData();
+          const token = await UserStorageService.getAuthToken();
+          const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
+          if (token && staffId) {
+            await ApiService.staffAutoLogout(token, staffId, 'collector');
+          }
+        } catch (e) {
+          // Silent fail - app is going to background
+        }
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
+      appStateSubscription.remove();
+    };
+  }, [sendHeartbeat, performAutoLogout, recordActivity]);
+
   const handleLogout = async () => {
     // Prevent multiple clicks
     if (isLoggingOut) {
-      console.log("ΓÅ│ Logout already in progress, ignoring...");
+      console.log("Logout already in progress, ignoring...");
       return;
+    }
+
+    // CRITICAL: Clear heartbeat interval FIRST to prevent last_login updates after logout
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
     }
 
     // Close sidebar first
@@ -180,6 +312,7 @@ const CollectorHome = ({ navigation }) => {
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
         edges={["top", "left", "right"]}
+        {...panResponder.panHandlers}
       >
         <StatusBar
           barStyle={isDarkMode ? "light-content" : "dark-content"}

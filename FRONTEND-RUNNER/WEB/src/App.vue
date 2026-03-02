@@ -20,45 +20,41 @@ const PAGE_LOADED_FLAG = 'page_loaded'
 
 // Handle tab/window close
 const handleBeforeUnload = () => {
-  // Only trigger if user is authenticated and is an employee/inspector/collector
+  // Trigger for ALL authenticated users (not just employees/inspectors)
   if (authStore.isAuthenticated && authStore.user) {
     const userType = authStore.user.userType
-    if (['business_employee', 'inspector', 'collector', 'web_employee'].includes(userType)) {
-      // Detect if this is a refresh vs an actual tab close.
-      // On refresh: sessionStorage still has the flag we set on mount.
-      // On tab close: sessionStorage is about to be wiped (flag was never re-set after last unload).
-      // We use a two-flag approach:
-      //   'page_loaded' is set on mount and removed on beforeunload.
-      //   If it's present on beforeunload, it means the page is being refreshed.
-      const isRefresh = sessionStorage.getItem(PAGE_LOADED_FLAG) === 'true'
 
-      // Remove the flag so next beforeunload (if it's a close) won't see it
-      sessionStorage.removeItem(PAGE_LOADED_FLAG)
+    // Detect if this is a refresh vs an actual tab close.
+    // On refresh: sessionStorage still has the flag we set on mount.
+    // On tab close: sessionStorage is about to be wiped (flag was never re-set after last unload).
+    const isRefresh = sessionStorage.getItem(PAGE_LOADED_FLAG) === 'true'
 
-      if (isRefresh) {
-        // This is a page refresh — do NOT log out or clear localStorage
-        return
-      }
+    // Remove the flag so next beforeunload (if it's a close) won't see it
+    sessionStorage.removeItem(PAGE_LOADED_FLAG)
 
-      // This is an actual tab/window close — perform logout cleanup
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    if (isRefresh) {
+      // This is a page refresh — do NOT log out or clear localStorage
+      return
+    }
 
-      if (token) {
-        const userId = authStore.user.id || authStore.user.userId || authStore.user.employeeId
+    // This is an actual tab/window close — perform logout cleanup
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
 
-        // Use URLSearchParams for application/x-www-form-urlencoded
-        // Express body-parser handles this much more reliably than Blobs
-        const params = new URLSearchParams()
-        params.append('userId', userId)
-        params.append('userType', userType)
+    if (token) {
+      const userId = authStore.user.id || authStore.user.userId || authStore.user.employeeId
 
-        navigator.sendBeacon(`${apiUrl}/auth/logout`, params)
+      // Use URLSearchParams for application/x-www-form-urlencoded
+      // Express body-parser handles this much more reliably than Blobs
+      const params = new URLSearchParams()
+      params.append('userId', userId)
+      params.append('userType', userType)
 
-        // Clear local data synchronously
-        localStorage.clear()
-        sessionStorage.clear()
-      }
+      navigator.sendBeacon(`${apiUrl}/auth/logout`, params)
+
+      // Clear local data synchronously
+      localStorage.clear()
+      sessionStorage.clear()
     }
   }
 }

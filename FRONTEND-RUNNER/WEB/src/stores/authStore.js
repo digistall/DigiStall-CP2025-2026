@@ -610,7 +610,7 @@ export const useAuthStore = defineStore('auth', () => {
     const userType = user.value.userType || localStorage.getItem('userType');
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     
-    console.log('⏰ Auto-logout triggered due to 5 minutes of inactivity');
+    console.log('⏰ Auto-logout triggered due to 15 minutes of inactivity');
     
     try {
       // Call auto-logout API to record in activity log
@@ -653,7 +653,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
   
   /**
-   * Start activity tracking - sends heartbeat every 5 minutes
+   * Start activity tracking - sends heartbeat while active, auto-logout after 15 minutes
    * Also monitors for inactivity to trigger auto-logout
    */
   function startActivityTracking() {
@@ -666,13 +666,13 @@ export const useAuthStore = defineStore('auth', () => {
     
     // Check activity every minute to detect inactivity sooner
     activityInterval = setInterval(() => {
-      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      const inactivityThreshold = Date.now() - (15 * 60 * 1000);
       
-      if (lastActivityTime > fiveMinutesAgo) {
-        // User has been active in the last 5 minutes, send heartbeat
+      if (lastActivityTime > inactivityThreshold) {
+        // User has been active in the last 15 minutes, send heartbeat
         sendActivityHeartbeat();
       } else {
-        // User has been inactive for more than 5 minutes, auto-logout
+        // User has been inactive for more than 15 minutes, auto-logout
         console.log('⏰ Inactivity detected - last activity:', new Date(lastActivityTime).toLocaleString());
         autoLogoutDueToInactivity();
       }
