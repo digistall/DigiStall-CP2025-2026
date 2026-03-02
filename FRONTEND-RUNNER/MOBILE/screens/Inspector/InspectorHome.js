@@ -27,7 +27,7 @@ import ReportScreen from "./InspectorScreens/Report/ReportScreen";
 import SettingsScreen from "./InspectorScreens/Settings/SettingsScreen";
 
 const { width, height } = Dimensions.get("window");
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
 const HEARTBEAT_INTERVAL = 60 * 1000; // 1 minute
 
 const InspectorHome = ({ navigation }) => {
@@ -136,7 +136,7 @@ const InspectorHome = ({ navigation }) => {
     }, HEARTBEAT_INTERVAL);
 
     // Handle app state changes
-    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+    const appStateSubscription = AppState.addEventListener('change', async (nextAppState) => {
       if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
         // App came to foreground - check if should auto-logout
         const timeSinceActivity = Date.now() - lastActivityRef.current;
@@ -145,6 +145,19 @@ const InspectorHome = ({ navigation }) => {
         } else {
           recordActivity();
           sendHeartbeat();
+        }
+      } else if (appStateRef.current === 'active' && nextAppState.match(/inactive|background/)) {
+        // App going to background - send auto-logout API to mark offline immediately
+        // This ensures the dashboard shows the user as offline when they close/minimize the app
+        try {
+          const userData = await UserStorageService.getUserData();
+          const token = await UserStorageService.getAuthToken();
+          const staffId = userData?.staff?.inspector_id || userData?.staff?.staffId;
+          if (token && staffId) {
+            await ApiService.staffAutoLogout(token, staffId, 'inspector');
+          }
+        } catch (e) {
+          // Silent fail - app is going to background
         }
       }
       appStateRef.current = nextAppState;

@@ -548,6 +548,10 @@ export const logout = async (req, res) => {
               checkRows = checkResult[0] || [];
               if (checkRows.length > 0) {
                 [result] = await connection.execute('CALL sp_updateBusinessEmployeeLastLogout(?, ?)', [userId, philippineTime]);
+                // Mark user as offline
+                try {
+                  await connection.execute('UPDATE business_employee SET is_online = 0 WHERE business_employee_id = ?', [userId]);
+                } catch (e) { /* is_online column may not exist */ }
                 // Also deactivate the employee session for online status tracking
                 try {
                   await connection.execute(`
@@ -573,6 +577,10 @@ export const logout = async (req, res) => {
               checkRows = checkResult[0] || [];
               if (checkRows.length > 0) {
                 [result] = await connection.execute('CALL sp_updateBusinessManagerLastLogout(?, ?)', [userId, philippineTime]);
+                // Mark user as offline
+                try {
+                  await connection.execute('UPDATE business_manager SET is_online = 0 WHERE business_manager_id = ?', [userId]);
+                } catch (e) { /* is_online column may not exist */ }
               }
             }
             break;
@@ -584,6 +592,10 @@ export const logout = async (req, res) => {
               checkRows = checkResult[0] || [];
               if (checkRows.length > 0) {
                 [result] = await connection.execute('CALL sp_updateBusinessOwnerLastLogout(?, ?)', [userId, philippineTime]);
+                // Mark user as offline
+                try {
+                  await connection.execute('UPDATE stall_business_owner SET is_online = 0 WHERE business_owner_id = ?', [userId]);
+                } catch (e) { /* is_online column may not exist */ }
               }
             }
             break;
@@ -595,6 +607,10 @@ export const logout = async (req, res) => {
               checkRows = checkResult[0] || [];
               if (checkRows.length > 0) {
                 [result] = await connection.execute('CALL sp_updateSystemAdminLastLogout(?, ?)', [userId, philippineTime]);
+                // Mark user as offline
+                try {
+                  await connection.execute('UPDATE system_administrator SET is_online = 0 WHERE system_admin_id = ?', [userId]);
+                } catch (e) { /* is_online column may not exist */ }
               }
             }
             break;
@@ -991,6 +1007,7 @@ export const autoLogout = async (req, res) => {
         case 'employee':
           await connection.execute('CALL sp_autoLogoutBusinessEmployee(?, ?, ?, ?)', 
             [userId, philippineTime, ipAddress, userAgent]);
+          try { await connection.execute('UPDATE business_employee SET is_online = 0 WHERE business_employee_id = ?', [userId]); } catch (e) {}
           console.log(`✅ Auto-logout recorded for business_employee ${userId}`);
           break;
           
@@ -999,6 +1016,7 @@ export const autoLogout = async (req, res) => {
         case 'manager':
           await connection.execute('CALL sp_autoLogoutBusinessManager(?, ?, ?, ?)', 
             [userId, philippineTime, ipAddress, userAgent]);
+          try { await connection.execute('UPDATE business_manager SET is_online = 0 WHERE business_manager_id = ?', [userId]); } catch (e) {}
           console.log(`✅ Auto-logout recorded for business_manager ${userId}`);
           break;
           
@@ -1007,6 +1025,7 @@ export const autoLogout = async (req, res) => {
         case 'owner':
           // For business owner, just log the activity and update last_logout
           await connection.execute('CALL sp_updateBusinessOwnerLastLogout(?, ?)', [userId, philippineTime]);
+          try { await connection.execute('UPDATE stall_business_owner SET is_online = 0 WHERE business_owner_id = ?', [userId]); } catch (e) {}
           await connection.execute(`
             INSERT INTO staff_activity_log 
             (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, user_agent, status, created_at)
@@ -1022,6 +1041,7 @@ export const autoLogout = async (req, res) => {
         case 'admin':
         case 'system_admin':
           await connection.execute('CALL sp_updateSystemAdminLastLogout(?, ?)', [userId, philippineTime]);
+          try { await connection.execute('UPDATE system_administrator SET is_online = 0 WHERE system_admin_id = ?', [userId]); } catch (e) {}
           await connection.execute(`
             INSERT INTO staff_activity_log 
             (staff_type, staff_id, staff_name, action_type, action_description, module, ip_address, user_agent, status, created_at)
@@ -1036,12 +1056,14 @@ export const autoLogout = async (req, res) => {
         case 'inspector':
           await connection.execute('CALL sp_autoLogoutInspector(?, ?, ?, ?)', 
             [userId, philippineTime, ipAddress, userAgent]);
+          try { await connection.execute('UPDATE inspector SET is_online = 0 WHERE inspector_id = ?', [userId]); } catch (e) {}
           console.log(`✅ Auto-logout recorded for inspector ${userId}`);
           break;
           
         case 'collector':
           await connection.execute('CALL sp_autoLogoutCollector(?, ?, ?, ?)', 
             [userId, philippineTime, ipAddress, userAgent]);
+          try { await connection.execute('UPDATE collector SET is_online = 0 WHERE collector_id = ?', [userId]); } catch (e) {}
           console.log(`✅ Auto-logout recorded for collector ${userId}`);
           break;
           
