@@ -10,18 +10,52 @@
 //   false → APK / production build       → use DigitalOcean backend
 const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
+// ===== AUTO-DETECT LOCAL IP FROM EXPO =====
+// Expo Metro bundler knows the correct LAN IP for any WiFi network.
+// We extract it from Constants.expoConfig.hostUri (format: "IP:PORT")
+// This means you NEVER have to hardcode your home IP again.
+import Constants from 'expo-constants';
+
+const getDevHostIP = () => {
+  try {
+    const hostUri = Constants.expoConfig?.hostUri  // e.g. "178.16.104.68:8081"
+                 || Constants.manifest?.debuggerHost  // older SDK fallback
+                 || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0]; // strip the port
+      if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+        console.log(`🔍 Auto-detected dev machine IP: ${ip}`);
+        return ip;
+      }
+    }
+  } catch (e) {
+    console.log('⚠️ Could not auto-detect IP from Expo:', e.message);
+  }
+  return null;
+};
+
 // Server lists by environment
 const PRODUCTION_SERVERS = [
   'http://68.183.154.125:5001',   // DigitalOcean Backend-Mobile API (PRIMARY)
   'http://68.183.154.125:5000',   // DigitalOcean Backend-Web API (fallback)
 ];
 
-const DEVELOPMENT_SERVERS = [
-  'http://192.168.1.105:5001',    // Local Backend-Mobile API (primary)
-  'http://192.168.1.105:5000',    // Local Backend-Web API (fallback)
-  'http://192.168.1.105:3001',    // Local single-server fallback
-  'http://localhost:3001',        // Only works on emulator
-];
+// Build dev servers dynamically from auto-detected IP
+const detectedIP = IS_DEV ? getDevHostIP() : null;
+
+const DEVELOPMENT_SERVERS = detectedIP
+  ? [
+      `http://${detectedIP}:5001`,   // Local Backend-Mobile API (primary)
+      `http://${detectedIP}:5000`,   // Local Backend-Web API (fallback)
+      `http://${detectedIP}:3001`,   // Local single-server fallback
+      'http://localhost:3001',       // Only works on emulator
+    ]
+  : [
+      'http://192.168.1.105:5001',   // Hardcoded fallback if auto-detect fails
+      'http://192.168.1.105:5000',
+      'http://192.168.1.105:3001',
+      'http://localhost:3001',
+    ];
 
 export const API_CONFIG = {
   // Server endpoints are ordered automatically based on environment
@@ -257,5 +291,10 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
 
 console.log('📱 Mobile Network Config Loaded');
 console.log(`🔧 Environment: ${IS_DEV ? 'DEVELOPMENT (Expo Go → Local Backend)' : 'PRODUCTION (APK → DigitalOcean)'}`);
+if (IS_DEV && detectedIP) {
+  console.log(`🔍 Auto-detected LAN IP: ${detectedIP} (works on any WiFi)`);
+} else if (IS_DEV) {
+  console.log('⚠️ Could not auto-detect IP, using hardcoded fallback');
+}
 console.log('🌐 Server priority:', API_CONFIG.SERVERS.map(s => s.replace('http://', '')).join(' → '));
 console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
