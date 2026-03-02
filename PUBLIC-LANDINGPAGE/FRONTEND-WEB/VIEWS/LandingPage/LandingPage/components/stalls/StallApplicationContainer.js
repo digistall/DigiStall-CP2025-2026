@@ -306,7 +306,7 @@ export default {
         nature_of_business: toNull(business.natureOfBusiness),
         capitalization: toNull(business.businessCapitalization),
         source_of_capital: toNull(business.sourceOfCapital),
-        previous_business_experience: toNull(business.previousBusiness),
+        previous_business_experience: toNull(business.previousBusiness) || 'None',
         // Convert relative name to 'Yes'/'No' - database expects ENUM('Yes','No')
         relative_stall_owner: business.applicantRelative && business.applicantRelative.trim() !== '' ? 'Yes' : 'No',
         // Store the actual relative's name in a separate field if provided

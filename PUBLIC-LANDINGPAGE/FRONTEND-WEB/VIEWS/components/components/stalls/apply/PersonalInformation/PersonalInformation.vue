@@ -20,8 +20,19 @@
             <br>
             <form @submit.prevent>
                 <label>
-                    Full Name:
-                    <input type="text" v-model="fullName" required :class="{ 'input-error': errors.fullName }" />
+                    Last Name, First Name, Middle Name:
+                    <input type="text" v-model="fullName" required :class="{ 'input-error': errors.fullName }" placeholder="e.g. Dela Cruz, Juan Santos" />
+                </label>
+
+                <label>
+                    First Name:
+                    <input type="text" v-model="firstName" required :class="{ 'input-error': errors.firstName }" />
+                </label>
+
+                <label>
+                    Middle Name:
+                    <input type="text" v-model="middleName" :class="{ 'input-error': errors.middleName }" placeholder="Leave blank if none" />
+                    <small class="input-hint">Optional</small>
                 </label>
 
                 <label>

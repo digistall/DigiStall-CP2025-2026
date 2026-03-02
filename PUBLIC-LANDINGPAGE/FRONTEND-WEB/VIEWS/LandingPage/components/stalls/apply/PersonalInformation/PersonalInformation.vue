@@ -20,8 +20,8 @@
             <br>
             <form @submit.prevent>
                 <label>
-                    Full Name:
-                    <input type="text" v-model="fullName" required :class="{ 'input-error': errors.fullName }" />
+                    Last Name, First Name, Middle Name:
+                    <input type="text" v-model="fullName" required :class="{ 'input-error': errors.fullName }" placeholder="e.g. Dela Cruz, Juan Santos" />
                 </label>
 
                 <label>
@@ -142,7 +142,9 @@ export default {
     mounted() {
         // Initialize form with saved data if available
         if (this.savedData) {
-            this.fullName = this.savedData.fullName || '';
+            this.lastName = this.savedData.lastName || '';
+            this.firstName = this.savedData.firstName || '';
+            this.middleName = this.savedData.middleName || '';
             this.education = this.savedData.education || '';
             this.birthdate = this.savedData.birthdate || '';
             this.civilStatus = this.savedData.civilStatus || '';
