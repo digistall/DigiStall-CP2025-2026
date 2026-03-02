@@ -85,7 +85,8 @@ console.log('========================================\n');
 // ===== API ROUTES =====
 
 // PUBLIC ROUTES (No authentication)
-app.use('/api/applications', applicationRoutes);
+app.use('/api/mobile/applications', applicationRoutes);  // Mobile application routes (join raffle, join auction, etc)
+app.use('/api/applications', applicationRoutes);  // Also mount at /api/applications for backward compatibility
 app.use('/api/landing-applicants', landingApplicantRoutes);
 app.use('/api/stalls', stallRoutes);  // Some routes are public (landing page)
 app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);  // Applicants management
