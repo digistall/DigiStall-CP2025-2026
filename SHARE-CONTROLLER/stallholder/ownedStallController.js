@@ -1,4 +1,4 @@
-import { createConnection } from '../../config/database.js';
+﻿import { createConnection } from '../../config/database.js';
 
 /**
  * Get all owned/rented stalls for a stallholder, grouped by branch
