@@ -1,6 +1,7 @@
 import { createConnection } from "../../config/database.js";
 import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../config/multerApplicantDocuments.js";
 import { encryptData, decryptData } from "../../services/encryptionService.js";
+import bcrypt from 'bcrypt';
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -288,9 +289,10 @@ export const applicantController = {
 
         console.log("🔑 Generated credentials - Username:", generatedUsername);
 
-        // ── Hash password (bcrypt-style simple SHA via crypto, or store plain for now) ──
-        const crypto = await import('crypto');
-        const hashedPassword = crypto.createHash('sha256').update(generatedPassword).digest('hex');
+        // ── Hash password using bcrypt (compatible with login controller) ──
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(generatedPassword, saltRounds);
+        console.log("🔐 Password hashed with bcrypt");
 
         // ── Save credentials to credential table ──
         const [existingCred] = await connection.execute(
