@@ -57,13 +57,19 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
   }, []);
 
   // Fetch payment records on component mount
-  const fetchPaymentRecords = useCallback(async () => {
+  const fetchPaymentRecords = useCallback(async (retryCount = 0) => {
     try {
       setError(null);
       
       // Check auth first
       const isAuth = await checkAuth();
       if (!isAuth) {
+        // Retry after a short delay if auth check fails initially
+        if (retryCount < 2) {
+          console.log('🔄 Retrying auth check in 500ms... Attempt:', retryCount + 1);
+          setTimeout(() => fetchPaymentRecords(retryCount + 1), 500);
+          return;
+        }
         return;
       }
       
@@ -73,13 +79,25 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
       const response = await ApiService.getPaymentRecords(1, 8);
       
       if (response.success) {
-        setPaymentRecords(response.data);
-        console.log('✅ Payment records loaded:', response.data.length);
+        setPaymentRecords(response.data || []);
+        console.log('✅ Payment records loaded:', (response.data || []).length);
       } else {
+        // If it fails, retry once
+        if (retryCount < 1) {
+          console.log('🔄 Retrying payment fetch in 500ms...');
+          setTimeout(() => fetchPaymentRecords(retryCount + 1), 500);
+          return;
+        }
         setError(response.message || 'Failed to load payment records');
         console.error('❌ Failed to fetch payment records:', response.message);
       }
     } catch (err) {
+      // Retry once on network error
+      if (retryCount < 1) {
+        console.log('🔄 Retrying after network error in 500ms...');
+        setTimeout(() => fetchPaymentRecords(retryCount + 1), 500);
+        return;
+      }
       setError('Network error. Please try again.');
       console.error('❌ Error fetching payment records:', err);
     } finally {
@@ -95,8 +113,8 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
       const response = await ApiService.getAllPaymentRecords();
       
       if (response.success) {
-        setAllPaymentRecords(response.data);
-        console.log('✅ All payment records loaded:', response.data.length);
+        setAllPaymentRecords(response.data || []);
+        console.log('✅ All payment records loaded:', (response.data || []).length);
       } else {
         console.error('❌ Failed to fetch all payment records:', response.message);
       }
@@ -105,6 +123,7 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
     }
   };
 
+  // Mount immediately - screen already staggers the render timing
   useEffect(() => {
     fetchPaymentRecords();
   }, [fetchPaymentRecords]);

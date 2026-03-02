@@ -348,3 +348,172 @@ function getPaymentDescription(type, forMonth) {
   
   return description;
 }
+
+/**
+ * Get current month payment status for a stallholder
+ * @route GET /api/mobile/stallholder/payments/monthly-status
+ * @access Protected (Stallholder only)
+ */
+export const getMonthlyPaymentStatus = async (req, res) => {
+  let connection;
+  
+  try {
+    const userData = req.user; // From auth middleware
+    console.log('🔐 User data from token (getMonthlyPaymentStatus):', JSON.stringify(userData, null, 2));
+    
+    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    
+    if (!stallholderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify stallholder. Please log out and log in again.'
+      });
+    }
+    
+    console.log('📅 Fetching monthly payment status for stallholder:', stallholderId);
+    
+    connection = await createConnection();
+    
+    // If we only have applicantId, try to get stallholder_id
+    if (userData.applicantId && !userData.stallholderId) {
+      const [stallholderResult] = await connection.execute(
+        'CALL sp_getStallholderIdByApplicant(?)',
+        [userData.applicantId]
+      );
+      if (stallholderResult[0] && stallholderResult[0].length > 0) {
+        stallholderId = stallholderResult[0][0].stallholder_id;
+        console.log('📅 Found stallholder_id from applicant_id:', stallholderId);
+      }
+    }
+    
+    // Get current month in YYYY-MM format
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    console.log('📅 Checking payment for month:', currentMonth);
+    
+    // Check if there's a completed payment for the current month
+    const [paymentResult] = await connection.execute(
+      `SELECT 
+        p.payment_id,
+        p.amount,
+        p.payment_date,
+        p.payment_status,
+        p.payment_for_month,
+        p.payment_type
+      FROM payments p
+      WHERE p.stallholder_id = ?
+        AND p.payment_for_month = ?
+        AND p.payment_status IN ('completed', 'paid')
+        AND p.payment_type = 'rental'
+      ORDER BY p.payment_date DESC
+      LIMIT 1`,
+      [stallholderId, currentMonth]
+    );
+    
+    // Get stallholder info - use applicant_id to call stored procedure
+    const applicantId = userData.userId || userData.applicantId || userData.id;
+    console.log('📅 Looking up stall info for applicant_id:', applicantId);
+
+    // Use sp_getStallInfoByApplicant stored procedure
+    const [spResult] = await connection.execute(
+      'CALL sp_getStallInfoByApplicant(?)',
+      [applicantId]
+    );
+    const stallInfo = spResult[0]?.[0] || {};
+    console.log('📅 Stall info from SP:', JSON.stringify(stallInfo));
+    
+    // Check for any pending payment for current month
+    const [pendingResult] = await connection.execute(
+      `SELECT 
+        p.payment_id,
+        p.amount,
+        p.payment_date,
+        p.payment_status
+      FROM payments p
+      WHERE p.stallholder_id = ?
+        AND p.payment_for_month = ?
+        AND p.payment_status = 'pending'
+        AND p.payment_type = 'rental'
+      ORDER BY p.created_at DESC
+      LIMIT 1`,
+      [stallholderId, currentMonth]
+    );
+    
+    await connection.end();
+    
+    const currentPayment = paymentResult[0];
+    const pendingPayment = pendingResult[0];
+    const monthlyRent = parseFloat(stallInfo.monthly_rent) || 0;
+    
+    let status = 'unpaid';
+    let statusMessage = '';
+    let amountDue = monthlyRent;
+    let paymentDate = null;
+    
+    if (currentPayment) {
+      status = 'paid';
+      statusMessage = `Payment completed for ${currentMonthName}`;
+      amountDue = 0;
+      paymentDate = formatDate(currentPayment.payment_date);
+    } else if (pendingPayment) {
+      status = 'pending';
+      statusMessage = `Payment pending verification for ${currentMonthName}`;
+      amountDue = monthlyRent;
+    } else {
+      status = 'unpaid';
+      statusMessage = `Payment due for ${currentMonthName}`;
+      amountDue = monthlyRent;
+    }
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        currentMonth: currentMonth,
+        currentMonthName: currentMonthName,
+        status: status,
+        statusMessage: statusMessage,
+        isPaid: status === 'paid',
+        isPending: status === 'pending',
+        isUnpaid: status === 'unpaid',
+        amountDue: formatCurrency(amountDue),
+        amountDueRaw: amountDue,
+        monthlyRent: formatCurrency(monthlyRent),
+        monthlyRentRaw: monthlyRent,
+        paymentDate: paymentDate,
+        stallNumber: stallInfo.stall_number || 'N/A',
+        stallType: stallInfo.stall_type || 'N/A',
+        dueDate: getDueDate(now)
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching monthly payment status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch monthly payment status',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (e) {
+        console.error('Error closing connection:', e);
+      }
+    }
+  }
+};
+
+// Helper function to get due date (5th of current month)
+function getDueDate(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const dueDate = new Date(year, month, 5);
+  return dueDate.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+}

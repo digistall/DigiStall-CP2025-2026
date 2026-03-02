@@ -35,7 +35,8 @@ import {
 import {
   getPaymentRecords,
   getAllPaymentRecords,
-  getPaymentSummary
+  getPaymentSummary,
+  getMonthlyPaymentStatus
 } from '../SHARE-CONTROLLER/stallholder/paymentController.js';
 
 // Import owned stall controller
@@ -231,5 +232,12 @@ router.get('/payments/all', verifyToken, getAllPaymentRecords);
  * @access Protected (Stallholder only)
  */
 router.get('/payments/summary', verifyToken, getPaymentSummary);
+
+/**
+ * @route GET /api/mobile/stallholder/payments/monthly-status
+ * @desc Get current month payment status for stallholder
+ * @access Protected (Stallholder only)
+ */
+router.get('/payments/monthly-status', verifyToken, getMonthlyPaymentStatus);
 
 export default router;
