@@ -126,6 +126,46 @@ export default {
         this.loadingState = 'success'
         console.log('🎉 Application submitted successfully!', result)
 
+        // Send credentials email for general applications (no stall)
+        if (result.credentials) {
+          try {
+            const { username, password, email } = result.credentials
+            const applicantName = this.personalInfo?.fullName || 'Applicant'
+            console.log('📧 Sending credentials email to:', email)
+
+            const emailPayload = {
+              service_id: 'service_am6pozg',
+              template_id: 'template_3wccajf',
+              user_id: 'F2fUGiyhf-FjatviG',
+              template_params: {
+                from_name: 'Stall Management System',
+                from_email: 'digistall@unc.edu.ph',
+                to_email: email,
+                to_name: applicantName,
+                subject: 'Stall Application Approved - Your Login Credentials',
+                message: `Dear ${applicantName},\n\nCongratulations! Your stall application has been APPROVED.\n\nHere are your login credentials to access the stall management system:\n\nUsername: ${username}\nPassword: ${password}\n\nIMPORTANT INSTRUCTIONS:\n1. Please save these credentials securely\n2. Use these credentials to log into the mobile app\n3. Change your password after first login for security\n\nBest regards,\nStall Management Admin Team`,
+                username: username,
+                password: password,
+                reply_to: 'digistall@unc.edu.ph',
+              },
+            }
+
+            const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(emailPayload),
+            })
+
+            if (emailRes.ok) {
+              console.log('✅ Credentials email sent successfully')
+            } else {
+              console.warn('⚠️ Email send failed but application was saved:', await emailRes.text())
+            }
+          } catch (emailError) {
+            console.error('⚠️ Failed to send credentials email (application still saved):', emailError.message)
+          }
+        }
+
         setTimeout(() => {
           this.closeForm()
         }, 3000)
@@ -266,7 +306,7 @@ export default {
         nature_of_business: toNull(business.natureOfBusiness),
         capitalization: toNull(business.businessCapitalization),
         source_of_capital: toNull(business.sourceOfCapital),
-        previous_business_experience: toNull(business.previousBusiness),
+        previous_business_experience: toNull(business.previousBusiness) || 'None',
         // Convert relative name to 'Yes'/'No' - database expects ENUM('Yes','No')
         relative_stall_owner: business.applicantRelative && business.applicantRelative.trim() !== '' ? 'Yes' : 'No',
         // Store the actual relative's name in a separate field if provided
@@ -393,6 +433,8 @@ export default {
             application_status: result.data.application_status,
           },
         },
+        // Pass credentials through for email sending (general applications only)
+        credentials: result.data.credentials || null,
       }
     },
 
