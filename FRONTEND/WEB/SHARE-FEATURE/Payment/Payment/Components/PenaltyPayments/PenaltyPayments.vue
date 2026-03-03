@@ -21,7 +21,6 @@
           <table class="payments-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Stallholder Name</th>
                 <th>Violation</th>
                 <th>Offense #</th>
@@ -34,20 +33,20 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="9" class="empty-state">
+                <td colspan="8" class="empty-state">
                   <v-progress-circular indeterminate color="primary" size="48" />
                   <p>Loading penalty payments...</p>
                 </td>
               </tr>
               <tr v-else-if="error">
-                <td colspan="9" class="empty-state">
+                <td colspan="8" class="empty-state">
                   <v-icon size="48" color="error">mdi-alert-circle-outline</v-icon>
                   <p>{{ error }}</p>
                   <v-btn color="primary" size="small" @click="fetchPenaltyPayments">Try Again</v-btn>
                 </td>
               </tr>
               <tr v-else-if="filteredPayments.length === 0">
-                <td colspan="9" class="empty-state">
+                <td colspan="8" class="empty-state">
                   <v-icon size="48" color="grey">mdi-cash-remove</v-icon>
                   <p>No penalty payments recorded</p>
                 </td>
@@ -58,7 +57,6 @@
                 class="clickable-row"
                 @click="viewPayment(payment)"
               >
-                <td class="id-cell">{{ payment.penaltyPaymentId }}</td>
                 <td class="name-cell">
                   <div class="stallholder-info">
                     <div class="avatar">

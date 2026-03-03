@@ -126,10 +126,10 @@ export const getFilteredStalls = async (req, res) => {
       orderBy = "s.created_at ASC";
     }
 
-    query += ` ORDER BY ${orderBy} LIMIT ?`;
-    queryParams.push(parseInt(limit));
+    const safeLimit = Math.max(1, Math.min(parseInt(limit) || 50, 200));
+    query += ` ORDER BY ${orderBy} LIMIT ${safeLimit}`;
 
-    const [stalls] = await connection.execute(query, queryParams);
+    const [stalls] = await connection.query(query, queryParams);
 
     // Format stalls to match the expected frontend response structure
     const formattedStalls = stalls.map((stall) => {

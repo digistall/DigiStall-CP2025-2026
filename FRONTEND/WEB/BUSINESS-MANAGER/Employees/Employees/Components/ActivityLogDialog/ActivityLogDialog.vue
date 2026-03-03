@@ -190,6 +190,28 @@
           </v-row>
         </div>
 
+        <!-- Quick Time Period Filters -->
+        <div class="time-filters-section">
+          <div class="time-filters-label">
+            <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>
+            Time Period:
+          </div>
+          <div class="time-filter-chips">
+            <v-chip
+              v-for="period in timePeriods"
+              :key="period.value"
+              :color="activeTimePeriod === period.value ? 'primary' : 'default'"
+              :variant="activeTimePeriod === period.value ? 'flat' : 'outlined'"
+              size="small"
+              class="time-chip"
+              @click="setTimePeriod(period.value)"
+            >
+              <v-icon size="14" class="mr-1">{{ period.icon }}</v-icon>
+              {{ period.label }}
+            </v-chip>
+          </div>
+        </div>
+
         <!-- Activity Table with Scroll -->
         <div class="table-container" :class="{ 'has-scroll': filteredLogs.length > 7 }">
           <table class="activity-table">

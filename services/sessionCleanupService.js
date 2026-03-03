@@ -11,8 +11,8 @@
 import { createConnection } from '../config/database.js';
 
 // Configuration
-const HEARTBEAT_TIMEOUT_MINUTES = 3;  // Mark offline after 3 minutes of no heartbeat
-const CLEANUP_INTERVAL_MS = 60000;    // Run cleanup every 60 seconds
+const HEARTBEAT_TIMEOUT_MINUTES = 2;  // Mark offline after 2 minutes of no heartbeat
+const CLEANUP_INTERVAL_MS = 30000;    // Run cleanup every 30 seconds
 
 let cleanupInterval = null;
 

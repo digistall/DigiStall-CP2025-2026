@@ -65,7 +65,16 @@ export default {
         { title: 'Approve', value: 'APPROVE' },
         { title: 'Reject', value: 'REJECT' }
       ],
-      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+      activeTimePeriod: null,
+      realTimeInterval: null,
+      timePeriods: [
+        { label: 'Last 1 Hour', value: '1h', icon: 'mdi-clock-fast' },
+        { label: 'Last 24 Hours', value: '1d', icon: 'mdi-calendar-today' },
+        { label: 'Last 7 Days', value: '7d', icon: 'mdi-calendar-week' },
+        { label: 'Last 30 Days', value: '30d', icon: 'mdi-calendar-month' },
+        { label: 'Real-time', value: 'realtime', icon: 'mdi-access-point' }
+      ]
     };
   },
   computed: {
@@ -104,6 +113,10 @@ export default {
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside);
+    if (this.realTimeInterval) {
+      clearInterval(this.realTimeInterval);
+      this.realTimeInterval = null;
+    }
   },
   methods: {
     toggleFilter() {
@@ -127,7 +140,49 @@ export default {
       this.startDatePicker = null;
       this.endDatePicker = null;
       this.searchQuery = '';
+      this.activeTimePeriod = null;
+      if (this.realTimeInterval) {
+        clearInterval(this.realTimeInterval);
+        this.realTimeInterval = null;
+      }
       this.fetchLogs();
+    },
+
+    setTimePeriod(period) {
+      // Toggle off if clicking the same period
+      if (this.activeTimePeriod === period) {
+        this.activeTimePeriod = null;
+        if (this.realTimeInterval) {
+          clearInterval(this.realTimeInterval);
+          this.realTimeInterval = null;
+        }
+        this.filterLogs();
+        return;
+      }
+
+      this.activeTimePeriod = period;
+
+      // Clear manual date filters when using quick periods
+      this.filters.startDate = null;
+      this.filters.endDate = null;
+      this.startDatePicker = null;
+      this.endDatePicker = null;
+
+      // Stop any previous real-time interval
+      if (this.realTimeInterval) {
+        clearInterval(this.realTimeInterval);
+        this.realTimeInterval = null;
+      }
+
+      if (period === 'realtime') {
+        // Real-time: auto-refresh every 10 seconds
+        this.fetchLogs();
+        this.realTimeInterval = setInterval(() => {
+          this.fetchLogs();
+        }, 10000);
+      } else {
+        this.filterLogs();
+      }
     },
 
     updateStartDate(date) {
@@ -161,6 +216,29 @@ export default {
     filterLogs() {
       let logs = [...this.activityLogs];
       
+      // Filter by time period (quick filters)
+      if (this.activeTimePeriod && this.activeTimePeriod !== 'realtime') {
+        const now = new Date();
+        let cutoff;
+        switch (this.activeTimePeriod) {
+          case '1h':
+            cutoff = new Date(now.getTime() - 60 * 60 * 1000);
+            break;
+          case '1d':
+            cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+          case '7d':
+            cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case '30d':
+            cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        }
+        if (cutoff) {
+          logs = logs.filter(log => new Date(log.created_at) >= cutoff);
+        }
+      }
+
       // Filter by action type
       if (this.filters.actionType) {
         logs = logs.filter(log => 

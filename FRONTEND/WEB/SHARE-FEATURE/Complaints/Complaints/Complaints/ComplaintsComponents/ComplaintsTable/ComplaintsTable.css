@@ -32,7 +32,7 @@
 
 .complaints-table th {
   padding: 16px 12px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -59,6 +59,8 @@
 .complaints-table td {
   padding: 16px 12px;
   vertical-align: middle;
+  text-align: center;
+  
 }
 
 .complaints-name-cell {

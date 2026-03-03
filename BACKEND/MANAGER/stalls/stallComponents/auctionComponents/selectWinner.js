@@ -20,9 +20,9 @@ export const selectAuctionWinner = async (req, res) => {
 
     // Get auction info and verify ownership
     const [auctionInfo] = await connection.execute(
-      `SELECT a.auction_id, a.stall_id, a.auction_status, a.total_bids,
-              a.created_by_manager, a.winner_applicant_id, a.highest_bidder_id,
-              a.current_highest_bid, s.stall_number, s.rental_price
+      `SELECT a.auction_id, a.stall_id, a.status, a.created_by,
+              s.stall_number, s.rental_price,
+              (SELECT COUNT(*) FROM auction_bids WHERE auction_id = a.auction_id) AS total_bids
        FROM auction a
        INNER JOIN stall s ON a.stall_id = s.stall_id
        WHERE a.auction_id = ?`,
@@ -39,15 +39,19 @@ export const selectAuctionWinner = async (req, res) => {
     const auction = auctionInfo[0];
 
     // Only the branch manager who created the auction can confirm winner
-    if (auction.created_by_manager !== branchManagerId) {
+    if (auction.created_by !== branchManagerId) {
       return res.status(403).json({
         success: false,
         message: 'Only the branch manager who created this auction can confirm winner'
       });
     }
 
-    // Check if winner already confirmed
-    if (auction.winner_applicant_id) {
+    // Check if winner already confirmed (auction_participants with status = 'Winner')
+    const [existingWinner] = await connection.execute(
+      `SELECT participant_id FROM auction_participants WHERE auction_id = ? AND status = 'Winner' LIMIT 1`,
+      [auctionId]
+    );
+    if (existingWinner.length || auction.status === 'Awarded') {
       return res.status(400).json({
         success: false,
         message: 'Winner has already been confirmed for this auction'
@@ -64,80 +68,103 @@ export const selectAuctionWinner = async (req, res) => {
 
     // Get winner info (highest bidder)
     const [winnerInfo] = await connection.execute(
-      `SELECT ab.bid_id, ab.applicant_id, ab.application_id, ab.bid_amount,
-              a.applicant_full_name, a.applicant_contact_number
+      `SELECT ab.bid_id, ab.applicant_id, ab.bid_amount,
+              app.applicant_full_name, app.applicant_contact_number
        FROM auction_bids ab
-       INNER JOIN applicant a ON ab.applicant_id = a.applicant_id
-       WHERE ab.auction_id = ? AND ab.is_winning_bid = 1`,
+       INNER JOIN applicant app ON ab.applicant_id = app.applicant_id
+       WHERE ab.auction_id = ? AND ab.status != 'Cancelled'
+       ORDER BY ab.bid_amount DESC
+       LIMIT 1`,
       [auctionId]
     );
 
     if (!winnerInfo.length) {
       return res.status(400).json({
         success: false,
-        message: 'No winning bid found'
+        message: 'No valid bids found'
       });
     }
 
     const winner = winnerInfo[0];
 
-    // Update auction with confirmed winner
+    // Look up the application for this winner + stall
+    const [appInfo] = await connection.execute(
+      `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+      [winner.applicant_id, auction.stall_id]
+    );
+    const applicationId = appInfo.length ? appInfo[0].application_id : null;
+
+    // Update auction status to 'Awarded'
     await connection.execute(
-      `UPDATE auction 
-       SET winner_applicant_id = ?, winner_confirmed = 1, winning_bid_amount = ?,
-           winner_selection_date = NOW(), auction_status = 'Ended', updated_at = NOW()
-       WHERE auction_id = ?`,
-      [winner.applicant_id, winner.bid_amount, auctionId]
+      `UPDATE auction SET status = 'Awarded' WHERE auction_id = ?`,
+      [auctionId]
     );
 
-    // Update stall status
+    // Mark winning bid
     await connection.execute(
-      `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
+      `UPDATE auction_bids SET status = 'Winning' WHERE bid_id = ?`,
+      [winner.bid_id]
+    );
+
+    // Mark winner in auction_participants
+    await connection.execute(
+      `UPDATE auction_participants SET status = 'Winner' WHERE auction_id = ? AND applicant_id = ?`,
+      [auctionId, winner.applicant_id]
+    );
+
+    // Mark non-winners
+    await connection.execute(
+      `UPDATE auction_participants SET status = 'Not Selected' WHERE auction_id = ? AND applicant_id != ?`,
+      [auctionId, winner.applicant_id]
+    );
+
+    // Update stall raffle_auction_status
+    await connection.execute(
+      `UPDATE stall SET raffle_auction_status = 'Awarded' WHERE stall_id = ?`,
       [auction.stall_id]
     );
 
     // Create auction result record
-    const [bidCount] = await connection.execute(
-      'SELECT COUNT(DISTINCT applicant_id) as bidders FROM auction_bids WHERE auction_id = ?',
-      [auctionId]
+    await connection.execute(
+      `INSERT INTO auction_result (auction_id, winner_bid_id, final_amount, awarded_date)
+       VALUES (?, ?, ?, NOW())`,
+      [auctionId, winner.bid_id, winner.bid_amount]
     );
 
-    await connection.execute(
-      `INSERT INTO auction_result 
-       (auction_id, winner_applicant_id, winner_application_id, winning_bid_amount,
-        total_bids, total_bidders, awarded_by_manager, result_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'Confirmed')`,
-      [auctionId, winner.applicant_id, winner.application_id, winner.bid_amount,
-       auction.total_bids, bidCount[0].bidders, branchManagerId]
-    );
-
-    // Update application status to approved
-    await connection.execute(
-      `UPDATE application SET application_status = 'Approved' WHERE application_id = ?`,
-      [winner.application_id]
-    );
+    // Update application status to approved (if application exists)
+    if (applicationId) {
+      await connection.execute(
+        `UPDATE application SET application_status = 'Approved', reviewed_by = ?, reviewed_at = NOW() WHERE application_id = ?`,
+        [branchManagerId, applicationId]
+      );
+    }
 
     // Log the winner confirmation
     await connection.execute(
-      `INSERT INTO raffle_auction_log 
-       (stall_id, auction_id, action_type, performed_by_manager)
-       VALUES (?, ?, 'Winner Selected', ?)`,
-      [auction.stall_id, auctionId, branchManagerId]
+      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+       VALUES ('Auction', ?, 'Winner Selected', ?, ?)`,
+      [auctionId, branchManagerId, `Winner: ${winner.applicant_full_name} with bid ₱${winner.bid_amount}`]
+    );
+
+    // Count distinct bidders
+    const [bidCount] = await connection.execute(
+      'SELECT COUNT(DISTINCT applicant_id) as bidders FROM auction_bids WHERE auction_id = ?',
+      [auctionId]
     );
 
     console.log(`✅ Winner confirmed for auction ${auctionId}: ${winner.applicant_full_name} with bid ₱${winner.bid_amount}`);
 
     res.json({
       success: true,
-      message: `Winner confirmed! ${winner.applicant_full_name} won stall ${auction.stall_no} with bid ₱${winner.bid_amount}`,
+      message: `Winner confirmed! ${winner.applicant_full_name} won stall ${auction.stall_number} with bid ₱${winner.bid_amount}`,
       data: {
         auctionId: auctionId,
-        stallNo: auction.stall_no,
+        stallNumber: auction.stall_number,
         winner: {
           applicantId: winner.applicant_id,
           name: winner.applicant_full_name,
           contact: winner.applicant_contact_number,
-          applicationId: winner.application_id,
+          applicationId: applicationId,
           winningBid: parseFloat(winner.bid_amount)
         },
         totalBids: auction.total_bids,
@@ -167,14 +194,17 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
     connection = await createConnection();
 
     // Find all expired auctions that haven't confirmed winners yet
+    // status = 'Open' and end_date has passed
     const [expiredAuctions] = await connection.execute(
-      `SELECT a.auction_id, a.stall_id, a.total_bids, a.created_by_manager,
-              a.highest_bidder_id, a.current_highest_bid, s.stall_number
+      `SELECT a.auction_id, a.stall_id, a.created_by, s.stall_number,
+              (SELECT COUNT(*) FROM auction_bids WHERE auction_id = a.auction_id) AS total_bids
        FROM auction a
        INNER JOIN stall s ON a.stall_id = s.stall_id
-       WHERE a.auction_status = 'Active'
-       AND a.end_time <= NOW()
-       AND a.winner_applicant_id IS NULL`
+       WHERE a.status = 'Open'
+       AND a.end_date <= NOW()
+       AND NOT EXISTS (
+         SELECT 1 FROM auction_participants ap WHERE ap.auction_id = a.auction_id AND ap.status = 'Winner'
+       )`
     );
 
     console.log(`Found ${expiredAuctions.length} expired auctions`);
@@ -184,85 +214,110 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
     for (const auction of expiredAuctions) {
       try {
         if (auction.total_bids === 0) {
-          // No bids - just end the auction
+          // No bids - just close the auction
           await connection.execute(
-            `UPDATE auction SET auction_status = 'Ended' WHERE auction_id = ?`,
+            `UPDATE auction SET status = 'Closed' WHERE auction_id = ?`,
             [auction.auction_id]
           );
           await connection.execute(
-            `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
+            `UPDATE stall SET raffle_auction_status = 'Closed' WHERE stall_id = ?`,
             [auction.stall_id]
           );
 
           results.push({
             auctionId: auction.auction_id,
-            stallNo: auction.stall_no,
+            stallNumber: auction.stall_number,
             status: 'ended_no_bids'
           });
 
-          console.log(`📝 Auction ${auction.auction_id} ended - no bids`);
+          console.log(`📝 Auction ${auction.auction_id} closed - no bids`);
           continue;
         }
 
-        // Get winner info (highest bidder)
+        // Get highest bidder (winner)
         const [winnerInfo] = await connection.execute(
-          `SELECT ab.applicant_id, ab.application_id, ab.bid_amount,
-                  a.applicant_full_name
+          `SELECT ab.bid_id, ab.applicant_id, ab.bid_amount,
+                  app.applicant_full_name
            FROM auction_bids ab
-           INNER JOIN applicant a ON ab.applicant_id = a.applicant_id
-           WHERE ab.auction_id = ? AND ab.is_winning_bid = 1`,
+           INNER JOIN applicant app ON ab.applicant_id = app.applicant_id
+           WHERE ab.auction_id = ? AND ab.status != 'Cancelled'
+           ORDER BY ab.bid_amount DESC
+           LIMIT 1`,
           [auction.auction_id]
         );
 
         if (winnerInfo.length === 0) {
-          console.error(`❌ No winning bid found for auction ${auction.auction_id}`);
+          console.error(`❌ No valid bids found for auction ${auction.auction_id}`);
           continue;
         }
 
         const winner = winnerInfo[0];
 
-        // Update auction with confirmed winner
+        // Look up application
+        const [appInfo] = await connection.execute(
+          `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+          [winner.applicant_id, auction.stall_id]
+        );
+        const applicationId = appInfo.length ? appInfo[0].application_id : null;
+
+        // Update auction status to 'Awarded'
         await connection.execute(
-          `UPDATE auction 
-           SET winner_applicant_id = ?, winner_confirmed = 1, winning_bid_amount = ?,
-               winner_selection_date = NOW(), auction_status = 'Ended'
-           WHERE auction_id = ?`,
-          [winner.applicant_id, winner.bid_amount, auction.auction_id]
+          `UPDATE auction SET status = 'Awarded' WHERE auction_id = ?`,
+          [auction.auction_id]
         );
 
-        // Update stall status
+        // Mark winning bid
         await connection.execute(
-          `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
+          `UPDATE auction_bids SET status = 'Winning' WHERE bid_id = ?`,
+          [winner.bid_id]
+        );
+
+        // Mark winner in auction_participants
+        await connection.execute(
+          `UPDATE auction_participants SET status = 'Winner' WHERE auction_id = ? AND applicant_id = ?`,
+          [auction.auction_id, winner.applicant_id]
+        );
+
+        // Mark non-winners
+        await connection.execute(
+          `UPDATE auction_participants SET status = 'Not Selected' WHERE auction_id = ? AND applicant_id != ?`,
+          [auction.auction_id, winner.applicant_id]
+        );
+
+        // Update stall
+        await connection.execute(
+          `UPDATE stall SET raffle_auction_status = 'Awarded' WHERE stall_id = ?`,
           [auction.stall_id]
         );
 
-        // Create auction result record
+        // Create auction result
+        await connection.execute(
+          `INSERT INTO auction_result (auction_id, winner_bid_id, final_amount, awarded_date)
+           VALUES (?, ?, ?, NOW())`,
+          [auction.auction_id, winner.bid_id, winner.bid_amount]
+        );
+
+        // Update application status
+        if (applicationId) {
+          await connection.execute(
+            `UPDATE application SET application_status = 'Approved', reviewed_at = NOW() WHERE application_id = ?`,
+            [applicationId]
+          );
+        }
+
+        // Count bidders
         const [bidCount] = await connection.execute(
           'SELECT COUNT(DISTINCT applicant_id) as bidders FROM auction_bids WHERE auction_id = ?',
           [auction.auction_id]
         );
 
-        await connection.execute(
-          `INSERT INTO auction_result 
-           (auction_id, winner_applicant_id, winner_application_id, winning_bid_amount,
-            total_bids, total_bidders, awarded_by_manager, result_status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'Confirmed')`,
-          [auction.auction_id, winner.applicant_id, winner.application_id, winner.bid_amount,
-           auction.total_bids, bidCount[0].bidders, auction.created_by_manager]
-        );
-
-        // Update application status
-        await connection.execute(
-          `UPDATE application SET application_status = 'Approved' WHERE application_id = ?`,
-          [winner.application_id]
-        );
-
         results.push({
           auctionId: auction.auction_id,
-          stallNo: auction.stall_no,
+          stallNumber: auction.stall_number,
           winner: winner.applicant_full_name,
           winningBid: parseFloat(winner.bid_amount),
           totalBids: auction.total_bids,
+          totalBidders: bidCount[0].bidders,
           status: 'winner_selected'
         });
 
@@ -272,7 +327,7 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
         console.error(`❌ Error processing auction ${auction.auction_id}:`, error);
         results.push({
           auctionId: auction.auction_id,
-          stallNo: auction.stall_no,
+          stallNumber: auction.stall_number,
           status: 'error',
           error: error.message
         });

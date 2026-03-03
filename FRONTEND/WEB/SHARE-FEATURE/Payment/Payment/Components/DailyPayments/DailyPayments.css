@@ -56,7 +56,7 @@
 
 .payments-table thead th {
   padding: 16px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   font-size: 14px;
   white-space: nowrap;
@@ -80,6 +80,8 @@
   padding: 16px;
   font-size: 14px;
   vertical-align: middle;
+  text-align: center;
+  
 }
 
 /* Cell Specific Styles */
