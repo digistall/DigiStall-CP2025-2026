@@ -88,9 +88,17 @@
         Previous
       </button>
 
-      <div class="pagination-info">
-        <span>Page {{ currentPage }} of {{ totalPages }}</span>
-        <span class="stall-count">({{ filteredStalls.length }} stalls)</span>
+      <div class="pagination-pages">
+        <button
+          v-for="page in visiblePages"
+          :key="page"
+          class="page-number"
+          :class="{ active: page === currentPage, ellipsis: page === '...' }"
+          :disabled="page === '...'"
+          @click="page !== '...' && goToPage(page)"
+        >
+          {{ page }}
+        </button>
       </div>
 
       <button class="pagination-btn next-btn" @click="nextPage" :disabled="currentPage === totalPages"
@@ -101,6 +109,10 @@
             stroke-linejoin="round" />
         </svg>
       </button>
+    </div>
+
+    <div v-if="!loading && !error && totalPages > 1" class="pagination-summary">
+      <span>{{ filteredStalls.length }} stalls total</span>
     </div>
 
     <!-- No Results Message -->
@@ -345,7 +357,7 @@ export default {
       showStallDetails: false,
       selectedStallDetails: null,
       currentPage: 1,
-      stallsPerPage: 8,
+      stallsPerPage: 10,
       // Image gallery
       stallImages: [],
       currentImageIndex: 0,
@@ -413,6 +425,34 @@ export default {
       }
       // Fallback to the stall's primary image
       return this.selectedStallDetails?.imageUrl || stallBackgroundImg
+    },
+    visiblePages() {
+      const total = this.totalPages;
+      const current = this.currentPage;
+      const pages = [];
+      
+      if (total <= 7) {
+        for (let i = 1; i <= total; i++) pages.push(i);
+        return pages;
+      }
+      
+      // Always show first page
+      pages.push(1);
+      
+      if (current > 3) pages.push('...');
+      
+      // Show pages around current
+      const start = Math.max(2, current - 1);
+      const end = Math.min(total - 1, current + 1);
+      
+      for (let i = start; i <= end; i++) pages.push(i);
+      
+      if (current < total - 2) pages.push('...');
+      
+      // Always show last page
+      pages.push(total);
+      
+      return pages;
     },
   },
   watch: {
@@ -788,6 +828,12 @@ export default {
     previousPage() {
       if (this.currentPage > 1) {
         this.currentPage--
+      }
+    },
+
+    goToPage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page
       }
     },
 

@@ -29,7 +29,7 @@ export default {
     operation: {
       type: String,
       default: 'loading',
-      validator: (value) => ['create', 'update', 'edit', 'delete', 'loading'].includes(value)
+      validator: (value) => ['create', 'update', 'edit', 'delete', 'loading', 'generic'].includes(value)
     },
     entity: {
       type: String,

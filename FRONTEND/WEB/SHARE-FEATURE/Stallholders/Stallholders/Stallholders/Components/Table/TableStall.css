@@ -28,9 +28,9 @@
   width: 100%;
 }
 
-/* Stallholder Layout */
+/* Stallholder Layout - 7 columns after ID removal */
 .simplified-layout {
-  grid-template-columns: 0.8fr 1.8fr 2fr 1.8fr 1.4fr 1.5fr 1.8fr 1.2fr;
+  grid-template-columns: 1.8fr 1.6fr 2fr 1.5fr 1.4fr 1.3fr 1.2fr;
   width: 100%;
 }
 
@@ -89,43 +89,44 @@
   vertical-align: middle;
 }
 
-/* Column specific styles */
-.id-col {
-  justify-content: center;
-  font-weight: 600;
-  color: #1976d2;
-}
-
+/* Column specific styles - all centered */
 .name-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
   font-weight: 500;
 }
 
 .business-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
 }
 
 .email-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
 }
 
 .phone-col {
   justify-content: center;
+  text-align: center;
   font-family: 'Monaco', 'Menlo', monospace;
 }
 
 .stall-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
 }
 
 .status-col {
   justify-content: center;
+  text-align: center;
 }
 
 .compliance-col {
   justify-content: center;
+  text-align: center;
 }
 
 /* Business info styling */
@@ -133,7 +134,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  text-align: left;
+  text-align: center;
 }
 
 .business-name {
@@ -154,7 +155,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  text-align: left;
+  text-align: center;
+  align-items: center;
 }
 
 .stall-number {

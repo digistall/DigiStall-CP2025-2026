@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Add Stall Modal -->
-    <v-dialog v-model="showModal" max-width="800px" width="95vw" persistent>
+    <v-dialog v-model="showModal" max-width="800px" width="95vw" persistent scrollable>
       <v-card>
         <v-card-title>
           <span>Add Stall</span>
@@ -10,7 +10,7 @@
           </v-btn>
         </v-card-title>
 
-        <v-card-text class="pa-6">
+        <v-card-text class="pa-6" style="max-height: 70vh; overflow-y: auto;">
           <v-form ref="form" v-model="valid">
             <v-row dense>
               <!-- Stall Number -->

@@ -4,7 +4,6 @@
       <!-- Custom Table Header -->
       <div class="table-header">
         <div class="header-row simplified-layout">
-          <div class="header-cell id-col">ID</div>
           <div class="header-cell name-col">Full Name</div>
           <div class="header-cell business-col">Business</div>
           <div class="header-cell email-col">Email Address</div>
@@ -23,9 +22,6 @@
           class="table-row simplified-layout clickable-row"
           @click="viewMoreInfo(stallholder)"
         >
-          <div class="table-cell id-col">
-            #{{ stallholder.stallholder_id }}
-          </div>
           <div class="table-cell name-col">
             {{ stallholder.stallholder_name }}
           </div>

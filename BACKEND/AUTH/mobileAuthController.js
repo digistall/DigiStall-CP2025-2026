@@ -121,6 +121,7 @@ export const mobileLogin = async (req, res) => {
         s.stall_location,
         s.size,
         s.monthly_rent as stall_monthly_rent,
+        s.rental_price as stall_rental_price,
         b.branch_name
       FROM stallholder sh
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
@@ -234,7 +235,7 @@ export const mobileLogin = async (req, res) => {
           : null, // Calculate end date as 1 year from move_in_date
         contract_status: stallholderData[0].status === 'active' ? 'Active' : stallholderData[0].status,
         lease_amount: stallholderData[0].lease_amount || 0,
-        monthly_rent: stallholderData[0].stall_monthly_rent || stallholderData[0].monthly_rent || 0,
+        monthly_rent: stallholderData[0].stall_rental_price || stallholderData[0].stall_monthly_rent || stallholderData[0].monthly_rent || 0,
         payment_status: stallholderData[0].payment_status,
         compliance_status: stallholderData[0].compliance_status || 'Pending'
       } : null,

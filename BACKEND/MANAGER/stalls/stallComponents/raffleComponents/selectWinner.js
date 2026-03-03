@@ -21,8 +21,9 @@ export const selectRaffleWinner = async (req, res) => {
 
     // Get raffle info and verify ownership
     const [raffleInfo] = await connection.execute(
-      `SELECT r.raffle_id, r.stall_id, r.raffle_status, r.total_participants,
-              r.created_by_manager, r.winner_applicant_id, s.stall_no, s.rental_price
+      `SELECT r.raffle_id, r.stall_id, r.status, r.created_by,
+              s.stall_number, s.rental_price,
+              (SELECT COUNT(*) FROM raffle_participants WHERE raffle_id = r.raffle_id) AS total_participants
        FROM raffle r
        INNER JOIN stall s ON r.stall_id = s.stall_id
        WHERE r.raffle_id = ?`,
@@ -39,7 +40,7 @@ export const selectRaffleWinner = async (req, res) => {
     const raffle = raffleInfo[0];
 
     // Only the branch manager who created the raffle can select winner
-    if (raffle.created_by_manager !== branchManagerId) {
+    if (raffle.created_by !== branchManagerId) {
       return res.status(403).json({
         success: false,
         message: 'Only the branch manager who created this raffle can select winner'
@@ -47,7 +48,11 @@ export const selectRaffleWinner = async (req, res) => {
     }
 
     // Check if winner already selected
-    if (raffle.winner_applicant_id) {
+    const [existingWinner] = await connection.execute(
+      `SELECT participant_id FROM raffle_participants WHERE raffle_id = ? AND status = 'Winner' LIMIT 1`,
+      [raffleId]
+    );
+    if (existingWinner.length || raffle.status === 'Drawn') {
       return res.status(400).json({
         success: false,
         message: 'Winner has already been selected for this raffle'
@@ -62,15 +67,22 @@ export const selectRaffleWinner = async (req, res) => {
       });
     }
 
-    // Get all participants
+    // Get all registered participants
     const [participants] = await connection.execute(
-      `SELECT rp.participant_id, rp.applicant_id, rp.application_id,
-              a.applicant_full_name, a.applicant_contact_number
+      `SELECT rp.participant_id, rp.applicant_id, rp.ticket_number,
+              app.applicant_full_name, app.applicant_contact_number
        FROM raffle_participants rp
-       INNER JOIN applicant a ON rp.applicant_id = a.applicant_id
-       WHERE rp.raffle_id = ?`,
+       INNER JOIN applicant app ON rp.applicant_id = app.applicant_id
+       WHERE rp.raffle_id = ? AND rp.status = 'Registered'`,
       [raffleId]
     );
+
+    if (participants.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No registered participants found'
+      });
+    }
 
     let winner;
 
@@ -85,64 +97,73 @@ export const selectRaffleWinner = async (req, res) => {
       console.log(`👑 Random winner selected: ${winner.applicant_full_name} (${randomIndex + 1}/${participants.length})`);
     }
 
-    // Update raffle with winner
+    // Look up the application for this winner + stall
+    const [appInfo] = await connection.execute(
+      `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+      [winner.applicant_id, raffle.stall_id]
+    );
+    const applicationId = appInfo.length ? appInfo[0].application_id : null;
+
+    // Update raffle status to 'Drawn'
     await connection.execute(
-      `UPDATE raffle 
-       SET winner_applicant_id = ?, winner_selection_date = NOW(), 
-           raffle_status = 'Ended', winner_selected = 1, updated_at = NOW()
-       WHERE raffle_id = ?`,
-      [winner.applicant_id, raffleId]
+      `UPDATE raffle SET status = 'Drawn' WHERE raffle_id = ?`,
+      [raffleId]
     );
 
-    // Update participant as winner
+    // Update winner participant status
     await connection.execute(
-      'UPDATE raffle_participants SET is_winner = 1 WHERE participant_id = ?',
+      `UPDATE raffle_participants SET status = 'Winner' WHERE participant_id = ?`,
       [winner.participant_id]
     );
 
-    // Update stall status
+    // Mark non-winners
     await connection.execute(
-      `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
+      `UPDATE raffle_participants SET status = 'Not Selected' WHERE raffle_id = ? AND participant_id != ?`,
+      [raffleId, winner.participant_id]
+    );
+
+    // Update stall raffle_auction_status
+    await connection.execute(
+      `UPDATE stall SET raffle_auction_status = 'Drawn' WHERE stall_id = ?`,
       [raffle.stall_id]
     );
 
     // Create raffle result record
     await connection.execute(
-      `INSERT INTO raffle_result 
-       (raffle_id, winner_applicant_id, winner_application_id, total_participants,
-        selection_method, awarded_by_manager, result_status)
-       VALUES (?, ?, ?, ?, ?, ?, 'Confirmed')`,
-      [raffleId, winner.applicant_id, winner.application_id, 
-       raffle.total_participants, method, branchManagerId]
+      `INSERT INTO raffle_result (raffle_id, winner_participant_id, draw_date)
+       VALUES (?, ?, NOW())`,
+      [raffleId, winner.participant_id]
     );
 
-    // Update application status to approved
-    await connection.execute(
-      `UPDATE application SET application_status = 'Approved' WHERE application_id = ?`,
-      [winner.application_id]
-    );
+    // Update application status to approved (if application exists)
+    if (applicationId) {
+      await connection.execute(
+        `UPDATE application SET application_status = 'Approved', reviewed_by = ?, reviewed_at = NOW() WHERE application_id = ?`,
+        [branchManagerId, applicationId]
+      );
+    }
 
     // Log the winner selection
     await connection.execute(
-      `INSERT INTO raffle_auction_log 
-       (stall_id, raffle_id, action_type, performed_by_manager)
-       VALUES (?, ?, 'Winner Selected', ?)`,
-      [raffle.stall_id, raffleId, branchManagerId]
+      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+       VALUES ('Raffle', ?, 'Winner Selected', ?, ?)`,
+      [raffleId, branchManagerId, `Winner: ${winner.applicant_full_name} (ticket: ${winner.ticket_number || 'N/A'})`]
     );
 
-    console.log(`✅ Winner selected and raffle completed for stall ${raffle.stall_no}`);
+    console.log(`✅ Winner selected and raffle completed for stall ${raffle.stall_number}`);
 
     res.json({
       success: true,
-      message: `Winner selected! ${winner.applicant_full_name} won stall ${raffle.stall_no}`,
+      message: `Winner selected! ${winner.applicant_full_name} won stall ${raffle.stall_number}`,
       data: {
         raffleId: raffleId,
-        stallNo: raffle.stall_no,
+        stallNumber: raffle.stall_number,
         winner: {
           applicantId: winner.applicant_id,
           name: winner.applicant_full_name,
           contact: winner.applicant_contact_number,
-          applicationId: winner.application_id
+          applicationId: applicationId,
+          ticketNumber: winner.ticket_number
         },
         totalParticipants: raffle.total_participants,
         selectionMethod: method,
@@ -171,14 +192,17 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
     connection = await createConnection();
 
     // Find all expired raffles that haven't selected winners yet
+    // status = 'Open' and end_date has passed
     const [expiredRaffles] = await connection.execute(
-      `SELECT r.raffle_id, r.stall_id, r.total_participants, r.created_by_manager,
-              s.stall_no
+      `SELECT r.raffle_id, r.stall_id, r.created_by, s.stall_number,
+              (SELECT COUNT(*) FROM raffle_participants WHERE raffle_id = r.raffle_id) AS total_participants
        FROM raffle r
        INNER JOIN stall s ON r.stall_id = s.stall_id
-       WHERE r.raffle_status = 'Active'
-       AND r.end_time <= NOW()
-       AND r.winner_applicant_id IS NULL`
+       WHERE r.status = 'Open'
+       AND r.end_date <= NOW()
+       AND NOT EXISTS (
+         SELECT 1 FROM raffle_participants rp WHERE rp.raffle_id = r.raffle_id AND rp.status = 'Winner'
+       )`
     );
 
     console.log(`Found ${expiredRaffles.length} expired raffles`);
@@ -188,35 +212,40 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
     for (const raffle of expiredRaffles) {
       try {
         if (raffle.total_participants === 0) {
-          // No participants - just end the raffle
+          // No participants - just close the raffle
           await connection.execute(
-            `UPDATE raffle SET raffle_status = 'Ended' WHERE raffle_id = ?`,
+            `UPDATE raffle SET status = 'Closed' WHERE raffle_id = ?`,
             [raffle.raffle_id]
           );
           await connection.execute(
-            `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
+            `UPDATE stall SET raffle_auction_status = 'Closed' WHERE stall_id = ?`,
             [raffle.stall_id]
           );
 
           results.push({
             raffleId: raffle.raffle_id,
-            stallNo: raffle.stall_no,
+            stallNumber: raffle.stall_number,
             status: 'ended_no_participants'
           });
 
-          console.log(`📝 Raffle ${raffle.raffle_id} ended - no participants`);
+          console.log(`📝 Raffle ${raffle.raffle_id} closed - no participants`);
           continue;
         }
 
-        // Get participants for this raffle
+        // Get registered participants for this raffle
         const [participants] = await connection.execute(
-          `SELECT rp.participant_id, rp.applicant_id, rp.application_id,
-                  a.applicant_full_name
+          `SELECT rp.participant_id, rp.applicant_id, rp.ticket_number,
+                  app.applicant_full_name
            FROM raffle_participants rp
-           INNER JOIN applicant a ON rp.applicant_id = a.applicant_id
-           WHERE rp.raffle_id = ?`,
+           INNER JOIN applicant app ON rp.applicant_id = app.applicant_id
+           WHERE rp.raffle_id = ? AND rp.status = 'Registered'`,
           [raffle.raffle_id]
         );
+
+        if (participants.length === 0) {
+          console.error(`❌ No registered participants for raffle ${raffle.raffle_id}`);
+          continue;
+        }
 
         let winner;
         if (participants.length === 1) {
@@ -226,46 +255,55 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
           winner = participants[randomIndex];
         }
 
-        // Update raffle with winner
+        // Look up application
+        const [appInfo] = await connection.execute(
+          `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+          [winner.applicant_id, raffle.stall_id]
+        );
+        const applicationId = appInfo.length ? appInfo[0].application_id : null;
+
+        // Update raffle status to 'Drawn'
         await connection.execute(
-          `UPDATE raffle 
-           SET winner_applicant_id = ?, winner_selection_date = NOW(), 
-               raffle_status = 'Ended', winner_selected = 1
-           WHERE raffle_id = ?`,
-          [winner.applicant_id, raffle.raffle_id]
+          `UPDATE raffle SET status = 'Drawn' WHERE raffle_id = ?`,
+          [raffle.raffle_id]
         );
 
-        // Update participant as winner
+        // Update winner participant
         await connection.execute(
-          'UPDATE raffle_participants SET is_winner = 1 WHERE participant_id = ?',
+          `UPDATE raffle_participants SET status = 'Winner' WHERE participant_id = ?`,
           [winner.participant_id]
         );
 
-        // Update stall status
+        // Mark non-winners
         await connection.execute(
-          `UPDATE stall SET raffle_auction_status = 'Ended' WHERE stall_id = ?`,
+          `UPDATE raffle_participants SET status = 'Not Selected' WHERE raffle_id = ? AND participant_id != ?`,
+          [raffle.raffle_id, winner.participant_id]
+        );
+
+        // Update stall
+        await connection.execute(
+          `UPDATE stall SET raffle_auction_status = 'Drawn' WHERE stall_id = ?`,
           [raffle.stall_id]
         );
 
-        // Create raffle result record
+        // Create raffle result
         await connection.execute(
-          `INSERT INTO raffle_result 
-           (raffle_id, winner_applicant_id, winner_application_id, total_participants,
-            selection_method, awarded_by_manager, result_status)
-           VALUES (?, ?, ?, ?, 'Random', ?, 'Confirmed')`,
-          [raffle.raffle_id, winner.applicant_id, winner.application_id, 
-           raffle.total_participants, raffle.created_by_manager]
+          `INSERT INTO raffle_result (raffle_id, winner_participant_id, draw_date)
+           VALUES (?, ?, NOW())`,
+          [raffle.raffle_id, winner.participant_id]
         );
 
         // Update application status
-        await connection.execute(
-          `UPDATE application SET application_status = 'Approved' WHERE application_id = ?`,
-          [winner.application_id]
-        );
+        if (applicationId) {
+          await connection.execute(
+            `UPDATE application SET application_status = 'Approved', reviewed_at = NOW() WHERE application_id = ?`,
+            [applicationId]
+          );
+        }
 
         results.push({
           raffleId: raffle.raffle_id,
-          stallNo: raffle.stall_no,
+          stallNumber: raffle.stall_number,
           winner: winner.applicant_full_name,
           totalParticipants: raffle.total_participants,
           status: 'winner_selected'
@@ -277,7 +315,7 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
         console.error(`❌ Error processing raffle ${raffle.raffle_id}:`, error);
         results.push({
           raffleId: raffle.raffle_id,
-          stallNo: raffle.stall_no,
+          stallNumber: raffle.stall_number,
           status: 'error',
           error: error.message
         });
