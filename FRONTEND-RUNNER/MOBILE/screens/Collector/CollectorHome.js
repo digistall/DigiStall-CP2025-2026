@@ -124,19 +124,21 @@ const CollectorHome = ({ navigation }) => {
     // Send initial heartbeat
     sendHeartbeat();
 
-    // Set up heartbeat interval (check every minute)
-    heartbeatIntervalRef.current = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastActivityRef.current;
-
-      if (timeSinceActivity < INACTIVITY_TIMEOUT) {
-        // User has been active, send heartbeat
-        sendHeartbeat();
-      } else {
-        // User has been inactive for 15+ minutes, auto-logout
-        console.log('Collector inactivity detected:', Math.round(timeSinceActivity / 1000), 'seconds');
-        performAutoLogout();
+    // Helper to start heartbeat interval
+    const startHeartbeatInterval = () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
       }
-    }, HEARTBEAT_INTERVAL);
+      heartbeatIntervalRef.current = setInterval(() => {
+        const timeSinceActivity = Date.now() - lastActivityRef.current;
+        if (timeSinceActivity < INACTIVITY_TIMEOUT) {
+          sendHeartbeat();
+        } else {
+          console.log('Collector inactivity detected:', Math.round(timeSinceActivity / 1000), 'seconds');
+          performAutoLogout();
+        }
+      }, HEARTBEAT_INTERVAL);
+    };
 
     // Handle app state changes
     const appStateSubscription = AppState.addEventListener('change', async (nextAppState) => {
@@ -148,15 +150,22 @@ const CollectorHome = ({ navigation }) => {
         } else {
           recordActivity();
           sendHeartbeat();
+          // Restart heartbeat interval
+          startHeartbeatInterval();
         }
       } else if (appStateRef.current === 'active' && nextAppState.match(/inactive|background/)) {
-        // App going to background - send auto-logout API to mark offline immediately
+        // CRITICAL: Stop heartbeat IMMEDIATELY to prevent it re-setting online status
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
+        // Fire-and-forget auto-logout API (don't await - OS may suspend JS thread)
         try {
           const userData = await UserStorageService.getUserData();
           const token = await UserStorageService.getAuthToken();
           const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
           if (token && staffId) {
-            await ApiService.staffAutoLogout(token, staffId, 'collector');
+            ApiService.staffAutoLogout(token, staffId, 'collector').catch(() => {});
           }
         } catch (e) {
           // Silent fail - app is going to background
