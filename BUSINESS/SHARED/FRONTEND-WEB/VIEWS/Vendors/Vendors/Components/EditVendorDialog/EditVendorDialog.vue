@@ -14,7 +14,11 @@
         <v-container class="pa-0">
           <v-form ref="vendorForm" v-model="formValid" lazy-validation>
             <!-- Tabs matching VendorDetailsDialog structure -->
-            <v-tabs v-model="activeTab" bg-color="transparent" class="detail-tabs">
+            <v-tabs
+              v-model="activeTab"
+              bg-color="transparent"
+              class="detail-tabs"
+            >
               <v-tab value="0">
                 <v-icon left size="small">mdi-account</v-icon>
                 PERSONAL INFO
@@ -143,7 +147,9 @@
                   <!-- Spouse Section -->
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-2 mt-2">Spouse Information</div>
+                      <div class="text-subtitle-1 mb-2 mt-2">
+                        Spouse Information
+                      </div>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -209,7 +215,9 @@
                   <!-- Child Section -->
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-2 mt-2">Child Information</div>
+                      <div class="text-subtitle-1 mb-2 mt-2">
+                        Child Information
+                      </div>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -310,13 +318,17 @@
 
                   <v-row dense>
                     <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model="form.locationName"
+                      <v-autocomplete
+                        v-model="form.assignedLocationId"
+                        :items="assignedLocations"
+                        item-title="name"
+                        item-value="id"
                         label="Assigned Location"
                         outlined
                         density="compact"
                         prepend-inner-icon="mdi-map-marker"
-                      ></v-text-field>
+                        :search-input.sync="locationSearch"
+                      ></v-autocomplete>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -336,7 +348,9 @@
                 <v-container>
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-4">Upload Vendor Documents</div>
+                      <div class="text-subtitle-1 mb-4">
+                        Upload Vendor Documents
+                      </div>
                     </v-col>
                   </v-row>
 
@@ -435,8 +449,18 @@
 
       <v-card-actions class="px-6 py-4">
         <v-spacer></v-spacer>
-        <v-btn variant="text" @click="$emit('close')"> Cancel </v-btn>
-        <v-btn color="primary" variant="elevated" @click="submit"> Update Vendor </v-btn>
+        <v-btn variant="text" @click="$emit('close')" :disabled="loading">
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="elevated"
+          @click="submit"
+          :loading="loading"
+          :disabled="!formValid || loading"
+        >
+          Update Vendor
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
