@@ -1,4 +1,4 @@
-﻿﻿<template>
+﻿<template>
   <v-dialog v-model="visibleModel" max-width="1200px" persistent scrollable>
     <v-card>
       <!-- Header -->
@@ -142,7 +142,9 @@
                   <!-- Spouse Section -->
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-2 mt-2">Spouse Information</div>
+                      <div class="text-subtitle-1 mb-2 mt-2">
+                        Spouse Information
+                      </div>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -208,7 +210,9 @@
                   <!-- Child Section -->
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-2 mt-2">Child Information</div>
+                      <div class="text-subtitle-1 mb-2 mt-2">
+                        Child Information
+                      </div>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -287,17 +291,21 @@
 
                   <v-row dense>
                     <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model="form.locationName"
+                      <v-autocomplete
+                        v-model="form.assignedLocationId"
+                        :items="assignedLocations"
+                        item-title="name"
+                        item-value="id"
                         label="Assigned Location *"
                         :rules="[(v) => !!v || 'Location is required']"
                         outlined
                         density="compact"
                         prepend-inner-icon="mdi-map-marker"
-                        hint="e.g., Panganiban Sidewalk, Naga City Public Market"
+                        hint="Start typing to search locations"
                         persistent-hint
                         required
-                      ></v-text-field>
+                        :search-input.sync="form.locationSearch"
+                      ></v-autocomplete>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -343,7 +351,9 @@
                 <v-container class="pa-0">
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-4">Upload Vendor Documents</div>
+                      <div class="text-subtitle-1 mb-4">
+                        Upload Vendor Documents
+                      </div>
                     </v-col>
                   </v-row>
 
@@ -430,11 +440,18 @@
 
                   <v-row dense>
                     <v-col cols="12">
-                      <v-alert type="info" variant="tonal" density="compact" class="mb-0">
+                      <v-alert
+                        type="info"
+                        variant="tonal"
+                        density="compact"
+                        class="mb-0"
+                      >
                         <div class="text-caption">
-                          <v-icon size="small" class="mr-1">mdi-information</v-icon>
-                          Documents can be uploaded during vendor creation or added later through
-                          the vendor details page.
+                          <v-icon size="small" class="mr-1"
+                            >mdi-information</v-icon
+                          >
+                          Documents can be uploaded during vendor creation or
+                          added later through the vendor details page.
                         </div>
                       </v-alert>
                     </v-col>
@@ -451,19 +468,16 @@
       <v-card-actions class="px-6 py-4">
         <v-btn color="grey" text @click="closeDialog">Cancel</v-btn>
         <v-spacer></v-spacer>
-        <v-btn color="primary" @click="save" :loading="saving" :disabled="!formValid">
+        <v-btn
+          color="primary"
+          @click="save"
+          :loading="loading"
+          :disabled="!formValid || loading"
+        >
           <v-icon left>mdi-content-save</v-icon>
           Add Vendor
         </v-btn>
       </v-card-actions>
-
-      <!-- Toast Notification -->
-      <ToastNotification
-        :show="toast.show"
-        :message="toast.message"
-        :type="toast.type"
-        @close="toast.show = false"
-      />
     </v-card>
   </v-dialog>
 </template>

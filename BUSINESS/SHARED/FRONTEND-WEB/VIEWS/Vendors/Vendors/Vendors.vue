@@ -7,8 +7,8 @@
       <!-- Main Content -->
       <v-main class="vendors-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
-        <LoadingOverlay 
-          :loading="loading" 
+        <LoadingOverlay
+          :loading="loading"
           text="Loading vendors..."
           :full-page="false"
         />
@@ -26,11 +26,13 @@
                 :activeFilter="statusFilter"
                 @view="view"
                 @edit="edit"
+                @open-add-dialog="openAddDialog"
               />
 
               <!-- Add Vendor Dialog -->
               <AddVendorDialog
                 :isVisible="addDialog"
+                :loading="loading"
                 @close="addDialog = false"
                 @save="handleSave"
               />
@@ -39,6 +41,7 @@
               <VendorDetailsDialog
                 :isVisible="detailsDialog"
                 @close="detailsDialog = false"
+                @edit="handleEditFromDetails"
                 :data="detailsData"
                 photo="https://i.pravatar.cc/200?img=12"
               />
@@ -46,25 +49,28 @@
               <!-- Edit Vendor Dialog -->
               <EditVendorDialog
                 :isVisible="editDialog"
-                @close="editDialog = false"
+                :loading="loading"
                 :data="editData"
+                @close="editDialog = false"
                 @update="handleEditUpdate"
               />
             </v-col>
           </v-row>
         </v-container>
-      </v-main>
 
-      <!-- Floating Action Button for Add Vendor -->
-      <v-btn
-        icon="mdi-plus"
-        fab
-        color="primary"
-        size="large"
-        class="floating-add-btn"
-        @click="openAddDialog"
-        aria-label="Add vendor"
-      ></v-btn>
+        <!-- Snackbar for notifications -->
+        <v-snackbar
+          v-model="snackbar.show"
+          :color="snackbar.color"
+          :timeout="snackbar.timeout"
+          location="top"
+        >
+          {{ snackbar.message }}
+          <template v-slot:actions>
+            <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
+          </template>
+        </v-snackbar>
+      </v-main>
     </div>
   </v-app>
 </template>

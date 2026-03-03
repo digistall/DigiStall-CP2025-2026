@@ -149,12 +149,12 @@ const DailyPaymentController = {
           parseFloat(amount),
           referenceNo || null,
           status,
-        ]
+        ],
       );
 
       console.log(
         "📋 Raw stored procedure result:",
-        JSON.stringify(result, null, 2)
+        JSON.stringify(result, null, 2),
       );
 
       // Check if the procedure returned success
@@ -177,7 +177,7 @@ const DailyPaymentController = {
 
       console.log(
         "✅ Daily payment added successfully:",
-        paymentData.receipt_id
+        paymentData.receipt_id,
       );
 
       res.status(201).json({
@@ -227,7 +227,7 @@ const DailyPaymentController = {
           amount ? parseFloat(amount) : null,
           referenceNo || null,
           status || null,
-        ]
+        ],
       );
 
       const procedureResult = result[0];
@@ -331,7 +331,9 @@ const DailyPaymentController = {
 
       console.log("🔍 Fetching all vendors");
 
-      const [result] = await connection.execute("CALL getAllVendors()");
+      const [result] = await connection.execute(
+        "CALL getAllVendorsForDailyPayments()",
+      );
 
       const vendors = result[0] || [];
       console.log("📊 Vendors found:", vendors.length);
@@ -364,7 +366,9 @@ const DailyPaymentController = {
 
       console.log("🔍 Fetching all collectors");
 
-      const [result] = await connection.execute("CALL getAllCollectors()");
+      const [result] = await connection.execute(
+        "CALL getAllCollectorsForDailyPayments()",
+      );
 
       const collectors = result[0] || [];
       console.log("📊 Collectors found:", collectors.length);
@@ -388,4 +392,3 @@ const DailyPaymentController = {
 };
 
 export default DailyPaymentController;
-

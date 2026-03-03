@@ -3,7 +3,7 @@ import VendorDetailsDialog from './Components/VendorDetailsDialog/VendorDetailsD
 import EditVendorDialog from './Components/EditVendorDialog/EditVendorDialog.vue'
 import SearchVendor from './Components/Search/SearchVendor.vue'
 import TableVendor from './Components/Table/TableVendor.vue'
-import LoadingOverlay from '@SHARED_COMPONENTS/LoadingOverlay/LoadingOverlay.vue'
+import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Vendors',
@@ -38,7 +38,6 @@ export default {
         { title: 'Status', value: 'status', width: 120 },
         { title: 'Action', value: 'actions', sortable: false, align: 'end', width: 140 },
       ],
-      collectors: [],
       statuses: ['Active', 'Inactive', 'On Hold'],
 
       vendors: [],
@@ -83,7 +82,6 @@ export default {
   },
   mounted() {
     this.initializeVendors()
-    this.loadCollectors()
   },
   methods: {
     // Fetch vendors from API
@@ -124,36 +122,6 @@ export default {
         console.error('❌ Error loading vendors:', error)
       } finally {
         this.loading = false
-      }
-    },
-
-    // Fetch collectors from API
-    async loadCollectors() {
-      try {
-        const token = localStorage.getItem('authToken')
-        const response = await fetch(`${this.apiBaseUrl}/mobile-staff/collectors`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (!response.ok) {
-          console.warn('Failed to fetch collectors')
-          return
-        }
-
-        const result = await response.json()
-
-        if (result.success && result.data) {
-          this.collectors = result.data.map(
-            (collector) => `${collector.first_name} ${collector.last_name}`,
-          )
-          console.log(`✅ Loaded ${this.collectors.length} collectors`)
-        }
-      } catch (error) {
-        console.error('❌ Error loading collectors:', error)
       }
     },
 
