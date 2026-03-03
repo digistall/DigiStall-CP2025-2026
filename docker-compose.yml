@@ -112,7 +112,7 @@ services:
   frontend-web:
     build:
       context: .
-      dockerfile: FRONTEND-RUNNER/WEB/Dockerfile.prod
+      dockerfile: FRONTEND/WEB/Dockerfile.prod
     container_name: digistall-frontend-web
     restart: unless-stopped
     depends_on:

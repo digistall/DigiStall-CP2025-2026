@@ -6,7 +6,7 @@
  */
 
 import express from 'express';
-import StallholderController from '../SHARE-CONTROLLER/stallholders/stallholderController.js';
+import StallholderController from '../BACKEND/MANAGER/stallholders/stallholderController.js';
 import authMiddleware from '../middleware/auth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 

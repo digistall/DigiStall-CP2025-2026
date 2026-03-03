@@ -9,7 +9,7 @@ import {
   updateMobileApplication,
   joinRaffle,
   joinAuction
-} from '../SHARE-CONTROLLER/mobileApplicationController.js'
+} from '../BACKEND/PUBLIC/mobileApplicationController.js'
 
 const router = express.Router()
 

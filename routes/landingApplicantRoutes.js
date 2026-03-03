@@ -1,5 +1,5 @@
 import express from "express";
-import { applicantController } from "../SHARE-CONTROLLER/applicantsLanding/applicantController.js";
+import { applicantController } from "../BACKEND/PUBLIC/applicantsLanding/applicantController.js";
 
 const router = express.Router();
 

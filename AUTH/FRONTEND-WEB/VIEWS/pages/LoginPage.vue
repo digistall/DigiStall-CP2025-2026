@@ -18,7 +18,7 @@
         <div class="logo-title-section text-center">
           <!-- DigiStall Logo -->
           <img
-            src="../../../assets/DigiStall-Logo.png"
+            src="@/assets/DigiStall-Logo.png"
             alt="DigiStall Logo"
             class="digistall-logo mb-6"
           />

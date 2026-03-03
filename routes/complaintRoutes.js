@@ -6,7 +6,7 @@ import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import { authorizePermission } from '../middleware/enhancedAuth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
-import complaintController from '../SHARE-CONTROLLER/complaints/complaintController.js';
+import complaintController from '../BACKEND/MANAGER/complaints/complaintController.js';
 
 const router = express.Router();
 

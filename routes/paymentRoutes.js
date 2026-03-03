@@ -1,6 +1,6 @@
 import express from "express";
-import PaymentController from "../SHARE-CONTROLLER/payments/paymentController.js";
-import DailyPaymentController from "../SHARE-CONTROLLER/payments/dailyPaymentController.js";
+import PaymentController from "../BACKEND/MANAGER/payments/paymentController.js";
+import DailyPaymentController from "../BACKEND/MANAGER/payments/dailyPaymentController.js";
 import authMiddleware from "../middleware/auth.js";
 import { viewOnlyForOwners } from "../middleware/rolePermissions.js";
 import { authorizePermission } from "../middleware/enhancedAuth.js";

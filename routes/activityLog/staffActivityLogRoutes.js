@@ -4,7 +4,7 @@ import {
     getStaffActivityById, 
     getActivitySummary,
     clearAllActivityLogs
-} from '../../SHARE-CONTROLLER/activityLog/staffActivityLogController.js';
+} from '../../BACKEND/OWNER/activityLog/staffActivityLogController.js';
 import { authenticateToken, authorizeRole } from '../../middleware/enhancedAuth.js';
 
 const router = express.Router();

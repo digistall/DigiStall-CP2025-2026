@@ -7,7 +7,7 @@ import {
     terminateInspector,
     terminateCollector,
     resetStaffPassword
-} from '../SHARE-CONTROLLER/mobileStaff/mobileStaffController.js';
+} from '../BACKEND/MANAGER/mobileStaff/mobileStaffController.js';
 
 const router = express.Router();
 

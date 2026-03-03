@@ -5,13 +5,13 @@ import {
   getAllStalls,
   getStallById,
   searchStalls
-} from '../SHARE-CONTROLLER/stall/stallController.js';
+} from '../BACKEND/STALLHOLDER/stall/stallController.js';
 
 // Import stall image BLOB controller for serving images
 import {
   getStallImageBlobById,
   getStallImagesBlob
-} from '../SHARE-CONTROLLER/stalls/stallImageBlobController.js';
+} from '../BACKEND/MANAGER/stalls/stallImageBlobController.js';
 
 const router = express.Router();
 
