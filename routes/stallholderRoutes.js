@@ -5,7 +5,7 @@ import {
   getStallholderStallsWithDocuments,
   getBranchDocumentRequirements,
   uploadStallholderDocument
-} from '../SHARE-CONTROLLER/user/stallholderDocumentController.js';
+} from '../BACKEND/STALLHOLDER/user/stallholderDocumentController.js';
 
 // Import BLOB document controller for cloud storage
 import {
@@ -18,18 +18,18 @@ import {
   getStallholderDocuments,
   deleteStallholderDocumentBlob,
   updateStallholderDocumentVerificationStatus
-} from '../SHARE-CONTROLLER/documents/stallholderDocumentBlobController.js';
+} from '../BACKEND/STALLHOLDER/documents/stallholderDocumentBlobController.js';
 
 // Import complaint controller
 import {
   submitComplaint,
   getMyComplaints
-} from '../SHARE-CONTROLLER/stallholder/complaintController.js';
+} from '../BACKEND/STALLHOLDER/stallholder/complaintController.js';
 
 // Import profile controller
 import {
   getStallholderProfile
-} from '../SHARE-CONTROLLER/stallholder/profileController.js';
+} from '../BACKEND/STALLHOLDER/stallholder/profileController.js';
 
 // Import payment controller
 import {
@@ -37,12 +37,12 @@ import {
   getAllPaymentRecords,
   getPaymentSummary,
   getMonthlyPaymentStatus
-} from '../SHARE-CONTROLLER/stallholder/paymentController.js';
+} from '../BACKEND/STALLHOLDER/stallholder/paymentController.js';
 
 // Import owned stall controller
 import {
   getOwnedStalls
-} from '../SHARE-CONTROLLER/stallholder/ownedStallController.js';
+} from '../BACKEND/STALLHOLDER/stallholder/ownedStallController.js';
 
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';

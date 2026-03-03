@@ -5,10 +5,10 @@ import {
   login,
   verifyToken as verifyTokenHandler,
   getCurrentUser
-} from '../SHARE-CONTROLLER/auth/unifiedAuthController.js'
+} from '../BACKEND/AUTH/auth/unifiedAuthController.js'
 
 // Import logout and heartbeat from enhanced auth controller
-import { logout, heartbeat } from '../SHARE-CONTROLLER/auth/enhancedAuthController.js'
+import { logout, heartbeat } from '../BACKEND/AUTH/auth/enhancedAuthController.js'
 
 // Legacy authentication (for backward compatibility)
 import {
@@ -17,10 +17,10 @@ import {
   createAdminUser,
   createPasswordHash,
   testDb
-} from '../SHARE-CONTROLLER/auth/loginController.js'
+} from '../BACKEND/AUTH/auth/loginController.js'
 
 // Import password reset controller
-import passwordResetController from '../SHARE-CONTROLLER/auth/passwordResetController.js'
+import passwordResetController from '../BACKEND/AUTH/auth/passwordResetController.js'
 
 const router = express.Router()
 

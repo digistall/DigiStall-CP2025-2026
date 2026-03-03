@@ -15,7 +15,7 @@ import {
   getParticipantsByStall,
   autoCleanupApplicants,
   triggerCleanup
-} from '../SHARE-CONTROLLER/applicants/applicantsController.js'
+} from '../BACKEND/MANAGER/applicants/applicantsController.js'
 
 // Import document controller and multer config
 import {
@@ -23,7 +23,7 @@ import {
   getApplicantDocuments,
   deleteApplicantDocument,
   deleteAllDocuments
-} from '../SHARE-CONTROLLER/applicants/applicantDocumentController.js'
+} from '../BACKEND/MANAGER/applicants/applicantDocumentController.js'
 import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
 
 // Import BLOB document controller for cloud storage
@@ -35,7 +35,7 @@ import {
   deleteApplicantDocumentBlob,
   updateDocumentVerificationStatus,
   getApplicantDocumentByType
-} from '../SHARE-CONTROLLER/applicants/applicantDocumentBlobController.js'
+} from '../BACKEND/MANAGER/applicants/applicantDocumentBlobController.js'
 
 const router = express.Router()
 

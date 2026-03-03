@@ -6,7 +6,7 @@ import {
   reportStallholderWithPhotos,
   getViolationTypes,
   getInspectorSentReports
-} from '../SHARE-CONTROLLER/inspector/inspectorController.js';
+} from '../BACKEND/EMPLOYEE/inspector/inspectorController.js';
 import { verifyToken } from '../middleware/auth.js';
 import { uploadViolationEvidence } from '../config/multerViolationEvidence.js';
 

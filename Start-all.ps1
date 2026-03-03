@@ -81,9 +81,7 @@ Write-Host ""
 # ============================================
 Write-Host "[0] Syncing .env files..." -ForegroundColor Gray
 if (Test-Path "$projectRoot\.env") {
-    Copy-Item "$projectRoot\.env" "$projectRoot\FRONTEND-RUNNER\WEB\.env" -Force -ErrorAction SilentlyContinue
-    Copy-Item "$projectRoot\.env" "$projectRoot\FRONTEND-RUNNER\MOBILE\.env" -Force -ErrorAction SilentlyContinue
-    Write-Host "    .env files synced to FRONTEND-RUNNER" -ForegroundColor DarkGray
+    Write-Host "    .env present at project root" -ForegroundColor DarkGray
 } else {
     Write-Host "    WARNING: .env file not found!" -ForegroundColor Red
 }
@@ -138,10 +136,10 @@ if ($startAll -or $Web) {
     Write-Host "[3] Starting Frontend Web (port 5173)..." -ForegroundColor Yellow
     Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
         `$Host.UI.RawUI.WindowTitle = 'DigiStall - Frontend Web (5173)'
-        cd '$projectRoot\FRONTEND-RUNNER\WEB'
+        cd '$projectRoot\FRONTEND\WEB'
         Write-Host '========================================' -ForegroundColor Green
         Write-Host '  FRONTEND WEB - Vue.js Port 5173' -ForegroundColor Green
-        Write-Host '  Location: FRONTEND-RUNNER/WEB' -ForegroundColor Green
+        Write-Host '  Location: FRONTEND/WEB' -ForegroundColor Green
         Write-Host '========================================' -ForegroundColor Green
         Write-Host ''
         npm run dev
@@ -155,15 +153,15 @@ if ($startAll -or $Web) {
 if ($startAll -or $Mobile) {
     Write-Host "[4] Starting Frontend Mobile (Expo)..." -ForegroundColor Yellow
     
-    # Check if FRONTEND-RUNNER/MOBILE has node_modules
-    if (-not (Test-Path "$projectRoot\FRONTEND-RUNNER\MOBILE\node_modules")) {
+    # Check if FRONTEND/MOBILE has node_modules
+    if (-not (Test-Path "$projectRoot\FRONTEND\MOBILE\node_modules")) {
         Write-Host "    Installing mobile dependencies first..." -ForegroundColor DarkYellow
         Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
             `$Host.UI.RawUI.WindowTitle = 'DigiStall - Mobile (Expo)'
-            cd '$projectRoot\FRONTEND-RUNNER\MOBILE'
+            cd '$projectRoot\FRONTEND\MOBILE'
             Write-Host '========================================' -ForegroundColor Green
             Write-Host '  FRONTEND MOBILE - Expo' -ForegroundColor Green
-            Write-Host '  Location: FRONTEND-RUNNER/MOBILE' -ForegroundColor Green
+            Write-Host '  Location: FRONTEND/MOBILE' -ForegroundColor Green
             Write-Host '========================================' -ForegroundColor Green
             Write-Host ''
             Write-Host 'Installing dependencies...' -ForegroundColor Yellow
@@ -174,10 +172,10 @@ if ($startAll -or $Mobile) {
     } else {
         Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
             `$Host.UI.RawUI.WindowTitle = 'DigiStall - Mobile (Expo)'
-            cd '$projectRoot\FRONTEND-RUNNER\MOBILE'
+            cd '$projectRoot\FRONTEND\MOBILE'
             Write-Host '========================================' -ForegroundColor Green
             Write-Host '  FRONTEND MOBILE - Expo' -ForegroundColor Green
-            Write-Host '  Location: FRONTEND-RUNNER/MOBILE' -ForegroundColor Green
+            Write-Host '  Location: FRONTEND/MOBILE' -ForegroundColor Green
             Write-Host '========================================' -ForegroundColor Green
             Write-Host ''
             npx expo start -c
@@ -208,7 +206,7 @@ Write-Host "Architecture:" -ForegroundColor White
 Write-Host "  - Backend Web (5000)  = same server.js, different port" -ForegroundColor DarkGray
 Write-Host "  - Backend Mobile (5001) = same server.js, different port" -ForegroundColor DarkGray
 Write-Host "  - Matches production (DigitalOcean: 5000/5001)" -ForegroundColor DarkGray
-Write-Host "  - Frontend runs from FRONTEND-RUNNER/" -ForegroundColor DarkGray
+Write-Host "  - Frontend runs from FRONTEND/" -ForegroundColor DarkGray
 Write-Host "  - Database: DigitalOcean MySQL (cloud)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Mobile Backend Routing:" -ForegroundColor White

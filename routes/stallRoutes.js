@@ -46,7 +46,7 @@ import {
   cancelAuction,
   selectAuctionWinner,
   autoSelectWinnerForExpiredAuctions
-} from '../SHARE-CONTROLLER/stalls/stallController.js'
+} from '../BACKEND/MANAGER/stalls/stallController.js'
 
 // Import stall image controller
 import {
@@ -56,7 +56,7 @@ import {
   deleteStallImageByFilename,
   setStallPrimaryImage,
   getStallImageCount
-} from '../SHARE-CONTROLLER/stalls/stallImageController.js'
+} from '../BACKEND/MANAGER/stalls/stallImageController.js'
 
 // Import BLOB image controller for cloud storage
 import {
@@ -70,10 +70,10 @@ import {
   setStallPrimaryImageBlob,
   updateStallImageBlob,
   getStallPrimaryImageBlob
-} from '../SHARE-CONTROLLER/stalls/stallImageBlobController.js'
+} from '../BACKEND/MANAGER/stalls/stallImageBlobController.js'
 
 // Import new addStall with images
-import { addStallWithImages } from '../SHARE-CONTROLLER/stalls/stallComponents/addStallWithImages.js'
+import { addStallWithImages } from '../BACKEND/MANAGER/stalls/stallComponents/addStallWithImages.js'
 
 // Import multer configuration
 import upload, { checkImageLimit } from '../config/multerStallImages.js'
