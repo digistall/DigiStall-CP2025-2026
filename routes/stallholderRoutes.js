@@ -1,6 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js';
 import {
   getStallholderStallsWithDocuments,
   getBranchDocumentRequirements,
@@ -109,7 +112,7 @@ router.get('/documents/:applicantId', getStallholderStallsWithDocuments);
  * @body stallholder_id, document_type_id, file
  * @access Public (should be protected in production)
  */
-router.post('/documents/upload', upload.single('file'), uploadStallholderDocument);
+router.post('/documents/upload', upload.single('file'), compressUploads({ type: 'document' }), uploadStallholderDocument);
 
 // =============================================
 // STALLHOLDER DOCUMENT BLOB ROUTES (Cloud Storage)

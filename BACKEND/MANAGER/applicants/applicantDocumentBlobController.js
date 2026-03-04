@@ -8,6 +8,7 @@
 // =============================================
 
 import { createConnection } from '../../../config/database.js'
+import { compressBuffer } from '../../../config/imageCompression.js'
 
 // =============================================
 // UPLOAD APPLICANT DOCUMENT AS BLOB
@@ -48,7 +49,13 @@ export async function uploadApplicantDocumentBlob(req, res) {
     
     // Convert base64 to buffer
     const base64Data = document_data.replace(/^data:[^;]+;base64,/, '')
-    const documentBuffer = Buffer.from(base64Data, 'base64')
+    let documentBuffer = Buffer.from(base64Data, 'base64')
+    
+    // Compress image documents before storing (skip PDFs)
+    if (actualMimeType.startsWith('image/')) {
+      const compressed = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
+      documentBuffer = compressed.buffer
+    }
     
     // Check file size (5MB limit for documents)
     const maxSize = 5 * 1024 * 1024 // 5MB

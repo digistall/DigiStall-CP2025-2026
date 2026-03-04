@@ -133,6 +133,11 @@ console.log('✅ APPLICANTS routes loaded');
 // AUTH ROUTES
 console.log('✅ AUTH routes loaded');
 
+// Health check endpoint (used by Docker healthcheck)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Error handler
 app.use(errorHandler);
 
