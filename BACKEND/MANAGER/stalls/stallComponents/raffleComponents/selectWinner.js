@@ -131,19 +131,26 @@ export const selectRaffleWinner = async (req, res) => {
     );
     const branchId = stallBranch.length ? stallBranch[0].branch_id : null;
 
-    // Check 2-stall-per-branch limit
-    if (branchId) {
-      const [existingStalls] = await connection.execute(
-        `SELECT COUNT(*) as stall_count FROM stallholder 
-         WHERE (applicant_id = ? OR mobile_user_id = ?) AND branch_id = ? AND status = 'active'`,
-        [winner.applicant_id, winner.applicant_id, branchId]
-      );
-      if (existingStalls[0].stall_count >= 2) {
-        return res.status(400).json({
-          success: false,
-          message: 'This applicant already has the maximum of 2 stalls in this branch'
-        });
-      }
+    // Check GLOBAL 2-stall limit (across all branches and all stall types)
+    const [existingStalls] = await connection.execute(
+      `SELECT sh.stallholder_id, sh.stall_id, s.stall_number, s.price_type, b.branch_name
+       FROM stallholder sh
+       JOIN stall s ON sh.stall_id = s.stall_id
+       LEFT JOIN branch b ON sh.branch_id = b.branch_id
+       WHERE (sh.applicant_id = ? OR sh.mobile_user_id = ?) AND sh.status = 'active'`,
+      [winner.applicant_id, winner.applicant_id]
+    );
+    if (existingStalls.length >= 2) {
+      return res.status(400).json({
+        success: false,
+        message: `This applicant already owns ${existingStalls.length} stall(s) (maximum is 2). Cannot assign more stalls.`,
+        maxStalls: true,
+        existingStalls: existingStalls.map(s => ({
+          stallNumber: s.stall_number,
+          type: s.price_type,
+          branch: s.branch_name
+        }))
+      });
     }
 
     // Begin transaction (use query() not execute() for transaction commands)
@@ -224,6 +231,27 @@ export const selectRaffleWinner = async (req, res) => {
        VALUES ('Raffle', ?, 'Winner Selected', ?, ?)`,
       [raffleId, branchManagerId, `Winner: ${winner.applicant_full_name} (ticket: ${winner.ticket_number || 'N/A'})`]
     );
+
+    // After creating stallholder, check if winner now has 2 stalls — if so, auto-remove from all other auctions/raffles
+    const [updatedStallCount] = await connection.execute(
+      `SELECT COUNT(*) as cnt FROM stallholder WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
+      [winner.applicant_id, winner.applicant_id]
+    );
+    if (updatedStallCount[0].cnt >= 2) {
+      // Remove from all other raffle_participants where still Registered
+      await connection.execute(
+        `UPDATE raffle_participants SET status = 'Removed', updated_at = NOW()
+         WHERE applicant_id = ? AND status = 'Registered' AND raffle_id != ?`,
+        [winner.applicant_id, raffleId]
+      );
+      // Remove from all other auction_participants where still Registered
+      await connection.execute(
+        `UPDATE auction_participants SET status = 'Removed', updated_at = NOW()
+         WHERE applicant_id = ? AND status = 'Registered'`,
+        [winner.applicant_id]
+      );
+      console.log(`🚫 Applicant ${winner.applicant_id} now has 2 stalls — removed from all other auctions/raffles`);
+    }
 
     // Commit transaction
     await connection.query('COMMIT');
@@ -359,23 +387,21 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
         );
         const branchId = stallBranch.length ? stallBranch[0].branch_id : null;
 
-        // Check 2-stall-per-branch limit
-        if (branchId) {
-          const [existingStalls] = await connection.execute(
-            `SELECT COUNT(*) as stall_count FROM stallholder 
-             WHERE (applicant_id = ? OR mobile_user_id = ?) AND branch_id = ? AND status = 'active'`,
-            [winner.applicant_id, winner.applicant_id, branchId]
-          );
-          if (existingStalls[0].stall_count >= 2) {
-            console.log(`⚠️ Skipping raffle ${raffle.raffle_id} - applicant already has 2 stalls in branch`);
-            results.push({
-              raffleId: raffle.raffle_id,
-              stallNumber: raffle.stall_number,
-              status: 'skipped_max_stalls',
-              message: 'Winner already has maximum 2 stalls in this branch'
-            });
-            continue;
-          }
+        // Check GLOBAL 2-stall limit (across all branches and all stall types)
+        const [existingStalls] = await connection.execute(
+          `SELECT COUNT(*) as stall_count FROM stallholder 
+           WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
+          [winner.applicant_id, winner.applicant_id]
+        );
+        if (existingStalls[0].stall_count >= 2) {
+          console.log(`\u26a0\ufe0f Skipping raffle ${raffle.raffle_id} - applicant already has 2 stalls globally`);
+          results.push({
+            raffleId: raffle.raffle_id,
+            stallNumber: raffle.stall_number,
+            status: 'skipped_max_stalls',
+            message: 'Winner already has maximum 2 stalls'
+          });
+          continue;
         }
 
         // Update raffle status to 'Drawn'
@@ -445,6 +471,23 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
            WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review') AND applicant_id != ?`,
           [raffle.stall_id, winner.applicant_id]
         );
+
+        // After creating stallholder, auto-remove from other auctions/raffles if at 2 stalls
+        const [updatedCnt] = await connection.execute(
+          `SELECT COUNT(*) as cnt FROM stallholder WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
+          [winner.applicant_id, winner.applicant_id]
+        );
+        if (updatedCnt[0].cnt >= 2) {
+          await connection.execute(
+            `UPDATE raffle_participants SET status = 'Removed' WHERE applicant_id = ? AND status = 'Registered' AND raffle_id != ?`,
+            [winner.applicant_id, raffle.raffle_id]
+          );
+          await connection.execute(
+            `UPDATE auction_participants SET status = 'Removed' WHERE applicant_id = ? AND status = 'Registered'`,
+            [winner.applicant_id]
+          );
+          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has 2 stalls)`);
+        }
 
         results.push({
           raffleId: raffle.raffle_id,

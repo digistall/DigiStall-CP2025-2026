@@ -22,7 +22,7 @@ import Complaints from '@shared-features/Complaints/Complaints/Complaints.vue'
 import Compliances from '@shared-features/Compliances/Compliance.vue'
 import Vendors from '@shared-features/Vendors/Vendors/Vendors.vue'
 import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholders.vue'
-import Stalls from '@shared-features/Stalls/Stalls/Stalls.vue'
+import Stalls from '@shared-features/Stalls/Stalls.vue'
 
 // BUSINESS-MANAGER module - Manager-exclusive features
 import Employees from '@business-manager/Employees/Employees/Employees.vue'

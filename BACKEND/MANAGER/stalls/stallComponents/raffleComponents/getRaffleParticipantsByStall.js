@@ -182,6 +182,22 @@ export const getRaffleParticipantsByStall = async (req, res) => {
             console.error('Error stack:', err.stack);
           }
 
+          // Get stall count for this participant (how many active stalls they already own)
+          let stallCount = 0;
+          try {
+            const lookupId = p.applicant_id || p.stallholder_id;
+            if (lookupId) {
+              const [stallCountResult] = await connection.execute(
+                `SELECT COUNT(*) as stall_count FROM stallholder 
+                 WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
+                [lookupId, lookupId]
+              );
+              stallCount = stallCountResult[0]?.stall_count || 0;
+            }
+          } catch (countErr) {
+            console.error(`Error getting stall count for participant ${p.participant_id}:`, countErr);
+          }
+
           return {
             participantId: p.participant_id,
             applicantId: p.applicant_id,
@@ -192,6 +208,7 @@ export const getRaffleParticipantsByStall = async (req, res) => {
             isStallholder: !!p.stallholder_id,
             joinedAt: p.registration_date,
             status: p.participant_status,
+            stallCount,
             personalInfo
           };
         })
