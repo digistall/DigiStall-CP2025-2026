@@ -164,22 +164,6 @@ export const getRaffleParticipantsByStall = async (req, res) => {
                 const app = applicantDetails[0];
                 const decryptedFullName = decryptData(app.applicant_full_name) || 'Unknown';
                 
-                // Fallback: If email not found by applicant_id, try to find by matching full_name
-                if (applicantEmail === 'N/A') {
-                  console.log('Email not found by applicant_id, trying to match by name...');
-                  const [stallholderByName] = await connection.execute(
-                    `SELECT email, full_name FROM stallholder WHERE status = 'active' LIMIT 100`
-                  );
-                  for (const sh of stallholderByName) {
-                    const shName = decryptData(sh.full_name);
-                    if (shName && shName.toLowerCase() === decryptedFullName.toLowerCase()) {
-                      applicantEmail = decryptData(sh.email) || 'N/A';
-                      console.log('Found email by matching name:', applicantEmail);
-                      break;
-                    }
-                  }
-                }
-                
                 // Decrypt applicant data using correct column names
                 personalInfo = {
                   fullName: decryptedFullName,

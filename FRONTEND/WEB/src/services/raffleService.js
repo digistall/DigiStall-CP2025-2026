@@ -152,7 +152,7 @@ class RaffleService {
     try {
       console.log(`🎰 Selecting participant ${participantId} as winner for raffle ID: ${raffleId}`)
       
-      const response = await this.apiClient.post(`/raffles/${raffleId}/select-winner/${participantId}`)
+      const response = await this.apiClient.post(`/raffles/${raffleId}/select-winner`, { method: 'manual', participantId })
       
       console.log('✅ Winner selection response:', response.data)
       

@@ -6,8 +6,8 @@ import {
   ActivityIndicator,
   View,
   Text,
-  Alert,
 } from 'react-native';
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 // Import components
@@ -38,6 +38,7 @@ const CARD_WIDTH = isTablet
 
 const StallScreen = () => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [selectedSort, setSelectedSort] = useState('default');
   const [searchText, setSearchText] = useState('');
@@ -105,7 +106,7 @@ const StallScreen = () => {
       // Get user data from storage
       const userData = await UserStorageService.getUserData();
       if (!userData || !userData.user) {
-        Alert.alert('Error', 'User not logged in. Please login again.');
+        showAlert('error', 'Error', 'User not logged in. Please login again.');
         return;
       }
       
@@ -157,17 +158,13 @@ const StallScreen = () => {
         
         // Show informative message if no applications exist
         if (response.data?.restriction_message) {
-          Alert.alert(
-            'No Stalls Available',
-            'You need to apply to your first stall to see more stalls in that area. Please check with your branch manager or admin to get started.',
-            [{ text: 'OK' }]
-          );
+          showAlert('info', 'No Stalls Available', 'You need to apply to your first stall to see more stalls in that area. Please check with your branch manager or admin to get started.');
         }
       }
       
     } catch (error) {
       console.error('Error loading user data and stalls:', error);
-      Alert.alert('Error', 'Failed to load stall data. Please try again.');
+      showAlert('error', 'Error', 'Failed to load stall data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -177,26 +174,25 @@ const StallScreen = () => {
   const handleApplyToStall = async (stall) => {
     try {
       if (!userData || !userData.user) {
-        Alert.alert('Error', 'User data not found. Please login again.');
+        showAlert('error', 'Error', 'User data not found. Please login again.');
         return;
       }
 
       // Check if user can apply (based on backend data)
       if (!stall.canApply) {
         if (stall.maxApplicationsReached) {
-          Alert.alert(
-            'Application Limit Reached', 
+          showAlert('warning', 'Application Limit Reached', 
             `You have reached the maximum of 2 applications for ${stall.location}. You currently have ${stall.applicationsInBranch} applications in this branch.`
           );
         } else {
-          Alert.alert('Cannot Apply', 'You cannot apply to this stall at the moment.');
+          showAlert('warning', 'Cannot Apply', 'You cannot apply to this stall at the moment.');
         }
         return;
       }
 
       // Check if already applied (redundant check, but good for safety)
       if (stall.status === 'applied') {
-        Alert.alert('Already Applied', 'You have already applied to this stall.');
+        showAlert('info', 'Already Applied', 'You have already applied to this stall.');
         return;
       }
 
@@ -204,21 +200,17 @@ const StallScreen = () => {
       const stallTypeText = stall.priceType === 'Raffle' ? 'join the raffle for' : 
                            stall.priceType === 'Auction' ? 'bid in the auction for' : 'apply for';
       
-      Alert.alert(
-        'Confirm Application',
+      showAlert('confirm', 'Confirm Application',
         `Do you want to ${stallTypeText} Stall #${stall.stallNumber} at ${stall.location}?\n\nPrice: ₱${stall.price}\nLocation: ${stall.floor}\nSize: ${stall.size}\nType: ${stall.priceType}`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Confirm', 
-            onPress: () => submitApplication(stall)
-          }
+          { text: 'Confirm', onPress: () => submitApplication(stall) }
         ]
       );
 
     } catch (error) {
       console.error('Error applying to stall:', error);
-      Alert.alert('Error', 'Failed to apply to stall. Please try again.');
+      showAlert('error', 'Error', 'Failed to apply to stall. Please try again.');
     }
   };
 
@@ -296,14 +288,14 @@ const StallScreen = () => {
                               stall.priceType === 'Auction' ? 'You have successfully joined the auction!' :
                               'Your application has been submitted successfully!';
         
-        Alert.alert('Success', successMessage);
+        showAlert('success', 'Success', successMessage);
       } else {
-        Alert.alert('Error', response.message || 'Failed to submit application.');
+        showAlert('error', 'Error', response.message || 'Failed to submit application.');
       }
       
     } catch (error) {
       console.error('Error submitting application:', error);
-      Alert.alert('Error', 'Failed to submit application. Please try again.');
+      showAlert('error', 'Error', 'Failed to submit application. Please try again.');
     } finally {
       setApplying(null);
       stopLoading();
@@ -429,6 +421,7 @@ const StallScreen = () => {
         />
       </SafeAreaView>
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </SafeAreaProvider>
   );
 };

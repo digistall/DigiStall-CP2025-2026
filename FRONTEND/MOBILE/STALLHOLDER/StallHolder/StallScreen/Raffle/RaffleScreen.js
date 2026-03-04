@@ -6,10 +6,10 @@ import {
   Dimensions,
   Text,
   RefreshControl,
-  Alert,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 import RaffleCard from './Components/RaffleCard';
 import SearchFilterBar from './Components/SearchFilter/SearchFilterBar';
 import UserStorageService from '../../../../services/UserStorageService';
@@ -20,6 +20,7 @@ const { width } = Dimensions.get('window');
 
 const RaffleScreen = () => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [raffles, setRaffles] = useState([]);
   const [filteredRaffles, setFilteredRaffles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +43,7 @@ const RaffleScreen = () => {
       // Get user data from storage
       const userData = await UserStorageService.getUserData();
       if (!userData || !userData.user) {
-        Alert.alert('Error', 'User not logged in. Please login again.');
+        showAlert('error', 'Error', 'User not logged in. Please login again.');
         setRaffles([]);
         return;
       }
@@ -82,17 +83,13 @@ const RaffleScreen = () => {
         
         // Show informative message if no applications exist
         if (response.data?.restriction_message) {
-          Alert.alert(
-            'No Raffle Stalls Available',
-            'You need to apply to a stall first to see raffle stalls in that area. Please go to the Stall tab to submit your first application.',
-            [{ text: 'OK' }]
-          );
+          showAlert('info', 'No Raffle Stalls Available', 'Raffle stalls are only visible in areas where you have submitted applications. Submit your first application to see raffle stalls in that area.');
         }
       }
       
     } catch (error) {
       console.error('Error loading raffles:', error);
-      Alert.alert('Error', 'Failed to load raffle stalls. Please try again.');
+      showAlert('error', 'Error', 'Failed to load raffle stalls. Please try again.');
       setRaffles([]);
     } finally {
       setLoading(false);
@@ -236,6 +233,7 @@ const RaffleScreen = () => {
         maxToRenderPerBatch={10}
         windowSize={10}
       />
+      <AlertComponent />
     </View>
   );
 };
