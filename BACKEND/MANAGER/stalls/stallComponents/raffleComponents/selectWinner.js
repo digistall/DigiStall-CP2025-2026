@@ -110,7 +110,7 @@ export const selectRaffleWinner = async (req, res) => {
 
     // Look up the application for this winner + stall
     const [appInfo] = await connection.execute(
-      `SELECT application_id, branch_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+      `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
       [winner.applicant_id, raffle.stall_id]
     );
     const applicationId = appInfo.length ? appInfo[0].application_id : null;
@@ -156,101 +156,30 @@ export const selectRaffleWinner = async (req, res) => {
     // Begin transaction (use query() not execute() for transaction commands)
     await connection.query('START TRANSACTION');
 
-    // Update raffle status to 'Drawn'
-    await connection.execute(
-      `UPDATE raffle SET status = 'Drawn' WHERE raffle_id = ?`,
-      [raffleId]
+    // Call stored procedure to finalize raffle winner — handles all DB operations atomically
+    const app = applicantDetails.length > 0 ? applicantDetails[0] : {};
+    const [spResult] = await connection.execute(
+      `CALL sp_finalize_raffle_winner(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        raffleId,
+        winner.participant_id,
+        winner.applicant_id,
+        raffle.stall_id,
+        branchId,
+        branchManagerId,
+        winner.ticket_number || null,
+        app.applicant_full_name || '',
+        app.email_address || '',
+        app.applicant_contact_number || '',
+        app.applicant_address || '',
+        applicationId
+      ]
     );
 
-    // Update winner participant status
-    await connection.execute(
-      `UPDATE raffle_participants SET status = 'Winner' WHERE participant_id = ?`,
-      [winner.participant_id]
-    );
-
-    // Mark non-winners
-    await connection.execute(
-      `UPDATE raffle_participants SET status = 'Not Selected' WHERE raffle_id = ? AND participant_id != ?`,
-      [raffleId, winner.participant_id]
-    );
-
-    // Update stall: raffle_auction_status, status to Occupied, is_available to 0
-    await connection.execute(
-      `UPDATE stall SET raffle_auction_status = 'Drawn', status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
-      [raffle.stall_id]
-    );
-
-    // Create stallholder record so stall appears in Owned Stalls
-    if (applicantDetails.length) {
-      const app = applicantDetails[0];
-      // Check if stallholder already exists for this applicant+stall
-      const [existingSH] = await connection.execute(
-        `SELECT stallholder_id FROM stallholder WHERE applicant_id = ? AND stall_id = ?`,
-        [app.applicant_id, raffle.stall_id]
-      );
-      if (existingSH.length === 0) {
-        await connection.execute(
-          `INSERT INTO stallholder (applicant_id, mobile_user_id, full_name, email, contact_number, address, stall_id, branch_id, payment_status, status, compliance_status, move_in_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
-          [app.applicant_id, app.applicant_id, app.applicant_full_name, app.email_address, app.applicant_contact_number, app.applicant_address, raffle.stall_id, branchId]
-        );
-      }
-    }
-
-    // Update applicant status to approved
-    await connection.execute(
-      `UPDATE applicant SET status = 'approved' WHERE applicant_id = ?`,
-      [winner.applicant_id]
-    );
-
-    // Create raffle result record
-    await connection.execute(
-      `INSERT INTO raffle_result (raffle_id, winner_participant_id, draw_date)
-       VALUES (?, ?, NOW())`,
-      [raffleId, winner.participant_id]
-    );
-
-    // Update application status to approved (if application exists)
-    if (applicationId) {
-      await connection.execute(
-        `UPDATE application SET application_status = 'Approved', reviewed_by = ?, reviewed_at = NOW() WHERE application_id = ?`,
-        [branchManagerId, applicationId]
-      );
-    }
-
-    // Reject other pending applications for this stall
-    await connection.execute(
-      `UPDATE application SET application_status = 'Rejected', reviewed_by = ?, reviewed_at = NOW()
-       WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review') AND applicant_id != ?`,
-      [branchManagerId, raffle.stall_id, winner.applicant_id]
-    );
-
-    // Log the winner selection
-    await connection.execute(
-      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
-       VALUES ('Raffle', ?, 'Winner Selected', ?, ?)`,
-      [raffleId, branchManagerId, `Winner: ${winner.applicant_full_name} (ticket: ${winner.ticket_number || 'N/A'})`]
-    );
-
-    // After creating stallholder, check if winner now has 2 stalls — if so, auto-remove from all other auctions/raffles
-    const [updatedStallCount] = await connection.execute(
-      `SELECT COUNT(*) as cnt FROM stallholder WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
-      [winner.applicant_id, winner.applicant_id]
-    );
-    if (updatedStallCount[0].cnt >= 2) {
-      // Remove from all other raffle_participants where still Registered
-      await connection.execute(
-        `UPDATE raffle_participants SET status = 'Removed', updated_at = NOW()
-         WHERE applicant_id = ? AND status = 'Registered' AND raffle_id != ?`,
-        [winner.applicant_id, raffleId]
-      );
-      // Remove from all other auction_participants where still Registered
-      await connection.execute(
-        `UPDATE auction_participants SET status = 'Removed', updated_at = NOW()
-         WHERE applicant_id = ? AND status = 'Registered'`,
-        [winner.applicant_id]
-      );
-      console.log(`🚫 Applicant ${winner.applicant_id} now has 2 stalls — removed from all other auctions/raffles`);
+    // Check if auto-removed from other auctions/raffles
+    const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
+    if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
+      console.log(`🚫 Applicant ${winner.applicant_id} now has ${resultSet[0].new_stall_count} stalls — auto-removed from other auctions/raffles`);
     }
 
     // Commit transaction
@@ -404,89 +333,30 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
           continue;
         }
 
-        // Update raffle status to 'Drawn'
-        await connection.execute(
-          `UPDATE raffle SET status = 'Drawn' WHERE raffle_id = ?`,
-          [raffle.raffle_id]
+        // Use stored procedure to finalize raffle winner — handles all DB operations atomically
+        const app = applicantDetails.length > 0 ? applicantDetails[0] : {};
+        const [spResult] = await connection.execute(
+          `CALL sp_finalize_raffle_winner(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            raffle.raffle_id,
+            winner.participant_id,
+            winner.applicant_id,
+            raffle.stall_id,
+            branchId,
+            raffle.created_by,
+            winner.ticket_number || null,
+            app.applicant_full_name || '',
+            app.email_address || '',
+            app.applicant_contact_number || '',
+            app.applicant_address || '',
+            applicationId
+          ]
         );
 
-        // Update winner participant
-        await connection.execute(
-          `UPDATE raffle_participants SET status = 'Winner' WHERE participant_id = ?`,
-          [winner.participant_id]
-        );
-
-        // Mark non-winners
-        await connection.execute(
-          `UPDATE raffle_participants SET status = 'Not Selected' WHERE raffle_id = ? AND participant_id != ?`,
-          [raffle.raffle_id, winner.participant_id]
-        );
-
-        // Update stall: raffle_auction_status, status to Occupied, is_available to 0
-        await connection.execute(
-          `UPDATE stall SET raffle_auction_status = 'Drawn', status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
-          [raffle.stall_id]
-        );
-
-        // Create stallholder record so stall appears in Owned Stalls
-        if (applicantDetails.length) {
-          const app = applicantDetails[0];
-          const [existingSH] = await connection.execute(
-            `SELECT stallholder_id FROM stallholder WHERE applicant_id = ? AND stall_id = ?`,
-            [app.applicant_id, raffle.stall_id]
-          );
-          if (existingSH.length === 0) {
-            await connection.execute(
-              `INSERT INTO stallholder (applicant_id, mobile_user_id, full_name, email, contact_number, address, stall_id, branch_id, payment_status, status, compliance_status, move_in_date)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
-              [app.applicant_id, app.applicant_id, app.applicant_full_name, app.email_address, app.applicant_contact_number, app.applicant_address, raffle.stall_id, branchId]
-            );
-          }
-        }
-
-        // Update applicant status to approved
-        await connection.execute(
-          `UPDATE applicant SET status = 'approved' WHERE applicant_id = ?`,
-          [winner.applicant_id]
-        );
-
-        // Create raffle result
-        await connection.execute(
-          `INSERT INTO raffle_result (raffle_id, winner_participant_id, draw_date)
-           VALUES (?, ?, NOW())`,
-          [raffle.raffle_id, winner.participant_id]
-        );
-
-        // Update application status
-        if (applicationId) {
-          await connection.execute(
-            `UPDATE application SET application_status = 'Approved', reviewed_at = NOW() WHERE application_id = ?`,
-            [applicationId]
-          );
-        }
-
-        // Reject other pending applications for this stall
-        await connection.execute(
-          `UPDATE application SET application_status = 'Rejected', reviewed_at = NOW()
-           WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review') AND applicant_id != ?`,
-          [raffle.stall_id, winner.applicant_id]
-        );
-
-        // After creating stallholder, auto-remove from other auctions/raffles if at 2 stalls
-        const [updatedCnt] = await connection.execute(
-          `SELECT COUNT(*) as cnt FROM stallholder WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
-          [winner.applicant_id, winner.applicant_id]
-        );
-        if (updatedCnt[0].cnt >= 2) {
-          await connection.execute(
-            `UPDATE raffle_participants SET status = 'Removed' WHERE applicant_id = ? AND status = 'Registered' AND raffle_id != ?`,
-            [winner.applicant_id, raffle.raffle_id]
-          );
-          await connection.execute(
-            `UPDATE auction_participants SET status = 'Removed' WHERE applicant_id = ? AND status = 'Registered'`,
-            [winner.applicant_id]
-          );
-          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has 2 stalls)`);
+        // Check if auto-removed from other auctions/raffles
+        const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
+        if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
+          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has ${resultSet[0].new_stall_count} stalls)`);
         }
 
         results.push({

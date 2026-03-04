@@ -132,7 +132,7 @@ export const selectAuctionWinner = async (req, res) => {
 
     // Look up the application for this winner + stall
     const [appInfo] = await connection.execute(
-      `SELECT application_id, branch_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+      `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
       [winner.applicant_id, auction.stall_id]
     );
     const applicationId = appInfo.length ? appInfo[0].application_id : null;
@@ -175,125 +175,33 @@ export const selectAuctionWinner = async (req, res) => {
       });
     }
 
-    // Begin transaction to prevent partial commits (use query() not execute() for transaction commands)
+    // Begin transaction (use query() not execute() for transaction commands)
     await connection.query('START TRANSACTION');
 
-    // Update auction status to 'Awarded'
-    await connection.execute(
-      `UPDATE auction SET status = 'Awarded' WHERE auction_id = ?`,
-      [auctionId]
+    // Call stored procedure to finalize auction winner — handles all DB operations atomically
+    const app = applicantDetails.length > 0 ? applicantDetails[0] : {};
+    const [spResult] = await connection.execute(
+      `CALL sp_finalize_auction_winner(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        auctionId,
+        winner.applicant_id,
+        winnerBidId,
+        auction.stall_id,
+        branchId,
+        branchManagerId,
+        winner.bid_amount || auction.rental_price,
+        app.applicant_full_name || '',
+        app.email_address || '',
+        app.applicant_contact_number || '',
+        app.applicant_address || '',
+        applicationId
+      ]
     );
 
-    // Mark winning bid (if a bid exists)
-    if (winnerBidId) {
-      await connection.execute(
-        `UPDATE auction_bids SET status = 'Winning' WHERE bid_id = ?`,
-        [winnerBidId]
-      );
-    }
-
-    // Mark winner in auction_participants
-    await connection.execute(
-      `UPDATE auction_participants SET status = 'Winner' WHERE auction_id = ? AND applicant_id = ?`,
-      [auctionId, winner.applicant_id]
-    );
-
-    // Mark non-winners
-    await connection.execute(
-      `UPDATE auction_participants SET status = 'Not Selected' WHERE auction_id = ? AND applicant_id != ?`,
-      [auctionId, winner.applicant_id]
-    );
-
-    // Update stall: mark as Occupied, not available, set raffle_auction_status
-    await connection.execute(
-      `UPDATE stall SET raffle_auction_status = 'Awarded', status = 'Occupied', is_available = 0, updated_at = NOW() WHERE stall_id = ?`,
-      [auction.stall_id]
-    );
-
-    // Create auction result record
-    await connection.execute(
-      `INSERT INTO auction_result (auction_id, winner_bid_id, final_amount, awarded_date)
-       VALUES (?, ?, ?, NOW())`,
-      [auctionId, winnerBidId, winner.bid_amount || auction.rental_price]
-    );
-
-    // Update application status to approved (if application exists)
-    if (applicationId) {
-      await connection.execute(
-        `UPDATE application SET application_status = 'Approved', reviewed_by = ?, reviewed_at = NOW() WHERE application_id = ?`,
-        [branchManagerId, applicationId]
-      );
-    }
-
-    // Create stallholder record so the winner sees this stall in Owned Stalls
-    if (applicantDetails.length > 0) {
-      const app = applicantDetails[0];
-      const [existingStallholder] = await connection.execute(
-        `SELECT stallholder_id FROM stallholder WHERE applicant_id = ? AND stall_id = ?`,
-        [winner.applicant_id, auction.stall_id]
-      );
-
-      let stallholderId;
-      if (existingStallholder.length === 0) {
-        const [shResult] = await connection.execute(
-          `INSERT INTO stallholder (
-            applicant_id, mobile_user_id, full_name, email, contact_number, address,
-            stall_id, branch_id, payment_status, status, compliance_status, move_in_date
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
-          [
-            app.applicant_id, app.applicant_id,
-            app.applicant_full_name, app.email_address,
-            app.applicant_contact_number, app.applicant_address,
-            auction.stall_id, branchId
-          ]
-        );
-        stallholderId = shResult.insertId;
-        console.log(`🏪 Created stallholder record ${stallholderId} for auction winner`);
-      } else {
-        stallholderId = existingStallholder[0].stallholder_id;
-        console.log(`🏪 Stallholder record ${stallholderId} already exists for this stall`);
-      }
-
-      // Update applicant status to approved
-      await connection.execute(
-        `UPDATE applicant SET status = 'approved', updated_at = NOW() WHERE applicant_id = ?`,
-        [winner.applicant_id]
-      );
-    }
-
-    // Reject other pending applications for the same stall
-    await connection.execute(
-      `UPDATE application SET application_status = 'Rejected', updated_at = NOW()
-       WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review')${applicationId ? ' AND application_id != ?' : ''}`,
-      applicationId ? [auction.stall_id, applicationId] : [auction.stall_id]
-    );
-
-    // Log the winner confirmation
-    await connection.execute(
-      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
-       VALUES ('Auction', ?, 'Winner Selected', ?, ?)`,
-      [auctionId, branchManagerId, `Winner: ${winner.applicant_full_name} with bid ₱${winner.bid_amount}`]
-    );
-
-    // After creating stallholder, check if winner now has 2 stalls — if so, auto-remove from all other auctions/raffles
-    const [updatedStallCount] = await connection.execute(
-      `SELECT COUNT(*) as cnt FROM stallholder WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
-      [winner.applicant_id, winner.applicant_id]
-    );
-    if (updatedStallCount[0].cnt >= 2) {
-      // Remove from all other auction_participants where still Registered
-      await connection.execute(
-        `UPDATE auction_participants SET status = 'Removed', updated_at = NOW()
-         WHERE applicant_id = ? AND status = 'Registered' AND auction_id != ?`,
-        [winner.applicant_id, auctionId]
-      );
-      // Remove from all other raffle_participants where still Registered
-      await connection.execute(
-        `UPDATE raffle_participants SET status = 'Removed', updated_at = NOW()
-         WHERE applicant_id = ? AND status = 'Registered'`,
-        [winner.applicant_id]
-      );
-      console.log(`🚫 Applicant ${winner.applicant_id} now has 2 stalls — removed from all other auctions/raffles`);
+    // Check if auto-removed from other auctions/raffles
+    const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
+    if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
+      console.log(`🚫 Applicant ${winner.applicant_id} now has ${resultSet[0].new_stall_count} stalls — auto-removed from other auctions/raffles`);
     }
 
     // Commit transaction
@@ -449,95 +357,30 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
           continue;
         }
 
-        // Update auction status to 'Awarded'
-        await connection.execute(
-          `UPDATE auction SET status = 'Awarded' WHERE auction_id = ?`,
-          [auction.auction_id]
+        // Use stored procedure to finalize auction winner — handles all DB operations atomically
+        const app = applicantDetails.length > 0 ? applicantDetails[0] : {};
+        const [spResult] = await connection.execute(
+          `CALL sp_finalize_auction_winner(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            auction.auction_id,
+            winner.applicant_id,
+            winner.bid_id,
+            auction.stall_id,
+            branchId,
+            auction.created_by,
+            winner.bid_amount,
+            app.applicant_full_name || '',
+            app.email_address || '',
+            app.applicant_contact_number || '',
+            app.applicant_address || '',
+            applicationId
+          ]
         );
 
-        // Mark winning bid
-        await connection.execute(
-          `UPDATE auction_bids SET status = 'Winning' WHERE bid_id = ?`,
-          [winner.bid_id]
-        );
-
-        // Mark winner in auction_participants
-        await connection.execute(
-          `UPDATE auction_participants SET status = 'Winner' WHERE auction_id = ? AND applicant_id = ?`,
-          [auction.auction_id, winner.applicant_id]
-        );
-
-        // Mark non-winners
-        await connection.execute(
-          `UPDATE auction_participants SET status = 'Not Selected' WHERE auction_id = ? AND applicant_id != ?`,
-          [auction.auction_id, winner.applicant_id]
-        );
-
-        // Update stall: raffle_auction_status, status to Occupied, is_available to 0
-        await connection.execute(
-          `UPDATE stall SET raffle_auction_status = 'Awarded', status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
-          [auction.stall_id]
-        );
-
-        // Create stallholder record so stall appears in Owned Stalls
-        if (applicantDetails.length) {
-          const app = applicantDetails[0];
-          const [existingSH] = await connection.execute(
-            `SELECT stallholder_id FROM stallholder WHERE applicant_id = ? AND stall_id = ?`,
-            [app.applicant_id, auction.stall_id]
-          );
-          if (existingSH.length === 0) {
-            await connection.execute(
-              `INSERT INTO stallholder (applicant_id, mobile_user_id, full_name, email, contact_number, address, stall_id, branch_id, payment_status, status, compliance_status, move_in_date)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
-              [app.applicant_id, app.applicant_id, app.applicant_full_name, app.email_address, app.applicant_contact_number, app.applicant_address, auction.stall_id, branchId]
-            );
-          }
-        }
-
-        // Update applicant status to approved
-        await connection.execute(
-          `UPDATE applicant SET status = 'approved' WHERE applicant_id = ?`,
-          [winner.applicant_id]
-        );
-
-        // Create auction result
-        await connection.execute(
-          `INSERT INTO auction_result (auction_id, winner_bid_id, final_amount, awarded_date)
-           VALUES (?, ?, ?, NOW())`,
-          [auction.auction_id, winner.bid_id, winner.bid_amount]
-        );
-
-        // Update application status
-        if (applicationId) {
-          await connection.execute(
-            `UPDATE application SET application_status = 'Approved', reviewed_at = NOW() WHERE application_id = ?`,
-            [applicationId]
-          );
-        }
-
-        // Reject other pending applications for this stall
-        await connection.execute(
-          `UPDATE application SET application_status = 'Rejected', reviewed_at = NOW()
-           WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review') AND applicant_id != ?`,
-          [auction.stall_id, winner.applicant_id]
-        );
-
-        // After creating stallholder, auto-remove from other auctions/raffles if at 2 stalls
-        const [updatedCnt] = await connection.execute(
-          `SELECT COUNT(*) as cnt FROM stallholder WHERE (applicant_id = ? OR mobile_user_id = ?) AND status = 'active'`,
-          [winner.applicant_id, winner.applicant_id]
-        );
-        if (updatedCnt[0].cnt >= 2) {
-          await connection.execute(
-            `UPDATE auction_participants SET status = 'Removed' WHERE applicant_id = ? AND status = 'Registered' AND auction_id != ?`,
-            [winner.applicant_id, auction.auction_id]
-          );
-          await connection.execute(
-            `UPDATE raffle_participants SET status = 'Removed' WHERE applicant_id = ? AND status = 'Registered'`,
-            [winner.applicant_id]
-          );
-          console.log(`\ud83d\udeab Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has 2 stalls)`);
+        // Check if auto-removed from other auctions/raffles
+        const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
+        if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
+          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has ${resultSet[0].new_stall_count} stalls)`);
         }
 
         // Count bidders

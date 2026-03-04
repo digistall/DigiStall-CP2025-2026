@@ -149,8 +149,10 @@ export const getAuctionParticipantsByStall = async (req, res) => {
               );
               console.log('Applicant query result:', applicantDetails);
               
-              // Try to fetch email from stallholder table using applicant_id
+              // Try to fetch email from multiple sources
               let applicantEmail = 'N/A';
+              
+              // 1. Try stallholder table by applicant_id
               const [stallholderByApplicant] = await connection.execute(
                 `SELECT email, full_name FROM stallholder WHERE applicant_id = ? LIMIT 1`,
                 [p.applicant_id]
@@ -160,25 +162,37 @@ export const getAuctionParticipantsByStall = async (req, res) => {
                 console.log('Found email from stallholder table by applicant_id:', applicantEmail);
               }
               
+              // 2. Try credential.username (often stores email)
+              if (applicantEmail === 'N/A') {
+                const [credentialResult] = await connection.execute(
+                  `SELECT username FROM credential WHERE applicant_id = ? LIMIT 1`,
+                  [p.applicant_id]
+                );
+                if (credentialResult.length > 0 && credentialResult[0].username) {
+                  const username = credentialResult[0].username;
+                  // Check if username looks like an email
+                  if (username.includes('@')) {
+                    applicantEmail = username;
+                    console.log('Found email from credential.username:', applicantEmail);
+                  }
+                }
+              }
+              
+              // 3. Try other_information.email_address (encrypted)
+              if (applicantEmail === 'N/A') {
+                const [otherInfoResult] = await connection.execute(
+                  `SELECT email_address FROM other_information WHERE applicant_id = ? LIMIT 1`,
+                  [p.applicant_id]
+                );
+                if (otherInfoResult.length > 0 && otherInfoResult[0].email_address) {
+                  applicantEmail = decryptData(otherInfoResult[0].email_address) || 'N/A';
+                  console.log('Found email from other_information:', applicantEmail);
+                }
+              }
+              
               if (applicantDetails.length > 0) {
                 const app = applicantDetails[0];
                 const decryptedFullName = decryptData(app.applicant_full_name) || 'Unknown';
-                
-                // Fallback: If email not found by applicant_id, try to find by matching full_name
-                if (applicantEmail === 'N/A') {
-                  console.log('Email not found by applicant_id, trying to match by name...');
-                  const [stallholderByName] = await connection.execute(
-                    `SELECT email, full_name FROM stallholder WHERE status = 'active' LIMIT 100`
-                  );
-                  for (const sh of stallholderByName) {
-                    const shName = decryptData(sh.full_name);
-                    if (shName && shName.toLowerCase() === decryptedFullName.toLowerCase()) {
-                      applicantEmail = decryptData(sh.email) || 'N/A';
-                      console.log('Found email by matching name:', applicantEmail);
-                      break;
-                    }
-                  }
-                }
                 
                 // Decrypt applicant data using correct column names
                 personalInfo = {
