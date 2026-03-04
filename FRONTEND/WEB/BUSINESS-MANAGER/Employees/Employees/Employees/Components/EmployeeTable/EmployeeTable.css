@@ -25,7 +25,7 @@
   min-height: 56px;
   align-items: center;
   gap: 4px;
-  padding: 0 12px;
+  padding: 0 16px;
   width: 100%;
 }
 
@@ -50,10 +50,9 @@
 
 .header-cell,
 .table-cell {
-  padding: 12px 6px;
+  padding: 12px 8px;
   display: flex;
   align-items: center;
-  justify-content: center;
   min-width: 0;
   word-wrap: break-word;
 }
@@ -67,6 +66,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  justify-content: center;
   text-align: center;
 }
 
@@ -75,11 +75,13 @@
   color: #2c3e50;
   word-wrap: break-word;
   overflow: hidden;
-  text-align: center;
-  vertical-align: middle;
 }
 
-.employee-col {
+.employee-col.header-cell {
+  justify-content: center;
+}
+
+.employee-col.table-cell {
   justify-content: center;
 }
 
@@ -105,7 +107,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  flex: 1;
+  flex: 0;
 }
 
 .employee-name {
@@ -155,11 +157,13 @@
   font-size: 13px;
   color: #2c3e50;
   font-weight: 500;
+  text-align: center;
 }
 
 .login-time {
   font-size: 12px;
   color: #6c757d;
+  text-align: center;
 }
 
 .no-data-container {
@@ -195,7 +199,7 @@
 @media (min-width: 1400px) {
   .header-row,
   .table-row {
-    grid-template-columns: 4fr 2fr 1.2fr 2.5fr 2fr 2fr;
+    grid-template-columns: 3fr 1.5fr 1fr 2fr 1.5fr;
     gap: 12px;
     padding: 0 24px;
   }
@@ -206,7 +210,7 @@
   .table-row {
     grid-template-columns: 2.5fr 1.3fr 0.9fr 1.8fr 1.3fr;
     gap: 6px;
-    padding: 0 12px;
+    padding: 0 16px;
   }
 
   .employee-name {
