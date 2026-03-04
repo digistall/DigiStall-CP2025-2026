@@ -47,6 +47,15 @@ class ApiService {
       console.log('🔐 Token in response:', data.token ? 'YES (' + data.token.substring(0, 20) + '...)' : 'NO TOKEN!');
 
       if (!response.ok) {
+        // Pass through blocked account info (e.g., overdue payment)
+        if (data.blocked) {
+          return {
+            success: false,
+            blocked: true,
+            reason: data.reason,
+            message: data.message || 'Account is blocked'
+          };
+        }
         throw new Error(data.message || 'Login failed');
       }
 
