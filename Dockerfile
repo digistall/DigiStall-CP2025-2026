@@ -6,14 +6,14 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install dependencies for native modules (sharp, bcrypt, etc.)
+RUN apk add --no-cache python3 make g++ vips-dev
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy all application files
 COPY . .
