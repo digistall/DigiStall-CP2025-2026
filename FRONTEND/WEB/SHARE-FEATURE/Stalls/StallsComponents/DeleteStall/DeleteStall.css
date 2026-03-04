@@ -1,0 +1,281 @@
+/* Delete Confirmation Dialog Styles */
+.v-dialog {
+  max-width: 95vw !important;
+}
+
+.v-dialog .v-card {
+  border-radius: 16px !important;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+/* Modal Header */
+.v-dialog .v-card .v-card-title {
+  padding: 20px 24px 16px !important;
+  background: #d32f2f;
+  color: white !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.v-dialog .v-card .v-card-title .v-icon {
+  font-size: 28px !important;
+}
+
+.v-dialog .v-card .v-card-title .text-h6 {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+}
+
+/* Modal Body */
+.v-card-text {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  color: #000 !important;
+}
+
+.v-card-text .text-body-1 {
+  font-size: 16px !important;
+  margin-bottom: 16px !important;
+}
+
+.v-card-text .v-alert {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* Stall Details Box */
+.bg-grey-lighten-5 {
+  border: 1px solid #e0e0e0;
+}
+
+.bg-grey-lighten-5 .text-caption {
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bg-grey-lighten-5 .text-body-2 {
+  font-size: 14px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Modal Footer Buttons */
+.v-card-actions .v-btn {
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.3px !important;
+  border-radius: 8px !important;
+  padding: 8px 20px !important;
+  transition: all 0.25s ease-in-out;
+}
+
+/* Cancel Button */
+.v-card-actions .v-btn[color="grey-darken-1"] {
+  background: #e0e0e0 !important;
+  color: #424242 !important;
+}
+
+.v-card-actions .v-btn[color="grey-darken-1"]:hover {
+  background: #cfcfcf !important;
+  transform: translateY(-2px);
+}
+
+/* Delete Button */
+.v-card-actions .v-btn[color="error"] {
+  background: #d32f2f !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.35) !important;
+}
+
+.v-card-actions .v-btn[color="error"]:hover {
+  background: #b71c1c !important;
+  box-shadow: 0 8px 22px rgba(211, 47, 47, 0.5) !important;
+  transform: translateY(-2px);
+}
+
+.v-card-actions .v-btn[color="error"] .v-icon {
+  margin-right: 8px;
+}
+
+/* Success Popup Styles */
+.success-popup-card {
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%) !important;
+  color: white !important;
+  border-radius: 20px !important;
+  position: relative;
+  overflow: hidden;
+  min-height: 200px;
+  z-index: 9999 !important;
+}
+
+.popup-content {
+  padding: 40px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute !important;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Loading Animation */
+.loading-spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 4px solid transparent;
+  border-top: 4px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+}
+
+.spinner-ring:nth-child(2) {
+  width: 60px;
+  height: 60px;
+  top: 10px;
+  left: 10px;
+  animation-duration: 1s;
+  animation-direction: reverse;
+}
+
+.spinner-ring:nth-child(3) {
+  width: 40px;
+  height: 40px;
+  top: 20px;
+  left: 20px;
+  animation-duration: 0.8s;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Success Check Animation */
+.success-icon {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.checkmark-circle {
+  width: 80px;
+  height: 80px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: circle-fill 0.6s ease-in-out;
+  margin: 0 auto; 
+}
+
+.checkmark {
+  width: 24px;
+  height: 12px;
+  border: 4px solid white;
+  border-top: none;
+  border-right: none;
+  transform: rotate(-45deg);
+  animation: checkmark-draw 0.4s ease-in-out 0.2s both;
+  opacity: 0;
+  position: relative;
+  margin-top: 2px; 
+  margin-left: -2px; 
+}
+
+@keyframes circle-fill {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes checkmark-draw {
+  0% {
+    opacity: 0;
+    transform: rotate(-45deg) scale(0);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-45deg) scale(1);
+  }
+}
+
+.success-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  animation: fade-in-up 0.6s ease-out 0.4s both;
+}
+
+.popup-text {
+  font-size: 16px;
+  opacity: 0.9;
+  line-height: 1.5;
+  animation: fade-in-up 0.6s ease-out 0.6s both;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 0.9;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+  .v-dialog .v-card .v-card-title {
+    padding: 16px !important;
+  }
+
+  .v-card-text {
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+
+  .v-card-actions {
+    padding: 12px !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .v-card-actions .v-btn {
+    width: 100%;
+  }
+}
