@@ -250,14 +250,23 @@ export default {
     confirmActionHandler() {
       console.log('✅ Confirm action - selectedApplicant:', this.selectedApplicant)
       console.log('✅ Confirm action - applicant_id to use:', this.selectedApplicant?.applicant_id)
-      if (this.confirmAction === 'accept') {
-        this.$emit('accept', this.selectedApplicant)
-      } else {
-        this.$emit('decline', this.selectedApplicant)
-      }
+      const action = this.confirmAction
+      const applicant = this.selectedApplicant
+
       this.showConfirmDialog = false
-      this.selectedApplicant = null
-      this.confirmAction = ''
+
+      if (action === 'accept') {
+        this.$emit('accept', applicant)
+      } else {
+        this.$emit('decline', applicant)
+      }
+
+      // Delay reset until after Vuetify dialog close animation (300ms)
+      // to prevent the header from flashing red during the transition
+      setTimeout(() => {
+        this.selectedApplicant = null
+        this.confirmAction = ''
+      }, 300)
     },
     formatDate(date) {
       if (!date) return 'N/A'

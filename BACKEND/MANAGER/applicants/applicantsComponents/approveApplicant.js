@@ -228,6 +228,7 @@ export const approveApplicant = async (req, res) => {
       console.log('⚠️ Stallholder already exists, updating...');
       await connection.execute(
         `UPDATE stallholder SET 
+          mobile_user_id = ?,
           full_name = ?,
           email = ?,
           contact_number = ?,
@@ -240,6 +241,7 @@ export const approveApplicant = async (req, res) => {
           updated_at = NOW()
         WHERE applicant_id = ?`,
         [
+          applicant.applicant_id,
           applicant.encrypted_name,
           applicant.encrypted_email,
           applicant.encrypted_contact,
@@ -254,6 +256,7 @@ export const approveApplicant = async (req, res) => {
       const [stallholderResult] = await connection.execute(
         `INSERT INTO stallholder (
           applicant_id,
+          mobile_user_id,
           full_name,
           email,
           contact_number,
@@ -264,8 +267,9 @@ export const approveApplicant = async (req, res) => {
           status,
           compliance_status,
           move_in_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
         [
+          applicant.applicant_id,
           applicant.applicant_id,
           applicant.encrypted_name,
           applicant.encrypted_email,

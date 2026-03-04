@@ -219,7 +219,9 @@ export default {
             floorNumber: s.floorNumber || s.floor_number || null,
             monthlyRental: parseFloat(s.monthlyRental || s.rental_price || 0),
             moveInDate: s.contract_start_date || s.move_in_date || null,
-            paymentStatus: s.payment_status || 'unpaid'
+            paymentStatus: s.payment_status || 'unpaid',
+            // Check if current month has been paid (from backend subquery)
+            _currentMonthPaid: parseFloat(s.current_month_paid_amount || 0) > 0
           }))
         } else {
           this.showToast('Failed to load stall list', 'error')
@@ -246,10 +248,11 @@ export default {
 
       // If due day doesn't exist in month (e.g. 31 in Feb), use last day
       if (dueDate.getMonth() !== now.getMonth()) {
-        dueDate.setDate(0) // last day of prev month â†’ correct to last day of current month
+        dueDate.setDate(0) // last day of prev month → correct to last day of current month
       }
 
-      const isPaid = (stall.paymentStatus || '').toLowerCase() === 'paid'
+      // Check if paid: use DB payment_status OR check actual payments for current month
+      const isPaid = (stall.paymentStatus || '').toLowerCase() === 'paid' || stall._currentMonthPaid
 
       if (isPaid) {
         // We don't know advance vs on-time from just payment_status; show Paid

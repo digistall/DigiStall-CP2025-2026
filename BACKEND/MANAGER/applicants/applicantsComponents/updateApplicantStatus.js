@@ -338,6 +338,7 @@ export const updateApplicantStatus = async (req, res) => {
             await connection.execute(
               `INSERT INTO stallholder (
                 applicant_id,
+                mobile_user_id,
                 stallholder_name,
                 contact_number,
                 email,
@@ -353,8 +354,9 @@ export const updateApplicantStatus = async (req, res) => {
                 payment_status,
                 compliance_status,
                 date_created
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
               [
+                applicant.applicant_id,
                 applicant.applicant_id,
                 applicant.encrypted_name,           // Use encrypted name
                 applicant.encrypted_contact,        // Use encrypted contact

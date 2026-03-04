@@ -106,26 +106,60 @@ export const mobileLogin = async (req, res) => {
     const otherData = otherResult[0] || [];
     console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
 
-    // Get application status
-    const [applicationResult] = await connection.execute('CALL sp_getLatestApplicationByApplicantId(?)', [applicantId]);
-    const applicationData = applicationResult[0] || [];
+    // Get application status - direct query instead of SP to include section/floor data
+    const [applicationResult] = await connection.execute(`
+      SELECT 
+        a.*,
+        s.stall_number,
+        s.stall_location,
+        s.size,
+        s.stall_size,
+        s.area_sqm,
+        s.rental_price,
+        s.section as stall_section,
+        s.floor_level as stall_floor_level,
+        sec.section_name,
+        f.floor_name as joined_floor_name,
+        b.branch_id as stall_branch_id,
+        b.branch_name
+      FROM application a
+      LEFT JOIN stall s ON a.stall_id = s.stall_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON sec.floor_id = f.floor_id
+      LEFT JOIN branch b ON s.branch_id = b.branch_id
+      WHERE a.applicant_id = ?
+      ORDER BY a.created_at DESC
+      LIMIT 1
+    `, [applicantId]);
+    const applicationData = applicationResult || [];
     console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
+    console.log('📝 Application raw data:', JSON.stringify(applicationData, null, 2));
 
     // Get stallholder information (if approved) - Using direct query instead of stored procedure
     // because sp_getStallholderByApplicantId depends on fn_getEncryptionKey which may not exist
     // Check both applicant_id and mobile_user_id since stallholders can be linked by either
+    // Also JOIN section and floor tables for guaranteed location/size fallback data
     const [stallholderResult] = await connection.execute(`
       SELECT 
         sh.*,
         s.stall_number,
         s.stall_location,
         s.size,
+        s.stall_size,
+        s.area_sqm,
+        s.floor_level,
+        s.section,
         s.monthly_rent as stall_monthly_rent,
         s.rental_price as stall_rental_price,
-        b.branch_name
+        s.price_type,
+        b.branch_name,
+        sec.section_name,
+        f.floor_name as joined_floor_name
       FROM stallholder sh
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON sec.floor_id = f.floor_id
       WHERE sh.applicant_id = ? OR sh.mobile_user_id = ?
     `, [applicantId, applicantId]);
     let stallholderData = stallholderResult || [];
@@ -134,6 +168,7 @@ export const mobileLogin = async (req, res) => {
       stallholderData[0] = await decryptStallholderData(stallholderData[0]);
     }
     console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
+    console.log('🏪 Stallholder raw data:', JSON.stringify(stallholderData, null, 2));
 
     // ===== CHECK IF STALLHOLDER IS OVERDUE — BLOCK LOGIN =====
     if (stallholderData.length > 0 && stallholderData[0].status === 'active') {
@@ -270,11 +305,11 @@ export const mobileLogin = async (req, res) => {
         status: applicationData[0].application_status,
         application_date: applicationData[0].application_date,
         stall_number: applicationData[0].stall_number || applicationData[0].stall_no,
-        stall_no: applicationData[0].stall_no || applicationData[0].stall_number, // Keep for backwards compatibility
+        stall_no: applicationData[0].stall_no || applicationData[0].stall_number,
         rental_price: applicationData[0].rental_price,
-        stall_location: applicationData[0].stall_location,
-        size: applicationData[0].size,
-        branch_id: applicationData[0].branch_id,
+        stall_location: applicationData[0].stall_location || applicationData[0].stall_section || applicationData[0].section_name || applicationData[0].stall_floor_level || applicationData[0].joined_floor_name || null,
+        size: applicationData[0].size || applicationData[0].stall_size || (applicationData[0].area_sqm ? `${applicationData[0].area_sqm} sq.m` : null),
+        branch_id: applicationData[0].branch_id || applicationData[0].stall_branch_id,
         branch_name: applicationData[0].branch_name
       } : null,
       stallholder: stallholderData.length > 0 ? {
@@ -290,8 +325,9 @@ export const mobileLogin = async (req, res) => {
         stall_id: stallholderData[0].stall_id,
         stall_number: stallholderData[0].stall_number || stallholderData[0].stall_no,
         stall_no: stallholderData[0].stall_no || stallholderData[0].stall_number, // Keep for backwards compatibility
-        stall_location: stallholderData[0].stall_location,
-        size: stallholderData[0].size,
+        stall_location: stallholderData[0].stall_location || stallholderData[0].section || stallholderData[0].section_name || stallholderData[0].floor_level || stallholderData[0].joined_floor_name || null,
+        size: stallholderData[0].size || stallholderData[0].stall_size || (stallholderData[0].area_sqm ? `${stallholderData[0].area_sqm} sq.m` : null),
+        price_type: stallholderData[0].price_type || null,
         // Contract dates - move_in_date is the contract start date
         move_in_date: stallholderData[0].move_in_date,
         contract_start_date: stallholderData[0].move_in_date, // Use move_in_date as contract start

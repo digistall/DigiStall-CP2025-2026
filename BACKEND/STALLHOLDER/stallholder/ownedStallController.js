@@ -30,13 +30,32 @@ export const getOwnedStalls = async (req, res) => {
     connection = await createConnection();
 
     // Get all stallholder records for this applicant across all branches
-    // Uses sp_getStallholderStallsForDocuments which already joins stall + branch tables
-    const [stallResult] = await connection.execute(
-      'CALL sp_getStallholderStallsForDocuments(?)',
-      [applicantId]
+    // Direct query to check both mobile_user_id AND applicant_id
+    const [rawStalls] = await connection.execute(
+      `SELECT 
+        sh.stallholder_id,
+        sh.full_name as stallholder_name,
+        sh.email as stallholder_email,
+        sh.contact_number as stallholder_contact,
+        sh.address as stallholder_address,
+        sh.branch_id,
+        sh.stall_id,
+        sh.payment_status,
+        sh.status as contract_status,
+        sh.move_in_date as contract_start_date,
+        s.stall_number,
+        s.size,
+        s.rental_price as monthly_rent,
+        s.stall_location,
+        s.price_type as stall_type,
+        b.branch_name,
+        b.area as branch_area
+      FROM stallholder sh
+      LEFT JOIN stall s ON sh.stall_id = s.stall_id
+      LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      WHERE sh.mobile_user_id = ? OR sh.applicant_id = ?`,
+      [applicantId, applicantId]
     );
-
-    const rawStalls = stallResult[0] || [];
     console.log('?? Raw stalls from DB:', rawStalls.length);
 
     // For each stall, get additional details (images, payment info)
