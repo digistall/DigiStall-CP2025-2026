@@ -25,7 +25,7 @@ import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholder
 import Stalls from '@shared-features/Stalls/Stalls.vue'
 
 // BUSINESS-MANAGER module - Manager-exclusive features
-import Employees from '@business-manager/Employees/Employees/Employees.vue'
+import Employees from '@business-manager/Employees/Employees.vue'
 
 // BUSINESS-OWNER module - Owner-only features
 import BranchManagement from '@business-owner/Branch/Branch.vue'
