@@ -218,9 +218,12 @@ export async function getApplicantDocumentBlobById(req, res) {
     const doc = documents[0]
     
     // Return binary data with correct content type
+    const mimeType = doc.mime_type || 'application/octet-stream'
+    const filename = doc.original_filename || `document_${document_id}`
+    
     res.set({
-      'Content-Type': doc.mime_type,
-      'Content-Disposition': `inline; filename="${doc.original_filename}"`,
+      'Content-Type': mimeType,
+      'Content-Disposition': `inline; filename="${filename}"`,
       'Cache-Control': 'public, max-age=3600'
     })
     res.send(doc.document_data)

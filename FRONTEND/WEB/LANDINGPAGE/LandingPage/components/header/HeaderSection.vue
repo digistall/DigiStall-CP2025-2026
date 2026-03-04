@@ -38,11 +38,6 @@
               <i class="mdi mdi-phone-outline"></i>
               <span>Contact</span>
             </a>
-            <button @click="handleLoginButtonClick" class="login-btn" :class="{ 'logged-in': isLoggedIn }">
-              <i :class="isLoggedIn ? 'mdi mdi-account-circle' : 'mdi mdi-login'"></i>
-              <span v-if="isLoggedIn" class="username-display">{{ currentUsername }}</span>
-              <span v-else>Login</span>
-            </button>
           </nav>
         </div>
       </div>

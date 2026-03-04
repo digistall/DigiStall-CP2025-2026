@@ -44,6 +44,11 @@ import {
   getOwnedStalls
 } from '../BACKEND/STALLHOLDER/stallholder/ownedStallController.js';
 
+// Import joined stall controller
+import {
+  getJoinedStalls
+} from '../BACKEND/STALLHOLDER/stallholder/joinedStallController.js';
+
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
 
@@ -205,6 +210,17 @@ router.get('/complaints', verifyToken, getMyComplaints);
  * @access Protected (Stallholder only)
  */
 router.get('/owned-stalls', verifyToken, getOwnedStalls);
+
+// =============================================
+// STALLHOLDER JOINED STALLS ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/joined-stalls
+ * @desc Get all stalls the user has joined via raffle or auction
+ * @access Protected (Stallholder only)
+ */
+router.get('/joined-stalls', verifyToken, getJoinedStalls);
 
 // =============================================
 // STALLHOLDER PAYMENT ROUTES

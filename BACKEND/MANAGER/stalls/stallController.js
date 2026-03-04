@@ -38,6 +38,7 @@ import { getActiveAuctions, getAuctionDetails } from './stallComponents/auctionC
 import { getAuctionParticipantsByStall } from './stallComponents/auctionComponents/getAuctionParticipantsByStall.js'
 import { extendAuctionTimer, cancelAuction } from './stallComponents/auctionComponents/manageAuction.js'
 import { selectAuctionWinner, autoSelectWinnerForExpiredAuctions } from './stallComponents/auctionComponents/selectWinner.js'
+import { getParticipantDetail } from './stallComponents/getParticipantDetail.js'
 
 // Export all stall functions (components are called directly)
 export {
@@ -83,6 +84,9 @@ export {
   extendAuctionTimer,
   cancelAuction,
   selectAuctionWinner,
-  autoSelectWinnerForExpiredAuctions
+  autoSelectWinnerForExpiredAuctions,
+  
+  // Participant detail
+  getParticipantDetail
 }
 

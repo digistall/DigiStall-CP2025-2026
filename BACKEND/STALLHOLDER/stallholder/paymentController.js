@@ -19,23 +19,23 @@ export const getPaymentRecords = async (req, res) => {
     
     connection = await createConnection();
     
-    // Get the actual stallholder_id from the database using the applicant/user ID
-    let stallholderId = null;
+    // Get ALL stallholder_ids from the database using the applicant/user ID
     const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    let stallholderIds = [];
     
     if (lookupId) {
-      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
+      console.log('🔍 Looking up stallholder_ids for applicant/user ID:', lookupId);
       const [stallholderResult] = await connection.execute(
         'CALL sp_getStallholderIdByApplicant(?)',
         [lookupId]
       );
       if (stallholderResult[0] && stallholderResult[0].length > 0) {
-        stallholderId = stallholderResult[0][0].stallholder_id;
-        console.log('✅ Found stallholder_id:', stallholderId);
+        stallholderIds = stallholderResult[0].map(r => r.stallholder_id);
+        console.log('✅ Found stallholder_ids:', stallholderIds);
       }
     }
     
-    if (!stallholderId) {
+    if (stallholderIds.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No stallholder record found. Please contact support.',
@@ -43,21 +43,33 @@ export const getPaymentRecords = async (req, res) => {
       });
     }
     
-    console.log('📋 Fetching payment records for stallholder:', stallholderId, 'page:', pageInt, 'limit:', limitInt);
+    console.log('📋 Fetching payment records for stallholders:', stallholderIds, 'page:', pageInt, 'limit:', limitInt);
     
-    // Get total count of payments using stored procedure
-    const [countResult] = await connection.execute(
-      'CALL sp_getPaymentCountByStallholder(?)',
-      [stallholderId]
-    );
-    const totalRecords = countResult[0]?.[0]?.total || 0;
+    // Build placeholders for IN clause
+    const placeholders = stallholderIds.map(() => '?').join(',');
     
-    // Get payment records with pagination using stored procedure
-    const [paymentResult] = await connection.execute(
-      'CALL sp_getPaymentsByStallholderPaginated(?, ?, ?)',
-      [stallholderId, limitInt, offsetInt]
+    // Get total count of payments for ALL stalls
+    // Use query() instead of execute() to avoid prepared statement issues with IN clause
+    const [countRows] = await connection.query(
+      `SELECT COUNT(*) as total FROM payments WHERE stallholder_id IN (${placeholders})`,
+      stallholderIds
     );
-    const payments = paymentResult[0] || [];
+    const totalRecords = countRows[0]?.total || 0;
+    
+    // Get payment records with pagination for ALL stalls
+    const [payments] = await connection.query(
+      `SELECT p.payment_id, p.amount, p.payment_date, p.payment_time, p.payment_status,
+              p.payment_type, p.payment_for_month, p.payment_method, p.reference_number,
+              p.collected_by, p.notes, p.created_at,
+              s.stall_number
+       FROM payments p
+       LEFT JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+       LEFT JOIN stall s ON sh.stall_id = s.stall_id
+       WHERE p.stallholder_id IN (${placeholders})
+       ORDER BY p.payment_date DESC, p.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...stallholderIds, limitInt, offsetInt]
+    );
     
     await connection.end();
     
@@ -73,13 +85,13 @@ export const getPaymentRecords = async (req, res) => {
       method: formatPaymentMethod(payment.payment_method),
       reference: payment.reference_number || 'N/A',
       collectedBy: payment.collected_by || 'N/A',
-      branch: payment.branch_name || 'N/A',
+      stallNumber: payment.stall_number || 'N/A',
       notes: payment.notes || '',
       paymentForMonth: payment.payment_for_month,
       createdAt: payment.created_at
     }));
     
-    console.log(`✅ Found ${payments.length} payment records for stallholder ${stallholderId}`);
+    console.log(`✅ Found ${payments.length} payment records for stallholders ${stallholderIds}`);
     
     return res.status(200).json({
       success: true,
@@ -366,119 +378,117 @@ export const getMonthlyPaymentStatus = async (req, res) => {
     const userData = req.user; // From auth middleware
     console.log('🔐 User data from token (getMonthlyPaymentStatus):', JSON.stringify(userData, null, 2));
     
-    let stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
+    const applicantId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
-    if (!stallholderId) {
+    if (!applicantId) {
       return res.status(400).json({
         success: false,
         message: 'Unable to identify stallholder. Please log out and log in again.'
       });
     }
     
-    console.log('📅 Fetching monthly payment status for stallholder:', stallholderId);
+    console.log('📅 Fetching monthly payment status for applicant:', applicantId);
     
     connection = await createConnection();
     
-    // If we only have applicantId, try to get stallholder_id
-    if (userData.applicantId && !userData.stallholderId) {
-      const [stallholderResult] = await connection.execute(
-        'CALL sp_getStallholderIdByApplicant(?)',
-        [userData.applicantId]
-      );
-      if (stallholderResult[0] && stallholderResult[0].length > 0) {
-        stallholderId = stallholderResult[0][0].stallholder_id;
-        console.log('📅 Found stallholder_id from applicant_id:', stallholderId);
-      }
-    }
+    // Get ALL stalls for this applicant (no longer LIMIT 1)
+    const [spResult] = await connection.execute(
+      'CALL sp_getStallInfoByApplicant(?)',
+      [applicantId]
+    );
+    const allStalls = spResult[0] || [];
+    console.log('📅 Found stalls:', allStalls.length);
     
+    if (allStalls.length === 0) {
+      await connection.end();
+      return res.status(200).json({
+        success: true,
+        data: {
+          stalls: [],
+          currentMonth: '',
+          currentMonthName: '',
+          // Legacy single-stall fields for backward compatibility
+          status: 'unpaid',
+          stallNumber: 'N/A',
+          amountDue: '₱0.00',
+          monthlyRent: '₱0.00',
+          isUnpaid: true,
+          isPaid: false,
+          isPending: false,
+          statusMessage: 'No stalls found'
+        }
+      });
+    }
+
     // Get current month in YYYY-MM format
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const currentMonthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
     console.log('📅 Checking payment for month:', currentMonth);
-    
-    // Check if there's a completed payment for the current month
-    const [paymentResult] = await connection.execute(
-      `SELECT 
-        p.payment_id,
-        p.amount,
-        p.payment_date,
-        p.payment_status,
-        p.payment_for_month,
-        p.payment_type
-      FROM payments p
-      WHERE p.stallholder_id = ?
-        AND p.payment_for_month = ?
-        AND p.payment_status IN ('completed', 'paid')
-        AND p.payment_type = 'rental'
-      ORDER BY p.payment_date DESC
-      LIMIT 1`,
-      [stallholderId, currentMonth]
-    );
-    
-    // Get stallholder info - use applicant_id to call stored procedure
-    const applicantId = userData.userId || userData.applicantId || userData.id;
-    console.log('📅 Looking up stall info for applicant_id:', applicantId);
 
-    // Use sp_getStallInfoByApplicant stored procedure
-    const [spResult] = await connection.execute(
-      'CALL sp_getStallInfoByApplicant(?)',
-      [applicantId]
-    );
-    const stallInfo = spResult[0]?.[0] || {};
-    console.log('📅 Stall info from SP:', JSON.stringify(stallInfo));
-    
-    // Check for any pending payment for current month
-    const [pendingResult] = await connection.execute(
-      `SELECT 
-        p.payment_id,
-        p.amount,
-        p.payment_date,
-        p.payment_status
-      FROM payments p
-      WHERE p.stallholder_id = ?
-        AND p.payment_for_month = ?
-        AND p.payment_status = 'pending'
-        AND p.payment_type = 'rental'
-      ORDER BY p.created_at DESC
-      LIMIT 1`,
-      [stallholderId, currentMonth]
-    );
-    
-    await connection.end();
-    
-    const currentPayment = paymentResult[0];
-    const pendingPayment = pendingResult[0];
-    const monthlyRent = parseFloat(stallInfo.monthly_rent) || 0;
-    
-    let status = 'unpaid';
-    let statusMessage = '';
-    let amountDue = monthlyRent;
-    let paymentDate = null;
-    
-    if (currentPayment) {
-      status = 'paid';
-      statusMessage = `Payment completed for ${currentMonthName}`;
-      amountDue = 0;
-      paymentDate = formatDate(currentPayment.payment_date);
-    } else if (pendingPayment) {
-      status = 'pending';
-      statusMessage = `Payment pending verification for ${currentMonthName}`;
-      amountDue = monthlyRent;
-    } else {
-      status = 'unpaid';
-      statusMessage = `Payment due for ${currentMonthName}`;
-      amountDue = monthlyRent;
-    }
-    
-    return res.status(200).json({
-      success: true,
-      data: {
-        currentMonth: currentMonth,
-        currentMonthName: currentMonthName,
-        status: status,
-        statusMessage: statusMessage,
+    // Build payment status for EACH stall
+    const stallStatuses = [];
+    for (const stallInfo of allStalls) {
+      const shId = stallInfo.stallholder_id;
+      const monthlyRent = parseFloat(stallInfo.monthly_rent) || 0;
+
+      // Check completed payment
+      const [paymentResult] = await connection.execute(
+        `SELECT payment_id, amount, payment_date, payment_status, payment_for_month, payment_type
+         FROM payments
+         WHERE stallholder_id = ?
+           AND payment_for_month = ?
+           AND payment_status IN ('completed', 'paid')
+           AND payment_type = 'rental'
+         ORDER BY payment_date DESC
+         LIMIT 1`,
+        [shId, currentMonth]
+      );
+
+      // Check pending payment
+      const [pendingResult] = await connection.execute(
+        `SELECT payment_id, amount, payment_date, payment_status
+         FROM payments
+         WHERE stallholder_id = ?
+           AND payment_for_month = ?
+           AND payment_status = 'pending'
+           AND payment_type = 'rental'
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [shId, currentMonth]
+      );
+
+      const currentPayment = paymentResult[0];
+      const pendingPayment = pendingResult[0];
+
+      let status = 'unpaid';
+      let statusMessage = '';
+      let amountDue = monthlyRent;
+      let paymentDate = null;
+
+      if (currentPayment) {
+        status = 'paid';
+        statusMessage = `Payment completed for ${currentMonthName}`;
+        amountDue = 0;
+        paymentDate = formatDate(currentPayment.payment_date);
+      } else if (pendingPayment) {
+        status = 'pending';
+        statusMessage = `Payment pending verification for ${currentMonthName}`;
+        amountDue = monthlyRent;
+      } else {
+        status = 'unpaid';
+        statusMessage = `Payment due for ${currentMonthName}`;
+        amountDue = monthlyRent;
+      }
+
+      stallStatuses.push({
+        stallholderId: shId,
+        stallId: stallInfo.stall_id,
+        stallNumber: stallInfo.stall_number || 'N/A',
+        stallType: stallInfo.stall_type || 'N/A',
+        status,
+        statusMessage,
         isPaid: status === 'paid',
         isPending: status === 'pending',
         isUnpaid: status === 'unpaid',
@@ -486,10 +496,24 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         amountDueRaw: amountDue,
         monthlyRent: formatCurrency(monthlyRent),
         monthlyRentRaw: monthlyRent,
-        paymentDate: paymentDate,
-        stallNumber: stallInfo.stall_number || 'N/A',
-        stallType: stallInfo.stall_type || 'N/A',
+        paymentDate,
         dueDate: getDueDate(now)
+      });
+    }
+
+    await connection.end();
+
+    // Use the first stall for backward-compatible single-stall fields
+    const primary = stallStatuses[0];
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        stalls: stallStatuses,
+        currentMonth,
+        currentMonthName,
+        // Legacy single-stall fields for backward compatibility
+        ...primary
       }
     });
     

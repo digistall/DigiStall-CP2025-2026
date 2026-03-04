@@ -1,17 +1,26 @@
 <template>
   <v-container fluid class="login-container">
-    <!-- Back Button - Upper Left -->
-    <v-btn
-      class="back-btn"
-      @click="goToLandingPage"
-      :disabled="loading"
-      variant="elevated"
-      size="large"
-      prepend-icon="mdi-arrow-left"
-    >
-      Back
-    </v-btn>
+    <!-- Mobile Device Error Screen -->
+    <div v-if="isMobileDevice" class="mobile-error-overlay">
+      <div class="mobile-error-card">
+        <div class="mobile-error-icon">
+          <v-icon size="80" color="error">mdi-monitor-cellphone-star</v-icon>
+        </div>
+        <h1 class="mobile-error-code">400</h1>
+        <h2 class="mobile-error-title">Desktop Only</h2>
+        <p class="mobile-error-message">
+          The DigiStall Web Portal is designed for desktop computers only. 
+          Please use a desktop or laptop computer to access the login page.
+        </p>
+        <p class="mobile-error-hint">
+          For mobile access, please download the <strong>DigiStall Mobile App</strong> from the app store.
+        </p>
+        <v-icon size="40" color="grey">mdi-cellphone-arrow-down</v-icon>
+      </div>
+    </div>
 
+    <!-- Desktop Login Content -->
+    <template v-else>
     <v-row class="fill-height" no-gutters>
       <!-- Left Side - Logo and Title -->
       <v-col cols="12" md="8" class="left-section d-flex align-center justify-center">
@@ -171,6 +180,7 @@
       :operationType="errorPopup.operationType"
       @close="errorPopup.show = false"
     />
+    </template>
   </v-container>
 </template>
 
