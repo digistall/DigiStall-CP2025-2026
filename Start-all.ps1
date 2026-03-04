@@ -167,7 +167,7 @@ if ($startAll -or $Mobile) {
             Write-Host 'Installing dependencies...' -ForegroundColor Yellow
             npm install
             Write-Host ''
-            npx expo start -c
+            npx expo start -c --offline
 "@
     } else {
         Start-Process powershell -ArgumentList "-NoExit", "-Command", @"
@@ -178,7 +178,7 @@ if ($startAll -or $Mobile) {
             Write-Host '  Location: FRONTEND/MOBILE' -ForegroundColor Green
             Write-Host '========================================' -ForegroundColor Green
             Write-Host ''
-            npx expo start -c
+            npx expo start -c --offline
 "@
     }
 }

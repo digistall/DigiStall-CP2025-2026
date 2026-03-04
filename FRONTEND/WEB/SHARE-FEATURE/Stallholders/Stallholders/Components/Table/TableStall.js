@@ -475,20 +475,21 @@ export default {
       this.showDocPreviewDialog = true
 
       try {
-        // Documents are stored as BLOB in database
-        // Use the public endpoint under /api/documents (no auth required for direct img src access)
         const documentId = doc.document_id
         if (documentId) {
-          // Public blob endpoint at /api/documents/blob/:documentId
-          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-          this.documentPreviewUrl = `${baseUrl}/documents/blob/${documentId}`
-          console.log('Document preview URL:', this.documentPreviewUrl)
+          // Fetch blob via apiClient so auth token is sent
+          const response = await apiClient.get(`/documents/blob/${documentId}`, {
+            responseType: 'blob'
+          })
+          const blob = new Blob([response.data], { type: doc.document_mime_type || doc.file_type || 'image/jpeg' })
+          this.documentPreviewUrl = URL.createObjectURL(blob)
+          console.log('Document preview blob URL created for document_id:', documentId)
         } else {
           console.error('No document_id available for preview')
           this.documentPreviewError = true
         }
       } catch (error) {
-        console.error('Error setting up document preview:', error)
+        console.error('Error loading document preview:', error)
         this.documentPreviewError = true
       }
     },
@@ -542,24 +543,21 @@ export default {
 
     async downloadDocument(doc) {
       try {
-        const filePath = doc.file_path || doc.file_url
-        if (filePath) {
-          let downloadUrl
-          if (filePath.startsWith('http')) {
-            downloadUrl = filePath
-          } else {
-            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-            downloadUrl = `${baseUrl.replace('/api', '')}${filePath}`
-          }
-          
-          // Open in new tab to trigger download
+        const documentId = doc.document_id
+        if (documentId) {
+          // Fetch blob via apiClient with auth
+          const response = await apiClient.get(`/documents/blob/${documentId}`, {
+            responseType: 'blob'
+          })
+          const blob = new Blob([response.data], { type: doc.document_mime_type || doc.file_type || 'application/octet-stream' })
+          const url = URL.createObjectURL(blob)
           const link = document.createElement('a')
-          link.href = downloadUrl
-          link.download = doc.file_name || doc.original_filename || `document_${doc.document_id}`
-          link.target = '_blank'
+          link.href = url
+          link.download = doc.document_type || doc.document_name || `document_${documentId}`
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
+          URL.revokeObjectURL(url)
         } else {
           this.showDocSnackbar('Document file not available', 'error')
         }
@@ -672,8 +670,8 @@ export default {
     isImageDocument(fileTypeOrDoc) {
       // If passed a document object, check multiple fields
       if (fileTypeOrDoc && typeof fileTypeOrDoc === 'object') {
-        const fileType = (fileTypeOrDoc.file_type || '').toLowerCase()
-        const fileName = (fileTypeOrDoc.file_name || fileTypeOrDoc.original_filename || '').toLowerCase()
+        const fileType = (fileTypeOrDoc.file_type || fileTypeOrDoc.document_mime_type || '').toLowerCase()
+        const fileName = (fileTypeOrDoc.file_name || fileTypeOrDoc.document_name || fileTypeOrDoc.original_filename || '').toLowerCase()
         return fileType.includes('image') || 
                fileType.startsWith('image/') ||
                fileName.endsWith('.jpg') || 
@@ -698,8 +696,8 @@ export default {
     isPdfDocument(fileTypeOrDoc) {
       // If passed a document object, check multiple fields
       if (fileTypeOrDoc && typeof fileTypeOrDoc === 'object') {
-        const fileType = (fileTypeOrDoc.file_type || '').toLowerCase()
-        const fileName = (fileTypeOrDoc.file_name || fileTypeOrDoc.original_filename || '').toLowerCase()
+        const fileType = (fileTypeOrDoc.file_type || fileTypeOrDoc.document_mime_type || '').toLowerCase()
+        const fileName = (fileTypeOrDoc.file_name || fileTypeOrDoc.document_name || fileTypeOrDoc.original_filename || '').toLowerCase()
         return fileType.includes('pdf') || fileName.endsWith('.pdf')
       }
       // If passed a string (file_type or file_name)
