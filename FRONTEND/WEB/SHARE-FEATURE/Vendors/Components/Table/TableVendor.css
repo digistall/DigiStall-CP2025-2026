@@ -40,9 +40,8 @@
 }
 
 .table-header {
-  background: linear-gradient(135deg, #002181 0%, #0047ab 100%);
+  background: rgb(0, 33, 129);
   color: white;
-  box-shadow: 0 2px 8px rgba(0, 33, 129, 0.15);
 }
 
 .header-row,
@@ -55,9 +54,9 @@
   width: 100%;
 }
 
-/* Vendor Layout - 7 columns */
+/* Vendor Layout - 6 columns (no Vendor ID) */
 .simplified-layout {
-  grid-template-columns: 100px 1.1fr 1.3fr 1.5fr 140px 110px 130px;
+  grid-template-columns: 1.8fr 1.6fr 2fr 1.5fr 1.3fr 1.2fr;
   width: 100%;
 }
 
@@ -114,39 +113,44 @@
   vertical-align: middle;
 }
 
-/* Column specific styles */
-.id-col {
-  justify-content: center;
-  font-weight: 600;
-  color: #1976d2;
-}
-
+/* Column specific styles - all centered */
 .name-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
   font-weight: 500;
 }
 
 .business-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
 }
 
 .email-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
 }
 
 .phone-col {
   justify-content: center;
+  text-align: center;
   font-family: 'Monaco', 'Menlo', monospace;
 }
 
 .stall-col {
-  justify-content: flex-start;
+  justify-content: center;
+  text-align: center;
 }
 
 .status-col {
   justify-content: center;
+  text-align: center;
+}
+
+.compliance-col {
+  justify-content: center;
+  text-align: center;
 }
 
 .actions-col {
@@ -390,7 +394,7 @@
 /* Mobile responsiveness */
 @media (max-width: 1200px) {
   .simplified-layout {
-    grid-template-columns: 0.8fr 1.6fr 1.8fr 1.6fr 1.2fr 1.3fr 1.6fr;
+    grid-template-columns: 1.5fr 1.4fr 1.8fr 1.3fr 1.2fr 1.1fr;
   }
 }
 
