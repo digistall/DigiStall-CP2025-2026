@@ -211,9 +211,7 @@
             <v-col cols="12" md="6">
               <div class="detail-item">
                 <span class="detail-label">Amount:</span>
-                <span class="detail-value">{{
-                  formatCurrency(selectedPayment.amount)
-                }}</span>
+                <span class="detail-value">{{ formatCurrency(selectedPayment.amount) }}</span>
               </div>
             </v-col>
             <v-col cols="12" md="6">

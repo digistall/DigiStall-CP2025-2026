@@ -11,12 +11,12 @@ import { createConnection } from "../../../config/database.js";
  * Uses local timezone (expected: Philippine Time UTC+8) to preserve the correct calendar date.
  */
 function formatDateForDB(val) {
-  if (!val || val === '') return null;
+  if (!val || val === "") return null;
   if (val instanceof Date) {
     if (isNaN(val.getTime())) return null;
     const y = val.getFullYear();
-    const m = String(val.getMonth() + 1).padStart(2, '0');
-    const d = String(val.getDate()).padStart(2, '0');
+    const m = String(val.getMonth() + 1).padStart(2, "0");
+    const d = String(val.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   }
   const s = String(val).trim();
@@ -24,8 +24,8 @@ function formatDateForDB(val) {
   const date = new Date(s);
   if (isNaN(date.getTime())) return null;
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
@@ -40,10 +40,9 @@ export async function getAssignedLocations(req, res) {
 
     connection = await createConnection();
 
-    const [result] = await connection.execute(
-      "CALL getAssignedLocations(?)",
-      [search],
-    );
+    const [result] = await connection.execute("CALL getAssignedLocations(?)", [
+      search,
+    ]);
 
     const locations = result[0] || [];
 
@@ -200,10 +199,12 @@ export async function getAllVendors(req, res) {
     const vendors = result[0] || [];
 
     // Format date fields to YYYY-MM-DD strings for frontend compatibility
-    vendors.forEach(v => {
+    vendors.forEach((v) => {
       if (v.birthdate) v.birthdate = formatDateForDB(v.birthdate);
-      if (v.spouse_birthdate) v.spouse_birthdate = formatDateForDB(v.spouse_birthdate);
-      if (v.child_birthdate) v.child_birthdate = formatDateForDB(v.child_birthdate);
+      if (v.spouse_birthdate)
+        v.spouse_birthdate = formatDateForDB(v.spouse_birthdate);
+      if (v.child_birthdate)
+        v.child_birthdate = formatDateForDB(v.child_birthdate);
     });
 
     console.log(`✅ Fetched ${vendors.length} vendors`);
@@ -255,8 +256,10 @@ export async function getVendorById(req, res) {
 
     // Format date fields to YYYY-MM-DD strings for frontend compatibility
     if (vendor.birthdate) vendor.birthdate = formatDateForDB(vendor.birthdate);
-    if (vendor.spouse_birthdate) vendor.spouse_birthdate = formatDateForDB(vendor.spouse_birthdate);
-    if (vendor.child_birthdate) vendor.child_birthdate = formatDateForDB(vendor.child_birthdate);
+    if (vendor.spouse_birthdate)
+      vendor.spouse_birthdate = formatDateForDB(vendor.spouse_birthdate);
+    if (vendor.child_birthdate)
+      vendor.child_birthdate = formatDateForDB(vendor.child_birthdate);
 
     console.log(`✅ Fetched vendor: ${vendor.full_name}`);
 
@@ -322,12 +325,22 @@ export async function updateVendor(req, res) {
 
     console.log(`🔄 Updating vendor with relations: ${id}`);
 
-    console.log('📦 Update payload received:', {
-      id, firstName, lastName, suffix, birthdate,
-      spouseFullName, spouseAge, spouseBirthdate,
-      childFullName, childAge, childBirthdate,
-      businessName, vendingTimeStart, vendingTimeEnd,
-      assignedLocationId
+    console.log("📦 Update payload received:", {
+      id,
+      firstName,
+      lastName,
+      suffix,
+      birthdate,
+      spouseFullName,
+      spouseAge,
+      spouseBirthdate,
+      childFullName,
+      childAge,
+      childBirthdate,
+      businessName,
+      vendingTimeStart,
+      vendingTimeEnd,
+      assignedLocationId,
     });
 
     // Update vendor with all relations using stored procedure (28 params)

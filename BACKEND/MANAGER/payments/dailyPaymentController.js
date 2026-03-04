@@ -1,5 +1,8 @@
 import { createConnection } from "../../../config/database.js";
-import { decryptAES256GCM, isAES256GCMEncrypted } from "../../../services/mysqlDecryptionService.js";
+import {
+  decryptAES256GCM,
+  isAES256GCMEncrypted,
+} from "../../../services/mysqlDecryptionService.js";
 
 /**
  * Safely decrypt a value if it is AES-256-GCM encrypted.

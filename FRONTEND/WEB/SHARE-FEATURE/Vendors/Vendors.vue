@@ -7,11 +7,7 @@
       <!-- Main Content -->
       <v-main class="vendors-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
-        <LoadingOverlay
-          :loading="loading"
-          text="Loading vendors..."
-          :full-page="false"
-        />
+        <LoadingOverlay :loading="loading" text="Loading vendors..." :full-page="false" />
 
         <v-container fluid class="main-content">
           <v-row>
