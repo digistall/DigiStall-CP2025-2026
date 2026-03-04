@@ -27,6 +27,8 @@
                 @view="view"
                 @edit="edit"
                 @open-add-dialog="openAddDialog"
+                @vendor-added="handleSave"
+                @refresh-vendors="initializeVendors"
               />
 
               <!-- Add Vendor Dialog -->

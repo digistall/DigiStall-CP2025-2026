@@ -4,7 +4,6 @@
       <!-- Custom Table Header -->
       <div class="table-header">
         <div class="header-row simplified-layout">
-          <div class="header-cell id-col">Vendor ID</div>
           <div class="header-cell name-col">Vendor's Name</div>
           <div class="header-cell business-col">Business Name</div>
           <div class="header-cell email-col">Email Address</div>
@@ -22,7 +21,6 @@
           class="table-row simplified-layout clickable-row"
           @click="$emit('view', vendor.raw || vendor)"
         >
-          <div class="table-cell id-col">#{{ vendor.id }}</div>
           <div class="table-cell name-col">{{ vendor.name }}</div>
           <div class="table-cell business-col">{{ vendor.business }}</div>
           <div class="table-cell email-col">{{ vendor.email || 'N/A' }}</div>

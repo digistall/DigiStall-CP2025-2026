@@ -5,7 +5,8 @@ import {
   getAllVendors,
   getVendorById,
   updateVendor,
-  deleteVendor
+  deleteVendor,
+  getAssignedLocations
 } from '../BACKEND/MANAGER/vendors/vendorController.js';
 
 const router = express.Router();
@@ -32,6 +33,13 @@ router.post('/', enhancedAuthMiddleware.authenticateToken, createVendor);
  * @access  Protected
  */
 router.get('/', enhancedAuthMiddleware.authenticateToken, getAllVendors);
+
+/**
+ * @route   GET /api/vendors/locations
+ * @desc    Get assigned locations for dropdown
+ * @access  Protected
+ */
+router.get('/locations', enhancedAuthMiddleware.authenticateToken, getAssignedLocations);
 
 /**
  * @route   GET /api/vendors/:id

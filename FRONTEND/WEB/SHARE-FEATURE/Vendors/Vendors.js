@@ -3,7 +3,7 @@ import VendorDetailsDialog from './Components/VendorDetailsDialog/VendorDetailsD
 import EditVendorDialog from './Components/EditVendorDialog/EditVendorDialog.vue'
 import SearchVendor from './Components/Search/SearchVendor.vue'
 import TableVendor from './Components/Table/TableVendor.vue'
-import LoadingOverlay from '../../Common/LoadingOverlay/LoadingOverlay.vue'
+import LoadingOverlay from '@SHARED_COMPONENTS/LoadingOverlay/LoadingOverlay.vue'
 
 export default {
   name: 'Vendors',
@@ -32,7 +32,6 @@ export default {
       })(),
 
       headers: [
-        { title: 'Vendor ID', value: 'id', width: 120 },
         { title: "Vendor's Name", value: 'name' },
         { title: 'Business Name', value: 'business' },
         { title: 'Status', value: 'status', width: 120 },
@@ -202,7 +201,7 @@ export default {
 
     edit(row) {
       this.editData = row?.raw || row
-      this.editTargetId = row?.id
+      this.editTargetId = row?.id || row?.vendor_id
       this.editDialog = true
     },
 
@@ -249,7 +248,7 @@ export default {
     handleEditFromDetails(vendorData) {
       this.detailsDialog = false
       this.editData = vendorData
-      this.editTargetId = vendorData?.vendorId || vendorData?.id
+      this.editTargetId = vendorData?.vendorId || vendorData?.id || vendorData?.vendor_id
       this.editDialog = true
     },
   },

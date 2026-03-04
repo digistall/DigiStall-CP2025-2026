@@ -5,6 +5,38 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:3001"
 ).replace(/\/api$/, "");
 
+/**
+ * Convert any date value (Date object, ISO string, etc.) to YYYY-MM-DD
+ * for HTML <input type="date"> compatibility.
+ * Uses local timezone to preserve the calendar date.
+ */
+function formatDate(val) {
+  if (!val) return "";
+  const s = String(val).trim();
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "";
+  return (
+    d.getFullYear() +
+    "-" +
+    String(d.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(d.getDate()).padStart(2, "0")
+  );
+}
+
+/**
+ * Normalize a time value (e.g. "09:00:00") to HH:MM for HTML <input type="time">.
+ */
+function formatTime(val) {
+  if (!val) return "";
+  const s = String(val).trim();
+  // Match HH:MM or HH:MM:SS and return HH:MM
+  const m = s.match(/^(\d{2}:\d{2})/);
+  return m ? m[1] : s;
+}
+
 export default {
   setup(props, { emit }) {
     // Support both v-model (modelValue) and :isVisible + @close API
@@ -114,7 +146,7 @@ export default {
         f.lastName = src.last_name || src.lastName || "";
         f.middleName = src.middle_name || src.middleName || "";
         f.suffix = src.suffix || "";
-        f.birthdate = src.birthdate || "";
+        f.birthdate = formatDate(src.birthdate);
         f.gender = src.gender || "Male";
         f.phone = src.contact_number || src.phone || "";
         f.email = src.email || "";
@@ -125,7 +157,7 @@ export default {
         // Spouse fields from database
         f.spouseFullName = src.spouse_full_name || src.spouseFullName || "";
         f.spouseAge = src.spouse_age || src.spouseAge || null;
-        f.spouseBirthdate = src.spouse_birthdate || src.spouseBirthdate || "";
+        f.spouseBirthdate = formatDate(src.spouse_birthdate || src.spouseBirthdate);
         f.spouseEducation = src.spouse_education || src.spouseEducation || "";
         f.spouseContact = src.spouse_contact || src.spouseContact || "";
         f.spouseOccupation =
@@ -134,7 +166,7 @@ export default {
         // Child fields from database
         f.childFullName = src.child_full_name || src.childFullName || "";
         f.childAge = src.child_age || src.childAge || null;
-        f.childBirthdate = src.child_birthdate || src.childBirthdate || "";
+        f.childBirthdate = formatDate(src.child_birthdate || src.childBirthdate);
 
         // Business fields from database
         f.businessName = src.business_name || src.businessName || "";
@@ -144,8 +176,8 @@ export default {
           src.productsSold ||
           src.businessDescription ||
           "";
-        f.vendStart = src.vending_time_start || src.vendStart || "";
-        f.vendEnd = src.vending_time_end || src.vendEnd || "";
+        f.vendStart = formatTime(src.vending_time_start || src.vendStart);
+        f.vendEnd = formatTime(src.vending_time_end || src.vendEnd);
 
         // Location field from database
         f.locationName = src.location_name || src.locationName || "";
