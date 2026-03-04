@@ -17,7 +17,7 @@ export const styles = StyleSheet.create({
     },
     shadowOpacity: 0.12,
     shadowRadius: 12,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
 
   tableHeader: {
@@ -72,7 +72,6 @@ export const styles = StyleSheet.create({
   },
 
   recordsList: {
-    flex: 1,
     paddingBottom: 8,
   },
 

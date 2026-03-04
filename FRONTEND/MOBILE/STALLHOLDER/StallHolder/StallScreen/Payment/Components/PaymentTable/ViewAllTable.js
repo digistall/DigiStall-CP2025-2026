@@ -24,6 +24,7 @@ const ViewAllTable = ({
 }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const isDark = theme?.dark || false;
 
   useEffect(() => {
     if (visible) {
@@ -182,9 +183,23 @@ const ViewAllTable = ({
         
         {/* Main Info */}
         <View style={styles.recordMainInfo}>
-          <Text style={[styles.recordDescription, theme && { color: theme.colors.text }]}>
-            {record.description}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={[styles.recordDescription, theme && { color: theme.colors.text }]}>
+              {record.description}
+            </Text>
+            {record.stallNumber && record.stallNumber !== 'N/A' && (
+              <View style={{ 
+                backgroundColor: isDark ? 'rgba(48, 92, 222, 0.2)' : 'rgba(48, 92, 222, 0.1)', 
+                paddingHorizontal: 6, 
+                paddingVertical: 2, 
+                borderRadius: 4 
+              }}>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#305CDE' }}>
+                  Stall {record.stallNumber}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text style={[styles.recordDate, theme && { color: theme.colors.textSecondary }]}>
             {record.date}
           </Text>

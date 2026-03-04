@@ -136,23 +136,25 @@ export const getAllPaymentRecords = async (req, res) => {
     
     connection = await createConnection();
     
-    // Get the actual stallholder_id from the database
-    let stallholderId = null;
+    // Get ALL stallholder_ids for this applicant (supports multiple stalls)
     const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
-    if (lookupId) {
-      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
-      const [stallholderResult] = await connection.execute(
-        'CALL sp_getStallholderIdByApplicant(?)',
-        [lookupId]
-      );
-      if (stallholderResult[0] && stallholderResult[0].length > 0) {
-        stallholderId = stallholderResult[0][0].stallholder_id;
-        console.log('✅ Found stallholder_id:', stallholderId);
-      }
+    if (!lookupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to identify user. Please log out and log in again.',
+        data: []
+      });
     }
     
-    if (!stallholderId) {
+    console.log('🔍 Looking up ALL stallholder_ids for applicant/user ID:', lookupId);
+    const [stallholderResult] = await connection.execute(
+      'CALL sp_getStallholderIdByApplicant(?)',
+      [lookupId]
+    );
+    const stallholderIds = (stallholderResult[0] || []).map(row => row.stallholder_id);
+    
+    if (stallholderIds.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No stallholder record found. Please contact support.',
@@ -160,19 +162,24 @@ export const getAllPaymentRecords = async (req, res) => {
       });
     }
     
-    console.log('📋 Fetching ALL payment records for stallholder:', stallholderId);
+    console.log('✅ Found stallholder_ids:', stallholderIds);
+    console.log('📋 Fetching ALL payment records for all stallholders...');
     
-    // Get all payment records using stored procedure
-    const [paymentResult] = await connection.execute(
-      'CALL sp_getAllPaymentsByStallholder(?)',
-      [stallholderId]
-    );
-    const payments = paymentResult[0] || [];
+    // Fetch payments for ALL stallholders
+    let allPayments = [];
+    for (const shId of stallholderIds) {
+      const [paymentResult] = await connection.execute(
+        'CALL sp_getAllPaymentsByStallholder(?)',
+        [shId]
+      );
+      const payments = paymentResult[0] || [];
+      allPayments = allPayments.concat(payments);
+    }
     
     await connection.end();
     
-    // Format the payment records
-    const formattedPayments = payments.map(payment => ({
+    // Format the payment records (now includes stall_number)
+    const formattedPayments = allPayments.map(payment => ({
       id: payment.payment_id,
       date: formatDate(payment.payment_date),
       time: payment.payment_time,
@@ -186,15 +193,21 @@ export const getAllPaymentRecords = async (req, res) => {
       branch: payment.branch_name || 'N/A',
       notes: payment.notes || '',
       paymentForMonth: payment.payment_for_month,
-      createdAt: payment.created_at
+      createdAt: payment.created_at,
+      // NEW: Include stall information
+      stallNumber: payment.stall_number || 'N/A',
+      stallType: payment.stall_type || 'N/A'
     }));
     
-    console.log(`✅ Found ${payments.length} total payment records for stallholder ${stallholderId}`);
+    // Sort by date descending (newest first)
+    formattedPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    console.log(`✅ Found ${allPayments.length} total payment records for ${stallholderIds.length} stall(s)`);
     
     return res.status(200).json({
       success: true,
       data: formattedPayments,
-      totalRecords: payments.length
+      totalRecords: formattedPayments.length
     });
     
   } catch (error) {

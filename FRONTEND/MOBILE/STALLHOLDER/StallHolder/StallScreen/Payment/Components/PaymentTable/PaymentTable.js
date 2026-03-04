@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated } from "react-native";
 import { styles } from "./PaymentTableStyles";
 import ViewAllTable from "./ViewAllTable";
 import ApiService from "../../../../../../services/ApiService";
@@ -67,10 +67,10 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
       // Check auth first
       const isAuth = await checkAuth();
       if (!isAuth) {
-        // Retry after a short delay if auth check fails initially
-        if (retryCount < 2) {
-          console.log('🔄 Retrying auth check in 500ms... Attempt:', retryCount + 1);
-          setTimeout(() => fetchPaymentRecords(retryCount + 1), 500);
+        // Retry after a delay if auth check fails initially (up to 3 retries)
+        if (retryCount < 3) {
+          console.log('🔄 Retrying auth check in 800ms... Attempt:', retryCount + 1);
+          setTimeout(() => fetchPaymentRecords(retryCount + 1), 800);
           return;
         }
         return;
@@ -85,20 +85,20 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
         setPaymentRecords(response.data || []);
         console.log('✅ Payment records loaded:', (response.data || []).length);
       } else {
-        // If it fails, retry once
-        if (retryCount < 1) {
-          console.log('🔄 Retrying payment fetch in 500ms...');
-          setTimeout(() => fetchPaymentRecords(retryCount + 1), 500);
+        // If it fails, retry up to 2 more times
+        if (retryCount < 2) {
+          console.log('🔄 Retrying payment fetch in 800ms...');
+          setTimeout(() => fetchPaymentRecords(retryCount + 1), 800);
           return;
         }
         setError(response.message || 'Failed to load payment records');
         console.error('❌ Failed to fetch payment records:', response.message);
       }
     } catch (err) {
-      // Retry once on network error
-      if (retryCount < 1) {
-        console.log('🔄 Retrying after network error in 500ms...');
-        setTimeout(() => fetchPaymentRecords(retryCount + 1), 500);
+      // Retry up to 2 times on network error with longer delay
+      if (retryCount < 2) {
+        console.log('🔄 Retrying after network error in 1000ms...');
+        setTimeout(() => fetchPaymentRecords(retryCount + 1), 1000);
         return;
       }
       setError('Network error. Please try again.');
@@ -126,9 +126,24 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
     }
   };
 
-  // Mount immediately - screen already staggers the render timing
+  // Mount with a small delay to ensure auth data is fully loaded
   useEffect(() => {
-    fetchPaymentRecords();
+    // Use isMounted flag to prevent state updates on unmounted component
+    let isMounted = true;
+    
+    const initFetch = async () => {
+      // Wait a bit for auth data to be fully available
+      await new Promise(resolve => setTimeout(resolve, 300));
+      if (isMounted) {
+        fetchPaymentRecords();
+      }
+    };
+    
+    initFetch();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [fetchPaymentRecords]);
 
   const onRefresh = useCallback(() => {
@@ -247,7 +262,21 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
         
         {/* Main Info */}
         <View style={styles.recordMainInfo}>
-          <Text style={[styles.recordDescription, { color: colors.text }]}>{record.description}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={[styles.recordDescription, { color: colors.text }]}>{record.description}</Text>
+            {record.stallNumber && record.stallNumber !== 'N/A' && (
+              <View style={{ 
+                backgroundColor: isDark ? 'rgba(48, 92, 222, 0.2)' : 'rgba(48, 92, 222, 0.1)', 
+                paddingHorizontal: 6, 
+                paddingVertical: 2, 
+                borderRadius: 4 
+              }}>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#305CDE' }}>
+                  Stall {record.stallNumber}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text style={[styles.recordDateInline, { color: colors.textSecondary }]}>{record.date}</Text>
         </View>
         
@@ -422,15 +451,8 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
         style={styles.recordsList}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
+        scrollEnabled={false}
         contentContainerStyle={{ paddingVertical: 8 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#305CDE"]}
-            tintColor="#305CDE"
-          />
-        }
       >
         {paymentRecords.map((record, index) => renderPaymentRecord(record, index))}
         
