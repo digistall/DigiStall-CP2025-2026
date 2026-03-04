@@ -21,8 +21,10 @@ export const API_CONFIG = {
     
     // DigitalOcean Production Server - MOVE TO TOP FOR DEPLOYED APPS
     // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
-     'http://68.183.154.125:5001',   // Production Backend-Mobile API
-     'http://68.183.154.125:5000',   // Production Backend-Web API (fallback)
+     'http://digi-stall.com:5001',    // Production Domain Backend-Mobile API
+     'http://68.183.154.125:5001',   // Production IP Backend-Mobile API
+     'http://digi-stall.com:5000',    // Production Domain Backend-Web API (fallback)
+     'http://68.183.154.125:5000',   // Production IP Backend-Web API (fallback)
   ],
   
   // Static file server for images (Apache on port 80)

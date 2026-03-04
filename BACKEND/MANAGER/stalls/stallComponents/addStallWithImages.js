@@ -1,4 +1,5 @@
 import { createConnection } from '../../../../config/database.js'
+import { compressBuffer } from '../../../../config/imageCompression.js'
 import path from 'path'
 import fs from 'fs'
 
@@ -247,8 +248,13 @@ export const addStallWithImages = async (req, res) => {
       for (let i = 0; i < base64Images.length && i < 10; i++) {
         const imgData = base64Images[i];
         const base64String = imgData.image_data.replace(/^data:image\/\w+;base64,/, '');
-        const imageBuffer = Buffer.from(base64String, 'base64');
+        let imageBuffer = Buffer.from(base64String, 'base64');
         const mimeType = imgData.mime_type || 'image/jpeg';
+        
+        // Compress image before storing
+        const compressed = await compressBuffer(imageBuffer, mimeType, { type: 'default' });
+        imageBuffer = compressed.buffer;
+        
         const fileName = imgData.file_name || `stall_${stallId}_${i + 1}.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
         const displayOrder = i + 1;
         

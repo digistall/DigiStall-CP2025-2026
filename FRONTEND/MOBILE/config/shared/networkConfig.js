@@ -36,8 +36,10 @@ const getDevHostIP = () => {
 
 // Server lists by environment
 const PRODUCTION_SERVERS = [
-  'http://68.183.154.125:5001',   // DigitalOcean Backend-Mobile API (PRIMARY)
-  'http://68.183.154.125:5000',   // DigitalOcean Backend-Web API (fallback)
+  'http://digi-stall.com:5001',    // Domain Backend-Mobile API (PRIMARY)
+  'http://68.183.154.125:5001',    // IP Backend-Mobile API (fallback)
+  'http://digi-stall.com:5000',    // Domain Backend-Web API (fallback)
+  'http://68.183.154.125:5000',    // IP Backend-Web API (fallback)
 ];
 
 // Build dev servers dynamically from auto-detected IP

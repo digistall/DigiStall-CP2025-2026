@@ -8,6 +8,7 @@
 // =============================================
 
 import { createConnection } from '../../../config/database.js'
+import { compressBuffer } from '../../../config/imageCompression.js'
 
 // =============================================
 // UPLOAD STALL IMAGE AS BLOB
@@ -38,10 +39,14 @@ export async function uploadStallImageBlob(req, res) {
     
     // Convert base64 to buffer
     const base64Data = image_data.replace(/^data:image\/\w+;base64,/, '')
-    const imageBuffer = Buffer.from(base64Data, 'base64')
+    let imageBuffer = Buffer.from(base64Data, 'base64')
+    
+    // Compress the image before storing
+    const compressed = await compressBuffer(imageBuffer, actualMimeType, { type: 'default' })
+    imageBuffer = compressed.buffer
     
     // NO SIZE LIMIT - LONGBLOB supports up to 4GB
-    console.log(`📸 Uploading image: ${imageBuffer.length} bytes (${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
+    console.log(`📸 Uploading image: ${imageBuffer.length} bytes (${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB)${!compressed.skipped ? ' [compressed]' : ''}`)
     
     connection = await createConnection()
     
@@ -158,8 +163,12 @@ export async function uploadStallImagesBlob(req, res) {
       displayOrder++
       
       const base64Data = img.image_data.replace(/^data:image\/\w+;base64,/, '')
-      const imageBuffer = Buffer.from(base64Data, 'base64')
+      let imageBuffer = Buffer.from(base64Data, 'base64')
       const actualMimeType = img.mime_type || 'image/jpeg'
+      
+      // Compress image before storing
+      const compressed = await compressBuffer(imageBuffer, actualMimeType, { type: 'default' })
+      imageBuffer = compressed.buffer
       const extension = actualMimeType === 'image/png' ? 'png' : 'jpg'
       const generatedFileName = img.file_name || `stall_${stall_id}_${Date.now()}_${i}.${extension}`
       const imageUrl = `/api/stalls/images/blob/${stall_id}/${displayOrder}`
@@ -549,7 +558,11 @@ export async function updateStallImageBlob(req, res) {
     
     // Convert base64 to buffer
     const base64Data = image_data.replace(/^data:image\/\w+;base64,/, '')
-    const imageBuffer = Buffer.from(base64Data, 'base64')
+    let imageBuffer = Buffer.from(base64Data, 'base64')
+    
+    // Compress image before storing
+    const compressed = await compressBuffer(imageBuffer, mime_type || 'image/jpeg', { type: 'default' })
+    imageBuffer = compressed.buffer
     
     // Check file size
     const maxSize = 2 * 1024 * 1024
