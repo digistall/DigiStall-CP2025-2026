@@ -149,8 +149,10 @@ export const getRaffleParticipantsByStall = async (req, res) => {
               );
               console.log('Applicant query result:', applicantDetails);
               
-              // Try to fetch email from stallholder table using applicant_id
+              // Try to fetch email from multiple sources
               let applicantEmail = 'N/A';
+              
+              // 1. Try stallholder table by applicant_id
               const [stallholderByApplicant] = await connection.execute(
                 `SELECT email, full_name FROM stallholder WHERE applicant_id = ? LIMIT 1`,
                 [p.applicant_id]
@@ -158,6 +160,34 @@ export const getRaffleParticipantsByStall = async (req, res) => {
               if (stallholderByApplicant.length > 0 && stallholderByApplicant[0].email) {
                 applicantEmail = decryptData(stallholderByApplicant[0].email) || 'N/A';
                 console.log('Found email from stallholder table by applicant_id:', applicantEmail);
+              }
+              
+              // 2. Try credential.username (often stores email)
+              if (applicantEmail === 'N/A') {
+                const [credentialResult] = await connection.execute(
+                  `SELECT username FROM credential WHERE applicant_id = ? LIMIT 1`,
+                  [p.applicant_id]
+                );
+                if (credentialResult.length > 0 && credentialResult[0].username) {
+                  const username = credentialResult[0].username;
+                  // Check if username looks like an email
+                  if (username.includes('@')) {
+                    applicantEmail = username;
+                    console.log('Found email from credential.username:', applicantEmail);
+                  }
+                }
+              }
+              
+              // 3. Try other_information.email_address (encrypted)
+              if (applicantEmail === 'N/A') {
+                const [otherInfoResult] = await connection.execute(
+                  `SELECT email_address FROM other_information WHERE applicant_id = ? LIMIT 1`,
+                  [p.applicant_id]
+                );
+                if (otherInfoResult.length > 0 && otherInfoResult[0].email_address) {
+                  applicantEmail = decryptData(otherInfoResult[0].email_address) || 'N/A';
+                  console.log('Found email from other_information:', applicantEmail);
+                }
               }
               
               if (applicantDetails.length > 0) {
