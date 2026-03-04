@@ -64,8 +64,8 @@ JWT_SECRET=your_super_secure_jwt_secret_change_this_in_production
 JWT_REFRESH_SECRET=your_super_secure_refresh_secret_change_this_in_production
 
 # CORS
-CORS_ORIGIN=http://68.183.154.125
-ALLOWED_ORIGINS=http://68.183.154.125,http://localhost
+CORS_ORIGIN=http://digi-stall.com
+ALLOWED_ORIGINS=http://digi-stall.com,http://68.183.154.125,http://localhost
 
 # Upload path (Docker volume)
 UPLOAD_PATH=/opt/digistall/uploads
@@ -88,8 +88,9 @@ sleep 10
 echo ""
 echo "✅ Deployment complete!"
 echo "======================================="
-echo "🌐 Frontend: http://68.183.154.125"
-echo "🔌 Backend API: http://68.183.154.125:3001/api"
+echo "🌐 Frontend Web: http://digi-stall.com (68.183.154.125)"
+echo "🔌 Backend Web API: http://digi-stall.com:5000/api (68.183.154.125:5000)"
+echo "📱 Backend Mobile API: http://digi-stall.com:5001/api (68.183.154.125:5001)"
 echo ""
 echo "📊 Container Status:"
 docker-compose ps

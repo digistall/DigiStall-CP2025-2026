@@ -26,6 +26,9 @@ import {
 } from '../BACKEND/MANAGER/applicants/applicantDocumentController.js'
 import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
 
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js'
+
 // Import BLOB document controller for cloud storage
 import {
   uploadApplicantDocumentBlob,
@@ -82,6 +85,7 @@ router.post('/cleanup/trigger', triggerCleanup)       // Manual trigger for admi
 router.post(
   '/:applicant_id/documents',
   uploadApplicantDocs,
+  compressUploads({ type: 'document' }),
   uploadApplicantDocuments
 )
 
