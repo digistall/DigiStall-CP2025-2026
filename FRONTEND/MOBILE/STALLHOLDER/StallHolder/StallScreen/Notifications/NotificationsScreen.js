@@ -3,7 +3,6 @@ import {
   FlatList,
   StyleSheet,
   SafeAreaView,
-  Alert,
   RefreshControl,
   Keyboard,
   TouchableWithoutFeedback,
@@ -14,9 +13,11 @@ import NotificationCard from "./Components/NotificationCard";
 import NotificationEmptyState from "./Components/NotificationEmptyState";
 import { generateSampleNotifications } from "./utils/notificationHelpers";
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 
 const NotificationsScreen = () => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   // Sample data
   const [allNotifications, setAllNotifications] = useState(
@@ -160,37 +161,29 @@ const NotificationsScreen = () => {
   };
 
   const handleDelete = (notificationId) => {
-    Alert.alert(
-      "Delete Notification",
-      "Are you sure you want to delete this notification?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            setAllNotifications((prev) =>
-              prev.filter((notification) => notification.id !== notificationId)
-            );
-          },
+    showAlert('confirm', 'Delete Notification', 'Are you sure you want to delete this notification?', [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          setAllNotifications((prev) =>
+            prev.filter((notification) => notification.id !== notificationId)
+          );
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleClearAll = () => {
-    Alert.alert(
-      "Clear All Notifications",
-      "Are you sure you want to clear all notifications? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear All",
-          style: "destructive",
-          onPress: () => setAllNotifications([]),
-        },
-      ]
-    );
+    showAlert('confirm', 'Clear All Notifications', 'Are you sure you want to clear all notifications? This action cannot be undone.', [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear All",
+        style: "destructive",
+        onPress: () => setAllNotifications([]),
+      },
+    ]);
   };
 
   const onRefresh = () => {
@@ -278,6 +271,7 @@ const NotificationsScreen = () => {
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={() => Keyboard.dismiss()}
         />
+        <AlertComponent />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );

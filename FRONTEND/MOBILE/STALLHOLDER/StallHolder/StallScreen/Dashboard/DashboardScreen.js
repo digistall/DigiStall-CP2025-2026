@@ -10,17 +10,18 @@ import {
   RefreshControl,
   TouchableOpacity,
   Vibration,
-  Alert,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import UserStorageService from "../../../../services/UserStorageService";
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 
 const { width, height } = Dimensions.get("window");
 
 const DashboardScreen = ({ onNavigate }) => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,8 +78,7 @@ const DashboardScreen = ({ onNavigate }) => {
       case 'support':
         console.log('📱 Quick Action: Show Support Info');
         // Show support information
-        Alert.alert(
-          '🆘 Support & Help',
+        showAlert('info', '🆘 Support & Help',
           'Need assistance?\n\n' +
           '📞 Contact: (123) 456-7890\n' +
           '📧 Email: support@digistall.com\n' +
@@ -491,6 +491,7 @@ const DashboardScreen = ({ onNavigate }) => {
           <View style={styles.bottomSpacing} />
         </View>
       </ScrollView>
+      <AlertComponent />
     </SafeAreaView>
   );
 };

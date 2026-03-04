@@ -5,7 +5,7 @@ export const selectRaffleWinner = async (req, res) => {
   let connection;
   try {
     const { raffleId } = req.params;
-    const { method = 'random' } = req.body; // 'random' or 'manual'
+    const { method = 'random', participantId } = req.body; // 'random' or 'manual', participantId for manual selection
     const branchManagerId = req.user?.branchManagerId || req.user?.userId;
 
     if (!branchManagerId) {
@@ -86,7 +86,18 @@ export const selectRaffleWinner = async (req, res) => {
 
     let winner;
 
-    if (participants.length === 1) {
+    if (method === 'manual' && participantId) {
+      // Manual selection - find the specific participant
+      const manualWinner = participants.find(p => p.participant_id == participantId);
+      if (!manualWinner) {
+        return res.status(400).json({
+          success: false,
+          message: 'Selected participant not found among registered participants'
+        });
+      }
+      winner = manualWinner;
+      console.log(`👑 Manually selected winner: ${winner.applicant_full_name}`);
+    } else if (participants.length === 1) {
       // Automatic winner if only one participant
       winner = participants[0];
       console.log(`👑 Automatic winner (only participant): ${winner.applicant_full_name}`);
@@ -99,10 +110,44 @@ export const selectRaffleWinner = async (req, res) => {
 
     // Look up the application for this winner + stall
     const [appInfo] = await connection.execute(
-      `SELECT application_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
+      `SELECT application_id, branch_id FROM application WHERE applicant_id = ? AND stall_id = ? LIMIT 1`,
       [winner.applicant_id, raffle.stall_id]
     );
     const applicationId = appInfo.length ? appInfo[0].application_id : null;
+
+    // Get applicant details for stallholder creation (email is in other_information table)
+    const [applicantDetails] = await connection.execute(
+      `SELECT a.applicant_id, a.applicant_full_name, oi.email_address, a.applicant_contact_number, a.applicant_address
+       FROM applicant a
+       LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
+       WHERE a.applicant_id = ?`,
+      [winner.applicant_id]
+    );
+
+    // Get branch_id from stall
+    const [stallBranch] = await connection.execute(
+      `SELECT branch_id FROM stall WHERE stall_id = ?`,
+      [raffle.stall_id]
+    );
+    const branchId = stallBranch.length ? stallBranch[0].branch_id : null;
+
+    // Check 2-stall-per-branch limit
+    if (branchId) {
+      const [existingStalls] = await connection.execute(
+        `SELECT COUNT(*) as stall_count FROM stallholder 
+         WHERE (applicant_id = ? OR mobile_user_id = ?) AND branch_id = ? AND status = 'active'`,
+        [winner.applicant_id, winner.applicant_id, branchId]
+      );
+      if (existingStalls[0].stall_count >= 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'This applicant already has the maximum of 2 stalls in this branch'
+        });
+      }
+    }
+
+    // Begin transaction (use query() not execute() for transaction commands)
+    await connection.query('START TRANSACTION');
 
     // Update raffle status to 'Drawn'
     await connection.execute(
@@ -122,10 +167,33 @@ export const selectRaffleWinner = async (req, res) => {
       [raffleId, winner.participant_id]
     );
 
-    // Update stall raffle_auction_status
+    // Update stall: raffle_auction_status, status to Occupied, is_available to 0
     await connection.execute(
-      `UPDATE stall SET raffle_auction_status = 'Drawn' WHERE stall_id = ?`,
+      `UPDATE stall SET raffle_auction_status = 'Drawn', status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
       [raffle.stall_id]
+    );
+
+    // Create stallholder record so stall appears in Owned Stalls
+    if (applicantDetails.length) {
+      const app = applicantDetails[0];
+      // Check if stallholder already exists for this applicant+stall
+      const [existingSH] = await connection.execute(
+        `SELECT stallholder_id FROM stallholder WHERE applicant_id = ? AND stall_id = ?`,
+        [app.applicant_id, raffle.stall_id]
+      );
+      if (existingSH.length === 0) {
+        await connection.execute(
+          `INSERT INTO stallholder (applicant_id, mobile_user_id, full_name, email, contact_number, address, stall_id, branch_id, payment_status, status, compliance_status, move_in_date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
+          [app.applicant_id, app.applicant_id, app.applicant_full_name, app.email_address, app.applicant_contact_number, app.applicant_address, raffle.stall_id, branchId]
+        );
+      }
+    }
+
+    // Update applicant status to approved
+    await connection.execute(
+      `UPDATE applicant SET status = 'approved' WHERE applicant_id = ?`,
+      [winner.applicant_id]
     );
 
     // Create raffle result record
@@ -143,12 +211,22 @@ export const selectRaffleWinner = async (req, res) => {
       );
     }
 
+    // Reject other pending applications for this stall
+    await connection.execute(
+      `UPDATE application SET application_status = 'Rejected', reviewed_by = ?, reviewed_at = NOW()
+       WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review') AND applicant_id != ?`,
+      [branchManagerId, raffle.stall_id, winner.applicant_id]
+    );
+
     // Log the winner selection
     await connection.execute(
       `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
        VALUES ('Raffle', ?, 'Winner Selected', ?, ?)`,
       [raffleId, branchManagerId, `Winner: ${winner.applicant_full_name} (ticket: ${winner.ticket_number || 'N/A'})`]
     );
+
+    // Commit transaction
+    await connection.query('COMMIT');
 
     console.log(`✅ Winner selected and raffle completed for stall ${raffle.stall_number}`);
 
@@ -172,6 +250,9 @@ export const selectRaffleWinner = async (req, res) => {
     });
 
   } catch (error) {
+    if (connection) {
+      try { await connection.query('ROLLBACK'); } catch (e) { /* ignore rollback error */ }
+    }
     console.error('❌ Select raffle winner error:', error);
     res.status(500).json({
       success: false,
@@ -262,6 +343,41 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
         );
         const applicationId = appInfo.length ? appInfo[0].application_id : null;
 
+        // Get applicant details for stallholder creation (email is in other_information table)
+        const [applicantDetails] = await connection.execute(
+          `SELECT a.applicant_id, a.applicant_full_name, oi.email_address, a.applicant_contact_number, a.applicant_address
+           FROM applicant a
+           LEFT JOIN other_information oi ON a.applicant_id = oi.applicant_id
+           WHERE a.applicant_id = ?`,
+          [winner.applicant_id]
+        );
+
+        // Get branch_id from stall
+        const [stallBranch] = await connection.execute(
+          `SELECT branch_id FROM stall WHERE stall_id = ?`,
+          [raffle.stall_id]
+        );
+        const branchId = stallBranch.length ? stallBranch[0].branch_id : null;
+
+        // Check 2-stall-per-branch limit
+        if (branchId) {
+          const [existingStalls] = await connection.execute(
+            `SELECT COUNT(*) as stall_count FROM stallholder 
+             WHERE (applicant_id = ? OR mobile_user_id = ?) AND branch_id = ? AND status = 'active'`,
+            [winner.applicant_id, winner.applicant_id, branchId]
+          );
+          if (existingStalls[0].stall_count >= 2) {
+            console.log(`⚠️ Skipping raffle ${raffle.raffle_id} - applicant already has 2 stalls in branch`);
+            results.push({
+              raffleId: raffle.raffle_id,
+              stallNumber: raffle.stall_number,
+              status: 'skipped_max_stalls',
+              message: 'Winner already has maximum 2 stalls in this branch'
+            });
+            continue;
+          }
+        }
+
         // Update raffle status to 'Drawn'
         await connection.execute(
           `UPDATE raffle SET status = 'Drawn' WHERE raffle_id = ?`,
@@ -280,10 +396,32 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
           [raffle.raffle_id, winner.participant_id]
         );
 
-        // Update stall
+        // Update stall: raffle_auction_status, status to Occupied, is_available to 0
         await connection.execute(
-          `UPDATE stall SET raffle_auction_status = 'Drawn' WHERE stall_id = ?`,
+          `UPDATE stall SET raffle_auction_status = 'Drawn', status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
           [raffle.stall_id]
+        );
+
+        // Create stallholder record so stall appears in Owned Stalls
+        if (applicantDetails.length) {
+          const app = applicantDetails[0];
+          const [existingSH] = await connection.execute(
+            `SELECT stallholder_id FROM stallholder WHERE applicant_id = ? AND stall_id = ?`,
+            [app.applicant_id, raffle.stall_id]
+          );
+          if (existingSH.length === 0) {
+            await connection.execute(
+              `INSERT INTO stallholder (applicant_id, mobile_user_id, full_name, email, contact_number, address, stall_id, branch_id, payment_status, status, compliance_status, move_in_date)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
+              [app.applicant_id, app.applicant_id, app.applicant_full_name, app.email_address, app.applicant_contact_number, app.applicant_address, raffle.stall_id, branchId]
+            );
+          }
+        }
+
+        // Update applicant status to approved
+        await connection.execute(
+          `UPDATE applicant SET status = 'approved' WHERE applicant_id = ?`,
+          [winner.applicant_id]
         );
 
         // Create raffle result
@@ -300,6 +438,13 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
             [applicationId]
           );
         }
+
+        // Reject other pending applications for this stall
+        await connection.execute(
+          `UPDATE application SET application_status = 'Rejected', reviewed_at = NOW()
+           WHERE stall_id = ? AND application_status IN ('Pending', 'Under Review') AND applicant_id != ?`,
+          [raffle.stall_id, winner.applicant_id]
+        );
 
         results.push({
           raffleId: raffle.raffle_id,

@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { ScrollView, StyleSheet, Dimensions, Text, View, Alert } from "react-native";
+import { ScrollView, StyleSheet, Dimensions, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import CrudLoadingOverlay from "../../../../components/Common/CrudLoadingOverlay";
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 import useLoading from "../../../../hooks/useLoading";
 import AuctionCard from "./Components/AuctionCardComponents/AuctionCard";
 import SearchFilterBar from "../Stall/components/SearchFilter/SearchFilterBar";
@@ -17,6 +18,7 @@ const { width } = Dimensions.get("window");
 const AuctionScreen = () => {
   const { theme } = useTheme();
   const { startLoading, stopLoading, overlayProps } = useLoading();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [showReminder, setShowReminder] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("ALL");
@@ -42,8 +44,7 @@ const AuctionScreen = () => {
       console.log('🔍 User Data:', userData ? 'Found' : 'Not Found');
       
       if (!userData || !userData.user) {
-        Alert.alert('Error', 'User not logged in. Please login again.');
-        setAuctionStallsData([]);
+        showAlert('error', 'Error', 'User not logged in. Please login again.');
         return;
       }
       
@@ -105,17 +106,13 @@ const AuctionScreen = () => {
         // Show informative message if no applications exist
         if (response.data?.restriction_message) {
           console.log('📢 Showing restriction alert');
-          Alert.alert(
-            'No Auction Stalls Available',
-            'You need to apply to a stall first to see auction stalls in that area. Please go to the Stall tab to submit your first application.',
-            [{ text: 'OK' }]
-          );
+          showAlert('info', 'No Auction Stalls Available', 'You need to apply to a stall first to see auction stalls in that area. Please go to the Stall tab to submit your first application.');
         }
       }
       
     } catch (error) {
       console.error('❌ Error loading auction stalls:', error);
-      Alert.alert('Error', 'Failed to load auction stalls. Please try again.');
+      showAlert('error', 'Error', 'Failed to load auction stalls. Please try again.');
       setAuctionStallsData([]);
     } finally {
       console.log('🏁 Loading complete');
@@ -133,7 +130,7 @@ const AuctionScreen = () => {
       // Get user data from storage
       const userData = await UserStorageService.getUserData();
       if (!userData || !userData.user) {
-        Alert.alert('Error', 'User not logged in. Please login again.');
+        showAlert('error', 'Error', 'User not logged in. Please login again.');
         return;
       }
       
@@ -172,11 +169,11 @@ const AuctionScreen = () => {
         );
       } else {
         console.error('❌ Failed to join auction:', response.message);
-        Alert.alert('Error', response.message || 'Failed to pre-register for auction.');
+        showAlert('error', 'Error', response.message || 'Failed to pre-register for auction.');
       }
     } catch (error) {
       console.error('❌ Error pre-registering for auction:', error);
-      Alert.alert('Error', 'Failed to pre-register for auction. Please try again.');
+      showAlert('error', 'Error', 'Failed to pre-register for auction. Please try again.');
     } finally {
       stopLoading();
     }
@@ -341,6 +338,7 @@ const AuctionScreen = () => {
         )}
       </SafeAreaView>
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </SafeAreaProvider>
   );
 };

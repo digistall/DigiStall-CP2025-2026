@@ -1,19 +1,18 @@
-import { View, Text, TouchableOpacity, Image, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { styles } from "../UploadDocument/UploadDocumentStyles";
+import { useCustomAlert } from '../../../../../../components/Common/CustomAlert';
 
 const UploadDocuments = ({
   documentType,
   uploadedDocument,
   onDocumentChange,
 }) => {
+  const { showAlert, AlertComponent } = useCustomAlert();
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Sorry, we need camera roll permissions to upload images"
-      );
+      showAlert('warning', 'Permission Required', 'Sorry, we need camera roll permissions to upload images');
       return false;
     }
     return true;
@@ -23,7 +22,7 @@ const UploadDocuments = ({
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    Alert.alert("Select Image", "Choose how you want to upload the document", [
+    showAlert('info', 'Select Image', 'Choose how you want to upload the document', [
       {
         text: "Camera",
         onPress: () => openCamera(),
@@ -42,10 +41,7 @@ const UploadDocuments = ({
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Camera permission is needed to take photos"
-      );
+      showAlert('warning', 'Permission Required', 'Camera permission is needed to take photos');
       return;
     }
 
@@ -75,23 +71,19 @@ const UploadDocuments = ({
   };
 
   const removeImage = () => {
-    Alert.alert(
-      "Remove Document",
-      "Are you sure you want to remove this document?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    showAlert('confirm', 'Remove Document', 'Are you sure you want to remove this document?', [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          onDocumentChange(documentType.key, null);
         },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            onDocumentChange(documentType.key, null);
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -125,6 +117,7 @@ const UploadDocuments = ({
           </Text>
         </TouchableOpacity>
       )}
+      <AlertComponent />
     </View>
   );
 };

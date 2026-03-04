@@ -5,12 +5,13 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import UploadDocuments from "../UploadDocument/UploadDocuments";
 import { styles } from "../DocumentModal/DocumentModalStyles";
+import { useCustomAlert } from '../../../../../../components/Common/CustomAlert';
 
 const DocumentModal = ({ visible, onClose, onSubmit }) => {
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [documents, setDocuments] = useState({
     votersId: null,
     associationClearance: null,
@@ -78,16 +79,12 @@ const DocumentModal = ({ visible, onClose, onSubmit }) => {
     );
 
     if (uploadedDocuments.length === 0) {
-      Alert.alert(
-        "No Documents",
-        "Please upload at least one document before submitting."
-      );
+      showAlert('warning', 'No Documents', 'Please upload at least one document before submitting.');
       return;
     }
 
     if (uploadedDocuments.length < documentTypes.length) {
-      Alert.alert(
-        "Incomplete Documents",
+      showAlert('confirm', 'Incomplete Documents',
         `You have uploaded ${uploadedDocuments.length} out of ${documentTypes.length} required documents. Do you want to submit anyway?`,
         [
           {
@@ -193,6 +190,7 @@ const DocumentModal = ({ visible, onClose, onSubmit }) => {
           </View>
         </ScrollView>
       </View>
+      <AlertComponent />
     </Modal>
   );
 };

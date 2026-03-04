@@ -8,13 +8,13 @@ import {
   Image,
   Dimensions,
   ScrollView,
-  Alert,
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +27,7 @@ const DocumentPreviewModal = ({
   isLoading = false,
 }) => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [imageLoading, setImageLoading] = useState(true);
   const [scale, setScale] = useState(1);
   const [fullScreenVisible, setFullScreenVisible] = useState(false);
@@ -117,8 +118,7 @@ const DocumentPreviewModal = ({
   });
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Document',
+    showAlert('confirm', 'Delete Document',
       `Are you sure you want to delete "${document?.file_name || 'this document'}"?\n\nThis action cannot be undone.`,
       [
         {
@@ -482,6 +482,7 @@ const DocumentPreviewModal = ({
         </View>
       </View>
     </Modal>
+    <AlertComponent />
     </>
   );
 };

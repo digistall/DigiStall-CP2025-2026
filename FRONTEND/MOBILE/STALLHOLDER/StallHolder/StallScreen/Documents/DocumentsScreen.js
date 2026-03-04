@@ -6,11 +6,11 @@ import {
   Dimensions,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   RefreshControl,
   Image,
 } from "react-native";
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,6 +30,7 @@ const { width, height } = Dimensions.get("window");
 const DocumentsScreen = () => {
   const { theme, isDark } = useTheme();
   const { startLoading, stopLoading, overlayProps } = useLoading();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   // State for tabs and data
   const [activeTabIndex, setActiveTabIndex] = useState(0);
@@ -126,11 +127,11 @@ const DocumentsScreen = () => {
           setGroupedByBranch([]);
         }
       } else {
-        Alert.alert('Error', response.message || 'Failed to load documents');
+        showAlert('error', 'Error', response.message || 'Failed to load documents');
       }
     } catch (error) {
       console.error('Error loading stallholder documents:', error);
-      Alert.alert('Error', 'Failed to connect to server');
+      showAlert('error', 'Error', 'Failed to connect to server');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -165,10 +166,7 @@ const DocumentsScreen = () => {
   };
 
   const handleUpload = (documentTypeId, documentName, stallholderId) => {
-    Alert.alert(
-      'Upload Document',
-      `Select upload method for ${documentName}`,
-      [
+    showAlert('info', 'Upload Document', `Select upload method for ${documentName}`, [
         {
           text: 'Take Photo',
           onPress: () => uploadFromCamera(documentTypeId, stallholderId),
@@ -185,8 +183,7 @@ const DocumentsScreen = () => {
           text: 'Cancel',
           style: 'cancel',
         },
-      ],
-      { cancelable: true }
+      ]
     );
   };
 
@@ -195,7 +192,7 @@ const DocumentsScreen = () => {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera permission is required to take photos');
+        showAlert('warning', 'Permission Required', 'Camera permission is required to take photos');
         return;
       }
 
@@ -210,7 +207,7 @@ const DocumentsScreen = () => {
         await performUpload(result.assets[0], documentTypeId, stallholderId);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to capture image');
+      showAlert('error', 'Error', 'Failed to capture image');
       console.error('Camera error:', error);
     }
   };
@@ -220,7 +217,7 @@ const DocumentsScreen = () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Gallery permission is required');
+        showAlert('warning', 'Permission Required', 'Gallery permission is required');
         return;
       }
 
@@ -235,7 +232,7 @@ const DocumentsScreen = () => {
         await performUpload(result.assets[0], documentTypeId, stallholderId);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to select image');
+      showAlert('error', 'Error', 'Failed to select image');
       console.error('Gallery error:', error);
     }
   };
@@ -258,7 +255,7 @@ const DocumentsScreen = () => {
         console.log('📄 Document selection cancelled');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to select document');
+      showAlert('error', 'Error', 'Failed to select document');
       console.error('Document picker error:', error);
     }
   };
@@ -294,16 +291,13 @@ const DocumentsScreen = () => {
       const response = await ApiService.uploadStallholderDocumentBlob(uploadPayload, currentToken);
       
       if (response.success) {
-        Alert.alert(
-          'Success',
-          'Document uploaded successfully and is pending verification'
-        );
+        showAlert('success', 'Success', 'Document uploaded successfully and is pending verification');
         await loadStallholderDocuments();
       } else {
-        Alert.alert('Upload Failed', response.message || 'Failed to upload');
+        showAlert('error', 'Upload Failed', response.message || 'Failed to upload');
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to upload document');
+      showAlert('error', 'Error', error.message || 'Failed to upload document');
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
@@ -383,7 +377,7 @@ const DocumentsScreen = () => {
       }
     } catch (error) {
       console.error('❌ Error loading document preview:', error);
-      Alert.alert('Error', 'Failed to load document');
+      showAlert('error', 'Error', 'Failed to load document');
     } finally {
       setPreviewLoading(false);
     }
@@ -399,7 +393,7 @@ const DocumentsScreen = () => {
   const deleteDocument = async () => {
     try {
       if (!selectedDocument?.document_id) {
-        Alert.alert('Error', 'Document ID not found');
+        showAlert('error', 'Error', 'Document ID not found');
         return;
       }
 
@@ -410,15 +404,15 @@ const DocumentsScreen = () => {
       );
 
       if (response.success) {
-        Alert.alert('Success', 'Document deleted successfully');
+        showAlert('success', 'Success', 'Document deleted successfully');
         closeDocumentPreview();
         await loadStallholderDocuments();
       } else {
-        Alert.alert('Error', response.message || 'Failed to delete document');
+        showAlert('error', 'Error', response.message || 'Failed to delete document');
       }
     } catch (error) {
       console.error('❌ Error deleting document:', error);
-      Alert.alert('Error', 'Failed to delete document');
+      showAlert('error', 'Error', 'Failed to delete document');
     } finally {
       stopLoading();
     }
@@ -732,6 +726,7 @@ const DocumentsScreen = () => {
         </>
       )}
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </View>
   );
 };

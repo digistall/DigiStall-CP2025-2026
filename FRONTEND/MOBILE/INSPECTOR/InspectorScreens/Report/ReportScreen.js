@@ -7,7 +7,6 @@ import {
   Dimensions,
   TouchableOpacity,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -20,6 +19,7 @@ import { useTheme } from "../../../components/ThemeComponents/ThemeContext";
 import ApiService from "../../../services/ApiService";
 import CrudLoadingOverlay from "../../../components/Common/CrudLoadingOverlay";
 import useLoading from "../../../hooks/useLoading";
+import { useCustomAlert } from "../../../components/Common/CustomAlert";
 
 const { width, height } = Dimensions.get("window");
 const MAX_PHOTOS = 5;
@@ -27,6 +27,7 @@ const MAX_PHOTOS = 5;
 const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSuccess, onCancel }) => {
   const { theme, isDark } = useTheme();
   const { startLoading, stopLoading, overlayProps } = useLoading();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   // Violation types from API
   const [violationTypes, setViolationTypes] = useState([]);
@@ -80,7 +81,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
   // Pick photo from camera
   const takePhoto = async () => {
     if (evidencePhotos.length >= MAX_PHOTOS) {
-      Alert.alert('Limit Reached', `Maximum ${MAX_PHOTOS} photos allowed per report.`);
+      showAlert('warning', 'Limit Reached', `Maximum ${MAX_PHOTOS} photos allowed per report.`);
       return;
     }
 
@@ -102,14 +103,14 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      showAlert('error', 'Error', 'Failed to take photo. Please try again.');
     }
   };
 
   // Pick photo from gallery
   const pickFromGallery = async () => {
     if (evidencePhotos.length >= MAX_PHOTOS) {
-      Alert.alert('Limit Reached', `Maximum ${MAX_PHOTOS} photos allowed per report.`);
+      showAlert('warning', 'Limit Reached', `Maximum ${MAX_PHOTOS} photos allowed per report.`);
       return;
     }
 
@@ -131,7 +132,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
       }
     } catch (error) {
       console.error('Error picking photos:', error);
-      Alert.alert('Error', 'Failed to pick photos. Please try again.');
+      showAlert('error', 'Error', 'Failed to pick photos. Please try again.');
     }
   };
 
@@ -142,24 +143,20 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
 
   // Show photo picker options
   const showPhotoOptions = () => {
-    Alert.alert(
-      'Add Photo Evidence',
-      'Choose how to add photos',
-      [
-        {
-          text: 'Take Photo',
-          onPress: takePhoto,
-        },
-        {
-          text: 'Choose from Gallery',
-          onPress: pickFromGallery,
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
+    showAlert('info', 'Add Photo Evidence', 'Choose how to add photos', [
+      {
+        text: 'Take Photo',
+        onPress: takePhoto,
+      },
+      {
+        text: 'Choose from Gallery',
+        onPress: pickFromGallery,
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
   };
 
   const loadViolationTypes = async () => {
@@ -202,31 +199,31 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
   const handleSubmit = () => {
     // Validation
     if (!stallholderName.trim()) {
-      Alert.alert("Error", "Please enter the stallholder name");
+      showAlert('error', 'Error', 'Please enter the stallholder name');
       return;
     }
     if (!stallholderId.trim()) {
-      Alert.alert("Error", "Please enter the stallholder ID");
+      showAlert('error', 'Error', 'Please enter the stallholder ID');
       return;
     }
     if (!branchId.trim()) {
-      Alert.alert("Error", "Please enter the branch ID");
+      showAlert('error', 'Error', 'Please enter the branch ID');
       return;
     }
     if (!receiptNumber.trim()) {
-      Alert.alert("Error", "Please enter the receipt number");
+      showAlert('error', 'Error', 'Please enter the receipt number');
       return;
     }
     if (receiptNumber.length !== 7 || !/^\d+$/.test(receiptNumber)) {
-      Alert.alert("Error", "Receipt number must be exactly 7 digits");
+      showAlert('error', 'Error', 'Receipt number must be exactly 7 digits');
       return;
     }
     if (!selectedViolation) {
-      Alert.alert("Error", "Please select a violation type");
+      showAlert('error', 'Error', 'Please select a violation type');
       return;
     }
     if (!evidence.trim()) {
-      Alert.alert("Error", "Please provide evidence description");
+      showAlert('error', 'Error', 'Please provide evidence description');
       return;
     }
 
@@ -236,8 +233,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
       : '\nPhotos: None';
 
     // Show confirmation
-    Alert.alert(
-      "Confirm Report Submission",
+    showAlert('confirm', 'Confirm Report Submission',
       `Are you sure you want to submit this violation report?\n\nStallholder: ${stallholderName}\nStallholder ID: ${stallholderId}\nBranch ID: ${branchId}\nReceipt No: ${receiptNumber}\nViolation: ${selectedViolation.violation_type}${photoInfo}`,
       [
         {
@@ -278,37 +274,33 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
                   ? `The violation report has been successfully submitted with ${evidencePhotos.length} photo(s).`
                   : "The violation report has been successfully submitted.";
                   
-                Alert.alert(
-                  "Report Submitted",
-                  successMessage,
-                  [
-                    {
-                      text: "OK",
-                      onPress: () => {
-                        // Reset form
-                        setSelectedViolation(null);
-                        setRemarks("");
-                        setEvidence("");
-                        setReceiptNumber("");
-                        setEvidencePhotos([]);
-                        if (!preselectedStall && !preselectedStallholder) {
-                          setStallholderName("");
-                          setStallholderId("");
-                          setBranchId("");
-                          setStallId("");
-                        }
-                        onSubmitSuccess && onSubmitSuccess();
-                      },
+                showAlert('success', 'Report Submitted', successMessage, [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      // Reset form
+                      setSelectedViolation(null);
+                      setRemarks("");
+                      setEvidence("");
+                      setReceiptNumber("");
+                      setEvidencePhotos([]);
+                      if (!preselectedStall && !preselectedStallholder) {
+                        setStallholderName("");
+                        setStallholderId("");
+                        setBranchId("");
+                        setStallId("");
+                      }
+                      onSubmitSuccess && onSubmitSuccess();
                     },
-                  ]
-                );
+                  },
+                ]);
               } else {
-                Alert.alert("Error", response.message || "Failed to submit report");
+                showAlert('error', 'Error', response.message || "Failed to submit report");
               }
             } catch (error) {
               setIsSubmitting(false);
               stopLoading();
-              Alert.alert("Error", "An unexpected error occurred. Please try again.");
+              showAlert('error', 'Error', "An unexpected error occurred. Please try again.");
               console.error('Submit error:', error);
             }
           },
@@ -643,6 +635,7 @@ const ReportScreen = ({ preselectedStall, preselectedStallholder, onSubmitSucces
         </View>
       </ScrollView>
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </KeyboardAvoidingView>
   );
 };

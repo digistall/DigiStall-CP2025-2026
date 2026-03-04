@@ -9,7 +9,6 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -18,12 +17,14 @@ import { useTheme } from '../../../../../../components/ThemeComponents/ThemeCont
 import { changePassword } from "../../../../../../services/AuthService";
 import CrudLoadingOverlay from "../../../../../../components/Common/CrudLoadingOverlay";
 import useLoading from "../../../../../../hooks/useLoading";
+import { useCustomAlert } from '../../../../../../components/Common/CustomAlert';
 
 const { width } = Dimensions.get("window");
 
 const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
   const { theme } = useTheme();
   const { startLoading, stopLoading, overlayProps } = useLoading();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   // Form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -116,10 +117,7 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
       const result = await changePassword(currentPassword, newPassword);
 
       if (result.success) {
-        Alert.alert(
-          "Success! 🎉",
-          "Your password has been changed successfully.",
-          [
+        showAlert('success', 'Success! 🎉', 'Your password has been changed successfully.', [
             {
               text: "OK",
               onPress: () => {
@@ -134,8 +132,7 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
                 onGoBack();
               },
             },
-          ]
-        );
+        ]);
       } else {
         setErrors({ submit: result.message || "Failed to change password" });
       }
@@ -392,6 +389,7 @@ const ChangePassword = ({ onGoBack, onPasswordChanged }) => {
       </ScrollView>
       </KeyboardAvoidingView>
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </View>
   );
 };

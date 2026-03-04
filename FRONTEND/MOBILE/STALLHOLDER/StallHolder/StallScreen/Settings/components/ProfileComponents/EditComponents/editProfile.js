@@ -6,7 +6,6 @@ import {
   ScrollView,
   Modal,
   TouchableOpacity,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
+import { useCustomAlert } from '../../../../../../../components/Common/CustomAlert';
 
 const { width, height } = Dimensions.get("window");
 
@@ -71,6 +71,7 @@ const InputField = React.memo(function InputField({
 // Main Modal Component
 const EditProfileModal = ({ visible, onClose, user, onSave }) => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const styles = createThemedEditStyles(theme);
   
   const [formData, setFormData] = useState({
@@ -155,7 +156,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
 
   const handleSave = useCallback(() => {
     if (!validateForm()) {
-      Alert.alert("Validation Error", "Please fix the errors before saving.");
+      showAlert('error', 'Validation Error', 'Please fix the errors before saving.');
       return;
     }
     const updatedData = {
@@ -165,8 +166,8 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
         : null,
     };
     onSave(updatedData);
-    Alert.alert("Success", "Profile updated successfully!");
-  }, [formData, onSave]);
+    showAlert('success', 'Success', 'Profile updated successfully!');
+  }, [formData, onSave, showAlert]);
 
   const handleInputChange = useCallback(
     (field, value) => {
@@ -400,6 +401,7 @@ const EditProfileModal = ({ visible, onClose, user, onSave }) => {
             <View style={styles.bottomSpacing} />
           </ScrollView>
         </KeyboardAvoidingView>
+        <AlertComponent />
       </View>
     </Modal>
   );

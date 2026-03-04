@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
-  Alert,
   Image,
 } from 'react-native';
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 
 // Import components
 import SearchFilterBar from './components/SearchFilter/SearchFilterBar';
@@ -39,6 +39,7 @@ const CARD_WIDTH = isTablet
 const TabbedStallScreen = () => {
   const { theme, isDark } = useTheme();
   const { startLoading, stopLoading, overlayProps } = useLoading();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [activeTab, setActiveTab] = useState('Fixed Price'); // Default to Fixed Price
   const [stallsData, setStallsData] = useState([]);
   const [filteredStalls, setFilteredStalls] = useState([]);
@@ -148,7 +149,7 @@ const TabbedStallScreen = () => {
       
       if (!userData || !userData.user) {
         console.log('❌ No user data found or missing user object');
-        Alert.alert('Error', 'User not logged in. Please login again.');
+        showAlert('error', 'Error', 'User not logged in. Please login again.');
         return;
       }
       
@@ -166,7 +167,7 @@ const TabbedStallScreen = () => {
       const applicantId = userData.user.applicant_id;
       
       if (!applicantId) {
-        Alert.alert('Error', 'User ID not found. Please login again.');
+        showAlert('error', 'Error', 'User ID not found. Please login again.');
         return;
       }
       
@@ -220,16 +221,12 @@ const TabbedStallScreen = () => {
         
         // Show informative message if no stalls found
         if (activeTab === 'Fixed Price' && response.data?.restriction_message) {
-          Alert.alert(
-            'No Stalls Available',
-            'You need to apply to your first stall to see more stalls in that area. Please check with your branch manager or admin to get started.',
-            [{ text: 'OK' }]
-          );
+          showAlert('info', 'No Stalls Available', 'You need to apply to your first stall to see more stalls in that area. Please check with your branch manager or admin to get started.');
         }
       }
     } catch (error) {
       console.error(`❌ Error loading ${activeTab} stalls:`, error);
-      Alert.alert('Error', `Failed to load ${activeTab} stalls. Please try again.`);
+      showAlert('error', 'Error', `Failed to load ${activeTab} stalls. Please try again.`);
       setStallsData([]);
     } finally {
       setLoading(false);
@@ -287,13 +284,13 @@ const TabbedStallScreen = () => {
     
     if (!userData || !userData.user || !userData.user.applicant_id) {
       console.error('❌ User validation failed - missing userData or applicant_id');
-      Alert.alert('Error', 'Please login again to apply for stalls.');
+      showAlert('error', 'Error', 'Please login again to apply for stalls.');
       return;
     }
     
     if (!userData.user) {
       console.error('❌ User validation failed - userData.user is missing');
-      Alert.alert('Error', 'User information not available. Please login again.');
+      showAlert('error', 'Error', 'User information not available. Please login again.');
       return;
     }
     
@@ -302,7 +299,7 @@ const TabbedStallScreen = () => {
     
     if (!applicantId) {
       console.error('❌ applicantId is null/undefined after extraction');
-      Alert.alert('Error', 'User ID not found. Please login again.');
+      showAlert('error', 'Error', 'User ID not found. Please login again.');
       return;
     }
 
@@ -324,22 +321,12 @@ const TabbedStallScreen = () => {
         console.log('🎰 joinRaffle response:', JSON.stringify(response, null, 2));
         
         if (response.success) {
-          Alert.alert(
-            'Raffle Joined! 🎉',
-            `You have successfully joined the raffle for this stall. Good luck!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  // Refresh stalls to show updated status
-                  loadUserDataAndStalls();
-                }
-              }
-            ]
-          );
+          showAlert('success', 'Raffle Joined! 🎉', 'You have successfully joined the raffle for this stall. Good luck!', [
+            { text: 'OK', onPress: () => loadUserDataAndStalls() }
+          ]);
         } else {
           console.error('❌ joinRaffle failed:', response.message);
-          Alert.alert('Failed to Join Raffle', response.message || 'Failed to join raffle. Please try again.');
+          showAlert('error', 'Failed to Join Raffle', response.message || 'Failed to join raffle. Please try again.');
         }
       } else if (activeTab === 'Auction') {
         // For Auction stalls, use joinAuction endpoint
@@ -353,22 +340,12 @@ const TabbedStallScreen = () => {
         console.log('🔨 joinAuction response:', JSON.stringify(response, null, 2));
         
         if (response.success) {
-          Alert.alert(
-            'Auction Joined! 🔨',
-            `You have successfully joined the auction for this stall. Good luck!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  // Refresh stalls to show updated status
-                  loadUserDataAndStalls();
-                }
-              }
-            ]
-          );
+          showAlert('success', 'Auction Joined! 🔨', 'You have successfully joined the auction for this stall. Good luck!', [
+            { text: 'OK', onPress: () => loadUserDataAndStalls() }
+          ]);
         } else {
           console.error('❌ joinAuction failed:', response.message);
-          Alert.alert('Failed to Join Auction', response.message || 'Failed to join auction. Please try again.');
+          showAlert('error', 'Failed to Join Auction', response.message || 'Failed to join auction. Please try again.');
         }
       } else {
         // For Fixed Price stalls, use submitApplication
@@ -388,22 +365,12 @@ const TabbedStallScreen = () => {
         console.log('📝 submitApplication response:', JSON.stringify(response, null, 2));
 
         if (response.success) {
-          Alert.alert(
-            'Application Submitted',
-            `Your application for ${activeTab} stall has been submitted successfully!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  // Refresh stalls to show updated status
-                  loadUserDataAndStalls();
-                }
-              }
-            ]
-          );
+          showAlert('success', 'Application Submitted', `Your application for ${activeTab} stall has been submitted successfully!`, [
+            { text: 'OK', onPress: () => loadUserDataAndStalls() }
+          ]);
         } else {
           console.error('❌ submitApplication failed:', response.message);
-          Alert.alert('Application Failed', response.message || 'Failed to submit application. Please try again.');
+          showAlert('error', 'Application Failed', response.message || 'Failed to submit application. Please try again.');
         }
       }
     } catch (error) {
@@ -411,7 +378,7 @@ const TabbedStallScreen = () => {
       console.error('❌ Error name:', error.name);
       console.error('❌ Error message:', error.message);
       console.error('❌ Error stack:', error.stack);
-      Alert.alert('Error', 'Failed to submit application. Please check your connection and try again.');
+      showAlert('error', 'Error', 'Failed to submit application. Please check your connection and try again.');
     } finally {
       setApplying(null);
       stopLoading();
@@ -548,6 +515,7 @@ const TabbedStallScreen = () => {
         onToggleFavorite={handleToggleFavorite}
       />
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </View>
   );
 };

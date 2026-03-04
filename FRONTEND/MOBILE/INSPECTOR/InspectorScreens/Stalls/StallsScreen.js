@@ -9,16 +9,17 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../components/ThemeComponents/ThemeContext";
 import ApiService from "../../../services/ApiService";
+import { useCustomAlert } from "../../../components/Common/CustomAlert";
 
 const { width, height } = Dimensions.get("window");
 
 const SentReportsScreen = ({ onSelectReport }) => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,11 +39,11 @@ const SentReportsScreen = ({ onSelectReport }) => {
       if (response.success) {
         setReports(response.data || []);
       } else {
-        Alert.alert('Error', response.message || 'Failed to load reports');
+        showAlert('error', 'Error', response.message || 'Failed to load reports');
       }
     } catch (error) {
       console.error('Error loading reports:', error);
-      Alert.alert('Error', 'Failed to load sent reports');
+      showAlert('error', 'Error', 'Failed to load sent reports');
     } finally {
       setLoading(false);
     }
@@ -407,6 +408,7 @@ const SentReportsScreen = ({ onSelectReport }) => {
           />
         }
       />
+      <AlertComponent />
     </View>
   );
 };

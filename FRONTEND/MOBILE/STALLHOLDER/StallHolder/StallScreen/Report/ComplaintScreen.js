@@ -7,12 +7,12 @@ import {
   Dimensions,
   TouchableOpacity,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Image,
 } from "react-native";
+import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -67,6 +67,7 @@ const COMPLAINT_TYPES = [
 
 const ComplaintScreen = () => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   // User data and token
   const [userData, setUserData] = useState(null);
@@ -124,7 +125,7 @@ const ComplaintScreen = () => {
   // Take photo with camera
   const takePhoto = async () => {
     if (evidencePhoto) {
-      Alert.alert('Photo Already Added', 'Please remove the current photo first.');
+      showAlert('info', 'Photo Already Added', 'Please remove the current photo first.');
       return;
     }
 
@@ -146,14 +147,14 @@ const ComplaintScreen = () => {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      showAlert('error', 'Error', 'Failed to take photo. Please try again.');
     }
   };
 
   // Pick photo from gallery
   const pickFromGallery = async () => {
     if (evidencePhoto) {
-      Alert.alert('Photo Already Added', 'Please remove the current photo first.');
+      showAlert('info', 'Photo Already Added', 'Please remove the current photo first.');
       return;
     }
 
@@ -175,7 +176,7 @@ const ComplaintScreen = () => {
       }
     } catch (error) {
       console.error('Error picking photo:', error);
-      Alert.alert('Error', 'Failed to pick photo. Please try again.');
+      showAlert('error', 'Error', 'Failed to pick photo. Please try again.');
     }
   };
 
@@ -186,10 +187,7 @@ const ComplaintScreen = () => {
 
   // Show photo picker options
   const showPhotoOptions = () => {
-    Alert.alert(
-      'Add Photo Evidence',
-      'Choose how to add a photo',
-      [
+    showAlert('info', 'Add Photo Evidence', 'Choose how to add a photo', [
         { text: 'Take Photo', onPress: takePhoto },
         { text: 'Choose from Gallery', onPress: pickFromGallery },
         { text: 'Cancel', style: 'cancel' },
@@ -201,19 +199,19 @@ const ComplaintScreen = () => {
   const handleSubmit = () => {
     // Validation
     if (!selectedComplaintType) {
-      Alert.alert("Error", "Please select a complaint type");
+      showAlert('error', 'Error', 'Please select a complaint type');
       return;
     }
     if (!subject.trim()) {
-      Alert.alert("Error", "Please enter a subject for your complaint");
+      showAlert('error', 'Error', 'Please enter a subject for your complaint');
       return;
     }
     if (!description.trim()) {
-      Alert.alert("Error", "Please describe your complaint in detail");
+      showAlert('error', 'Error', 'Please describe your complaint in detail');
       return;
     }
     if (description.trim().length < 20) {
-      Alert.alert("Error", "Please provide more details in your description (at least 20 characters)");
+      showAlert('error', 'Error', 'Please provide more details in your description (at least 20 characters)');
       return;
     }
 
@@ -221,12 +219,11 @@ const ComplaintScreen = () => {
     const photoInfo = evidencePhoto ? '\nPhoto Attached: Yes' : '';
 
     // Show confirmation
-    Alert.alert(
-      "Submit Complaint",
+    showAlert('confirm', 'Submit Complaint',
       `Are you sure you want to submit this complaint?\n\nType: ${selectedComplaintType.type}\nSubject: ${subject}${photoInfo}`,
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Submit", onPress: submitComplaint },
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Submit', onPress: submitComplaint },
       ]
     );
   };
@@ -257,30 +254,26 @@ const ComplaintScreen = () => {
       stopLoading();
       
       if (response.success) {
-        Alert.alert(
-          "Complaint Submitted",
-          "Your complaint has been successfully submitted. The management team will review it and get back to you soon.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                // Reset form
-                setSelectedComplaintType(null);
-                setSubject("");
-                setDescription("");
-                setEvidencePhoto(null);
-              },
+        showAlert('success', 'Complaint Submitted',
+          'Your complaint has been successfully submitted. The management team will review it and get back to you soon.',
+          [{
+            text: 'OK',
+            onPress: () => {
+              setSelectedComplaintType(null);
+              setSubject('');
+              setDescription('');
+              setEvidencePhoto(null);
             },
-          ]
+          }]
         );
       } else {
-        Alert.alert("Error", response.message || "Failed to submit complaint. Please try again.");
+        showAlert('error', 'Error', response.message || 'Failed to submit complaint. Please try again.');
       }
     } catch (error) {
       setIsSubmitting(false);
       stopLoading();
       console.error('Submit error:', error);
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      showAlert('error', 'Error', 'An unexpected error occurred. Please try again.');
     }
   };
 
@@ -536,6 +529,7 @@ const ComplaintScreen = () => {
         </View>
       </ScrollView>
       <CrudLoadingOverlay {...overlayProps} theme={theme} />
+      <AlertComponent />
     </KeyboardAvoidingView>
   );
 };

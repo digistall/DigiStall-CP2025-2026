@@ -363,7 +363,7 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
           </View>
           
           <View style={styles.locationContainer}>
-            <Text style={[styles.locationText, { color: colors.textSecondary }]}>{stall.location}</Text>
+            <Text style={styles.locationText}>{stall.location}</Text>
           </View>
         </View>
 
