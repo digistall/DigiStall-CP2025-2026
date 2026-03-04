@@ -82,6 +82,9 @@ import { addStallWithImages } from '../BACKEND/MANAGER/stalls/stallComponents/ad
 import upload, { checkImageLimit } from '../config/multerStallImages.js'
 import multer from 'multer'
 
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js'
+
 // Temporary upload for addStall - Configure with large limits for base64 images
 // Base64 encoding increases size by ~33%, so 100MB allows ~75MB of actual images
 const tempUpload = multer({ 
@@ -135,6 +138,7 @@ router.post('/',
   },
   viewOnlyForOwners, 
   tempUpload.array('images', 10), 
+  compressUploads({ type: 'default' }),
   addStallWithImages
 )  // POST /api/stalls - Add new stall with images
 router.get('/', getAllStalls)                 // GET /api/stalls - Get all stalls for branch manager
@@ -169,7 +173,7 @@ router.post('/auctions/auto-select-winners', viewOnlyForOwners, autoSelectWinner
 
 // ===== STALL IMAGE MANAGEMENT ROUTES =====
 // Upload stall images (max 10 per stall, 2MB each, PNG/JPG only)
-router.post('/:stall_id/images/upload', viewOnlyForOwners, upload.array('images', 10), uploadStallImages)  // POST /api/stalls/:stall_id/images/upload - Upload multiple images
+router.post('/:stall_id/images/upload', viewOnlyForOwners, upload.array('images', 10), compressUploads({ type: 'default' }), uploadStallImages)  // POST /api/stalls/:stall_id/images/upload - Upload multiple images
 router.get('/:stall_id/images', getStallImages)                     // GET /api/stalls/:stall_id/images - Get all images for stall
 router.get('/:stall_id/images/count', getStallImageCount)           // GET /api/stalls/:stall_id/images/count - Get image count
 router.delete('/images/:image_id', viewOnlyForOwners, deleteStallImage)                // DELETE /api/stalls/images/:image_id - Delete image by database ID

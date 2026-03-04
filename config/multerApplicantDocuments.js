@@ -10,6 +10,7 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
+import { compressImage, compressBuffer } from './imageCompression.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -200,7 +201,7 @@ export function deleteAllApplicantDocuments(branchId, applicantId) {
 }
 
 // Save document from base64 data (used during application submission)
-export function saveApplicantDocumentFromBase64(branchId, applicantId, documentType, base64Data, originalFilename) {
+export async function saveApplicantDocumentFromBase64(branchId, applicantId, documentType, base64Data, originalFilename) {
   try {
     const uploadPath = path.join(BASE_UPLOAD_DIR, String(branchId), String(applicantId))
     
@@ -251,6 +252,12 @@ export function saveApplicantDocumentFromBase64(branchId, applicantId, documentT
     const filePath = path.join(uploadPath, filename)
     
     fs.writeFileSync(filePath, buffer)
+    
+    // Compress the saved image file
+    if (/\.(jpg|jpeg|png|webp)$/i.test(ext)) {
+      await compressImage(filePath, { type: 'document' })
+    }
+    
     console.log(`✅ Saved document: ${filePath}`)
     
     return {
@@ -330,6 +337,13 @@ export async function saveApplicantDocumentToBlob(connection, applicantId, busin
     }
     const documentBuffer = Buffer.from(fileData, 'base64')
     
+    // Compress image documents before storing (skip PDFs)
+    let finalBuffer = documentBuffer
+    if (mimeType.startsWith('image/')) {
+      const compressed = await compressBuffer(documentBuffer, mimeType, { type: 'document' })
+      finalBuffer = compressed.buffer
+    }
+    
     // Virtual file path for API endpoint
     const virtualFilePath = `/api/applicants/documents/blob/${applicantId}/${documentTypeId}`
     
@@ -350,14 +364,14 @@ export async function saveApplicantDocumentToBlob(connection, applicantId, busin
       
       await connection.execute(
         'CALL sp_updateApplicantDocumentMulter(?, ?, ?, ?, ?, ?)',
-        [documentId, virtualFilePath, filename, documentBuffer.length, mimeType, documentBuffer]
+        [documentId, virtualFilePath, filename, finalBuffer.length, mimeType, finalBuffer]
       )
     } else {
       // Insert new document using stored procedure
       const [insertRows] = await connection.execute(
         'CALL sp_insertApplicantDocumentMulter(?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [applicantId, businessOwnerId, branchId || null, documentTypeId,
-         virtualFilePath, filename, documentBuffer.length, mimeType, documentBuffer]
+         virtualFilePath, filename, finalBuffer.length, mimeType, finalBuffer]
       )
       documentId = insertRows[0][0].document_id
     }
@@ -368,7 +382,7 @@ export async function saveApplicantDocumentToBlob(connection, applicantId, busin
       document_id: documentId,
       filename: filename,
       url: virtualFilePath,
-      size: documentBuffer.length,
+      size: finalBuffer.length,
       mime_type: mimeType,
       storage_type: 'blob',
       is_update: isUpdate

@@ -49,7 +49,7 @@ export const handleLogin = async (
     const connectivityResult = await ApiService.testConnectivity();
     
     if (!connectivityResult.success) {
-      throw new Error('Cannot reach the server. Please check:\n\n• Backend server is running (port 3001 or 5000)\n• Internet or Wi-Fi connection active\n• DigitalOcean: http://68.183.154.125:5000');
+      throw new Error('Cannot reach the server. Please check:\n\n• Backend server is running (port 3001 or 5000)\n• Internet or Wi-Fi connection active\n• Server: http://digi-stall.com (68.183.154.125)');
     }
 
     console.log('✅ Basic connectivity successful to:', connectivityResult.server);

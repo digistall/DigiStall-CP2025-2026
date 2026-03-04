@@ -10,6 +10,9 @@ import {
 import { verifyToken } from '../middleware/auth.js';
 import { uploadViolationEvidence } from '../config/multerViolationEvidence.js';
 
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js';
+
 const router = express.Router();
 
 /**
@@ -52,6 +55,6 @@ router.post('/report', verifyToken, reportStallholder);
  * @desc Submit a violation report with photo evidence
  * @access Protected (Inspector only)
  */
-router.post('/report-with-photos', verifyToken, uploadViolationEvidence, reportStallholderWithPhotos);
+router.post('/report-with-photos', verifyToken, uploadViolationEvidence, compressUploads({ type: 'default' }), reportStallholderWithPhotos);
 
 export default router;
