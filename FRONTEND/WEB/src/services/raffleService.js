@@ -205,7 +205,7 @@ class RaffleService {
       success: false,
       message: message,
       status: status,
-      error: error.message
+      error: error.response?.data || error.message
     }
   }
 }

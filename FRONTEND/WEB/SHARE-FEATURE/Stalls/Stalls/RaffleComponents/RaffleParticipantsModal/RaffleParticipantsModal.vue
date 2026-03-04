@@ -140,6 +140,13 @@
                     <div class="participant-details">
                       <div class="participant-name">
                         {{ participant.personalInfo.fullName }}
+                        <v-chip v-if="participant.stallCount >= 2" color="error" size="x-small" class="ml-1">
+                          <v-icon start size="x-small">mdi-alert</v-icon>
+                          Max Stalls ({{ participant.stallCount }}/2)
+                        </v-chip>
+                        <v-chip v-else-if="participant.stallCount === 1" color="warning" size="x-small" class="ml-1">
+                          {{ participant.stallCount }}/2 Stalls
+                        </v-chip>
                         <v-icon v-if="participant.isWinner" color="amber" size="small" class="ml-1">
                           mdi-crown
                         </v-icon>
@@ -215,6 +222,42 @@
         </v-btn>
       </v-card-actions>
     </v-card>
+
+    <!-- Max Stalls Warning Dialog -->
+    <v-dialog v-model="showMaxStallsDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="d-flex align-center pa-4" style="background-color: #FF5252; color: white;">
+          <v-icon color="white" class="mr-2">mdi-alert-circle</v-icon>
+          Maximum Stalls Reached
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <p class="text-body-1 mb-3">
+            <strong>{{ maxStallsParticipantName }}</strong> already owns the maximum number of stalls allowed (2 stalls).
+          </p>
+          <p class="text-body-2 text-grey-darken-1 mb-3">
+            Each person can only rent up to <strong>2 stalls</strong> across all branches and stall types (Fixed Price, Auction, Raffle).
+          </p>
+          <div v-if="maxStallsExistingStalls.length > 0" class="mt-3">
+            <p class="text-subtitle-2 font-weight-bold mb-2">Current stalls owned:</p>
+            <v-list density="compact" class="rounded border">
+              <v-list-item v-for="(stall, idx) in maxStallsExistingStalls" :key="idx">
+                <template v-slot:prepend>
+                  <v-icon color="primary" size="small">mdi-store</v-icon>
+                </template>
+                <v-list-item-title>{{ stall.stallNumber }}</v-list-item-title>
+                <v-list-item-subtitle>{{ stall.branch }} - {{ stall.type }}</v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </div>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer></v-spacer>
+          <v-btn color="primary" variant="elevated" @click="showMaxStallsDialog = false">
+            Understood
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-dialog>
 </template>
 

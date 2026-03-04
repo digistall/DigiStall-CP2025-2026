@@ -20,7 +20,11 @@ export default {
       participants: [],
       stallInfo: null,
       raffleInfo: null,
-      selectingWinner: false
+      selectingWinner: false,
+      // Max stalls warning dialog
+      showMaxStallsDialog: false,
+      maxStallsParticipantName: '',
+      maxStallsExistingStalls: []
     }
   },
   computed: {
@@ -115,7 +119,14 @@ export default {
           // Refresh participants to show the winner
           await this.fetchParticipants()
         } else {
-          throw new Error(response.message || 'Failed to select winner')
+          // Check if this is a max stalls error
+          if (response.error?.maxStalls) {
+            this.maxStallsParticipantName = 'The randomly selected winner'
+            this.maxStallsExistingStalls = response.error.existingStalls || []
+            this.showMaxStallsDialog = true
+          } else {
+            this.$emit('show-message', { text: response.message || 'Failed to select winner', type: 'error' })
+          }
         }
       } catch (error) {
         console.error('❌ Error selecting winner:', error)
@@ -145,7 +156,15 @@ export default {
           // Refresh participants to show the winner
           await this.fetchParticipants()
         } else {
-          throw new Error(response.message || 'Failed to select winner')
+          // Check if this is a max stalls error
+          if (response.error?.maxStalls) {
+            const participant = this.participants.find(p => p.participantId === participantId)
+            this.maxStallsParticipantName = participant?.personalInfo?.fullName || 'This participant'
+            this.maxStallsExistingStalls = response.error.existingStalls || []
+            this.showMaxStallsDialog = true
+          } else {
+            this.$emit('show-message', { text: response.message || 'Failed to select winner', type: 'error' })
+          }
         }
       } catch (error) {
         console.error('❌ Error selecting winner:', error)
