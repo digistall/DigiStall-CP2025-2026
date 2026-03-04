@@ -539,37 +539,232 @@
   }
 }
 
-/* Mobile Responsive */
-@media (max-width: 767px) and (orientation: portrait) {
-  .login-container .v-row {
+/* ============================================
+   MOBILE RESPONSIVE - Clean Mobile App Design
+   ============================================ */
+@media (max-width: 767px) {
+  /* Full screen container with background */
+  .login-container {
+    padding: 0 !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Semi-transparent white overlay like mobile app */
+  .login-container::before {
+    background: rgba(255, 255, 255, 0.73) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* CRITICAL: Override Vuetify v-row fill-height so it doesn't stretch */
+  .login-container .v-row.fill-height,
+  .login-container .v-row,
+  .login-container > .v-row {
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    height: auto !important;
     flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
+  /* CRITICAL: Override Vuetify v-col sizing - both must shrink to content */
+  .login-container .v-col-12,
+  .login-container .v-col-md-8,
+  .login-container .v-col-md-4 {
+    flex: 0 0 auto !important;
+    max-width: 350px !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* ---- LEFT SECTION: Logo + Title (top area) ---- */
   .left-section {
-    min-height: 40vh;
-    padding: 1.5rem 1rem;
+    min-height: unset !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin-bottom: 20px !important;
   }
 
+  .logo-title-section {
+    animation: none !important;
+    padding: 0 !important;
+  }
+
+  /* DigiStall Logo */
+  .digistall-logo,
+  .city-logo {
+    width: 75px !important;
+    height: 75px !important;
+    margin-bottom: 15px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Title text */
+  .main-title {
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 3px !important;
+    color: #000 !important;
+    text-shadow: none !important;
+    line-height: 1.3 !important;
+  }
+
+  .sub-title {
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+    color: #000 !important;
+  }
+
+  .powered-by {
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    color: #3498db !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Remove Vuetify mb- utility spacing on mobile */
+  .left-section .mb-6 { margin-bottom: 15px !important; }
+  .left-section .mb-2 { margin-bottom: 3px !important; }
+  .left-section .mb-4 { margin-bottom: 8px !important; }
+
+  /* ---- RIGHT SECTION: Login Card ---- */
   .right-section {
-    min-height: 60vh;
-    padding: 1rem;
+    min-height: unset !important;
+    height: auto !important;
+    padding: 0 !important;
+    animation: none !important;
   }
 
+  /* Remove the desktop white pseudo-element */
   .right-section::before {
-    width: calc(100vw - 2rem);
-    min-height: min(60vh, 500px);
-    border-radius: 16px;
+    display: none !important;
   }
 
+  /* White card - matching mobile app design */
   .login-card {
-    width: calc(100vw - 2rem) !important;
-    min-height: min(60vh, 500px) !important;
+    width: 100% !important;
+    max-width: 350px !important;
+    min-height: unset !important;
+    height: auto !important;
+    background: #ffffff !important;
+    border-radius: 15px !important;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.12) !important;
+    padding: 0 !important;
+    display: block !important;
   }
 
   .login-card .v-card-text {
-    padding: clamp(1.5rem, 4vw, 2rem) !important;
+    padding: 28px 24px !important;
+    height: auto !important;
+    min-height: unset !important;
+    display: block !important;
   }
 
+  /* Form title */
+  .form-title {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 1.5rem !important;
+    color: #2c3e50 !important;
+  }
+
+  /* Input fields */
+  .v-text-field .v-field,
+  .v-select .v-field {
+    min-height: 50px !important;
+    border-radius: 10px !important;
+    border: 1px solid #ddd !important;
+    background: #fff !important;
+  }
+
+  .v-text-field .v-field__input,
+  .v-select .v-field__input {
+    padding: 12px 15px !important;
+    font-size: 16px !important;
+  }
+
+  .v-field__prepend-inner {
+    padding-left: 12px !important;
+  }
+
+  /* Login Button - pill shape like mobile app */
+  .login-btn {
+    height: 50px !important;
+    border-radius: 25px !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    background: #4a7dff !important;
+    color: white !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+
+  .login-btn:hover {
+    background: #3b6de8 !important;
+    transform: none !important;
+  }
+
+  /* Forgot password */
+  .forgot-password-btn {
+    font-size: 0.9rem !important;
+    color: #3498db !important;
+    text-transform: none !important;
+  }
+
+  /* Alerts */
+  .error-alert,
+  .success-alert {
+    font-size: 0.9rem !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* Extra small screens (< 380px) */
+@media (max-width: 380px) {
+  .login-container .v-col-12,
+  .login-container .v-col-md-8,
+  .login-container .v-col-md-4 {
+    max-width: 300px !important;
+  }
+
+  .login-card {
+    max-width: 300px !important;
+  }
+
+  .digistall-logo, .city-logo {
+    width: 65px !important;
+    height: 65px !important;
+  }
+
+  .main-title {
+    font-size: 1.25rem !important;
+  }
+
+  .sub-title {
+    font-size: 1rem !important;
+  }
+
+  .login-card .v-card-text {
+    padding: 24px 20px !important;
+  }
+
+  .form-title {
+    font-size: 1.35rem !important;
+  }
+}
+
+/* Loading screen mobile adjustments */
+@media (max-width: 767px) {
   .loading-card {
     min-width: 300px !important;
     max-width: calc(100vw - 2rem) !important;

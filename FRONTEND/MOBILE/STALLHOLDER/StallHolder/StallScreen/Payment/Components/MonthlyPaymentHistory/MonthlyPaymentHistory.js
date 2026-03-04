@@ -239,9 +239,23 @@ const MonthlyPaymentHistory = ({ visible, onClose, theme, isDark }) => {
             ]}
           >
             <View style={styles.paymentInfo}>
-              <Text style={[styles.paymentDescription, { color: colors.text }]}>
-                {payment.description || 'Payment'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.paymentDescription, { color: colors.text }]}>
+                  {payment.description || 'Payment'}
+                </Text>
+                {payment.stallNumber && payment.stallNumber !== 'N/A' && (
+                  <View style={{ 
+                    backgroundColor: isDark ? 'rgba(48, 92, 222, 0.2)' : 'rgba(48, 92, 222, 0.1)', 
+                    paddingHorizontal: 6, 
+                    paddingVertical: 2, 
+                    borderRadius: 4 
+                  }}>
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.primary }}>
+                      Stall {payment.stallNumber}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.paymentDate, { color: colors.textSecondary }]}>
                 {payment.date} • {payment.method || 'N/A'}
               </Text>
