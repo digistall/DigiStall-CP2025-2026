@@ -37,19 +37,11 @@ export const approveApplicant = async (req, res) => {
   try {
     const { id } = req.params;
     // Password is auto-generated, username will be the email from other_information
+    // Password is optional — if applicant already has credentials, we skip credential creation
     const { password } = req.body;
 
     console.log(`🎯 Attempting to approve applicant ID: ${id}`);
-    console.log(`📝 Received password:`, password ? '***' : 'undefined');
-
-    // Validate required fields (username will be derived from email)
-    if (!password) {
-      console.log('❌ Missing password for approval');
-      return res.status(400).json({
-        success: false,
-        message: 'Password is required for approval'
-      });
-    }
+    console.log(`📝 Received password:`, password ? '***' : 'undefined/skipped');
 
     connection = await createConnection();
     await connection.beginTransaction();
@@ -123,16 +115,21 @@ export const approveApplicant = async (req, res) => {
       });
     }
 
-    // Check if username (email) already exists in credential table
+    // Check if applicant already has credentials (e.g. from general application / landing page signup)
     const [existingCredential] = await connection.execute(
-      'SELECT credential_id FROM credential WHERE username = ?',
-      [username]
+      'SELECT credential_id, username FROM credential WHERE applicant_id = ?',
+      [applicant.applicant_id]
     );
 
-    if (existingCredential.length > 0) {
+    const alreadyHasCredentials = existingCredential.length > 0;
+    console.log(`🔑 Applicant ${applicant.applicant_id} already has credentials: ${alreadyHasCredentials}`);
+
+    // If no existing credentials, password is required
+    if (!alreadyHasCredentials && !password) {
+      console.log('❌ Missing password for approval (no existing credentials)');
       return res.status(400).json({
         success: false,
-        message: 'Username already exists. Please generate a new username.'
+        message: 'Password is required for approval (applicant has no existing account)'
       });
     }
 
@@ -176,20 +173,26 @@ export const approveApplicant = async (req, res) => {
     const application = applicationRows[0];
     console.log(`📋 Found pending application:`, application);
 
-    // Hash the password using bcrypt
-    const bcrypt = await import('bcrypt');
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    // Encrypt the password for storage in applicant table (using same format as other encrypted data)
-    const encryptedPassword = encryptData(password);
+    // Only create credentials if the applicant doesn't already have them
+    if (!alreadyHasCredentials) {
+      // Hash the password using bcrypt
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Encrypt the password for storage in applicant table (using same format as other encrypted data)
+      const encryptedPassword = encryptData(password);
 
-    // 1. Store credentials in credential table for mobile app access
-    await connection.execute(
-      `INSERT INTO credential (
-        applicant_id, username, password_hash, created_at
-      ) VALUES (?, ?, ?, NOW())`,
-      [applicant.applicant_id, username, passwordHash]
-    );
+      // 1. Store credentials in credential table for mobile app access
+      await connection.execute(
+        `INSERT INTO credential (
+          applicant_id, username, password_hash, created_at
+        ) VALUES (?, ?, ?, NOW())`,
+        [applicant.applicant_id, username, passwordHash]
+      );
+      console.log(`✅ New credentials created for applicant ${applicant.applicant_id}`);
+    } else {
+      console.log(`⏭️ Skipping credential creation — applicant ${applicant.applicant_id} already has account (username: ${existingCredential[0].username})`);
+    }
     
     // 1.5. Update applicant status to approved
     await connection.execute(
@@ -300,17 +303,20 @@ export const approveApplicant = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Applicant approved successfully. Stallholder record created and stall assigned.',
+      message: alreadyHasCredentials 
+        ? 'Applicant approved successfully. Existing account used — stall assigned directly.'
+        : 'Applicant approved successfully. Stallholder record created and stall assigned.',
       data: {
         applicant_id: applicant.applicant_id,
         stallholder_id: stallholderId,
         full_name: applicant.applicant_full_name,
         email: applicant.email_address,
-        username: username,
+        username: alreadyHasCredentials ? existingCredential[0].username : username,
         stall_id: application.stall_id,
         branch_id: application.branch_id,
         move_in_date: new Date().toISOString().split('T')[0],
-        approved_at: new Date().toISOString()
+        approved_at: new Date().toISOString(),
+        credentials_already_existed: alreadyHasCredentials
       }
     });
 

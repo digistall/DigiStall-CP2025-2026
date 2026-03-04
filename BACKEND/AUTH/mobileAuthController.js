@@ -135,6 +135,71 @@ export const mobileLogin = async (req, res) => {
     }
     console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
 
+    // ===== CHECK IF STALLHOLDER IS OVERDUE — BLOCK LOGIN =====
+    if (stallholderData.length > 0 && stallholderData[0].status === 'active') {
+      const sh = stallholderData[0];
+      const paymentStatus = (sh.payment_status || 'unpaid').toLowerCase();
+      
+      if (paymentStatus !== 'paid') {
+        const moveInDate = sh.move_in_date ? new Date(sh.move_in_date) : null;
+        const now = new Date();
+        let isOverdue = false;
+
+        if (moveInDate) {
+          const isFirstMonth = moveInDate.getFullYear() === now.getFullYear() && moveInDate.getMonth() === now.getMonth();
+
+          if (isFirstMonth) {
+            // First month: overdue only after 5-day grace period from move-in date
+            const graceDate = new Date(moveInDate);
+            graceDate.setDate(graceDate.getDate() + 5);
+            graceDate.setHours(23, 59, 59, 999);
+            isOverdue = now > graceDate;
+          } else {
+            // Subsequent months: overdue if past the due day of the current month
+            const dueDay = moveInDate.getDate();
+            const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+            if (dueDate.getMonth() !== now.getMonth()) {
+              dueDate.setDate(0); // handle overflow (e.g. 31 in Feb)
+            }
+            isOverdue = now > dueDate;
+          }
+        }
+
+        if (isOverdue) {
+          // Double-check: see if total payments this month cover the rental
+          const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const [monthPayments] = await connection.execute(
+            `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
+             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+            [sh.stallholder_id, currentMonth]
+          );
+          const totalPaid = parseFloat(monthPayments[0]?.totalPaid || 0);
+
+          // Get rental price to compare
+          const rentalPrice = parseFloat(sh.stall_rental_price || sh.stall_monthly_rent || 0);
+
+          // Not fully paid if total paid < 99% of rental (tolerance for rounding)
+          if (totalPaid < rentalPrice * 0.99) {
+            // Update DB status to overdue
+            await connection.execute(
+              "UPDATE stallholder SET payment_status = 'overdue' WHERE stallholder_id = ?",
+              [sh.stallholder_id]
+            );
+
+            console.log('🚫 Login blocked — stallholder is overdue:', sh.stallholder_id);
+            return res.status(403).json({
+              success: false,
+              blocked: true,
+              reason: 'payment_overdue',
+              message: 'Your account has been temporarily disabled due to an overdue payment. Please settle your rental payment at the market office to regain access.',
+              stallholder_id: sh.stallholder_id
+            });
+          }
+        }
+      }
+    }
+    // ===== END OVERDUE CHECK =====
+
     // Get applicant full details
     const [applicantResult] = await connection.execute('CALL sp_getApplicantById(?)', [applicantId]);
     let applicantData = applicantResult[0] || [];

@@ -22,7 +22,11 @@
           <p class="text-body-1 mb-4">
             Are you sure you want to approve this applicant?
           </p>
-          <p class="text-body-2 text-grey">
+          <p v-if="applicant?.has_credentials" class="text-body-2 text-success font-weight-medium">
+            <v-icon size="small" color="success" class="mr-1">mdi-account-check</v-icon>
+            This applicant already has a mobile account. Approving will assign the stall directly.
+          </p>
+          <p v-else class="text-body-2 text-grey">
             Login credentials will be generated and sent to the applicant's email address.
           </p>
         </div>
@@ -42,13 +46,19 @@
         <div v-if="approved && !processing" class="text-center">
           <v-icon size="48" color="primary" class="mb-3">mdi-check-circle</v-icon>
           <p class="text-h6 text-primary mb-2">Applicant Approved!</p>
-          <div class="text-left bg-grey-lighten-4 pa-3 rounded mb-3">
+          <div v-if="credentialsAlreadyExisted" class="bg-grey-lighten-4 pa-3 rounded mb-3">
+            <p class="text-body-2 text-success">
+              <v-icon size="small" color="success" class="mr-1">mdi-account-check</v-icon>
+              Stall assigned using existing mobile account.
+            </p>
+          </div>
+          <div v-else class="text-left bg-grey-lighten-4 pa-3 rounded mb-3">
             <p class="text-body-2 mb-1"><strong>Generated Credentials:</strong></p>
             <p class="text-body-2 mb-1">Username: <strong>{{ credentials?.username }}</strong></p>
             <p class="text-body-2">Password: <strong>{{ credentials?.password }}</strong></p>
           </div>
           <p class="text-body-2 text-grey">
-            {{ emailSent ? 'Credentials have been sent to the applicant\'s email.' : 'Applicant approved but email failed to send.' }}
+            {{ credentialsAlreadyExisted ? 'The applicant can use their existing account to access the stall.' : (emailSent ? 'Credentials have been sent to the applicant\'s email.' : 'Applicant approved but email failed to send.') }}
           </p>
         </div>
       </v-card-text>

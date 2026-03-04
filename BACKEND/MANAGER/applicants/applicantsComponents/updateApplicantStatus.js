@@ -190,8 +190,24 @@ export const updateApplicantStatus = async (req, res) => {
       
       console.log(`🔍 Approval check: Current status: ${applicant.application_status}, New status: ${status}, Should create credentials: ${shouldCreateCredentials}`);
 
-      // If this is final approval, create credentials for mobile app
+      // If this is final approval, create credentials for mobile app (only if they don't already exist)
       if (shouldCreateCredentials) {
+        // First check if applicant already has credentials (e.g. from general application / landing page signup)
+        const [existingCredentialCheck] = await connection.execute(
+          'SELECT registrationid, user_name FROM credential WHERE applicant_id = ?',
+          [applicant.applicant_id]
+        );
+
+        const alreadyHasCredentials = existingCredentialCheck.length > 0;
+        console.log(`🔑 Applicant ${applicant.applicant_id} already has credentials: ${alreadyHasCredentials}`);
+
+        if (alreadyHasCredentials) {
+          // Skip credential creation — applicant already has an account
+          console.log(`⏭️ Skipping credential creation — applicant already has account (username: ${existingCredentialCheck[0].user_name})`);
+          credentialsCreated = true; // Mark as true so stallholder record is still created
+          finalUsername = existingCredentialCheck[0].user_name;
+          finalPassword = '(existing account)';
+        } else {
         try {
           console.log('🔑 Creating credentials for final approval...');
           
@@ -257,6 +273,7 @@ export const updateApplicantStatus = async (req, res) => {
             error: credError.message
           });
         }
+        } // end else (no existing credentials)
 
         // ============================================
         // CREATE STALLHOLDER RECORD
@@ -390,6 +407,7 @@ export const updateApplicantStatus = async (req, res) => {
       // Add credentials info if they were created
       if (credentialsCreated) {
         responseData.credentials_created = true;
+        responseData.credentials_already_existed = finalPassword === '(existing account)';
         responseData.mobile_username = finalUsername;
         responseData.mobile_password = finalPassword; // Return the actual password for email
         responseData.stallholder_created = true;
@@ -400,7 +418,9 @@ export const updateApplicantStatus = async (req, res) => {
       res.json({
         success: true,
         message: credentialsCreated 
-          ? 'Applicant approved successfully! Stallholder record created and mobile app credentials stored.' 
+          ? (finalPassword === '(existing account)' 
+              ? 'Applicant approved successfully! Existing account used — stall assigned directly.'
+              : 'Applicant approved successfully! Stallholder record created and mobile app credentials stored.')
           : 'Applicant status updated successfully',
         data: responseData
       });

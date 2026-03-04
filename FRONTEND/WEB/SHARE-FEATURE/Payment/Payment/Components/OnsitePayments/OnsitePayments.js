@@ -1,4 +1,4 @@
-﻿import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
+import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
 import ToastNotification from '@common/ToastNotification/ToastNotification.vue'
 
 // Discount and fee constants
@@ -134,7 +134,7 @@ export default {
     },
 
     statusFilterOptions() {
-      return ['Paid', 'Overdue', 'Pending']
+      return ['Paid', 'Discount', 'Due Soon', 'Overdue', 'Pending']
     },
 
     isPenaltyPayment() {
@@ -236,36 +236,52 @@ export default {
     // =========================================================
     // STATUS CONFIG (for main table Status column)
     // =========================================================
+    // 3-tier: Discount (5+ days early or first 5 days) | Normal (within 5 days of due) | Overdue (past due)
     getStatusConfig(stall) {
       const now = new Date()
       const moveIn = stall.moveInDate ? new Date(stall.moveInDate) : null
-      const dueDay = moveIn ? moveIn.getDate() : 1
+      if (!moveIn) return { label: 'Pending', color: '#9ca3af' }
+
+      const dueDay = moveIn.getDate()
 
       // Current month due date
       const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay)
-
-      // If due day doesn't exist in month (e.g. 31 in Feb), use last day
       if (dueDate.getMonth() !== now.getMonth()) {
-        dueDate.setDate(0) // last day of prev month â†’ correct to last day of current month
+        dueDate.setDate(0)
       }
 
       const isPaid = (stall.paymentStatus || '').toLowerCase() === 'paid'
-
       if (isPaid) {
-        // We don't know advance vs on-time from just payment_status; show Paid
         return { label: 'Paid', color: '#10b981' }
       }
 
+      // Check if this is the move-in month (first month)
+      const isFirstMonth = moveIn.getFullYear() === now.getFullYear() && moveIn.getMonth() === now.getMonth()
+
+      if (isFirstMonth) {
+        // First month: 5-day window from move-in = Discount, after that = Overdue
+        const graceDate = new Date(moveIn)
+        graceDate.setDate(graceDate.getDate() + ADVANCE_DAYS)
+        graceDate.setHours(23, 59, 59, 999)
+
+        if (now > graceDate) {
+          return { label: 'Overdue', color: '#ef4444' }
+        }
+        return { label: 'Discount', color: '#1e88e5' }
+      }
+
+      // Subsequent months
       if (now > dueDate) {
         return { label: 'Overdue', color: '#ef4444' }
       }
 
       const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24))
       if (daysUntilDue >= ADVANCE_DAYS) {
-        return { label: 'Pending', color: '#9ca3af' }
+        return { label: 'Discount', color: '#1e88e5' }
       }
 
-      return { label: 'Pending', color: '#9ca3af' }
+      // Within 5 days of due date = Normal price period
+      return { label: 'Due Soon', color: '#f59e0b' }
     },
 
     // =========================================================
@@ -357,11 +373,12 @@ export default {
     /**
      * Build the monthly payment timeline from moveInDate to today.
      *
-     * Status rules:
-     *   Paid     â€“ payment on time (within advance window)
-     *   Advance  â€“ payment 5+ days before due date  â†’ 25% discount applied
-     *   Overdue  â€“ past due date, no payment         â†’ 10% late fee added
-     *   Pending  â€“ due date not yet reached           â†’ show discounted amount
+     * 3-tier status rules:
+     *   Paid     - payment completed on time
+     *   Advance  - payment 5+ days before due date (25% discount applied)
+     *   Overdue  - past due date, no payment (+10% late fee)
+     *   Normal   - within 5 days of due, normal price (partial payments allowed)
+     *   Pending  - far from due date, discount available
      */
     buildPaymentTracker(stallholder, payments) {
       const rental = parseFloat(stallholder.monthlyRental) || 0
@@ -383,7 +400,6 @@ export default {
       while (year < maxYear || (year === maxYear && month <= maxMonth)) {
         // Build due date for this month
         let dueDate = new Date(year, month, dueDay)
-        // If dueDay overflows (e.g., Jan 31 â†’ Feb 31 doesn't exist), roll back
         if (dueDate.getMonth() !== month) {
           dueDate = new Date(year, month + 1, 0) // last day of intended month
         }
@@ -394,29 +410,54 @@ export default {
             const [pY, pM] = p.paymentForMonth.split('-').map(Number)
             return pY === year && pM === month + 1
           }
-          // Fallback: check if payment_date is within this calendar month
           const pd = new Date(p.paymentDate)
           return pd.getFullYear() === year && pd.getMonth() === month
         })
 
         let status, amount
 
+        // Check if this is the move-in month (first month)
+        const isFirstMonth = moveIn.getFullYear() === year && moveIn.getMonth() === month
+
         if (monthPayment) {
           const payDate = new Date(monthPayment.paymentDate)
           const daysEarly = Math.floor((dueDate - payDate) / (1000 * 60 * 60 * 24))
           if (daysEarly >= ADVANCE_DAYS) {
             status = 'Advance'
-            amount = parseFloat(monthPayment.amount) // already discounted when collected
+            amount = parseFloat(monthPayment.amount)
           } else {
             status = 'Paid'
             amount = parseFloat(monthPayment.amount)
           }
+        } else if (isFirstMonth) {
+          // First month: within 5 days of move-in = Discount, after = Overdue
+          const graceDate = new Date(moveIn)
+          graceDate.setDate(graceDate.getDate() + ADVANCE_DAYS)
+          graceDate.setHours(23, 59, 59, 999)
+
+          if (now > graceDate) {
+            status = 'Overdue'
+            amount = rental * (1 + LATE_FEE_RATE)
+          } else {
+            status = 'Advance'
+            amount = rental * (1 - ADVANCE_DISCOUNT)
+          }
         } else if (now > dueDate) {
+          // Past due date = Overdue (+10%)
           status = 'Overdue'
-          amount = rental * (1 + LATE_FEE_RATE) // +10%
+          amount = rental * (1 + LATE_FEE_RATE)
         } else {
-          status = 'Pending'
-          amount = rental * (1 - ADVANCE_DISCOUNT) // show discounted (incentive to pay early)
+          // Before due date
+          const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24))
+          if (daysUntilDue >= ADVANCE_DAYS) {
+            // 5+ days before due = Discount period
+            status = 'Pending'
+            amount = rental * (1 - ADVANCE_DISCOUNT)
+          } else {
+            // Within 5 days of due = Normal price (partial payments allowed)
+            status = 'Normal'
+            amount = rental
+          }
         }
 
         tracker.push({
@@ -429,7 +470,6 @@ export default {
           amount,
           status,
           receiptNo: monthPayment?.receiptNo || null,
-          // Store full payment record for detail modal
           paymentId: monthPayment?.id || null,
           paymentDate: monthPayment?.paymentDate || null,
           paymentTime: monthPayment?.paymentTime || null,
@@ -448,10 +488,12 @@ export default {
       return tracker
     },
 
+    
     getTrackerStatusConfig(status) {
       const map = {
         'Paid':    { color: '#10b981', iconColor: '#10b981', icon: 'mdi-check-circle' },
         'Advance': { color: '#1e88e5', iconColor: '#1e88e5', icon: 'mdi-clock-fast' },
+        'Normal':  { color: '#f59e0b', iconColor: '#f59e0b', icon: 'mdi-cash-clock' },
         'Overdue': { color: '#ef4444', iconColor: '#ef4444', icon: 'mdi-alert-circle' },
         'Pending': { color: '#9ca3af', iconColor: '#9ca3af', icon: 'mdi-clock-outline' }
       }
@@ -498,6 +540,10 @@ export default {
         items.push({ label: 'Total Due', value: this.formatCurrency(entry.amount), isTotal: true })
       } else if (entry.status === 'Paid') {
         items.push({ label: 'Total Paid', value: this.formatCurrency(entry.amount), isTotal: true })
+      } else if (entry.status === 'Normal') {
+        items.push({ label: 'Normal Price (Due Soon)', value: this.formatCurrency(rental) })
+        items.push({ label: 'Partial payments accepted', value: '', isNote: true })
+        items.push({ label: 'Total Due', value: this.formatCurrency(entry.amount), isTotal: true })
       } else {
         const discount = rental * ADVANCE_DISCOUNT
         items.push({ label: `Early Payment Discount (${ADVANCE_DISCOUNT * 100}%)`, value: `- ${this.formatCurrency(discount)}`, isDiscount: true })
@@ -556,24 +602,46 @@ export default {
 
           const monthlyRent = parseFloat(details.monthlyRental || details.rental_price || 0)
           const contractStart = details.contract_start_date ? new Date(details.contract_start_date) : null
-          const lastPayment = details.last_payment_date ? new Date(details.last_payment_date) : null
           const today = new Date()
           let dueDate
 
-          if (lastPayment) {
-            dueDate = new Date(lastPayment); dueDate.setDate(dueDate.getDate() + 30)
-          } else if (contractStart) {
-            dueDate = new Date(contractStart); dueDate.setDate(dueDate.getDate() + 30)
+          if (contractStart) {
+            // Due date = same day of month as contract start
+            dueDate = new Date(today.getFullYear(), today.getMonth(), contractStart.getDate())
+            if (dueDate.getMonth() !== today.getMonth()) {
+              dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+            }
           } else {
             dueDate = new Date(today); dueDate.setDate(dueDate.getDate() + 30)
           }
 
-          const daysEarly = Math.floor((dueDate - today) / (1000 * 60 * 60 * 24))
-          this.form.amount = (daysEarly >= ADVANCE_DAYS
-            ? (monthlyRent * (1 - ADVANCE_DISCOUNT))
-            : monthlyRent
-          ).toFixed(2)
+          // Check if this is the first month (move-in month)
+          const isFirstMonth = contractStart && contractStart.getFullYear() === today.getFullYear() && contractStart.getMonth() === today.getMonth()
 
+          let computedAmount
+          if (isFirstMonth) {
+            // First month: within 5 days of move-in = discount
+            const daysSinceMoveIn = Math.floor((today - contractStart) / (1000 * 60 * 60 * 24))
+            if (daysSinceMoveIn <= ADVANCE_DAYS) {
+              computedAmount = monthlyRent * (1 - ADVANCE_DISCOUNT)
+            } else {
+              // Past grace period - overdue with late fee
+              computedAmount = monthlyRent * (1 + LATE_FEE_RATE)
+            }
+          } else if (today > dueDate) {
+            // Past due date = overdue (+10%)
+            computedAmount = monthlyRent * (1 + LATE_FEE_RATE)
+          } else {
+            const daysUntilDue = Math.floor((dueDate - today) / (1000 * 60 * 60 * 24))
+            if (daysUntilDue >= ADVANCE_DAYS) {
+              computedAmount = monthlyRent * (1 - ADVANCE_DISCOUNT)
+            } else {
+              // Within 5 days of due = normal price (partial payments allowed)
+              computedAmount = monthlyRent
+            }
+          }
+
+          this.form.amount = computedAmount.toFixed(2)
           this.form.paymentDate = today.toISOString().split('T')[0]
           this.form.paymentTime = today.toTimeString().split(' ')[0].substring(0, 5)
           this.form.paymentForMonth = today.toISOString().substring(0, 7)
