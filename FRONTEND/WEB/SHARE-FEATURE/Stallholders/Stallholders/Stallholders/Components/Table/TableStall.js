@@ -280,10 +280,12 @@ export default {
     },
 
     getPaymentStatusColor(status) {
-      switch (status) {
+      switch ((status || '').toLowerCase()) {
+        case 'paid': return 'green'
         case 'current': return 'green'
         case 'overdue': return 'red'
         case 'grace_period': return 'yellow'
+        case 'unpaid': return 'orange'
         default: return 'grey'
       }
     },

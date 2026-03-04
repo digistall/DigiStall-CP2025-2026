@@ -663,14 +663,14 @@ const StallholderController = {
             // Create stallholder
             await connection.execute(
               `INSERT INTO stallholder (
-                 applicant_id, stallholder_name, contact_number, email, address,
+                 applicant_id, mobile_user_id, stallholder_name, contact_number, email, address,
                  business_name, business_type, branch_id, stall_id,
                  contract_start_date, contract_end_date, contract_status,
                  lease_amount, monthly_rent, payment_status, notes,
                  created_by_business_manager
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', ?, ?)`,
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', ?, ?)`,
               [
-                null, stallholderName.toString().trim(), contactNumber?.toString() || null, 
+                null, null, stallholderName.toString().trim(), contactNumber?.toString() || null, 
                 email?.toString() || null, address?.toString() || null,
                 businessName?.toString() || null, businessType?.toString() || null,
                 branchId, stallId, contractStart, contractEnd, leaseAmount, monthlyRent,
@@ -1776,14 +1776,14 @@ const StallholderController = {
             // Create stallholder record
             const [stallholderResult] = await connection.execute(
               `INSERT INTO stallholder (
-                 applicant_id, stallholder_name, contact_number, email, address,
+                 applicant_id, mobile_user_id, stallholder_name, contact_number, email, address,
                  business_name, business_type, branch_id, stall_id,
                  contract_start_date, contract_end_date, contract_status,
                  lease_amount, monthly_rent, payment_status, notes,
                  created_by_business_manager, date_created, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', ?, ?, NOW(), NOW())`,
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', ?, ?, NOW(), NOW())`,
               [
-                applicantId, // Link to applicant if created
+                applicantId, applicantId, // Link to applicant if created
                 row.stallholder_name,
                 row.contact_number || null,
                 row.email || null,

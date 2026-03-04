@@ -219,7 +219,9 @@ export default {
             floorNumber: s.floorNumber || s.floor_number || null,
             monthlyRental: parseFloat(s.monthlyRental || s.rental_price || 0),
             moveInDate: s.contract_start_date || s.move_in_date || null,
-            paymentStatus: s.payment_status || 'unpaid'
+            paymentStatus: s.payment_status || 'unpaid',
+            // Check if current month has been paid (from backend subquery)
+            _currentMonthPaid: parseFloat(s.current_month_paid_amount || 0) > 0
           }))
         } else {
           this.showToast('Failed to load stall list', 'error')
@@ -236,7 +238,8 @@ export default {
     // =========================================================
     // STATUS CONFIG (for main table Status column)
     // =========================================================
-    // 3-tier: Discount (5+ days early or first 5 days) | Normal (within 5 days of due) | Overdue (past due)
+    // Checks actual payment records for current month to determine paid status
+    // 3-tier: Paid | Discount (5+ days early) | Due Soon (within 5 days) | Overdue (past due)
     getStatusConfig(stall) {
       const now = new Date()
       const moveIn = stall.moveInDate ? new Date(stall.moveInDate) : null
@@ -250,7 +253,8 @@ export default {
         dueDate.setDate(0)
       }
 
-      const isPaid = (stall.paymentStatus || '').toLowerCase() === 'paid'
+      // Check if paid: use DB payment_status OR check if tracker shows payment for current month
+      const isPaid = (stall.paymentStatus || '').toLowerCase() === 'paid' || stall._currentMonthPaid
       if (isPaid) {
         return { label: 'Paid', color: '#10b981' }
       }

@@ -82,6 +82,10 @@ const PaymentController = {
       let query;
       let params;
       
+      // Build current month string for payment check (e.g., '2026-03')
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
       if (branchId) {
         query = `
           SELECT 
@@ -107,7 +111,11 @@ const PaymentController = {
             sh.full_name as business_name,
             sec.section_name as sectionName,
             f.floor_name as floorName,
-            f.floor_number as floorNumber
+            f.floor_number as floorNumber,
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
+             WHERE p.stallholder_id = sh.stallholder_id 
+             AND p.payment_for_month = ? 
+             AND p.payment_status = 'completed') as current_month_paid_amount
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -116,7 +124,7 @@ const PaymentController = {
           WHERE sh.branch_id = ?
           ORDER BY sh.stallholder_id
         `;
-        params = [branchId];
+        params = [currentMonth, branchId];
       } else {
         // For system admin or business owner, get all stallholders
         query = `
@@ -143,7 +151,11 @@ const PaymentController = {
             sh.full_name as business_name,
             sec.section_name as sectionName,
             f.floor_name as floorName,
-            f.floor_number as floorNumber
+            f.floor_number as floorNumber,
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
+             WHERE p.stallholder_id = sh.stallholder_id 
+             AND p.payment_for_month = ? 
+             AND p.payment_status = 'completed') as current_month_paid_amount
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -151,7 +163,7 @@ const PaymentController = {
           LEFT JOIN floor f ON s.floor_id = f.floor_id
           ORDER BY sh.stallholder_id
         `;
-        params = [];
+        params = [currentMonth];
       }
       
       const [result] = await connection.execute(query, params);

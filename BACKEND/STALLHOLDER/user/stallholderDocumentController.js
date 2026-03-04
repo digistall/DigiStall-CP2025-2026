@@ -23,12 +23,33 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
 
     console.log('📄 Fetching stallholder stalls with documents for applicant:', applicantId);
 
-    // Get stallholder info and their stalls using stored procedure
-    const [stallsRows] = await connection.execute(
-      'CALL sp_getStallholderStallsForDocuments(?)',
-      [applicantId]
+    // Get stallholder info and their stalls using direct query
+    // Check both mobile_user_id AND applicant_id since new stallholders may only have applicant_id set
+    const [stallholderStalls] = await connection.execute(
+      `SELECT 
+        sh.stallholder_id,
+        sh.full_name as stallholder_name,
+        sh.email as stallholder_email,
+        sh.contact_number as stallholder_contact,
+        sh.address as stallholder_address,
+        sh.branch_id,
+        sh.stall_id,
+        sh.payment_status,
+        sh.status as contract_status,
+        sh.move_in_date as contract_start_date,
+        s.stall_number,
+        s.size,
+        s.rental_price as monthly_rent,
+        s.stall_location,
+        s.price_type as stall_type,
+        b.branch_name,
+        b.area as branch_area
+      FROM stallholder sh
+      LEFT JOIN stall s ON sh.stall_id = s.stall_id
+      LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      WHERE sh.mobile_user_id = ? OR sh.applicant_id = ?`,
+      [applicantId, applicantId]
     );
-    const stallholderStalls = stallsRows[0];
 
     console.log('📊 Query result - stallholderStalls:', stallholderStalls.length, 'found');
     console.log('📊 Stalls data:', JSON.stringify(stallholderStalls, null, 2));
