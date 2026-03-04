@@ -199,16 +199,21 @@
   }
 
   .nav-menu {
-    gap: 15px;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .nav-link {
-    font-size: 13px;
-    padding: 5px 10px;
+    font-size: 12px;
+    padding: 5px 8px;
   }
 
-  .login-btn {
-    font-size: 13px;
-    padding: 8px 16px;
+  .nav-link span {
+    display: none;
+  }
+
+  .nav-link i {
+    font-size: 20px;
   }
 }

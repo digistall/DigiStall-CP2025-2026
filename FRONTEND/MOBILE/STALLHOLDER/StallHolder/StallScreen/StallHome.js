@@ -28,6 +28,7 @@ import DocumentsScreen from "./Documents/DocumentsScreen";
 import TabbedStallScreen from "./Stall/TabbedStallScreen";
 import PaymentScreen from "./Payment/PaymentScreen";
 import OwnedStallsScreen from "./OwnedStalls/OwnedStallsScreen";
+import JoinedStallsScreen from "./JoinedStalls/JoinedStallsScreen";
 
 const { width, height } = Dimensions.get("window");
 
@@ -135,6 +136,7 @@ const StallHome = ({ navigation }) => {
       documents: "Documents",
       payment: "Payment",
       "owned-stalls": "Owned Stalls",
+      "joined-stalls": "Joined Stalls",
     };
     return titles[currentScreen] || "Stall Management";
   };
@@ -161,6 +163,7 @@ const StallHome = ({ navigation }) => {
     "documents",
     "reports",
     "owned-stalls",
+    "joined-stalls",
   ];
 
   // Determine if need to wrap in ScrollView
@@ -185,6 +188,8 @@ const StallHome = ({ navigation }) => {
         return <PaymentScreen />;
       case "owned-stalls":
         return <OwnedStallsScreen />;
+      case "joined-stalls":
+        return <JoinedStallsScreen />;
       default:
         return <TabbedStallScreen />;
     }

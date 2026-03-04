@@ -45,7 +45,10 @@ import {
   extendAuctionTimer,
   cancelAuction,
   selectAuctionWinner,
-  autoSelectWinnerForExpiredAuctions
+  autoSelectWinnerForExpiredAuctions,
+  
+  // Participant detail
+  getParticipantDetail
 } from '../BACKEND/MANAGER/stalls/stallController.js'
 
 // Import stall image controller
@@ -137,6 +140,7 @@ router.post('/',
 router.get('/', getAllStalls)                 // GET /api/stalls - Get all stalls for branch manager
 router.get('/available', getAvailableStalls)  // GET /api/stalls/available - Get available stalls
 router.get('/filter', getStallsByFilter)     // GET /api/stalls/filter - Get stalls by filter
+router.get('/participants/:applicantId/detail', getParticipantDetail)  // GET /api/stalls/participants/:applicantId/detail - Get full participant info
 router.get('/:id', getStallById)             // GET /api/stalls/:id - Get stall by ID
 router.put('/:id', viewOnlyForOwners, updateStall)              // PUT /api/stalls/:id - Update stall
 router.delete('/:id', viewOnlyForOwners, deleteStall)           // DELETE /api/stalls/:id - Delete stall

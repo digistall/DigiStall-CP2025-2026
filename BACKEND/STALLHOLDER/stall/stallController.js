@@ -293,6 +293,32 @@ export const getStallsByType = async (req, res) => {
       }
     }
 
+    // Filter out stalls that already have active stallholders (occupied stalls)
+    const [occupiedRows] = await connection.execute(
+      `SELECT DISTINCT stall_id FROM stallholder WHERE status = 'active'`
+    )
+    const occupiedStallIds = new Set(occupiedRows.map(r => r.stall_id))
+    stalls = stalls.filter(s => !occupiedStallIds.has(s.stall_id))
+    console.log(`🏪 Filtered out ${occupiedStallIds.size} occupied stalls, ${stalls.length} available stalls remain`)
+
+    // Filter out stalls that this user has already joined via raffle or auction
+    if (applicant_id) {
+      const [joinedRaffleRows] = await connection.execute(
+        `SELECT DISTINCT r.stall_id FROM raffle_participants rp JOIN raffle r ON rp.raffle_id = r.raffle_id WHERE rp.applicant_id = ?`,
+        [applicant_id]
+      )
+      const [joinedAuctionRows] = await connection.execute(
+        `SELECT DISTINCT a.stall_id FROM auction_participants ap JOIN auction a ON ap.auction_id = a.auction_id WHERE ap.applicant_id = ?`,
+        [applicant_id]
+      )
+      const joinedStallIds = new Set([
+        ...joinedRaffleRows.map(r => r.stall_id),
+        ...joinedAuctionRows.map(r => r.stall_id)
+      ])
+      stalls = stalls.filter(s => !joinedStallIds.has(s.stall_id))
+      console.log(`🎟️ Filtered out ${joinedStallIds.size} already-joined stalls, ${stalls.length} stalls remain`)
+    }
+
     // For each stall, fetch images from stall_images table (images stored as BLOB)
     const stallsWithImages = await Promise.all(stalls.map(async (stall) => {
       const [imageRows] = await connection.execute(

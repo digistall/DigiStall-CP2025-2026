@@ -1173,6 +1173,62 @@ class ApiService {
     }
   }
 
+  /**
+   * Get all stalls the user has joined via raffle or auction participation
+   * Token is fetched internally from storage
+   * @returns {Promise} - Response with joined stalls
+   */
+  static async getJoinedStalls() {
+    try {
+      const token = await UserStorageService.getAuthToken();
+      if (!token) {
+        return { success: false, message: 'Authentication token not found. Please log in again.', data: { stalls: [], total_joined: 0 } };
+      }
+
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_JOINED_STALLS}`;
+      
+      console.log('🎟️ Fetching joined stalls from:', url);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch joined stalls');
+      }
+
+      console.log('✅ Joined stalls fetched:', data.data?.total_joined || 0, 'stalls');
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Get Joined Stalls API Error:', error);
+      const errorMessage = error.name === 'AbortError' 
+        ? 'Request timed out. Please check your connection.'
+        : (error.message || 'Network error occurred');
+      return {
+        success: false,
+        message: errorMessage,
+        data: { stalls: [], total_joined: 0 }
+      };
+    }
+  }
+
   // ===== STALLHOLDER DOCUMENT METHODS =====
 
   /**

@@ -128,6 +128,9 @@ export const API_CONFIG = {
     // Stallholder owned stalls endpoint
     GET_OWNED_STALLS: '/api/mobile/stallholder/owned-stalls',
     
+    // Stallholder joined stalls endpoint
+    GET_JOINED_STALLS: '/api/mobile/stallholder/joined-stalls',
+    
     // Stallholder payment endpoints
     GET_PAYMENT_RECORDS: '/api/mobile/stallholder/payments',
     GET_ALL_PAYMENT_RECORDS: '/api/mobile/stallholder/payments/all',

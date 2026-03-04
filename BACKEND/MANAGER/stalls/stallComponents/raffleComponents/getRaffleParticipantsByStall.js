@@ -228,6 +228,12 @@ export const getRaffleParticipantsByStall = async (req, res) => {
             console.error(`Error getting stall count for participant ${p.participant_id}:`, countErr);
           }
 
+          // Dynamically update businessName based on current stall count
+          // (fixes badge when participant became stallholder after joining)
+          if (stallCount > 0 && personalInfo.businessName !== 'Stallholder') {
+            personalInfo.businessName = 'Stallholder';
+          }
+
           return {
             participantId: p.participant_id,
             applicantId: p.applicant_id,
