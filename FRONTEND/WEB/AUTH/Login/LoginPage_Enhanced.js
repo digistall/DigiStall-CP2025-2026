@@ -14,7 +14,7 @@ export default {
       valid: false,
       loading: false,
       showLoadingScreen: false,
-      isMobileDevice: false,
+      isMobileDevice: false, // No longer used for blocking
       email: '',
       password: '',
       showPassword: false,
@@ -55,35 +55,22 @@ export default {
     return { authStore }
   },
   async mounted() {
-    // Check if user is on a mobile device
-    this.checkMobileDevice()
-
     // Check if already authenticated
-    if (!this.isMobileDevice && this.authStore.isAuthenticated) {
+    if (this.authStore.isAuthenticated) {
       this.$router.push(this.getSmartRedirectPath())
     }
 
     // Listen for storage changes (login/logout in other tabs)
     window.addEventListener('storage', this.handleStorageChange)
-    window.addEventListener('resize', this.checkMobileDevice)
   },
   beforeUnmount() {
     // Clean up event listeners
     window.removeEventListener('storage', this.handleStorageChange)
-    window.removeEventListener('resize', this.checkMobileDevice)
     if (this.redirectTimeout) {
       clearTimeout(this.redirectTimeout)
     }
   },
   methods: {
-    checkMobileDevice() {
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera
-      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i
-      const isMobileUA = mobileRegex.test(userAgent)
-      const isSmallScreen = window.innerWidth <= 768
-      this.isMobileDevice = isMobileUA || isSmallScreen
-    },
-
     clearError() {
       this.errorMessage = ''
       this.errorPopup.show = false

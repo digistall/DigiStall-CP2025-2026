@@ -1,7 +1,7 @@
 /* Container and Layout */
 .login-container {
   min-height: 100vh;
-  background-image: url('@/assets/background-mobile.png');
+  background-image: url('@/assets/background-image.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -67,7 +67,7 @@
   }
 }
 
-/* Overlay for better contrast */
+/* Transparent overlay for better contrast */
 .login-container::before {
   content: '';
   position: absolute;
@@ -75,7 +75,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.016);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   z-index: 1;
 }
 
