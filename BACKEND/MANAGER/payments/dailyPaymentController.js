@@ -1,4 +1,36 @@
 import { createConnection } from "../../../config/database.js";
+import {
+  decryptAES256GCM,
+  isAES256GCMEncrypted,
+} from "../../../services/mysqlDecryptionService.js";
+
+/**
+ * Safely decrypt a value if it is AES-256-GCM encrypted.
+ * Returns the original value when decryption is not needed or fails.
+ */
+const safeDecrypt = (value) => {
+  if (!value || typeof value !== "string") return value;
+  try {
+    if (isAES256GCMEncrypted(value)) {
+      const decrypted = decryptAES256GCM(value);
+      return decrypted !== value ? decrypted : value;
+    }
+    return value;
+  } catch (error) {
+    console.error("⚠️ Decryption failed for value:", error.message);
+    return value;
+  }
+};
+
+/**
+ * Build a display name from first_name and last_name, decrypting if needed.
+ */
+const buildDisplayName = (firstName, lastName) => {
+  const decryptedFirst = safeDecrypt(firstName) || "";
+  const decryptedLast = safeDecrypt(lastName) || "";
+  const name = `${decryptedFirst} ${decryptedLast}`.trim();
+  return name || "N/A";
+};
 
 const DailyPaymentController = {
   /**
@@ -14,8 +46,37 @@ const DailyPaymentController = {
 
       const [result] = await connection.execute("CALL getAllDailyPayments()");
 
-      const payments = result[0] || [];
-      console.log("📊 Daily payments found:", payments.length);
+      const rawPayments = result[0] || [];
+      console.log("📊 Daily payments found:", rawPayments.length);
+
+      // Decrypt collector names (encrypted with AES-256-GCM) and build display names
+      const payments = rawPayments.map((payment) => {
+        try {
+          return {
+            ...payment,
+            collector_name: buildDisplayName(
+              payment.collector_first_name,
+              payment.collector_last_name,
+            ),
+            vendor_name: buildDisplayName(
+              payment.vendor_first_name,
+              payment.vendor_last_name,
+            ),
+          };
+        } catch (decryptError) {
+          console.error(
+            "⚠️ Decryption error for payment",
+            payment.receipt_id,
+            ":",
+            decryptError.message,
+          );
+          return {
+            ...payment,
+            collector_name: "N/A",
+            vendor_name: "N/A",
+          };
+        }
+      });
 
       res.status(200).json({
         success: true,
@@ -67,12 +128,25 @@ const DailyPaymentController = {
         });
       }
 
-      console.log("📊 Daily payment found:", result[0][0]);
+      const raw = result[0][0];
+      const payment = {
+        ...raw,
+        collector_name: buildDisplayName(
+          raw.collector_first_name,
+          raw.collector_last_name,
+        ),
+        vendor_name: buildDisplayName(
+          raw.vendor_first_name,
+          raw.vendor_last_name,
+        ),
+      };
+
+      console.log("📊 Daily payment found:", payment);
 
       res.status(200).json({
         success: true,
         message: "Daily payment retrieved successfully",
-        data: result[0][0],
+        data: payment,
       });
     } catch (error) {
       console.error("❌ Error fetching daily payment:", error);
@@ -149,12 +223,12 @@ const DailyPaymentController = {
           parseFloat(amount),
           referenceNo || null,
           status,
-        ]
+        ],
       );
 
       console.log(
         "📋 Raw stored procedure result:",
-        JSON.stringify(result, null, 2)
+        JSON.stringify(result, null, 2),
       );
 
       // Check if the procedure returned success
@@ -175,15 +249,28 @@ const DailyPaymentController = {
         });
       }
 
+      // Decrypt names in the returned payment data
+      const decryptedPayment = {
+        ...paymentData,
+        collector_name: buildDisplayName(
+          paymentData.collector_first_name,
+          paymentData.collector_last_name,
+        ),
+        vendor_name: buildDisplayName(
+          paymentData.vendor_first_name,
+          paymentData.vendor_last_name,
+        ),
+      };
+
       console.log(
         "✅ Daily payment added successfully:",
-        paymentData.receipt_id
+        decryptedPayment.receipt_id,
       );
 
       res.status(201).json({
         success: true,
         message: "Daily payment added successfully",
-        data: paymentData,
+        data: decryptedPayment,
       });
     } catch (error) {
       console.error("❌ Error adding daily payment:", error);
@@ -227,7 +314,7 @@ const DailyPaymentController = {
           amount ? parseFloat(amount) : null,
           referenceNo || null,
           status || null,
-        ]
+        ],
       );
 
       const procedureResult = result[0];
@@ -244,12 +331,25 @@ const DailyPaymentController = {
         });
       }
 
+      // Decrypt names in the returned payment data
+      const decryptedPayment = {
+        ...paymentData,
+        collector_name: buildDisplayName(
+          paymentData.collector_first_name,
+          paymentData.collector_last_name,
+        ),
+        vendor_name: buildDisplayName(
+          paymentData.vendor_first_name,
+          paymentData.vendor_last_name,
+        ),
+      };
+
       console.log("✅ Daily payment updated successfully");
 
       res.status(200).json({
         success: true,
         message: "Daily payment updated successfully",
-        data: paymentData,
+        data: decryptedPayment,
       });
     } catch (error) {
       console.error("❌ Error updating daily payment:", error);
@@ -331,10 +431,33 @@ const DailyPaymentController = {
 
       console.log("🔍 Fetching all vendors");
 
-      const [result] = await connection.execute("CALL getAllVendors()");
+      const [result] = await connection.execute(
+        "CALL getAllVendorsForDailyPayments()",
+      );
 
-      const vendors = result[0] || [];
-      console.log("📊 Vendors found:", vendors.length);
+      const rawVendors = result[0] || [];
+      console.log("📊 Vendors found:", rawVendors.length);
+
+      // Decrypt vendor names if encrypted and build display names
+      const vendors = rawVendors.map((vendor) => {
+        try {
+          return {
+            vendor_id: vendor.vendor_id,
+            vendor_name: buildDisplayName(vendor.first_name, vendor.last_name),
+          };
+        } catch (decryptError) {
+          console.error(
+            "⚠️ Decryption error for vendor",
+            vendor.vendor_id,
+            ":",
+            decryptError.message,
+          );
+          return {
+            vendor_id: vendor.vendor_id,
+            vendor_name: "N/A",
+          };
+        }
+      });
 
       res.status(200).json({
         success: true,
@@ -364,10 +487,36 @@ const DailyPaymentController = {
 
       console.log("🔍 Fetching all collectors");
 
-      const [result] = await connection.execute("CALL getAllCollectors()");
+      const [result] = await connection.execute(
+        "CALL getAllCollectorsForDailyPayments()",
+      );
 
-      const collectors = result[0] || [];
-      console.log("📊 Collectors found:", collectors.length);
+      const rawCollectors = result[0] || [];
+      console.log("📊 Collectors found:", rawCollectors.length);
+
+      // Decrypt collector names (encrypted with AES-256-GCM) and build display names
+      const collectors = rawCollectors.map((collector) => {
+        try {
+          return {
+            collector_id: collector.collector_id,
+            collector_name: buildDisplayName(
+              collector.first_name,
+              collector.last_name,
+            ),
+          };
+        } catch (decryptError) {
+          console.error(
+            "⚠️ Decryption error for collector",
+            collector.collector_id,
+            ":",
+            decryptError.message,
+          );
+          return {
+            collector_id: collector.collector_id,
+            collector_name: "N/A",
+          };
+        }
+      });
 
       res.status(200).json({
         success: true,
@@ -388,4 +537,3 @@ const DailyPaymentController = {
 };
 
 export default DailyPaymentController;
-
