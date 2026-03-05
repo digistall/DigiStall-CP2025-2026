@@ -115,7 +115,10 @@ const PaymentController = {
             (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
              WHERE p.stallholder_id = sh.stallholder_id 
              AND p.payment_for_month = ? 
-             AND p.payment_status = 'completed') as current_month_paid_amount
+             AND p.payment_status = 'completed') as current_month_paid_amount,
+            (SELECT COUNT(*) FROM violation_report vr 
+             WHERE vr.stallholder_id = sh.stallholder_id 
+             AND vr.payment_status IN ('unpaid', 'pending')) as unpaid_violations_count
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -155,7 +158,10 @@ const PaymentController = {
             (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
              WHERE p.stallholder_id = sh.stallholder_id 
              AND p.payment_for_month = ? 
-             AND p.payment_status = 'completed') as current_month_paid_amount
+             AND p.payment_status = 'completed') as current_month_paid_amount,
+            (SELECT COUNT(*) FROM violation_report vr 
+             WHERE vr.stallholder_id = sh.stallholder_id 
+             AND vr.payment_status IN ('unpaid', 'pending')) as unpaid_violations_count
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id

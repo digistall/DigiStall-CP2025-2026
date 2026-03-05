@@ -336,6 +336,21 @@
   border: 1px dashed #e2e8f0;
 }
 
+/* ===== Application Status Chip ===== */
+.status-chip-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.status-chip {
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.3px;
+  padding: 0 14px !important;
+  text-align: center;
+}
+
 /* ===== Document Preview ===== */
 .doc-preview-img {
   border-radius: 8px;

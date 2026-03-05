@@ -58,6 +58,11 @@
                 {{ item.raw?.stallholderData?.paymentStatus || 'current' }}
               </v-chip>
             </div>
+            <!-- Violation Warning -->
+            <div v-if="item.raw?.stallholderData?.hasViolation" class="violation-warning-row">
+              <v-icon color="red" size="14">mdi-alert-circle</v-icon>
+              <span class="violation-warning-text">Violation Found — Must pay penalty before rental</span>
+            </div>
           </div>
         </v-list-item>
       </template>
@@ -77,6 +82,7 @@
           >
             {{ item.raw?.stallholderData?.stallNo }}
           </v-chip>
+          <v-icon v-if="item.raw?.stallholderData?.hasViolation" color="red" size="16" class="ml-2">mdi-alert-circle</v-icon>
         </div>
       </template>
 
@@ -119,6 +125,23 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <!-- Violation Warning Alert -->
+    <v-alert
+      v-if="selectedStallholderData && selectedStallholderData.hasViolation"
+      type="error"
+      variant="tonal"
+      density="compact"
+      class="mt-2"
+      icon="mdi-alert-circle"
+    >
+      <div class="violation-alert-content">
+        <strong>Violation Found!</strong>
+        <span>This stallholder has {{ selectedStallholderData.unpaidViolationsCount }} unpaid violation(s). 
+          Penalty must be paid first before processing rental payment. 
+          Select <strong>"penalty"</strong> as Payment Type to pay the violation.</span>
+      </div>
+    </v-alert>
   </div>
 </template>
 
@@ -235,7 +258,9 @@ export default {
               contractStatus: stallholder.contractStatus || stallholder.contract_status,
               paymentStatus: stallholder.totalPayments > 0 ? 'paid' : 'pending',
               totalPayments: stallholder.totalPayments || 0,
-              lastPaymentDate: stallholder.lastPaymentDate
+              lastPaymentDate: stallholder.lastPaymentDate,
+              hasViolation: parseInt(stallholder.unpaid_violations_count) > 0,
+              unpaidViolationsCount: parseInt(stallholder.unpaid_violations_count) || 0
             }
           }))
 
@@ -409,5 +434,36 @@ export default {
 .info-value.amount {
   color: #059669;
   font-weight: 600;
+}
+
+/* Violation Warning in dropdown item */
+.violation-warning-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 3px 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+}
+
+.violation-warning-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #dc2626;
+  letter-spacing: 0.1px;
+}
+
+/* Violation Alert below info card */
+.violation-alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.violation-alert-content strong {
+  font-size: 13px;
 }
 </style>

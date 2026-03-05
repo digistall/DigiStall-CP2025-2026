@@ -220,6 +220,7 @@ export default {
             monthlyRental: parseFloat(s.monthlyRental || s.rental_price || 0),
             moveInDate: s.contract_start_date || s.move_in_date || null,
             paymentStatus: s.payment_status || 'unpaid',
+            unpaidViolations: parseInt(s.unpaid_violations_count) || 0,
             // Check if current month has been paid (from backend subquery)
             _currentMonthPaid: parseFloat(s.current_month_paid_amount || 0) > 0
           }))
