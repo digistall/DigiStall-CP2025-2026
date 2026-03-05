@@ -84,8 +84,8 @@ export default {
         let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
         apiBase = apiBase.replace(/\/api\/?$/, '') // Remove trailing /api if present
         
-        // Get token for authenticated requests (stored as 'authToken' by authStore)
-        const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+        // Get token for authenticated requests (check both sessionStorage and localStorage)
+        const token = sessionStorage.getItem('authToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('authToken') || localStorage.getItem('token')
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
         
         console.log('🔐 Auth token present:', !!token)
@@ -211,9 +211,8 @@ export default {
       }
     },
     
-    // Handle document image load error
+    // Handle document image load error (expected when docs not yet uploaded)
     handleDocumentError(docType) {
-      console.warn(`⚠️ Failed to load ${docType} document`)
       this.applicantDocuments[docType] = null
     },
     
@@ -250,14 +249,23 @@ export default {
     confirmActionHandler() {
       console.log('✅ Confirm action - selectedApplicant:', this.selectedApplicant)
       console.log('✅ Confirm action - applicant_id to use:', this.selectedApplicant?.applicant_id)
-      if (this.confirmAction === 'accept') {
-        this.$emit('accept', this.selectedApplicant)
-      } else {
-        this.$emit('decline', this.selectedApplicant)
-      }
+      const action = this.confirmAction
+      const applicant = this.selectedApplicant
+
       this.showConfirmDialog = false
-      this.selectedApplicant = null
-      this.confirmAction = ''
+
+      if (action === 'accept') {
+        this.$emit('accept', applicant)
+      } else {
+        this.$emit('decline', applicant)
+      }
+
+      // Delay reset until after Vuetify dialog close animation (300ms)
+      // to prevent the header from flashing red during the transition
+      setTimeout(() => {
+        this.selectedApplicant = null
+        this.confirmAction = ''
+      }, 300)
     },
     formatDate(date) {
       if (!date) return 'N/A'

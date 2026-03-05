@@ -12,6 +12,7 @@ export default {
       default: false,
     },
   },
+  emits: ['close', 'declined', 'applicant-status-updated', 'refresh-data'],
   data() {
     return {
       showModal: false,
@@ -22,6 +23,8 @@ export default {
       sendNotification: true,
       reasonError: '',
       processingMessage: '',
+      showErrorSnackbar: false,
+      snackbarMessage: '',
     }
   },
   watch: {
@@ -148,9 +151,10 @@ export default {
         console.error('❌ Error in decline process:', error)
         
         if (this.$toast) {
-          this.$toast.error(`❌ Failed to decline applicant: ${error.message}`)
+          this.$toast.error(`Failed to decline applicant: ${error.message}`)
         } else {
-          alert(`❌ Failed to decline applicant: ${error.message}`)
+          this.snackbarMessage = `Failed to decline applicant: ${error.message}`
+          this.showErrorSnackbar = true
         }
       }
     },

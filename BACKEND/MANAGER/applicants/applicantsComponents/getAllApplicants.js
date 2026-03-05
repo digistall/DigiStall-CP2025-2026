@@ -1,6 +1,6 @@
 import { createConnection } from '../../../../config/database.js'
 
-// Get all applicants - using decrypted procedure
+// Get all applicants - using decrypted procedure, with hasCredentials flag
 export const getAllApplicants = async (req, res) => {
   let connection;
   try {
@@ -8,11 +8,23 @@ export const getAllApplicants = async (req, res) => {
 
     const [applicants] = await connection.execute('CALL getAllApplicantsDecrypted()');
 
+    // Get all applicant IDs that have credentials (for hasCredentials flag)
+    const [credentialRows] = await connection.execute(
+      'SELECT DISTINCT applicant_id FROM credential WHERE applicant_id IS NOT NULL'
+    );
+    const applicantIdsWithCredentials = new Set(credentialRows.map(r => r.applicant_id));
+
+    // Add hasCredentials flag to each applicant
+    const applicantsWithFlag = (applicants[0] || applicants).map(applicant => ({
+      ...applicant,
+      has_credentials: applicantIdsWithCredentials.has(applicant.applicant_id)
+    }));
+
     res.json({
       success: true,
       message: 'Applicants retrieved successfully',
-      data: applicants,
-      count: applicants.length
+      data: applicantsWithFlag,
+      count: applicantsWithFlag.length
     });
 
   } catch (error) {

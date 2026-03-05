@@ -344,6 +344,21 @@ export const getApplicantsByBranchManager = async (req, res) => {
     // Convert Map to Array
     const applicants = Array.from(applicantsMap.values());
 
+    // Add hasCredentials flag - check which applicants already have credentials
+    const applicantIds = applicants.map(a => a.applicant_id);
+    let applicantIdsWithCredentials = new Set();
+    if (applicantIds.length > 0) {
+      const placeholdersForCreds = applicantIds.map(() => '?').join(',');
+      const [credentialRows] = await connection.execute(
+        `SELECT DISTINCT applicant_id FROM credential WHERE applicant_id IN (${placeholdersForCreds})`,
+        applicantIds
+      );
+      applicantIdsWithCredentials = new Set(credentialRows.map(r => r.applicant_id));
+    }
+    applicants.forEach(applicant => {
+      applicant.has_credentials = applicantIdsWithCredentials.has(applicant.applicant_id);
+    });
+
     // Get summary statistics with multi-branch support
     let summaryQuery = `
       SELECT 

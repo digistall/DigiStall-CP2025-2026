@@ -9,6 +9,10 @@ export default {
       type: Object,
       default: null,
     },
+    isResolvingFromParent: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -98,21 +102,13 @@ export default {
         return;
       }
 
-      this.isResolving = true;
       this.resolveError = '';
 
-      try {
-        this.$emit('resolve-complaint', {
-          complaint_id: this.complaints.complaint_id,
-          status: this.resolveData.status,
-          resolution_notes: this.resolveData.resolution_notes
-        });
-      } catch (error) {
-        console.error('Error resolving complaint:', error);
-        this.resolveError = 'Failed to resolve complaint. Please try again.';
-      } finally {
-        this.isResolving = false;
-      }
+      this.$emit('resolve-complaint', {
+        complaint_id: this.complaints.complaint_id,
+        status: this.resolveData.status,
+        resolution_notes: this.resolveData.resolution_notes
+      });
     }
   },
   watch: {

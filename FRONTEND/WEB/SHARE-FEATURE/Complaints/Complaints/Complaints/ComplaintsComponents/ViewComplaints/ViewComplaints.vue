@@ -199,9 +199,9 @@
           <button
             class="modal-button resolve"
             @click="submitResolve"
-            :disabled="isResolving"
+            :disabled="isResolvingFromParent"
           >
-            <span v-if="isResolving" class="loading-spinner"></span>
+            <span v-if="isResolvingFromParent" class="loading-spinner"></span>
             <span v-else>{{ resolveData.status === 'resolved' ? 'Mark as Resolved' : 'Mark as Rejected' }}</span>
           </button>
         </div>

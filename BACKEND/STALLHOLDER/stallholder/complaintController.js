@@ -14,9 +14,9 @@ export const submitComplaint = async (req, res) => {
     console.log('👤 User from token:', JSON.stringify(req.user, null, 2));
     
     const userData = req.user; // From auth middleware
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    const userId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
-    console.log('🆔 Resolved stallholder ID:', stallholderId);
+    console.log('🆔 Resolved user/applicant ID:', userId);
     
     const {
       complaint_type,
@@ -27,13 +27,6 @@ export const submitComplaint = async (req, res) => {
       evidence // base64 blob
     } = req.body;
     
-    console.log('📝 Stallholder submitting complaint:', {
-      stallholderId,
-      complaint_type,
-      subject,
-      branch_id
-    });
-    
     // Validation
     if (!complaint_type || !subject || !description) {
       console.log('❌ Validation failed - missing fields');
@@ -43,17 +36,42 @@ export const submitComplaint = async (req, res) => {
       });
     }
     
-    if (!stallholderId) {
-      console.log('❌ No stallholder ID found');
+    if (!userId) {
+      console.log('❌ No user ID found');
       return res.status(400).json({
         success: false,
-        message: 'Stallholder ID not found in token'
+        message: 'User ID not found in token'
       });
     }
     
     console.log('📡 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connected');
+    
+    // Look up actual stallholder_id from DB using mobile_user_id or applicant_id
+    let stallholderId = userId;
+    try {
+      const [shRows] = await connection.execute(
+        `SELECT stallholder_id, stall_id, branch_id FROM stallholder 
+         WHERE mobile_user_id = ? OR applicant_id = ? OR stallholder_id = ? LIMIT 1`,
+        [userId, userId, userId]
+      );
+      if (shRows.length > 0) {
+        stallholderId = shRows[0].stallholder_id;
+        console.log('✅ Resolved actual stallholder_id:', stallholderId, 'from userId:', userId);
+      } else {
+        console.log('⚠️ No stallholder record found for userId:', userId, '- using userId as fallback');
+      }
+    } catch (lookupErr) {
+      console.log('⚠️ Stallholder lookup error:', lookupErr.message, '- using userId as fallback');
+    }
+    
+    console.log('📝 Stallholder submitting complaint:', {
+      stallholderId,
+      complaint_type,
+      subject,
+      branch_id
+    });
     
     // Ensure complaint table exists using stored procedure
     console.log('🔧 Ensuring complaint table exists...');
@@ -137,11 +155,29 @@ export const getMyComplaints = async (req, res) => {
   
   try {
     const userData = req.user;
-    const stallholderId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.id;
+    const userId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
-    console.log('📋 Getting complaints for stallholder:', stallholderId);
+    console.log('📋 Getting complaints for user:', userId);
     
     connection = await createConnection();
+    
+    // Look up actual stallholder_id from DB
+    let stallholderId = userId;
+    try {
+      const [shRows] = await connection.execute(
+        `SELECT stallholder_id FROM stallholder 
+         WHERE mobile_user_id = ? OR applicant_id = ? OR stallholder_id = ? LIMIT 1`,
+        [userId, userId, userId]
+      );
+      if (shRows.length > 0) {
+        stallholderId = shRows[0].stallholder_id;
+        console.log('✅ Resolved stallholder_id:', stallholderId, 'from userId:', userId);
+      }
+    } catch (lookupErr) {
+      console.log('⚠️ Stallholder lookup failed:', lookupErr.message);
+    }
+    
+    console.log('📋 Getting complaints for stallholder:', stallholderId);
     
     // Get complaints using decrypted stored procedure for proper display
     const [complaintsResult] = await connection.execute(

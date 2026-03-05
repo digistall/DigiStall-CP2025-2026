@@ -434,6 +434,17 @@
         </v-container>
       </v-main>
     </div>
+
+    <!-- Warning Snackbar -->
+    <v-snackbar
+      v-model="showWarningSnackbar"
+      :timeout="4000"
+      location="bottom left"
+      color="#ff9800"
+    >
+      <v-icon class="mr-2">mdi-alert</v-icon>
+      {{ snackbarMessage }}
+    </v-snackbar>
   </v-app>
 </template>
 
