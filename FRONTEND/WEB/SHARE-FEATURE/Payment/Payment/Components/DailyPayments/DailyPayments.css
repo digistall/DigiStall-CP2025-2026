@@ -16,140 +16,90 @@
   border-radius: 8px;
 }
 
-/* Table Styles - Matching Stallholders Design */
-.stallholders-table {
-  background: white;
-  border-radius: 8px;
+/* Payments Table Container */
+.payments-table-container {
+  flex: 1;
   overflow: hidden;
-  width: 100%;
-  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-.table-card {
-  border-radius: 8px;
+.payments-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  width: 100%;
+  border-radius: 12px;
+  background-color: white;
 }
 
-.table-header {
-  background: rgb(0, 33, 129);
+.table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Payments Table Styles */
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.payments-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #002181;
   color: white;
 }
 
-/* Scrollable table wrapper for fixed header */
-.scrollable-table-wrapper {
-  max-height: calc(100vh - 350px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
+.payments-table thead th {
+  padding: 16px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  border-bottom: 2px solid #001557;
 }
 
-.scrollable-table-wrapper::-webkit-scrollbar {
-  width: 8px;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-.scrollable-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-.header-row,
-.table-row {
-  display: grid;
-  min-height: 60px;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  width: 100%;
-}
-
-/* Payment Layout - 6 columns (no Receipt ID) */
-.simplified-layout {
-  grid-template-columns: 1.8fr 1.8fr 1fr 1.5fr 1.2fr 1fr;
-  width: 100%;
-}
-
-.clickable-row {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clickable-row:hover {
-  background-color: #f0f7ff !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 33, 129, 0.1);
-}
-
-.table-row {
+.payments-table tbody tr {
   border-bottom: 1px solid #e0e0e0;
   transition: background-color 0.2s;
 }
 
-.table-row:hover {
+.payments-table tbody tr:hover {
   background-color: #f5f5f5;
 }
 
-.table-row:last-child {
-  border-bottom: none;
+.payments-table tbody tr.clickable-row {
+  cursor: pointer;
 }
 
-.header-cell,
-.table-cell {
-  padding: 12px 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  word-wrap: break-word;
-}
-
-.header-cell {
-  font-weight: 600;
-  font-size: 13px;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-}
-
-.table-cell {
+.payments-table tbody td {
+  padding: 16px;
   font-size: 14px;
-  color: #2c3e50;
-  word-wrap: break-word;
-  overflow: hidden;
-  text-align: center;
   vertical-align: middle;
-}
-
-/* Column specific styles - all centered */
-.collector-col,
-.vendor-col {
-  justify-content: center;
   text-align: center;
+  
 }
 
-.collector-info,
-.vendor-info {
+/* Cell Specific Styles */
+.id-cell {
+  font-weight: 600;
+  color: #002181;
+}
+
+.name-cell .collector-info,
+.name-cell .vendor-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
+.name-cell .avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: #002181;
   color: white;
@@ -157,61 +107,42 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
-.avatar.vendor-avatar {
+.name-cell .avatar.vendor-avatar {
   background-color: #1976d2;
 }
 
-.name-text {
+.name-cell .name {
   font-weight: 500;
 }
 
-.amount-col {
-  justify-content: center;
-  text-align: center;
+.amount-cell {
   font-weight: 600;
   color: #2e7d32;
   white-space: nowrap;
 }
 
-.date-col {
-  justify-content: center;
-  text-align: center;
-}
-
-.reference-col {
-  justify-content: center;
-  text-align: center;
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 13px;
+.reference-cell {
+  font-family: monospace;
   color: #666;
 }
 
-.status-col {
-  justify-content: center;
-  text-align: center;
+.status-cell {
+  white-space: nowrap;
 }
 
 /* Empty State */
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #7f8c8d;
   text-align: center;
-}
-
-.empty-state .v-icon {
-  margin-bottom: 16px;
+  padding: 64px 24px !important;
+  color: #999;
 }
 
 .empty-state p {
-  margin: 0;
+  margin-top: 16px;
   font-size: 16px;
 }
 
@@ -265,8 +196,8 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
-  .simplified-layout {
-    grid-template-columns: 1.5fr 1.5fr 0.8fr 1.3fr 1fr 0.8fr;
+  .payments-table {
+    min-width: 900px;
   }
 }
 
@@ -275,33 +206,13 @@
     padding: 16px;
   }
 
-  .simplified-layout {
-    grid-template-columns: 1fr;
-    gap: 0;
+  .payments-table thead th,
+  .payments-table tbody td {
+    padding: 12px;
+    font-size: 13px;
   }
 
-  .header-row,
-  .table-row {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 16px;
-    gap: 8px;
-    min-height: auto;
-  }
-
-  .table-cell,
-  .header-cell {
-    justify-content: flex-start;
-    text-align: left;
-    padding: 0;
-  }
-
-  .header-cell {
-    display: none;
-  }
-
-  .avatar {
+  .name-cell .avatar {
     width: 32px;
     height: 32px;
     font-size: 14px;
@@ -311,6 +222,26 @@
     bottom: 24px;
     right: 24px;
   }
+}
+
+/* Scrollbar Styles */
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 /* Transition Animations */

@@ -1,13 +1,12 @@
-import express from "express";
-import enhancedAuthMiddleware from "../middleware/enhancedAuth.js";
+import express from 'express';
+import enhancedAuthMiddleware from '../middleware/enhancedAuth.js';
 import {
   createVendor,
   getAllVendors,
   getVendorById,
   updateVendor,
-  deleteVendor,
-  getAssignedLocations,
-} from "../BACKEND/MANAGER/vendors/vendorController.js";
+  deleteVendor
+} from '../BACKEND/MANAGER/vendors/vendorController.js';
 
 const router = express.Router();
 
@@ -25,45 +24,34 @@ const router = express.Router();
  * @desc    Create a new vendor
  * @access  Protected
  */
-router.post("/", enhancedAuthMiddleware.authenticateToken, createVendor);
+router.post('/', enhancedAuthMiddleware.authenticateToken, createVendor);
 
 /**
  * @route   GET /api/vendors
  * @desc    Get all vendors
  * @access  Protected
  */
-router.get("/", enhancedAuthMiddleware.authenticateToken, getAllVendors);
-
-/**
- * @route   GET /api/vendors/locations
- * @desc    Get assigned locations for dropdown
- * @access  Protected
- */
-router.get(
-  "/locations",
-  enhancedAuthMiddleware.authenticateToken,
-  getAssignedLocations,
-);
+router.get('/', enhancedAuthMiddleware.authenticateToken, getAllVendors);
 
 /**
  * @route   GET /api/vendors/:id
  * @desc    Get vendor by ID
  * @access  Protected
  */
-router.get("/:id", enhancedAuthMiddleware.authenticateToken, getVendorById);
+router.get('/:id', enhancedAuthMiddleware.authenticateToken, getVendorById);
 
 /**
  * @route   PUT /api/vendors/:id
  * @desc    Update vendor by ID
  * @access  Protected
  */
-router.put("/:id", enhancedAuthMiddleware.authenticateToken, updateVendor);
+router.put('/:id', enhancedAuthMiddleware.authenticateToken, updateVendor);
 
 /**
  * @route   DELETE /api/vendors/:id
  * @desc    Delete vendor by ID
  * @access  Protected
  */
-router.delete("/:id", enhancedAuthMiddleware.authenticateToken, deleteVendor);
+router.delete('/:id', enhancedAuthMiddleware.authenticateToken, deleteVendor);
 
 export default router;
