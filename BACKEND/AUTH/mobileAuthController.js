@@ -106,34 +106,134 @@ export const mobileLogin = async (req, res) => {
     const otherData = otherResult[0] || [];
     console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
 
-    // Get application status
-    const [applicationResult] = await connection.execute('CALL sp_getLatestApplicationByApplicantId(?)', [applicantId]);
-    const applicationData = applicationResult[0] || [];
+    // Get application status - direct query instead of SP to include section/floor data
+    const [applicationResult] = await connection.execute(`
+      SELECT 
+        a.*,
+        s.stall_number,
+        s.stall_location,
+        s.size,
+        s.stall_size,
+        s.area_sqm,
+        s.rental_price,
+        s.section as stall_section,
+        s.floor_level as stall_floor_level,
+        sec.section_name,
+        f.floor_name as joined_floor_name,
+        b.branch_id as stall_branch_id,
+        b.branch_name
+      FROM application a
+      LEFT JOIN stall s ON a.stall_id = s.stall_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON sec.floor_id = f.floor_id
+      LEFT JOIN branch b ON s.branch_id = b.branch_id
+      WHERE a.applicant_id = ?
+      ORDER BY a.created_at DESC
+      LIMIT 1
+    `, [applicantId]);
+    const applicationData = applicationResult || [];
     console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
+    console.log('📝 Application raw data:', JSON.stringify(applicationData, null, 2));
 
     // Get stallholder information (if approved) - Using direct query instead of stored procedure
     // because sp_getStallholderByApplicantId depends on fn_getEncryptionKey which may not exist
     // Check both applicant_id and mobile_user_id since stallholders can be linked by either
+    // Also JOIN section and floor tables for guaranteed location/size fallback data
     const [stallholderResult] = await connection.execute(`
       SELECT 
         sh.*,
         s.stall_number,
         s.stall_location,
         s.size,
+        s.stall_size,
+        s.area_sqm,
+        s.floor_level,
+        s.section,
         s.monthly_rent as stall_monthly_rent,
         s.rental_price as stall_rental_price,
-        b.branch_name
+        s.price_type,
+        b.branch_name,
+        sec.section_name,
+        f.floor_name as joined_floor_name
       FROM stallholder sh
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      LEFT JOIN section sec ON s.section_id = sec.section_id
+      LEFT JOIN floor f ON sec.floor_id = f.floor_id
       WHERE sh.applicant_id = ? OR sh.mobile_user_id = ?
     `, [applicantId, applicantId]);
     let stallholderData = stallholderResult || [];
-    // Decrypt stallholder data if found
-    if (stallholderData.length > 0) {
-      stallholderData[0] = await decryptStallholderData(stallholderData[0]);
+    // Decrypt ALL stallholder records (not just the first one)
+    for (let i = 0; i < stallholderData.length; i++) {
+      stallholderData[i] = await decryptStallholderData(stallholderData[i]);
     }
-    console.log('🏪 Stallholder data:', stallholderData.length > 0 ? 'Found (ID: ' + stallholderData[0]?.stallholder_id + ')' : 'Not found');
+    console.log('🏪 Stallholder data:', stallholderData.length > 0 ? `Found ${stallholderData.length} record(s) (IDs: ${stallholderData.map(s => s.stallholder_id).join(', ')})` : 'Not found');
+    console.log('🏪 Stallholder raw data:', JSON.stringify(stallholderData, null, 2));
+
+    // ===== CHECK IF STALLHOLDER IS OVERDUE — BLOCK LOGIN =====
+    if (stallholderData.length > 0 && stallholderData[0].status === 'active') {
+      const sh = stallholderData[0];
+      const paymentStatus = (sh.payment_status || 'unpaid').toLowerCase();
+      
+      if (paymentStatus !== 'paid') {
+        const moveInDate = sh.move_in_date ? new Date(sh.move_in_date) : null;
+        const now = new Date();
+        let isOverdue = false;
+
+        if (moveInDate) {
+          const isFirstMonth = moveInDate.getFullYear() === now.getFullYear() && moveInDate.getMonth() === now.getMonth();
+
+          if (isFirstMonth) {
+            // First month: overdue only after 5-day grace period from move-in date
+            const graceDate = new Date(moveInDate);
+            graceDate.setDate(graceDate.getDate() + 5);
+            graceDate.setHours(23, 59, 59, 999);
+            isOverdue = now > graceDate;
+          } else {
+            // Subsequent months: overdue if past the due day of the current month
+            const dueDay = moveInDate.getDate();
+            const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+            if (dueDate.getMonth() !== now.getMonth()) {
+              dueDate.setDate(0); // handle overflow (e.g. 31 in Feb)
+            }
+            isOverdue = now > dueDate;
+          }
+        }
+
+        if (isOverdue) {
+          // Double-check: see if total payments this month cover the rental
+          const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const [monthPayments] = await connection.execute(
+            `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
+             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+            [sh.stallholder_id, currentMonth]
+          );
+          const totalPaid = parseFloat(monthPayments[0]?.totalPaid || 0);
+
+          // Get rental price to compare
+          const rentalPrice = parseFloat(sh.stall_rental_price || sh.stall_monthly_rent || 0);
+
+          // Not fully paid if total paid < 99% of rental (tolerance for rounding)
+          if (totalPaid < rentalPrice * 0.99) {
+            // Update DB status to overdue
+            await connection.execute(
+              "UPDATE stallholder SET payment_status = 'overdue' WHERE stallholder_id = ?",
+              [sh.stallholder_id]
+            );
+
+            console.log('🚫 Login blocked — stallholder is overdue:', sh.stallholder_id);
+            return res.status(403).json({
+              success: false,
+              blocked: true,
+              reason: 'payment_overdue',
+              message: 'Your account has been temporarily disabled due to an overdue payment. Please settle your rental payment at the market office to regain access.',
+              stallholder_id: sh.stallholder_id
+            });
+          }
+        }
+      }
+    }
+    // ===== END OVERDUE CHECK =====
 
     // Get applicant full details
     const [applicantResult] = await connection.execute('CALL sp_getApplicantById(?)', [applicantId]);
@@ -159,6 +259,38 @@ export const mobileLogin = async (req, res) => {
     
     console.log('✅ Login successful for:', username);
     
+    // Helper to map stallholder row to response object
+    const mapStallholderRow = (row) => ({
+      stallholder_id: row.stallholder_id,
+      stallholder_name: row.full_name || row.stallholder_name,
+      contact_number: row.contact_number,
+      email: row.email,
+      address: row.address,
+      business_name: row.business_name,
+      business_type: row.business_type,
+      branch_id: row.branch_id,
+      branch_name: row.branch_name,
+      stall_id: row.stall_id,
+      stall_number: row.stall_number || row.stall_no,
+      stall_no: row.stall_no || row.stall_number,
+      stall_location: row.stall_location || row.section || row.section_name || row.floor_level || row.joined_floor_name || null,
+      size: row.size || row.stall_size || (row.area_sqm ? `${row.area_sqm} sq.m` : null),
+      price_type: row.price_type || null,
+      move_in_date: row.move_in_date,
+      contract_start_date: row.move_in_date,
+      contract_end_date: row.move_in_date 
+        ? new Date(new Date(row.move_in_date).setFullYear(new Date(row.move_in_date).getFullYear() + 1)).toISOString()
+        : null,
+      contract_status: row.status === 'active' ? 'Active' : row.status,
+      lease_amount: row.lease_amount || 0,
+      monthly_rent: row.stall_rental_price || row.stall_monthly_rent || row.monthly_rent || 0,
+      payment_status: row.payment_status,
+      compliance_status: row.compliance_status || 'Pending'
+    });
+
+    // Build stallholders array (all stalls owned by this user)
+    const stallholdersArray = stallholderData.map(mapStallholderRow);
+
     // Build comprehensive response with decrypted data
     const responseData = {
       user: {
@@ -205,40 +337,16 @@ export const mobileLogin = async (req, res) => {
         status: applicationData[0].application_status,
         application_date: applicationData[0].application_date,
         stall_number: applicationData[0].stall_number || applicationData[0].stall_no,
-        stall_no: applicationData[0].stall_no || applicationData[0].stall_number, // Keep for backwards compatibility
+        stall_no: applicationData[0].stall_no || applicationData[0].stall_number,
         rental_price: applicationData[0].rental_price,
-        stall_location: applicationData[0].stall_location,
-        size: applicationData[0].size,
-        branch_id: applicationData[0].branch_id,
+        stall_location: applicationData[0].stall_location || applicationData[0].stall_section || applicationData[0].section_name || applicationData[0].stall_floor_level || applicationData[0].joined_floor_name || null,
+        size: applicationData[0].size || applicationData[0].stall_size || (applicationData[0].area_sqm ? `${applicationData[0].area_sqm} sq.m` : null),
+        branch_id: applicationData[0].branch_id || applicationData[0].stall_branch_id,
         branch_name: applicationData[0].branch_name
       } : null,
-      stallholder: stallholderData.length > 0 ? {
-        stallholder_id: stallholderData[0].stallholder_id,
-        stallholder_name: stallholderData[0].full_name || stallholderData[0].stallholder_name,
-        contact_number: stallholderData[0].contact_number,
-        email: stallholderData[0].email,
-        address: stallholderData[0].address,
-        business_name: stallholderData[0].business_name,
-        business_type: stallholderData[0].business_type,
-        branch_id: stallholderData[0].branch_id,
-        branch_name: stallholderData[0].branch_name,
-        stall_id: stallholderData[0].stall_id,
-        stall_number: stallholderData[0].stall_number || stallholderData[0].stall_no,
-        stall_no: stallholderData[0].stall_no || stallholderData[0].stall_number, // Keep for backwards compatibility
-        stall_location: stallholderData[0].stall_location,
-        size: stallholderData[0].size,
-        // Contract dates - move_in_date is the contract start date
-        move_in_date: stallholderData[0].move_in_date,
-        contract_start_date: stallholderData[0].move_in_date, // Use move_in_date as contract start
-        contract_end_date: stallholderData[0].move_in_date 
-          ? new Date(new Date(stallholderData[0].move_in_date).setFullYear(new Date(stallholderData[0].move_in_date).getFullYear() + 1)).toISOString()
-          : null, // Calculate end date as 1 year from move_in_date
-        contract_status: stallholderData[0].status === 'active' ? 'Active' : stallholderData[0].status,
-        lease_amount: stallholderData[0].lease_amount || 0,
-        monthly_rent: stallholderData[0].stall_rental_price || stallholderData[0].stall_monthly_rent || stallholderData[0].monthly_rent || 0,
-        payment_status: stallholderData[0].payment_status,
-        compliance_status: stallholderData[0].compliance_status || 'Pending'
-      } : null,
+      stallholder: stallholdersArray.length > 0 ? stallholdersArray[0] : null,
+      // ALL stallholder records for multi-stall support
+      stallholders: stallholdersArray.length > 0 ? stallholdersArray : null,
       // Computed fields for easy access
       isStallholder: stallholderData.length > 0,
       isApproved: applicationData.length > 0 && applicationData[0].application_status === 'Approved',

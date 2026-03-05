@@ -15,6 +15,7 @@ export default {
       default: false,
     },
   },
+  emits: ['close', 'approved', 'applicant-approved', 'refresh-data'],
   data() {
     return {
       showModal: false,
@@ -23,6 +24,9 @@ export default {
       emailSent: false,
       credentials: null,
       processingMessage: '',
+      credentialsAlreadyExisted: false,
+      showErrorSnackbar: false,
+      snackbarMessage: '',
     }
   },
   watch: {
@@ -40,6 +44,7 @@ export default {
       this.emailSent = false
       this.credentials = null
       this.processingMessage = ''
+      this.credentialsAlreadyExisted = false
     },
 
     closeModal() {
@@ -50,12 +55,13 @@ export default {
     async approveApplicant() {
       try {
         this.processing = true
-        this.processingMessage = 'Generating credentials...'
+        this.processingMessage = 'Processing approval...'
 
         console.log('🎯 Approving applicant:', this.applicant)
         console.log('🔍 DEBUG - applicant_id:', this.applicant.applicant_id)
         console.log('🔍 DEBUG - application_id:', this.applicant.application_id)
         console.log('🔍 DEBUG - id:', this.applicant.id)
+        console.log('🔍 DEBUG - has_credentials:', this.applicant.has_credentials)
 
         // Get the correct applicant_id - use applicant_id directly, or extract from formatted id (#0047 -> 47)
         const applicantId = this.applicant.applicant_id || 
@@ -69,17 +75,30 @@ export default {
           throw new Error('Cannot determine applicant ID')
         }
 
-        // Username is the email, password is auto-generated
-        const username = this.applicant.email  // Email from other_information
-        const password = generatePassword()
+        // Check if applicant already has credentials (existing account)
+        const hasExistingCredentials = this.applicant.has_credentials || false
 
-        this.credentials = { username, password }
+        let username = null
+        let password = null
+
+        if (hasExistingCredentials) {
+          // Applicant already has an account — skip password generation
+          console.log('⏭️ Applicant already has credentials — skipping password generation')
+          this.processingMessage = 'Assigning stall to existing account...'
+          this.credentialsAlreadyExisted = true
+        } else {
+          // Generate new credentials
+          this.processingMessage = 'Generating credentials...'
+          username = this.applicant.email  // Email from other_information
+          password = generatePassword()
+          this.credentials = { username, password }
+        }
 
         console.log(`📝 Approving applicant ${this.applicant.id}:`, {
           email: this.applicant.email,
           name: this.applicant.fullName,
+          hasExistingCredentials,
           username,
-          password,
         })
 
         this.processingMessage = 'Updating database...'
@@ -96,23 +115,40 @@ export default {
           throw new Error(updateResult.message || 'Failed to update database')
         }
 
+        // Check if backend confirms credentials already existed
+        if (updateResult.data?.credentials_already_existed) {
+          this.credentialsAlreadyExisted = true
+        }
+
         console.log('✅ Applicant approved and credentials stored in database')
 
-        this.processingMessage = 'Sending credentials email...'
+        // Only send email if new credentials were created
+        if (!this.credentialsAlreadyExisted && username && password) {
+          this.processingMessage = 'Sending credentials email...'
 
-        // Send approval email with credentials
-        const emailResult = await sendApprovalEmailWithRetry(
-          this.applicant.email,
-          this.applicant.fullName,
-          username,
-          password,
-        )
+          // Send approval email with credentials
+          const emailResult = await sendApprovalEmailWithRetry(
+            this.applicant.email,
+            this.applicant.fullName,
+            username,
+            password,
+          )
 
-        this.emailSent = emailResult.success
+          this.emailSent = emailResult.success
+        } else {
+          this.emailSent = true // No email needed for existing accounts
+        }
+
         this.approved = true
         this.processing = false
 
-        if (emailResult.success) {
+        if (this.credentialsAlreadyExisted) {
+          if (this.$toast) {
+            this.$toast.success(
+              `✅ ${this.applicant.fullName} approved — stall assigned using existing account`,
+            )
+          }
+        } else if (this.emailSent) {
           // Show success message
           if (this.$toast) {
             this.$toast.success(
@@ -129,7 +165,7 @@ export default {
         } else {
           // Show partial success message
           if (this.$toast) {
-            this.$toast.warning(`⚠️ Applicant approved but email failed: ${emailResult.message}`)
+            this.$toast.warning(`⚠️ Applicant approved but email failed to send`)
           }
         }
 
@@ -138,6 +174,7 @@ export default {
           applicant: this.applicant,
           credentials: this.credentials,
           emailSent: this.emailSent,
+          credentialsAlreadyExisted: this.credentialsAlreadyExisted,
         })
 
         // Emit for realtime updates (no refresh needed)
@@ -149,9 +186,10 @@ export default {
         this.processing = false
 
         if (this.$toast) {
-          this.$toast.error(`❌ Failed to approve applicant: ${error.message}`)
+          this.$toast.error(`Failed to approve applicant: ${error.message}`)
         } else {
-          alert(`❌ Failed to approve applicant: ${error.message}`)
+          this.snackbarMessage = `Failed to approve applicant: ${error.message}`
+          this.showErrorSnackbar = true
         }
       }
     },

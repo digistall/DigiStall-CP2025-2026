@@ -51,6 +51,28 @@
       :sub-message="crudLoading.subMessage"
       :full-page="true"
     />
+
+    <!-- Success Snackbar -->
+    <v-snackbar
+      v-model="showSuccessSnackbar"
+      :timeout="4000"
+      location="bottom left"
+      color="#4caf50"
+    >
+      <v-icon class="mr-2">mdi-check-circle</v-icon>
+      {{ snackbarMessage }}
+    </v-snackbar>
+
+    <!-- Error Snackbar -->
+    <v-snackbar
+      v-model="showErrorSnackbar"
+      :timeout="4000"
+      location="bottom left"
+      color="#f44336"
+    >
+      <v-icon class="mr-2">mdi-alert-circle</v-icon>
+      {{ snackbarMessage }}
+    </v-snackbar>
   </v-app>
 </template>
 

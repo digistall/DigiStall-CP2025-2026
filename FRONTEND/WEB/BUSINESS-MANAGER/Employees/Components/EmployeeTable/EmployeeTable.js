@@ -69,7 +69,17 @@
       if (employee.employee_type === 'mobile') {
         return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
       }
-      return 'primary' // Web employee
+      // Web employee - color based on primary permission
+      const perms = employee.permissions || []
+      if (perms.includes('dashboard')) return 'indigo'
+      if (perms.includes('payments')) return 'green'
+      if (perms.includes('applicants')) return 'teal'
+      if (perms.includes('complaints')) return 'red'
+      if (perms.includes('compliances')) return 'deep-purple'
+      if (perms.includes('stallholders')) return 'blue'
+      if (perms.includes('vendors')) return 'amber-darken-2'
+      if (perms.includes('stalls')) return 'cyan'
+      return 'primary'
     },
 
     getEmployeeTypeColor(employee) {
@@ -77,7 +87,7 @@
       if (employee.employee_type === 'mobile') {
         return employee.mobile_role === 'inspector' ? 'purple' : 'orange'
       }
-      return 'primary' // Web employee
+      return this.getRoleColor(employee)
     },
 
     getRoleIcon(employee) {
@@ -85,7 +95,50 @@
       if (employee.employee_type === 'mobile') {
         return employee.mobile_role === 'inspector' ? 'mdi-clipboard-check' : 'mdi-account-cash'
       }
-      return 'mdi-account' // Web employee
+      // Web employee - icon based on primary permission
+      const perms = employee.permissions || []
+      if (perms.includes('dashboard')) return 'mdi-view-dashboard'
+      if (perms.includes('payments')) return 'mdi-cash-register'
+      if (perms.includes('applicants')) return 'mdi-file-document-edit'
+      if (perms.includes('complaints')) return 'mdi-alert-circle'
+      if (perms.includes('compliances')) return 'mdi-shield-check'
+      if (perms.includes('stallholders')) return 'mdi-account-group'
+      if (perms.includes('vendors')) return 'mdi-store'
+      if (perms.includes('stalls')) return 'mdi-storefront'
+      return 'mdi-account'
+    },
+
+    getWebRoleFromPermissions(employee) {
+      if (!employee || employee.employee_type === 'mobile') return employee?.display_role || 'Employee'
+      const perms = employee.permissions || []
+      if (perms.length === 0) return 'Employee'
+      const singleRoleMap = {
+        dashboard: 'Dashboard Admin',
+        payments: 'Payment Officer',
+        applicants: 'Application Officer',
+        complaints: 'Complaints Officer',
+        compliances: 'Compliance Officer',
+        vendors: 'Vendor Manager',
+        stallholders: 'Stallholder Manager',
+        stalls: 'Stall Manager',
+        collectors: 'Collections Manager',
+      }
+      if (perms.length === 1) {
+        return singleRoleMap[perms[0]] || 'Employee'
+      }
+      const shortLabelMap = {
+        dashboard: 'Dashboard',
+        payments: 'Payment',
+        applicants: 'Application',
+        complaints: 'Complaints',
+        compliances: 'Compliance',
+        vendors: 'Vendor',
+        stallholders: 'Stallholder',
+        stalls: 'Stall',
+        collectors: 'Collections',
+      }
+      const labels = perms.map(p => shortLabelMap[p] || p).filter(Boolean)
+      return labels.join(' / ') + ' Officer'
     },
 
     getPermissionText(permission) {

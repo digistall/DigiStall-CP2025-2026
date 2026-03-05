@@ -2,7 +2,6 @@ import ComplaintsTable from './ComplaintsComponents/ComplaintsTable/ComplaintsTa
 import ComplaintsSearch from './ComplaintsComponents/ComplaintsSearch/ComplaintsSearch.vue'
 import ViewComplaints from './ComplaintsComponents/ViewComplaints/ViewComplaints.vue'
 import LoadingOverlay from '@common/LoadingOverlay/LoadingOverlay.vue'
-import CrudLoadingOverlay from '@common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 import apiClient from '@services/apiClient'
 
 export default {
@@ -12,7 +11,6 @@ export default {
     ComplaintsSearch,
     ViewComplaints,
     LoadingOverlay,
-    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -20,7 +18,10 @@ export default {
       activeFilter: 'all',
       selectedComplaints: {},
       showViewComplaintsModal: false,
-      crudLoading: { visible: false, operation: 'generic', entity: 'complaint', message: '', subMessage: '' },
+      isResolvingComplaint: false,
+      showSuccessSnackbar: false,
+      showErrorSnackbar: false,
+      snackbarMessage: '',
       complaintsList: [], // Complaints data
       isLoading: false,
       error: null,
@@ -51,27 +52,21 @@ export default {
       // Open edit modal or navigate to edit page
     },
 
-    showCrudLoading(operation, entity, message, subMessage) {
-      this.crudLoading = { visible: true, operation: operation || 'generic', entity: entity || 'complaint', message: message || '', subMessage: subMessage || '' }
-    },
-    hideCrudLoading() {
-      this.crudLoading.visible = false
-    },
-
     async handleDeleteComplaints(complaints) {
       console.log('Delete complaints:', complaints)
       if (confirm(`Are you sure you want to delete complaint record ${complaints.id}?`)) {
-        this.showCrudLoading('delete', 'complaint')
         try {
           await apiClient.delete(`/complaints/${complaints.complaint_id}`)
 
           console.log('Complaint record deleted successfully!')
           await this.loadComplaintsData() // Reload data
+
+          this.snackbarMessage = 'Complaint record deleted successfully!'
+          this.showSuccessSnackbar = true
         } catch (error) {
           console.error('Failed to delete complaint:', error)
-          alert('Failed to delete complaint: ' + (error.response?.data?.message || error.message))
-        } finally {
-          this.hideCrudLoading()
+          this.snackbarMessage = 'Failed to delete complaint: ' + (error.response?.data?.message || error.message)
+          this.showErrorSnackbar = true
         }
       }
     },
@@ -84,7 +79,7 @@ export default {
     // Handle resolve complaint
     async handleResolveComplaint(resolveData) {
       console.log('Resolving complaint:', resolveData)
-      this.showCrudLoading('submit', 'complaint resolution')
+      this.isResolvingComplaint = true
 
       try {
         const response = await apiClient.put(`/complaints/${resolveData.complaint_id}/resolve`, {
@@ -95,20 +90,22 @@ export default {
         if (response.data.success) {
           console.log('✅ Complaint resolved successfully!')
 
-          // Show success message
-          alert(`Complaint has been ${resolveData.status === 'resolved' ? 'resolved' : 'rejected'} successfully!`)
-
           // Close the modal and reload data
           this.closeViewComplaintsModal()
           await this.loadComplaintsData()
+
+          // Show success snackbar
+          this.snackbarMessage = `Complaint has been ${resolveData.status === 'resolved' ? 'resolved' : 'rejected'} successfully!`
+          this.showSuccessSnackbar = true
         } else {
           throw new Error(response.data.message || 'Failed to resolve complaint')
         }
       } catch (error) {
         console.error('❌ Error resolving complaint:', error)
-        alert('Failed to resolve complaint: ' + (error.response?.data?.message || error.message))
+        this.snackbarMessage = 'Failed to resolve complaint: ' + (error.response?.data?.message || error.message)
+        this.showErrorSnackbar = true
       } finally {
-        this.hideCrudLoading()
+        this.isResolvingComplaint = false
       }
     },
 

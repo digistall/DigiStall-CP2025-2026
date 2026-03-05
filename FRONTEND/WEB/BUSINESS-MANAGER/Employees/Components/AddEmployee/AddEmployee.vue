@@ -34,7 +34,7 @@
                   <v-icon size="32">mdi-monitor</v-icon>
                 </div>
                 <div class="account-type-info">
-                  <div class="account-type-title">Web Employee</div>
+                  <div class="account-type-title">Web Staff</div>
                   <div class="account-type-desc">Access to web dashboard & management</div>
                 </div>
                 <v-icon v-if="accountType === 'web'" class="check-icon" color="success">mdi-check-circle</v-icon>
@@ -49,8 +49,8 @@
                   <v-icon size="32">mdi-cellphone</v-icon>
                 </div>
                 <div class="account-type-info">
-                  <div class="account-type-title">Mobile Staff</div>
-                  <div class="account-type-desc">Inspector or Collector for mobile app</div>
+                  <div class="account-type-title">Inspector / Collector</div>
+                  <div class="account-type-desc">Field staff using mobile app</div>
                 </div>
                 <v-icon v-if="accountType === 'mobile'" class="check-icon" color="success">mdi-check-circle</v-icon>
               </div>

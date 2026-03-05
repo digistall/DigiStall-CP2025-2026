@@ -53,7 +53,7 @@
                 <v-icon size="14" class="me-1">{{
                   getRoleIcon(employee)
                 }}</v-icon>
-                {{ employee.display_role || "Web Employee" }}
+                {{ employee.display_role || getWebRoleFromPermissions(employee) }}
               </v-chip>
             </div>
 

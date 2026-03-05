@@ -26,6 +26,9 @@ export default {
       showViewComplianceModal: false,
       complianceList: [], // Compliance data from backend
       crudLoading: { visible: false, operation: 'generic', entity: 'compliance record', message: '', subMessage: '' },
+      showSuccessSnackbar: false,
+      showErrorSnackbar: false,
+      snackbarMessage: '',
       isLoading: false,
       error: null,
     }
@@ -78,10 +81,12 @@ export default {
           // Reload data after deletion
           await this.loadComplianceData()
           console.log("Compliance record deleted successfully!")
-          alert("Compliance record deleted successfully!")
+          this.snackbarMessage = 'Compliance record deleted successfully!'
+          this.showSuccessSnackbar = true
         } catch (error) {
           console.error("Error deleting compliance:", error)
-          alert(error.response?.data?.message || "Failed to delete compliance record")
+          this.snackbarMessage = error.response?.data?.message || 'Failed to delete compliance record'
+          this.showErrorSnackbar = true
         } finally {
           this.hideCrudLoading()
         }

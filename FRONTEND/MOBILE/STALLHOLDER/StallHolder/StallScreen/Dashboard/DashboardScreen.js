@@ -14,6 +14,7 @@ import {
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import UserStorageService from "../../../../services/UserStorageService";
+import ApiService from "../../../../services/ApiService";
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 
@@ -23,8 +24,11 @@ const DashboardScreen = ({ onNavigate }) => {
   const { theme, isDark } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
   const [userData, setUserData] = useState(null);
+  const [liveStalls, setLiveStalls] = useState(null);
+  const [livePaymentStatus, setLivePaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStallIndex, setSelectedStallIndex] = useState(0);
 
   useEffect(() => {
     loadUserData();
@@ -32,14 +36,68 @@ const DashboardScreen = ({ onNavigate }) => {
 
   const loadUserData = async () => {
     try {
+      // Load cached data first for instant display
       const data = await UserStorageService.getUserData();
-      console.log('📊 Dashboard loaded user data:', JSON.stringify(data, null, 2));
+      console.log('📊 Dashboard loaded cached user data:', JSON.stringify(data, null, 2));
       setUserData(data);
+
+      // Then fetch fresh data from backend API
+      await fetchFreshData(data);
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const fetchFreshData = async (cachedData) => {
+    try {
+      // Fetch owned stalls data from backend
+      const [ownedStallsResponse, monthlyStatusResponse] = await Promise.all([
+        ApiService.getOwnedStalls().catch(err => { console.log('⚠️ Could not fetch owned stalls:', err); return null; }),
+        ApiService.getMonthlyPaymentStatus().catch(err => { console.log('⚠️ Could not fetch monthly status:', err); return null; }),
+      ]);
+
+      if (ownedStallsResponse?.success && ownedStallsResponse.data?.stalls?.length > 0) {
+        console.log('📊 Dashboard: Got fresh stall data from API:', ownedStallsResponse.data.stalls.length, 'stalls');
+        setLiveStalls(ownedStallsResponse.data.stalls);
+
+        // Also update cached user data with fresh stallholder info
+        if (cachedData) {
+          const freshStallholders = ownedStallsResponse.data.stalls.map(s => ({
+            stallholder_id: s.stallholder_id,
+            stall_id: s.stall_id,
+            stall_number: s.stall_number,
+            stall_no: s.stall_number,
+            stall_location: s.stall_location,
+            size: s.stall_size,
+            monthly_rent: s.monthly_rent,
+            branch_name: s.branch_name,
+            branch_id: s.branch_id,
+            payment_status: s.payment_status,
+            contract_status: s.contract_status,
+            contract_start_date: s.contract_start_date,
+            move_in_date: s.contract_start_date,
+          }));
+          const updatedData = {
+            ...cachedData,
+            stallholders: freshStallholders,
+            stallholder: freshStallholders[0] || cachedData.stallholder,
+            isStallholder: true,
+          };
+          setUserData(updatedData);
+          // Persist updated data to storage so future loads are fresh
+          await UserStorageService.saveUserData(updatedData);
+        }
+      }
+
+      if (monthlyStatusResponse?.success && monthlyStatusResponse.data) {
+        console.log('📊 Dashboard: Got fresh payment status:', monthlyStatusResponse.data.status);
+        setLivePaymentStatus(monthlyStatusResponse.data);
+      }
+    } catch (error) {
+      console.error('⚠️ Error fetching fresh dashboard data:', error);
     }
   };
 
@@ -102,7 +160,68 @@ const DashboardScreen = ({ onNavigate }) => {
     }
   };
 
-  // Extract display data from userData
+  // Get the list of all stalls owned by this user
+  const getAllStalls = () => {
+    // Prefer live stalls data from the API (most up-to-date)
+    if (liveStalls && liveStalls.length > 0) {
+      return liveStalls.map(s => ({
+        stallholder_id: s.stallholder_id,
+        stall_id: s.stall_id,
+        stall_number: s.stall_number,
+        stall_no: s.stall_number,
+        stall_location: s.stall_location,
+        size: s.stall_size,
+        monthly_rent: s.monthly_rent,
+        branch_name: s.branch_name,
+        branch_id: s.branch_id,
+        payment_status: s.payment_status,
+        contract_status: s.contract_status,
+        contract_start_date: s.contract_start_date,
+        move_in_date: s.contract_start_date,
+        compliance_status: s.compliance_status || 'Pending',
+        business_type: s.stall_type,
+        last_payment: s.last_payment,
+        next_payment_due: s.next_payment_due,
+      }));
+    }
+    if (!userData) return [];
+    // Use stallholders array if available, otherwise wrap stallholder in array
+    if (userData.stallholders && userData.stallholders.length > 0) {
+      return userData.stallholders;
+    }
+    if (userData.stallholder) {
+      return [userData.stallholder];
+    }
+    // Fall back to application data as a pseudo-stall
+    if (userData.application) {
+      return [{
+        stall_number: userData.application.stall_number || userData.application.stall_no,
+        stall_no: userData.application.stall_no || userData.application.stall_number,
+        stall_location: userData.application.stall_location,
+        size: userData.application.size,
+        monthly_rent: userData.application.rental_price,
+        branch_name: userData.application.branch_name,
+        branch_id: userData.application.branch_id,
+        payment_status: 'Pending',
+        compliance_status: 'Pending',
+        contract_status: 'Pending',
+        _fromApplication: true
+      }];
+    }
+    return [];
+  };
+
+  // Get the currently selected stall
+  const getActiveStall = () => {
+    const stalls = getAllStalls();
+    if (stalls.length === 0) return null;
+    const idx = Math.min(selectedStallIndex, stalls.length - 1);
+    return stalls[idx];
+  };
+
+  const getTotalStalls = () => getAllStalls().length;
+
+  // Extract display data from active stall / userData
   const getUserName = () => {
     if (!userData) return 'Stallholder';
     return userData.user?.full_name || userData.user?.fullName || userData.stallholder?.stallholder_name || 'Stallholder';
@@ -114,79 +233,95 @@ const DashboardScreen = ({ onNavigate }) => {
   };
 
   const getStallNumber = () => {
-    if (!userData) return 'N/A';
-    // Check stallholder data first (approved stallholders), then application data
-    // Database uses 'stall_number' in stall table
-    const stallNo = userData.stallholder?.stall_number ||
-                    userData.stallholder?.stall_no || 
-                    userData.stallholder?.stallNo ||
-                    userData.application?.stall_number ||
-                    userData.application?.stall_no || 
-                    userData.application?.stallNo ||
-                    userData.stall?.stall_number ||
-                    userData.stall?.stall_no;
-    console.log('📍 Getting stall number:', stallNo, 'from userData:', {
-      stallholder_stall_number: userData.stallholder?.stall_number,
-      stallholder_stall_no: userData.stallholder?.stall_no,
-      application_stall_number: userData.application?.stall_number
-    });
-    return stallNo || 'N/A';
+    const stall = getActiveStall();
+    if (!stall) return 'N/A';
+    return stall.stall_number || stall.stall_no || stall.stallNo || 'N/A';
   };
 
   const getStallLocation = () => {
-    if (!userData) return 'N/A';
-    return userData.stallholder?.stall_location || userData.application?.stall_location || 'N/A';
+    const stall = getActiveStall();
+    if (!stall) return 'N/A';
+    return stall.stall_location || 'N/A';
   };
 
   const getBranchName = () => {
-    if (!userData) return 'N/A';
-    return userData.stallholder?.branch_name || userData.application?.branch_name || 'N/A';
+    const stall = getActiveStall();
+    if (!stall) {
+      if (!userData) return 'N/A';
+      return userData.application?.branch_name || 'N/A';
+    }
+    return stall.branch_name || 'N/A';
   };
 
   const getBusinessType = () => {
+    const stall = getActiveStall();
     if (!userData) return 'N/A';
-    return userData.stallholder?.business_type || userData.business?.nature_of_business || 'N/A';
+    return stall?.business_type || userData.business?.nature_of_business || 'N/A';
   };
 
   const getMonthlyRent = () => {
-    if (!userData) return 0;
-    return userData.stallholder?.monthly_rent || userData.application?.rental_price || 0;
+    // Prefer live payment status data for rent amount
+    if (livePaymentStatus?.monthlyRentRaw) {
+      return livePaymentStatus.monthlyRentRaw;
+    }
+    const stall = getActiveStall();
+    if (!stall) return 0;
+    return stall.monthly_rent || stall.rental_price || 0;
   };
 
   const getPaymentStatus = () => {
-    if (!userData) return 'Unknown';
-    return userData.stallholder?.payment_status || 'Pending';
+    // Prefer live payment status from the API (most accurate)
+    if (livePaymentStatus) {
+      // If there are multiple stalls, find matching one
+      if (livePaymentStatus.stalls && livePaymentStatus.stalls.length > 0) {
+        const activeStall = getActiveStall();
+        const matchingStall = activeStall
+          ? livePaymentStatus.stalls.find(s => s.stallholderId === activeStall.stallholder_id || s.stallNumber === (activeStall.stall_number || activeStall.stall_no))
+          : livePaymentStatus.stalls[0];
+        if (matchingStall) {
+          const status = matchingStall.status || 'Pending';
+          return status.charAt(0).toUpperCase() + status.slice(1);
+        }
+      }
+      // Fall back to the primary status
+      if (livePaymentStatus.status) {
+        const status = livePaymentStatus.status;
+        return status.charAt(0).toUpperCase() + status.slice(1);
+      }
+    }
+    const stall = getActiveStall();
+    if (!stall) return 'Pending';
+    const status = stall.payment_status || 'Pending';
+    // Capitalize first letter
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   const getContractStatus = () => {
-    if (!userData) return 'Unknown';
-    return userData.stallholder?.contract_status || 'N/A';
+    const stall = getActiveStall();
+    if (!stall) return 'N/A';
+    return stall.contract_status || 'N/A';
   };
 
   const getContractEndDate = () => {
-    if (!userData) return null;
-    // contract_end_date is calculated from move_in_date (1 year contract)
-    return userData.stallholder?.contract_end_date || 
-           userData.stallholder?.contractEndDate ||
-           userData.application?.contract_end_date;
+    const stall = getActiveStall();
+    if (!stall) return null;
+    return stall.contract_end_date || stall.contractEndDate;
   };
 
   const getContractStartDate = () => {
-    if (!userData) return null;
-    // move_in_date is the contract start date
-    return userData.stallholder?.contract_start_date || 
-           userData.stallholder?.move_in_date ||
-           userData.stallholder?.contractStartDate ||
-           userData.application?.contract_start_date;
+    const stall = getActiveStall();
+    if (!stall) return null;
+    return stall.contract_start_date || stall.move_in_date || stall.contractStartDate;
   };
 
   const getComplianceStatus = () => {
-    if (!userData) return 'Unknown';
-    return userData.stallholder?.compliance_status || 'Pending';
+    const stall = getActiveStall();
+    if (!stall) return 'Pending';
+    return stall.compliance_status || 'Pending';
   };
 
   const isStallholder = () => {
-    return userData?.isStallholder || userData?.stallholder != null;
+    return userData?.isStallholder || userData?.stallholder != null || (userData?.stallholders && userData.stallholders.length > 0);
   };
 
   const getApplicationStatus = () => {
@@ -194,8 +329,9 @@ const DashboardScreen = ({ onNavigate }) => {
   };
 
   const getStallSize = () => {
-    if (!userData) return 'N/A';
-    return userData.stallholder?.size || userData.application?.size || 'N/A';
+    const stall = getActiveStall();
+    if (!stall) return 'N/A';
+    return stall.size || stall.stall_size || 'N/A';
   };
 
   const formatCurrency = (amount) => {
@@ -282,6 +418,27 @@ const DashboardScreen = ({ onNavigate }) => {
           </View>
           
           {/* Quick Stats Row */}
+          {getTotalStalls() > 1 && (
+            <View style={styles.stallSelectorRow}>
+              <TouchableOpacity 
+                onPress={() => setSelectedStallIndex(Math.max(0, selectedStallIndex - 1))}
+                disabled={selectedStallIndex === 0}
+                style={[styles.stallNavButton, selectedStallIndex === 0 && styles.stallNavButtonDisabled]}
+              >
+                <Ionicons name="chevron-back" size={20} color={selectedStallIndex === 0 ? 'rgba(255,255,255,0.3)' : 'white'} />
+              </TouchableOpacity>
+              <Text style={styles.stallSelectorText}>
+                Stall {selectedStallIndex + 1} of {getTotalStalls()}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => setSelectedStallIndex(Math.min(getTotalStalls() - 1, selectedStallIndex + 1))}
+                disabled={selectedStallIndex >= getTotalStalls() - 1}
+                style={[styles.stallNavButton, selectedStallIndex >= getTotalStalls() - 1 && styles.stallNavButtonDisabled]}
+              >
+                <Ionicons name="chevron-forward" size={20} color={selectedStallIndex >= getTotalStalls() - 1 ? 'rgba(255,255,255,0.3)' : 'white'} />
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={styles.quickStatsRow}>
             <View style={styles.quickStatItem}>
               <Text style={styles.quickStatValue}>{getStallNumber()}</Text>
@@ -400,7 +557,7 @@ const DashboardScreen = ({ onNavigate }) => {
           </View>
 
           {/* Contract Details Card */}
-          {isStallholder() && userData?.stallholder && (
+          {(isStallholder() || getActiveStall()) && (
             <View style={[styles.infoCard, { backgroundColor: theme.colors.card }]}>
               <View style={[styles.infoCardHeader, { borderBottomColor: theme.colors.border }]}>
                 <Ionicons name="document-text-outline" size={22} color="#305CDE" />
@@ -589,6 +746,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  
+  // Stall Selector (for multi-stall users)
+  stallSelectorRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  stallNavButton: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  stallNavButtonDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  stallSelectorText: {
+    color: 'white',
+    fontSize: width * 0.032,
+    fontWeight: '600',
+    marginHorizontal: 12,
   },
   
   // Quick Stats

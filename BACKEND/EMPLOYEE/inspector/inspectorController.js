@@ -93,7 +93,7 @@ export const reportStallholder = async (req, res) => {
   
   try {
     const staffData = req.user; // From auth middleware
-    const inspectorId = staffData.staffId || staffData.staff_id || staffData.id;
+    const inspectorId = staffData.staffId || staffData.staff_id || staffData.userId || staffData.id;
     
     const {
       stallholder_id,
@@ -115,6 +115,13 @@ export const reportStallholder = async (req, res) => {
     });
     
     // Validation
+    if (!inspectorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Inspector ID not found in token'
+      });
+    }
+    
     if (!stallholder_id || !violation_id || !branch_id) {
       return res.status(400).json({
         success: false,
@@ -138,7 +145,8 @@ export const reportStallholder = async (req, res) => {
     
     connection = await createConnection();
     
-    // Call the stored procedure with receipt_number
+    // Call the stored procedure - params must match SP order:
+    // (inspector_id, stallholder_id, violation_id, branch_id, stall_id, receipt_number, evidence, remarks)
     await connection.execute(
       'CALL reportStallholder(?, ?, ?, ?, ?, ?, ?, ?)',
       [
@@ -147,9 +155,9 @@ export const reportStallholder = async (req, res) => {
         violation_id,
         branch_id,
         stall_id || null,
+        String(receipt_number),
         evidence,
-        remarks || null,
-        parseInt(receipt_number)
+        remarks || null
       ]
     );
     

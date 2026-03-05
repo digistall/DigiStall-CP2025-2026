@@ -7,7 +7,6 @@ import ResetPasswordDialog from "./Components/ResetPasswordDialog/ResetPasswordD
 import ToastNotification from '@common/ToastNotification/ToastNotification.vue';
 import ActivityLogDialog from "./Components/ActivityLogDialog/ActivityLogDialog.vue";
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue';
-import CrudLoadingOverlay from '@common/CrudLoadingOverlay/CrudLoadingOverlay.vue';
 import {
   sendEmployeePasswordResetEmail,
   generateEmployeePassword,
@@ -27,20 +26,13 @@ export default {
     ToastNotification,
     ActivityLogDialog,
     LoadingOverlay,
-    CrudLoadingOverlay,
+    LoadingOverlay,
   },
   data() {
     return {
       saving: false,
       loading: false,
-      // CRUD operation loading state
-      crudLoading: {
-        visible: false,
-        operation: 'generic',
-        entity: 'employee',
-        message: '',
-        subMessage: '',
-      },
+      loadingText: 'Loading employees...',
       searchQuery: "",
       statusFilter: null,
       permissionFilter: null,
@@ -86,7 +78,7 @@ export default {
       employeeTypeOptions: [
         { title: "All Types", value: null },
         { title: "Web Employees", value: "web" },
-        { title: "Mobile Staff", value: "mobile" },
+        { title: "Inspector / Collector", value: "mobile" },
       ],
 
       permissionOptions: [
@@ -238,6 +230,40 @@ export default {
   },
 
   methods: {
+    // Get role name based on web employee permissions
+    getWebEmployeeRole(permissions) {
+      if (!permissions || !Array.isArray(permissions) || permissions.length === 0) return 'Employee';
+      const singleRoleMap = {
+        dashboard: 'Dashboard Admin',
+        payments: 'Payment Officer',
+        applicants: 'Application Officer',
+        complaints: 'Complaints Officer',
+        compliances: 'Compliance Officer',
+        vendors: 'Vendor Manager',
+        stallholders: 'Stallholder Manager',
+        stalls: 'Stall Manager',
+        collectors: 'Collections Manager',
+      };
+      // Single permission: use full role name
+      if (permissions.length === 1) {
+        return singleRoleMap[permissions[0]] || 'Employee';
+      }
+      // Multiple permissions: combine short labels
+      const shortLabelMap = {
+        dashboard: 'Dashboard',
+        payments: 'Payment',
+        applicants: 'Application',
+        complaints: 'Complaints',
+        compliances: 'Compliance',
+        vendors: 'Vendor',
+        stallholders: 'Stallholder',
+        stalls: 'Stall',
+        collectors: 'Collections',
+      };
+      const labels = permissions.map(p => shortLabelMap[p] || p).filter(Boolean);
+      return labels.join(' / ') + ' Officer';
+    },
+
     // Activity Log Dialog Methods
     openActivityLogDialog() {
       this.activityLogDialog = true;
@@ -320,11 +346,11 @@ export default {
         if (employeesData.success) {
           let employees = employeesData.data || employeesData.employees || [];
           
-          // Add employee_type for web employees
+          // Add employee_type for web employees with permission-based role
           employees = employees.map(emp => ({
             ...emp,
             employee_type: 'web',
-            display_role: emp.role || 'Web Employee'
+            display_role: emp.role || this.getWebEmployeeRole(emp.permissions)
           }));
           
           allEmployees = [...allEmployees, ...employees];
@@ -496,13 +522,8 @@ export default {
 
     async saveEmployee(employeeData) {
       this.saving = true;
-      this.crudLoading = {
-        visible: true,
-        operation: this.isEditMode ? 'edit' : 'add',
-        entity: 'employee',
-        message: this.isEditMode ? 'Updating employee...' : 'Adding employee...',
-        subMessage: 'Please wait while we process your request',
-      };
+      this.loadingText = this.isEditMode ? 'Updating employee...' : 'Creating employee...';
+      this.loading = true;
 
       try {
         // Get authentication token first
@@ -638,7 +659,8 @@ export default {
         this.showToast(`❌ ${error.message}`, "error");
       } finally {
         this.saving = false;
-        this.crudLoading = { ...this.crudLoading, visible: false };
+        this.loading = false;
+        this.loadingText = 'Loading employees...';
       }
     },
 
@@ -767,13 +789,8 @@ export default {
       if (!this.selectedEmployee) return;
 
       this.saving = true;
-      this.crudLoading = {
-        visible: true,
-        operation: 'save',
-        entity: 'permissions',
-        message: 'Saving permissions...',
-        subMessage: '',
-      };
+      this.loadingText = 'Saving permissions...';
+      this.loading = true;
 
       try {
         // Get authentication token
@@ -816,7 +833,8 @@ export default {
         );
       } finally {
         this.saving = false;
-        this.crudLoading = { ...this.crudLoading, visible: false };
+        this.loading = false;
+        this.loadingText = 'Loading employees...';
       }
     },
 
@@ -1047,13 +1065,8 @@ export default {
 
     async confirmFireEmployee({ employee, reason }) {
       this.saving = true;
-      this.crudLoading = {
-        visible: true,
-        operation: 'delete',
-        entity: 'employee',
-        message: 'Terminating employee...',
-        subMessage: 'Please wait while we process this action',
-      };
+      this.loadingText = 'Terminating employee...';
+      this.loading = true;
       
       try {
         const token = sessionStorage.getItem("authToken");
@@ -1115,7 +1128,8 @@ export default {
         );
       } finally {
         this.saving = false;
-        this.crudLoading = { ...this.crudLoading, visible: false };
+        this.loading = false;
+        this.loadingText = 'Loading employees...';
       }
     },
 

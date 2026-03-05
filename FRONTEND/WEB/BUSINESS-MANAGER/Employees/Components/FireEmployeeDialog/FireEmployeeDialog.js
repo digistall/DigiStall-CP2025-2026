@@ -55,7 +55,7 @@ export default {
       if (employee.employee_type === 'mobile') {
         return employee.mobile_role === 'inspector' ? 'Inspector' : 'Collector'
       }
-      return 'Web Employee'
+      return employee.display_role || 'Employee'
     },
 
     getRoleColor(employee) {
