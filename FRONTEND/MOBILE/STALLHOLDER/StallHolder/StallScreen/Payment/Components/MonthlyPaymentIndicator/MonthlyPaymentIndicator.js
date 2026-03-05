@@ -237,6 +237,10 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
     ? monthlyStatus.stalls 
     : [monthlyStatus]; // Backward-compatible: wrap single object in array
 
+  // Check if any stall has unpaid violations
+  const hasViolation = stalls.some(s => s.hasViolation);
+  const violationCount = stalls[0]?.unpaidViolationsCount || 0;
+
   return (
     <Animated.View 
       style={[
@@ -246,6 +250,51 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
         }
       ]}
     >
+      {/* Violation Warning Banner - shown when ANY stall has unpaid violations */}
+      {hasViolation && (
+        <View style={{
+          backgroundColor: isDark ? '#7F1D1D' : '#FEF2F2',
+          borderWidth: 1.5,
+          borderColor: isDark ? '#DC2626' : '#FECACA',
+          borderRadius: 16,
+          padding: 14,
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}>
+          <View style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 12,
+          }}>
+            <Ionicons name="warning" size={24} color="#EF4444" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{
+              fontSize: 14,
+              fontWeight: '700',
+              color: isDark ? '#FCA5A5' : '#991B1B',
+              marginBottom: 2,
+            }}>
+              Unpaid Violation{violationCount > 1 ? 's' : ''} ({violationCount})
+            </Text>
+            <Text style={{
+              fontSize: 12,
+              fontWeight: '500',
+              color: isDark ? '#FCA5A5' : '#B91C1C',
+              opacity: 0.85,
+              lineHeight: 16,
+            }}>
+              You have unpaid violation{violationCount > 1 ? 's' : ''}. Rental payments cannot be processed until {violationCount > 1 ? 'these are' : 'this is'} settled.
+            </Text>
+          </View>
+        </View>
+      )}
+
       {stalls.map((stall, index) => (
         <StallPaymentCard
           key={stall.stallholderId || stall.stallId || index}

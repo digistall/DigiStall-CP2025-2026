@@ -5,7 +5,7 @@
       <!-- Standardized Loading Overlay - contained within employee container -->
       <LoadingOverlay 
         :loading="loading" 
-        text="Loading employees..."
+        :text="loadingText"
         :full-page="false"
       />
       
@@ -204,16 +204,6 @@
               :message="toast.message"
               :type="toast.type"
               @close="toast.show = false"
-            />
-
-            <!-- CRUD Loading Overlay for add/edit/delete operations -->
-            <CrudLoadingOverlay
-              :visible="crudLoading.visible"
-              :operation="crudLoading.operation"
-              :entity="crudLoading.entity"
-              :message="crudLoading.message"
-              :sub-message="crudLoading.subMessage"
-              :full-page="true"
             />
           </v-col>
         </v-row>

@@ -240,7 +240,7 @@ const PaymentTable = ({ selectedPaymentMethod, theme = defaultTheme, isDark = fa
 
   const renderPaymentRecord = (record, index) => (
     <TouchableOpacity 
-      key={record.id} 
+      key={`${record.source || 'payment'}_${record.id}_${index}`} 
       style={[
         styles.recordCard, 
         { 

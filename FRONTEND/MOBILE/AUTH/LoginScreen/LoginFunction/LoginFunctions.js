@@ -182,16 +182,27 @@ export const handleLogin = async (
       }
 
     } else {
-      // Login failed - show professional error message
+      // Login failed
       console.log('❌ Login failed:', response.message);
       setIsLoading(false);
 
-      setErrorModal({
-        visible: true,
-        title: 'Authentication Failed',
-        message: response.message || 'The credentials you entered are incorrect. Please verify your username and password.',
-        type: 'error'
-      });
+      // Check if account is blocked due to overdue payment
+      if (response.blocked && response.reason === 'payment_overdue') {
+        setErrorModal({
+          visible: true,
+          title: 'Account Disabled',
+          message: response.message || 'Your account has been temporarily disabled due to an overdue payment. Please settle your rental payment at the market office to regain access.',
+          type: 'error'
+        });
+      } else {
+        // Generic login failure
+        setErrorModal({
+          visible: true,
+          title: 'Authentication Failed',
+          message: response.message || 'The credentials you entered are incorrect. Please verify your username and password.',
+          type: 'error'
+        });
+      }
     }
   } catch (error) {
     console.error('❌ Login error:', error);

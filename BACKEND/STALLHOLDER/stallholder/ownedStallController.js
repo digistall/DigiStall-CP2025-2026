@@ -30,13 +30,33 @@ export const getOwnedStalls = async (req, res) => {
     connection = await createConnection();
 
     // Get all stallholder records for this applicant across all branches
-    // Uses sp_getStallholderStallsForDocuments which already joins stall + branch tables
-    const [stallResult] = await connection.execute(
-      'CALL sp_getStallholderStallsForDocuments(?)',
-      [applicantId]
+    // Direct query to check both mobile_user_id AND applicant_id
+    const [rawStalls] = await connection.execute(
+      `SELECT 
+        sh.stallholder_id,
+        sh.full_name as stallholder_name,
+        sh.email as stallholder_email,
+        sh.contact_number as stallholder_contact,
+        sh.address as stallholder_address,
+        sh.branch_id,
+        sh.stall_id,
+        sh.payment_status,
+        sh.compliance_status,
+        sh.status as contract_status,
+        sh.move_in_date as contract_start_date,
+        s.stall_number,
+        s.size,
+        s.rental_price as monthly_rent,
+        s.stall_location,
+        s.price_type as stall_type,
+        b.branch_name,
+        b.area as branch_area
+      FROM stallholder sh
+      LEFT JOIN stall s ON sh.stall_id = s.stall_id
+      LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      WHERE sh.mobile_user_id = ? OR sh.applicant_id = ?`,
+      [applicantId, applicantId]
     );
-
-    const rawStalls = stallResult[0] || [];
     console.log('?? Raw stalls from DB:', rawStalls.length);
 
     // For each stall, get additional details (images, payment info)
@@ -64,6 +84,7 @@ export const getOwnedStalls = async (req, res) => {
       // Get latest payment info for this stallholder
       let lastPayment = null;
       let nextPaymentDue = null;
+      let computedPaymentStatus = stall.payment_status || 'unpaid';
       if (stall.stallholder_id) {
         try {
           const [payResult] = await connection.execute(
@@ -92,17 +113,37 @@ export const getOwnedStalls = async (req, res) => {
              FROM payments 
              WHERE stallholder_id = ? 
              AND payment_for_month = ? 
-             AND payment_status = 'completed'`,
+             AND payment_status IN ('completed', 'paid')`,
+            [stall.stallholder_id, currentMonth]
+          );
+
+          // Also check for pending payments this month
+          const [pendingCheck] = await connection.execute(
+            `SELECT COUNT(*) as pending_count 
+             FROM payments 
+             WHERE stallholder_id = ? 
+             AND payment_for_month = ? 
+             AND payment_status = 'pending'`,
             [stall.stallholder_id, currentMonth]
           );
           
           const isPaidThisMonth = paidCheck[0]?.paid_count > 0;
+          const hasPendingThisMonth = pendingCheck[0]?.pending_count > 0;
           nextPaymentDue = {
             month: isPaidThisMonth 
               ? `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}`
               : currentMonth,
             is_current_month_paid: isPaidThisMonth
           };
+
+          // Compute the REAL payment status from actual payment records
+          if (isPaidThisMonth) {
+            computedPaymentStatus = 'paid';
+          } else if (hasPendingThisMonth) {
+            computedPaymentStatus = 'pending';
+          } else {
+            computedPaymentStatus = stall.payment_status || 'unpaid';
+          }
         } catch (payError) {
           console.log('?? Could not fetch payment info for stallholder_id:', stall.stallholder_id);
         }
@@ -116,7 +157,8 @@ export const getOwnedStalls = async (req, res) => {
         stall_size: stall.size || 'N/A',
         stall_type: stall.stall_type || 'Fixed Price',
         monthly_rent: parseFloat(stall.monthly_rent) || 0,
-        payment_status: stall.payment_status || 'unpaid',
+        payment_status: computedPaymentStatus,
+        compliance_status: stall.compliance_status || 'Pending',
         contract_status: stall.contract_status || 'active',
         contract_start_date: stall.contract_start_date || null,
         branch_id: stall.branch_id,

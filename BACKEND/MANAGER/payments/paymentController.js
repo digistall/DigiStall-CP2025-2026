@@ -82,6 +82,10 @@ const PaymentController = {
       let query;
       let params;
       
+      // Build current month string for payment check (e.g., '2026-03')
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
       if (branchId) {
         query = `
           SELECT 
@@ -107,7 +111,14 @@ const PaymentController = {
             sh.full_name as business_name,
             sec.section_name as sectionName,
             f.floor_name as floorName,
-            f.floor_number as floorNumber
+            f.floor_number as floorNumber,
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
+             WHERE p.stallholder_id = sh.stallholder_id 
+             AND p.payment_for_month = ? 
+             AND p.payment_status = 'completed') as current_month_paid_amount,
+            (SELECT COUNT(*) FROM violation_report vr 
+             WHERE vr.stallholder_id = sh.stallholder_id 
+             AND vr.payment_status IN ('unpaid', 'pending')) as unpaid_violations_count
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -116,7 +127,7 @@ const PaymentController = {
           WHERE sh.branch_id = ?
           ORDER BY sh.stallholder_id
         `;
-        params = [branchId];
+        params = [currentMonth, branchId];
       } else {
         // For system admin or business owner, get all stallholders
         query = `
@@ -143,7 +154,14 @@ const PaymentController = {
             sh.full_name as business_name,
             sec.section_name as sectionName,
             f.floor_name as floorName,
-            f.floor_number as floorNumber
+            f.floor_number as floorNumber,
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
+             WHERE p.stallholder_id = sh.stallholder_id 
+             AND p.payment_for_month = ? 
+             AND p.payment_status = 'completed') as current_month_paid_amount,
+            (SELECT COUNT(*) FROM violation_report vr 
+             WHERE vr.stallholder_id = sh.stallholder_id 
+             AND vr.payment_status IN ('unpaid', 'pending')) as unpaid_violations_count
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -151,7 +169,7 @@ const PaymentController = {
           LEFT JOIN floor f ON s.floor_id = f.floor_id
           ORDER BY sh.stallholder_id
         `;
-        params = [];
+        params = [currentMonth];
       }
       
       const [result] = await connection.execute(query, params);
@@ -497,25 +515,47 @@ const PaymentController = {
         throw new Error('Failed to add payment');
       }
       
-      // Update stallholder payment status
-      await connection.execute(
-        "UPDATE stallholder SET payment_status = 'paid' WHERE stallholder_id = ?",
+      // Check total payments for this month to determine if fully paid
+      const currentMonth = paymentForMonth || `${new Date(paymentDate).getFullYear()}-${String(new Date(paymentDate).getMonth() + 1).padStart(2, '0')}`;
+      const [monthPayments] = await connection.execute(
+        `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
+         WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+        [parseInt(stallholderId), currentMonth]
+      );
+      const totalPaidThisMonth = parseFloat(monthPayments[0]?.totalPaid || 0);
+      
+      // Get the stallholder's monthly rental to compare
+      const [rentalResult] = await connection.execute(
+        `SELECT s.rental_price, s.monthly_rent FROM stallholder sh 
+         JOIN stall s ON sh.stall_id = s.stall_id WHERE sh.stallholder_id = ?`,
         [parseInt(stallholderId)]
       );
+      const monthlyRent = parseFloat(rentalResult[0]?.rental_price || rentalResult[0]?.monthly_rent || 0);
       
-      console.log('✅ Payment added successfully:', { paymentId, amount, referenceNumber });
+      // Determine payment status: paid if total >= rental (with small tolerance for rounding)
+      const isFullyPaid = totalPaidThisMonth >= (monthlyRent * 0.99);
+      const remaining = Math.max(0, monthlyRent - totalPaidThisMonth);
+      
+      // Update stallholder payment status
+      if (isFullyPaid) {
+        await connection.execute(
+          "UPDATE stallholder SET payment_status = 'paid' WHERE stallholder_id = ?",
+          [parseInt(stallholderId)]
+        );
+      }
+      // If partial, keep current status (don't overwrite to 'paid')
+      
+      console.log('✅ Payment added successfully:', { paymentId, amount: parseFloat(amount), totalPaidThisMonth, monthlyRent, isFullyPaid, remaining, referenceNumber });
       
       res.status(201).json({
         success: true,
-        message: 'Payment added successfully',
+        message: isFullyPaid ? 'Payment completed successfully!' : `Partial payment recorded. Remaining: ₱${remaining.toFixed(2)}`,
         paymentId: paymentId,
         amountPaid: parseFloat(amount),
-        monthlyRent: 0,
-        earlyDiscount: 0,
-        lateFee: 0,
-        daysEarly: 0,
-        daysOverdue: 0,
-        dueDate: null,
+        monthlyRent: monthlyRent,
+        totalPaidThisMonth: totalPaidThisMonth,
+        remaining: remaining,
+        isFullyPaid: isFullyPaid,
         receiptNumber: referenceNumber
       });
       

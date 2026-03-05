@@ -52,8 +52,7 @@ export async function uploadStallholderDocumentBlob(req, res) {
     
     // Compress image documents before storing (skip PDFs)
     if (actualMimeType.startsWith('image/')) {
-      const compressed = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
-      documentBuffer = compressed.buffer
+      documentBuffer = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
     }
     
     // Check file size (10MB limit for documents)
@@ -189,8 +188,7 @@ export async function uploadStallholderDocumentSubmissionBlob(req, res) {
     
     // Compress image documents before storing (skip PDFs)
     if (actualMimeType.startsWith('image/')) {
-      const compressed = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
-      documentBuffer = compressed.buffer
+      documentBuffer = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
     }
     
     // Check file size (10MB limit)

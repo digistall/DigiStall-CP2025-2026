@@ -331,7 +331,7 @@
                 <div v-else class="documents-list">
                   <v-card
                     v-for="doc in stallholderDocuments"
-                    :key="doc.submission_id"
+                    :key="doc.document_id"
                     class="document-item mb-3"
                     :class="{ 'pending-doc': doc.status === 'pending' }"
                     variant="outlined"
@@ -341,10 +341,10 @@
                         <!-- Document Icon -->
                         <div class="document-icon-wrapper mr-3">
                           <v-icon 
-                            :color="getDocFileTypeColor(doc.file_type)" 
+                            :color="getDocFileTypeColor(doc.file_type || doc.document_mime_type)" 
                             size="36"
                           >
-                            {{ getDocFileTypeIcon(doc.file_type) }}
+                            {{ getDocFileTypeIcon(doc.file_type || doc.document_mime_type) }}
                           </v-icon>
                         </div>
 
@@ -353,9 +353,9 @@
                           <div class="d-flex justify-space-between align-start mb-1">
                             <div>
                               <h4 class="document-name text-body-1 font-weight-medium">
-                                {{ doc.document_name }}
-                              </h4>
-                              <p class="text-caption text-grey mb-0">{{ doc.file_name }}</p>
+                                {{ doc.document_type || doc.document_name }}
+                            </h4>
+                              <p class="text-caption text-grey mb-0">{{ doc.document_mime_type || doc.file_type }}</p>
                             </div>
                             <v-chip
                               :color="getDocStatusColor(doc.status)"
@@ -672,8 +672,8 @@
           <div class="d-flex align-center">
             <v-icon class="mr-2">mdi-file-document</v-icon>
             <div>
-              <div class="text-subtitle-1 font-weight-medium">{{ previewingDocument.document_name }}</div>
-              <div class="text-caption opacity-80">{{ previewingDocument.file_name }}</div>
+              <div class="text-subtitle-1 font-weight-medium">{{ previewingDocument.document_type || previewingDocument.document_name }}</div>
+              <div class="text-caption opacity-80">{{ previewingDocument.document_mime_type || previewingDocument.file_type }}</div>
             </div>
           </div>
           <div class="d-flex align-center ga-2">
@@ -697,12 +697,19 @@
         </v-card-title>
 
         <v-card-text class="pa-0 preview-content">
+          <!-- Loading State -->
+          <div v-if="!documentPreviewUrl && !documentPreviewError" class="preview-loading pa-8 text-center" style="min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <v-progress-circular indeterminate color="primary" size="64" width="5"></v-progress-circular>
+            <p class="mt-4 text-grey text-body-1">Loading document preview...</p>
+            <p class="text-caption text-grey-lighten-1">Fetching image data from server</p>
+          </div>
+
           <!-- Image Preview -->
-          <div v-if="isImageDocument(previewingDocument)" class="preview-image-container" ref="imageContainer">
+          <div v-else-if="isImageDocument(previewingDocument)" class="preview-image-container" ref="imageContainer">
             <div class="image-wrapper" :style="{ transform: `scale(${imageZoom})` }">
               <img 
                 :src="documentPreviewUrl" 
-                :alt="previewingDocument.file_name"
+                :alt="previewingDocument.document_type || previewingDocument.document_name"
                 class="preview-image"
                 @error="documentPreviewError = true"
                 @load="documentPreviewError = false"
@@ -760,7 +767,7 @@
                   <v-icon size="small" color="grey" class="mr-1">mdi-tag</v-icon>
                   <span class="text-caption text-grey">Document Type</span>
                 </div>
-                <div class="text-body-2 font-weight-medium">{{ previewingDocument.document_name }}</div>
+                <div class="text-body-2 font-weight-medium">{{ previewingDocument.document_type || previewingDocument.document_name }}</div>
               </v-col>
               <v-col cols="12" sm="6" md="3">
                 <div class="detail-item">
