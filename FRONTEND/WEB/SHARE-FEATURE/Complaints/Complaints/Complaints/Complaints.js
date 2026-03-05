@@ -2,7 +2,6 @@ import ComplaintsTable from './ComplaintsComponents/ComplaintsTable/ComplaintsTa
 import ComplaintsSearch from './ComplaintsComponents/ComplaintsSearch/ComplaintsSearch.vue'
 import ViewComplaints from './ComplaintsComponents/ViewComplaints/ViewComplaints.vue'
 import LoadingOverlay from '@common/LoadingOverlay/LoadingOverlay.vue'
-import CrudLoadingOverlay from '@common/CrudLoadingOverlay/CrudLoadingOverlay.vue'
 import apiClient from '@services/apiClient'
 
 export default {
@@ -12,7 +11,6 @@ export default {
     ComplaintsSearch,
     ViewComplaints,
     LoadingOverlay,
-    CrudLoadingOverlay,
   },
   data() {
     return {
@@ -52,13 +50,6 @@ export default {
       console.log('Edit complaints:', complaints)
       this.selectedComplaints = complaints
       // Open edit modal or navigate to edit page
-    },
-
-    showCrudLoading(operation, entity, message, subMessage) {
-      this.crudLoading = { visible: true, operation: operation || 'generic', entity: entity || 'complaint', message: message || '', subMessage: subMessage || '' }
-    },
-    hideCrudLoading() {
-      this.crudLoading.visible = false
     },
 
     async handleDeleteComplaints(complaints) {

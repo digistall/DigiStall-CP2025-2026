@@ -85,7 +85,7 @@ export const getPaymentRecords = async (req, res) => {
        LEFT JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id
        LEFT JOIN stall s ON sh.stall_id = s.stall_id
        WHERE pp.stallholder_id IN (${placeholders}))
-       ORDER BY payment_date ASC, created_at ASC
+       ORDER BY payment_date DESC, created_at DESC
        LIMIT ? OFFSET ?`,
       [...stallholderIds, ...stallholderIds, limitInt, offsetInt]
     );
@@ -95,6 +95,7 @@ export const getPaymentRecords = async (req, res) => {
     // Format the payment records
     const formattedPayments = payments.map(payment => ({
       id: payment.payment_id,
+      source: payment.source || 'regular',
       date: formatDate(payment.payment_date),
       time: payment.payment_time,
       description: getPaymentDescription(payment.payment_type, payment.payment_for_month),
@@ -212,7 +213,7 @@ export const getAllPaymentRecords = async (req, res) => {
          LEFT JOIN stall st ON sh.stall_id = st.stall_id
          LEFT JOIN branch b ON sh.branch_id = b.branch_id
          WHERE pp.stallholder_id = ?
-         ORDER BY pp.payment_date ASC`,
+         ORDER BY pp.payment_date DESC`,
         [shId]
       );
       allPayments = allPayments.concat(penaltyResult || []);
@@ -228,6 +229,7 @@ export const getAllPaymentRecords = async (req, res) => {
       description: getPaymentDescription(payment.payment_type, payment.payment_for_month),
       amount: formatCurrency(payment.amount),
       rawAmount: parseFloat(payment.amount),
+      source: payment.source || 'regular',
       status: capitalizeFirst(payment.payment_status),
       method: formatPaymentMethod(payment.payment_method),
       reference: payment.reference_number || 'N/A',
@@ -241,8 +243,8 @@ export const getAllPaymentRecords = async (req, res) => {
       stallType: payment.stall_type || 'N/A'
     }));
     
-    // Sort by date ascending (oldest first)
-    formattedPayments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    // Sort by date descending (latest first)
+    formattedPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     console.log(`✅ Found ${allPayments.length} total payment records for ${stallholderIds.length} stall(s)`);
     
@@ -554,6 +556,33 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         paymentDate,
         dueDate: getDueDate(now)
       });
+    }
+
+    // Check for unpaid violations across ALL stalls of this person
+    // If ANY stall has an unpaid violation, ALL stalls should show the warning
+    const allStallholderIds = allStalls.map(s => s.stallholder_id);
+    const violationPlaceholders = allStallholderIds.map(() => '?').join(',');
+    let totalUnpaidViolations = 0;
+    
+    try {
+      const [violationRows] = await connection.query(
+        `SELECT COUNT(*) as violation_count 
+         FROM violation_report 
+         WHERE stallholder_id IN (${violationPlaceholders}) 
+           AND payment_status IN ('unpaid', 'pending')`,
+        allStallholderIds
+      );
+      totalUnpaidViolations = violationRows[0]?.violation_count || 0;
+      console.log('⚠️ Unpaid violations across all stalls:', totalUnpaidViolations);
+    } catch (violationErr) {
+      console.error('⚠️ Error checking violations (non-fatal):', violationErr.message);
+    }
+
+    // Attach violation info to ALL stall statuses
+    const hasAnyViolation = totalUnpaidViolations > 0;
+    for (const stallStatus of stallStatuses) {
+      stallStatus.hasViolation = hasAnyViolation;
+      stallStatus.unpaidViolationsCount = totalUnpaidViolations;
     }
 
     await connection.end();
