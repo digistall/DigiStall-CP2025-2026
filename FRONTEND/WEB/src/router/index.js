@@ -20,7 +20,7 @@ import Payment from '@shared-features/Payment/Payment/Payment.vue'
 import Applicants from '@shared-features/Applicants/Applicants/Applicants.vue'
 import Complaints from '@shared-features/Complaints/Complaints/Complaints.vue'
 import Compliances from '@shared-features/Compliances/Compliance.vue'
-import Vendors from '@shared-features/Vendors/Vendors.vue'
+import Vendors from '@shared-features/Vendors/Vendors/Vendors.vue'
 import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholders.vue'
 import Stalls from '@shared-features/Stalls/Stalls.vue'
 

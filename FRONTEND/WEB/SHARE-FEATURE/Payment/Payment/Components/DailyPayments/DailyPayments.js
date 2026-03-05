@@ -1,4 +1,4 @@
-import ToastNotification from '@SHARED_COMPONENTS/ToastNotification/ToastNotification.vue'
+import ToastNotification from '@common/ToastNotification/ToastNotification.vue'
 
 export default {
   name: 'DailyPayments',
