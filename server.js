@@ -34,6 +34,7 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import complianceRoutes from './routes/complianceRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import stallholdersManagementRoutes from './routes/stallholdersManagementRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
@@ -100,6 +101,7 @@ app.use('/api/mobile/auth', mobileAuthRoutes);  // Mobile auth
 app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
 app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
 app.use('/api/stallholders', stallholdersManagementRoutes);  // Stallholders management (admin/manager)
+app.use('/api/documents', documentRoutes);  // Document submissions (web)
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
