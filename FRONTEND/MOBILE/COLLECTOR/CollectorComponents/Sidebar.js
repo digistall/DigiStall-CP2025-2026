@@ -10,7 +10,6 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import UserStorageService from "../../services/UserStorageService";
 
 const { width, height } = Dimensions.get("window");
@@ -47,13 +46,13 @@ const Sidebar = ({
       try {
         const storedUserData = await UserStorageService.getUserData();
         console.log(
-          "Collector Sidebar - Retrieved user data:",
+          "≡ƒöì Collector Sidebar - Retrieved user data:",
           JSON.stringify(storedUserData, null, 2)
         );
         if (storedUserData && (storedUserData.staff || storedUserData.user)) {
           const userData = storedUserData.staff || storedUserData.user;
           setUserData(userData);
-          console.log("Collector Sidebar - Set user data:", userData);
+          console.log("≡ƒæñ Collector Sidebar - Set user data:", userData);
         } else {
           console.log("Γ¥î Collector Sidebar - No user data found");
         }
@@ -95,27 +94,32 @@ const Sidebar = ({
     {
       id: "dashboard",
       title: "Dashboard",
-      icon: "grid",
+      icon: require("../../assets/dashboard-icon.png"),
+      isImage: true,
     },
     {
       id: "payment",
       title: "Payment",
-      icon: "cash",
+      icon: require("../../assets/payment-icon.png"),
+      isImage: true,
     },
     {
       id: "vendor",
       title: "Vendor",
-      icon: "storefront",
+      icon: require("../../assets/Home-Image/StallIcon.png"),
+      isImage: true,
     },
     {
       id: "notifications",
       title: "Notifications",
-      icon: "notifications",
+      icon: require("../../assets/Notifications-icon.png"),
+      isImage: true,
     },
     {
       id: "settings",
       title: "Settings",
-      icon: "settings",
+      icon: require("../../assets/Settings-icon.png"),
+      isImage: true,
     },
   ];
 
@@ -188,11 +192,20 @@ const Sidebar = ({
                   onPress={() => onMenuItemPress(item.id)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={isActive ? item.icon : `${item.icon}-outline`}
-                    size={24}
-                    color={isActive ? colors.primary : colors.textSecondary}
-                  />
+                  {item.isImage && (
+                    <Image
+                      source={item.icon}
+                      style={[
+                        styles.menuIcon,
+                        {
+                          tintColor: isActive
+                            ? colors.primary
+                            : colors.textSecondary,
+                        },
+                      ]}
+                      resizeMode="contain"
+                    />
+                  )}
                   <Text
                     style={[
                       styles.menuItemText,
@@ -212,10 +225,9 @@ const Sidebar = ({
               onPress={() => onMenuItemPress("logout")}
               activeOpacity={0.7}
             >
-              <Image
-                source={require("../../assets/Home-Image/LogoutIcon.png")}
-                style={{ width: 24, height: 24, tintColor: '#ef4444' }}
-              />
+              <View style={styles.logoutIconContainer}>
+                <Text style={styles.logoutIconText}>ΓÄï</Text>
+              </View>
               <Text style={[styles.menuItemText, styles.logoutText]}>
                 Logout
               </Text>

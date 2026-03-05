@@ -1,36 +1,623 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
-const DashboardScreen = () => {
+const { width } = Dimensions.get("window");
+
+// Default theme colors for fallback
+const defaultTheme = {
+  colors: {
+    background: "#f8fafc",
+    surface: "#ffffff",
+    card: "#ffffff",
+    text: "#1f2937",
+    textSecondary: "#6b7280",
+    border: "#e5e7eb",
+    primary: "#3b82f6",
+  },
+};
+
+// ── Sample data (replace with real API data later) ──────────────────────────
+const sampleTransactions = [
+  {
+    id: "1",
+    reference: "REF-20260305-001",
+    collector: "Alice Johnson",
+    vendor: "Sunrise Fruits",
+    status: "Paid",
+    date: "2026-03-05 09:34",
+  },
+  {
+    id: "2",
+    reference: "REF-20260305-002",
+    collector: "Bob Smith",
+    vendor: "GreenGrocer Ltd",
+    status: "Pending",
+    date: "2026-03-05 10:12",
+  },
+  {
+    id: "3",
+    reference: "REF-20260304-123",
+    collector: "Clara Lee",
+    vendor: "Baker's Corner",
+    status: "Failed",
+    date: "2026-03-04 16:45",
+  },
+  {
+    id: "4",
+    reference: "REF-20260304-099",
+    collector: "Alice Johnson",
+    vendor: "Fresh Fish Market",
+    status: "Paid",
+    date: "2026-03-04 08:20",
+  },
+  {
+    id: "5",
+    reference: "REF-20260303-055",
+    collector: "Bob Smith",
+    vendor: "Naga Spice Stall",
+    status: "Paid",
+    date: "2026-03-03 14:10",
+  },
+];
+
+// ── Status badge helper ─────────────────────────────────────────────────────
+const getStatusStyle = (status) => {
+  switch (status) {
+    case "Paid":
+      return { bg: "#d1fae5", text: "#059669", icon: "checkmark-circle" };
+    case "Pending":
+      return { bg: "#fef3c7", text: "#d97706", icon: "time" };
+    case "Failed":
+      return { bg: "#fee2e2", text: "#dc2626", icon: "close-circle" };
+    default:
+      return { bg: "#f3f4f6", text: "#6b7280", icon: "help-circle" };
+  }
+};
+
+// ── Dashboard Screen ────────────────────────────────────────────────────────
+const DashboardScreen = ({ onNavigate }) => {
+  const theme = defaultTheme;
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Sample stats — wire to real API later
+  const [stats] = useState({
+    paymentsCollected: 128,
+    missingPayments: 7,
+    vendorPaid: 45,
+    unpaidVendors: 12,
+  });
+
+  const [transactions] = useState(sampleTransactions);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // TODO: fetch real data here
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
+
+  // ── Stats card definitions ──────────────────────────────────────────────
+  const statsData = [
+    {
+      id: "payments_collected",
+      title: "Payments Collected",
+      value: stats.paymentsCollected.toString(),
+      icon: "cash",
+      color: "#10b981",
+      bgColor: "#d1fae5",
+    },
+    {
+      id: "missing_payments",
+      title: "Missing Payments",
+      value: stats.missingPayments.toString(),
+      icon: "alert-circle",
+      color: "#ef4444",
+      bgColor: "#fee2e2",
+    },
+    {
+      id: "vendor_paid",
+      title: "Vendor Paid",
+      value: stats.vendorPaid.toString(),
+      icon: "checkmark-done-circle",
+      color: "#3b82f6",
+      bgColor: "#dbeafe",
+    },
+    {
+      id: "unpaid_vendors",
+      title: "Unpaid Vendors",
+      value: stats.unpaidVendors.toString(),
+      icon: "warning",
+      color: "#f59e0b",
+      bgColor: "#fef3c7",
+    },
+  ];
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Collector Dashboard</Text>
-        <Text style={styles.subtitle}>
-          Dashboard content will be implemented here
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#3b82f6"]}
+          tintColor="#3b82f6"
+        />
+      }
+    >
+      {/* ── Welcome Card ─────────────────────────────────────────────── */}
+      <LinearGradient
+        colors={["#3b82f6", "#1d4ed8"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.welcomeCard}
+      >
+        <View style={styles.welcomeContent}>
+          <Text style={styles.welcomeGreeting}>
+            {new Date().getHours() < 12
+              ? "Good Morning"
+              : new Date().getHours() < 18
+                ? "Good Afternoon"
+                : "Good Evening"}
+            ,
+          </Text>
+          <Text style={styles.welcomeName}>Collector! 💰</Text>
+          <Text style={styles.welcomeSubtext}>
+            Here's a summary of today's payment activity.
+          </Text>
+        </View>
+        <View style={styles.welcomeIconContainer}>
+          <Ionicons name="wallet" size={80} color="rgba(255,255,255,0.2)" />
+        </View>
+      </LinearGradient>
+
+      {/* ── Stats Cards ──────────────────────────────────────────────── */}
+      <View style={styles.sectionContainer}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Overview
         </Text>
+        <View style={styles.statsGrid}>
+          {statsData.map((stat) => (
+            <View
+              key={stat.id}
+              style={[styles.statCard, { backgroundColor: theme.colors.card }]}
+            >
+              <View
+                style={[
+                  styles.statIconContainer,
+                  { backgroundColor: stat.bgColor },
+                ]}
+              >
+                <Ionicons name={stat.icon} size={24} color={stat.color} />
+              </View>
+              <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                {loading ? "..." : stat.value}
+              </Text>
+              <Text
+                style={[
+                  styles.statTitle,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                {stat.title}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* ── Quick Tools ──────────────────────────────────────────────── */}
+      <View style={styles.sectionContainer}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Quick Tools
+        </Text>
+        <TouchableOpacity
+          style={styles.quickToolButton}
+          activeOpacity={0.85}
+          onPress={() => onNavigate && onNavigate("payment")}
+        >
+          <LinearGradient
+            colors={["#3b82f6", "#2563eb"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.quickToolGradient}
+          >
+            <View style={styles.quickToolIconWrap}>
+              <Ionicons name="add-circle" size={28} color="#ffffff" />
+            </View>
+            <View style={styles.quickToolTextWrap}>
+              <Text style={styles.quickToolTitle}>Add Daily Payment</Text>
+              <Text style={styles.quickToolSubtitle}>
+                Record a new payment transaction
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={22}
+              color="rgba(255,255,255,0.7)"
+            />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Recent Transactions ──────────────────────────────────────── */}
+      <View style={[styles.sectionContainer, styles.lastSection]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Recent Transactions
+        </Text>
+
+        {loading ? (
+          <View
+            style={[
+              styles.loadingContainer,
+              { backgroundColor: theme.colors.card },
+            ]}
+          >
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text
+              style={[
+                styles.loadingText,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              Loading transactions...
+            </Text>
+          </View>
+        ) : transactions.length > 0 ? (
+          transactions.map((txn) => {
+            const statusStyle = getStatusStyle(txn.status);
+            return (
+              <View
+                key={txn.id}
+                style={[styles.txnCard, { backgroundColor: theme.colors.card }]}
+              >
+                {/* Row 1 – Reference & Status */}
+                <View style={styles.txnRow}>
+                  <Text
+                    style={[styles.txnReference, { color: theme.colors.text }]}
+                    numberOfLines={1}
+                  >
+                    {txn.reference}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: statusStyle.bg },
+                    ]}
+                  >
+                    <Ionicons
+                      name={statusStyle.icon}
+                      size={14}
+                      color={statusStyle.text}
+                    />
+                    <Text
+                      style={[styles.statusText, { color: statusStyle.text }]}
+                    >
+                      {txn.status}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Row 2 – Collector & Vendor */}
+                <View style={styles.txnMetaRow}>
+                  <View style={styles.txnMeta}>
+                    <Ionicons
+                      name="person"
+                      size={14}
+                      color={theme.colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.txnMetaText,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {txn.collector}
+                    </Text>
+                  </View>
+                  <View style={styles.txnMeta}>
+                    <Ionicons
+                      name="storefront"
+                      size={14}
+                      color={theme.colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.txnMetaText,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {txn.vendor}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Row 3 – Date */}
+                <View style={styles.txnFooter}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={13}
+                    color={theme.colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.txnDate,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {txn.date}
+                  </Text>
+                </View>
+              </View>
+            );
+          })
+        ) : (
+          <View
+            style={[
+              styles.emptyContainer,
+              { backgroundColor: theme.colors.card },
+            ]}
+          >
+            <Ionicons
+              name="receipt-outline"
+              size={48}
+              color={theme.colors.textSecondary}
+            />
+            <Text
+              style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+            >
+              No recent transactions
+            </Text>
+            <Text
+              style={[
+                styles.emptySubtext,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              Payment records will appear here
+            </Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
 };
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+const CARD_WIDTH = (width - width * 0.12) / 2;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
-  content: {
-    padding: 20,
+
+  /* Welcome */
+  welcomeCard: {
+    margin: width * 0.04,
+    borderRadius: 20,
+    padding: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    overflow: "hidden",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: 8,
+  welcomeContent: {
+    flex: 1,
+    paddingRight: 16,
   },
-  subtitle: {
+  welcomeGreeting: {
     fontSize: 16,
-    color: "#6b7280",
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "500",
+  },
+  welcomeName: {
+    fontSize: 28,
+    color: "#ffffff",
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  welcomeSubtext: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  welcomeIconContainer: {
+    position: "absolute",
+    right: -10,
+    bottom: -10,
+    opacity: 0.3,
+  },
+
+  /* Sections */
+  sectionContainer: {
+    paddingHorizontal: width * 0.04,
+    marginBottom: 16,
+  },
+  lastSection: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 16,
+  },
+
+  /* Stats Grid */
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  statCard: {
+    width: CARD_WIDTH,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  statTitle: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  /* Quick Tools */
+  quickToolButton: {
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  quickToolGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+  },
+  quickToolIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  quickToolTextWrap: {
+    flex: 1,
+  },
+  quickToolTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  quickToolSubtitle: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
+  },
+
+  /* Transaction Cards */
+  txnCard: {
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  txnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  txnReference: {
+    fontSize: 14,
+    fontWeight: "700",
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  txnMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  txnMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  txnMetaText: {
+    fontSize: 13,
+    flexShrink: 1,
+  },
+  txnFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+    paddingTop: 10,
+  },
+  txnDate: {
+    fontSize: 12,
+  },
+
+  /* Loading / Empty */
+  loadingContainer: {
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 12,
+  },
+  emptyContainer: {
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: "center",
   },
 });
 
