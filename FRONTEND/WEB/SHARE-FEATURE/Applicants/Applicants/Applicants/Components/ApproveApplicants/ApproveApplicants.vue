@@ -93,6 +93,17 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Error Snackbar -->
+  <v-snackbar
+    v-model="showErrorSnackbar"
+    :timeout="4000"
+    location="bottom left"
+    color="#f44336"
+  >
+    <v-icon class="mr-2">mdi-alert-circle</v-icon>
+    {{ snackbarMessage }}
+  </v-snackbar>
 </template>
 
 <script src="./ApproveApplicants.js"></script>

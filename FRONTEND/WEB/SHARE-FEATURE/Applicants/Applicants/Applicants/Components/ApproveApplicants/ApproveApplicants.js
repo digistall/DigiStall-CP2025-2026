@@ -24,6 +24,8 @@ export default {
       credentials: null,
       processingMessage: '',
       credentialsAlreadyExisted: false,
+      showErrorSnackbar: false,
+      snackbarMessage: '',
     }
   },
   watch: {
@@ -183,9 +185,10 @@ export default {
         this.processing = false
 
         if (this.$toast) {
-          this.$toast.error(`❌ Failed to approve applicant: ${error.message}`)
+          this.$toast.error(`Failed to approve applicant: ${error.message}`)
         } else {
-          alert(`❌ Failed to approve applicant: ${error.message}`)
+          this.snackbarMessage = `Failed to approve applicant: ${error.message}`
+          this.showErrorSnackbar = true
         }
       }
     },

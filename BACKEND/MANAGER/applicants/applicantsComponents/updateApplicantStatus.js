@@ -302,31 +302,25 @@ export const updateApplicantStatus = async (req, res) => {
               `UPDATE stallholder SET 
                 stall_id = ?,
                 branch_id = ?,
-                stallholder_name = ?,
+                mobile_user_id = ?,
+                full_name = ?,
                 contact_number = ?,
                 email = ?,
                 address = ?,
-                business_type = ?,
-                contract_start_date = ?,
-                contract_end_date = ?,
-                contract_status = 'Active',
-                lease_amount = ?,
-                monthly_rent = ?,
-                payment_status = 'pending',
+                payment_status = 'unpaid',
+                status = 'active',
+                compliance_status = 'Compliant',
+                move_in_date = CURDATE(),
                 updated_at = NOW()
               WHERE applicant_id = ?`,
               [
                 applicant.stall_id,
                 applicant.branch_id,
-                applicant.encrypted_name,           // Use encrypted name
-                applicant.encrypted_contact,        // Use encrypted contact
-                applicant.encrypted_email,          // Use encrypted email
-                applicant.encrypted_address,        // Use encrypted address
-                applicant.nature_of_business || 'General',
-                formatDate(contractStartDate),
-                formatDate(contractEndDate),
-                applicant.rental_price || 0,
-                applicant.rental_price || 0,
+                applicant.applicant_id,
+                applicant.encrypted_name,
+                applicant.encrypted_contact,
+                applicant.encrypted_email,
+                applicant.encrypted_address,
                 applicant.applicant_id
               ]
             );
@@ -335,40 +329,31 @@ export const updateApplicantStatus = async (req, res) => {
             console.log('🔐 Creating new stallholder record with encrypted data...');
             
             // Create new stallholder record (using ENCRYPTED values)
+            // Column names must match actual stallholder table schema
             await connection.execute(
               `INSERT INTO stallholder (
                 applicant_id,
                 mobile_user_id,
-                stallholder_name,
+                full_name,
                 contact_number,
                 email,
                 address,
-                business_type,
-                branch_id,
                 stall_id,
-                contract_start_date,
-                contract_end_date,
-                contract_status,
-                lease_amount,
-                monthly_rent,
+                branch_id,
                 payment_status,
+                status,
                 compliance_status,
-                date_created
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', 'Compliant', NOW())`,
+                move_in_date
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', CURDATE())`,
               [
                 applicant.applicant_id,
                 applicant.applicant_id,
-                applicant.encrypted_name,           // Use encrypted name
-                applicant.encrypted_contact,        // Use encrypted contact
-                applicant.encrypted_email,          // Use encrypted email
-                applicant.encrypted_address,        // Use encrypted address
-                applicant.nature_of_business || 'General',
-                applicant.branch_id,
+                applicant.encrypted_name,
+                applicant.encrypted_contact,
+                applicant.encrypted_email,
+                applicant.encrypted_address,
                 applicant.stall_id,
-                formatDate(contractStartDate),
-                formatDate(contractEndDate),
-                applicant.rental_price || 0,
-                applicant.rental_price || 0
+                applicant.branch_id
               ]
             );
             console.log('✅ New stallholder record created with encrypted data');

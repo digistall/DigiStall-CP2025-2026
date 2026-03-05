@@ -1878,7 +1878,7 @@ const StallholderController = {
           v.violation_type AS violation_name,
           v.description AS violation_description,
           v.default_penalty AS severity,
-          vr.report_date,
+          vr.report_date AS date_reported,
           vr.offense_count,
           vr.penalty_amount,
           vr.payment_status,

@@ -60,6 +60,10 @@ export default {
       paymentChart: null,
       occupancyChart: null,
       collectorChart: null,
+
+      // Snackbar notification
+      showWarningSnackbar: false,
+      snackbarMessage: '',
     }
   },
   computed: {
@@ -1743,7 +1747,8 @@ export default {
     // Export Stalls Data
     exportStalls() {
       if (this.stallOverview.length === 0) {
-        alert('No stall data available to export')
+        this.snackbarMessage = 'No stall data available to export'
+        this.showWarningSnackbar = true
         return
       }
       
@@ -1792,7 +1797,8 @@ export default {
         }, [])
       
       if (stallholderData.length === 0) {
-        alert('No stallholder data available to export')
+        this.snackbarMessage = 'No stallholder data available to export'
+        this.showWarningSnackbar = true
         return
       }
       
@@ -1822,7 +1828,8 @@ export default {
     // Export Payments Data
     exportPayments() {
       if (this.recentPayments.length === 0) {
-        alert('No payment data available to export')
+        this.snackbarMessage = 'No payment data available to export'
+        this.showWarningSnackbar = true
         return
       }
       
@@ -1855,7 +1862,8 @@ export default {
     // Export Employees Data
     exportEmployees() {
       if (this.activeCollectors.length === 0) {
-        alert('No employee data available to export')
+        this.snackbarMessage = 'No employee data available to export'
+        this.showWarningSnackbar = true
         return
       }
       
@@ -1888,7 +1896,8 @@ export default {
     // Export Payment Trends Data
     exportPaymentTrends() {
       if (this.paymentTrendsData.length === 0) {
-        alert('No payment trends data available to export')
+        this.snackbarMessage = 'No payment trends data available to export'
+        this.showWarningSnackbar = true
         return
       }
       
@@ -1952,7 +1961,8 @@ export default {
     // Export Collector Performance Data
     exportCollectorPerformance() {
       if (this.collectorPerformanceData.length === 0) {
-        alert('No collector performance data available to export')
+        this.snackbarMessage = 'No collector performance data available to export'
+        this.showWarningSnackbar = true
         return
       }
       

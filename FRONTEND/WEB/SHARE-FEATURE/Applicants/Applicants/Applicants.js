@@ -44,6 +44,8 @@ export default {
       showDeclineModal: false,
       selectedApplicant: null,
       crudLoading: { visible: false, operation: 'generic', entity: 'applicant', message: '', subMessage: '' },
+      showErrorSnackbar: false,
+      snackbarMessage: '',
       // Sample data for vendor applicants with detailed information
       vendorApplicants: [
         {
@@ -827,7 +829,8 @@ export default {
           this.$toast.error(errorMessage)
         } else {
           console.error('📢', errorMessage)
-          alert(errorMessage) // Fallback if no toast
+          this.snackbarMessage = errorMessage
+          this.showErrorSnackbar = true
         }
 
         // Redirect to login if authentication error

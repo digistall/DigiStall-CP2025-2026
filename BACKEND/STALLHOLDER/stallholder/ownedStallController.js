@@ -41,6 +41,7 @@ export const getOwnedStalls = async (req, res) => {
         sh.branch_id,
         sh.stall_id,
         sh.payment_status,
+        sh.compliance_status,
         sh.status as contract_status,
         sh.move_in_date as contract_start_date,
         s.stall_number,
@@ -83,6 +84,7 @@ export const getOwnedStalls = async (req, res) => {
       // Get latest payment info for this stallholder
       let lastPayment = null;
       let nextPaymentDue = null;
+      let computedPaymentStatus = stall.payment_status || 'unpaid';
       if (stall.stallholder_id) {
         try {
           const [payResult] = await connection.execute(
@@ -111,17 +113,37 @@ export const getOwnedStalls = async (req, res) => {
              FROM payments 
              WHERE stallholder_id = ? 
              AND payment_for_month = ? 
-             AND payment_status = 'completed'`,
+             AND payment_status IN ('completed', 'paid')`,
+            [stall.stallholder_id, currentMonth]
+          );
+
+          // Also check for pending payments this month
+          const [pendingCheck] = await connection.execute(
+            `SELECT COUNT(*) as pending_count 
+             FROM payments 
+             WHERE stallholder_id = ? 
+             AND payment_for_month = ? 
+             AND payment_status = 'pending'`,
             [stall.stallholder_id, currentMonth]
           );
           
           const isPaidThisMonth = paidCheck[0]?.paid_count > 0;
+          const hasPendingThisMonth = pendingCheck[0]?.pending_count > 0;
           nextPaymentDue = {
             month: isPaidThisMonth 
               ? `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}`
               : currentMonth,
             is_current_month_paid: isPaidThisMonth
           };
+
+          // Compute the REAL payment status from actual payment records
+          if (isPaidThisMonth) {
+            computedPaymentStatus = 'paid';
+          } else if (hasPendingThisMonth) {
+            computedPaymentStatus = 'pending';
+          } else {
+            computedPaymentStatus = stall.payment_status || 'unpaid';
+          }
         } catch (payError) {
           console.log('?? Could not fetch payment info for stallholder_id:', stall.stallholder_id);
         }
@@ -135,7 +157,8 @@ export const getOwnedStalls = async (req, res) => {
         stall_size: stall.size || 'N/A',
         stall_type: stall.stall_type || 'Fixed Price',
         monthly_rent: parseFloat(stall.monthly_rent) || 0,
-        payment_status: stall.payment_status || 'unpaid',
+        payment_status: computedPaymentStatus,
+        compliance_status: stall.compliance_status || 'Pending',
         contract_status: stall.contract_status || 'active',
         contract_start_date: stall.contract_start_date || null,
         branch_id: stall.branch_id,

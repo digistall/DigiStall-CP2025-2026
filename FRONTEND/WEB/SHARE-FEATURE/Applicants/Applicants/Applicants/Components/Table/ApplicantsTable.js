@@ -84,8 +84,8 @@ export default {
         let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
         apiBase = apiBase.replace(/\/api\/?$/, '') // Remove trailing /api if present
         
-        // Get token for authenticated requests (stored as 'authToken' by authStore)
-        const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+        // Get token for authenticated requests (check both sessionStorage and localStorage)
+        const token = sessionStorage.getItem('authToken') || sessionStorage.getItem('accessToken') || localStorage.getItem('authToken') || localStorage.getItem('token')
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
         
         console.log('🔐 Auth token present:', !!token)
