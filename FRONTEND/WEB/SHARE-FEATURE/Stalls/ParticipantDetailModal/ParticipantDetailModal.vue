@@ -70,9 +70,11 @@
               </div>
               <div class="info-item">
                 <span class="info-label">Application Status</span>
-                <v-chip :color="getStatusColor(detail.personalInfo.status)" size="small" variant="flat">
-                  {{ capitalize(detail.personalInfo.status) }}
-                </v-chip>
+                <div class="status-chip-wrapper">
+                  <v-chip :color="getStatusColor(detail.personalInfo.status)" size="small" variant="flat" class="status-chip">
+                    {{ capitalize(detail.personalInfo.status) }}
+                  </v-chip>
+                </div>
               </div>
             </div>
           </div>

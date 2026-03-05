@@ -70,16 +70,22 @@ export const getPaymentRecords = async (req, res) => {
        LEFT JOIN stall s ON sh.stall_id = s.stall_id
        WHERE p.stallholder_id IN (${placeholders}))
        UNION ALL
-       (SELECT pp.penalty_payment_id as payment_id, pp.amount, pp.payment_date, pp.payment_time, pp.payment_status,
-              'penalty' as payment_type, NULL as payment_for_month, pp.payment_method, pp.reference_number,
-              pp.collected_by, pp.notes, pp.created_at,
+       (SELECT pp.penalty_payment_id as payment_id, pp.amount, pp.payment_date, pp.payment_time,
+              pp.payment_status COLLATE utf8mb4_unicode_ci as payment_status,
+              'penalty' COLLATE utf8mb4_unicode_ci as payment_type,
+              NULL as payment_for_month,
+              pp.payment_method COLLATE utf8mb4_unicode_ci as payment_method,
+              pp.reference_number COLLATE utf8mb4_unicode_ci as reference_number,
+              pp.collected_by COLLATE utf8mb4_unicode_ci as collected_by,
+              pp.notes COLLATE utf8mb4_unicode_ci as notes,
+              pp.created_at,
               s.stall_number,
-              'penalty' as source
+              'penalty' COLLATE utf8mb4_unicode_ci as source
        FROM penalty_payments pp
        LEFT JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id
        LEFT JOIN stall s ON sh.stall_id = s.stall_id
        WHERE pp.stallholder_id IN (${placeholders}))
-       ORDER BY payment_date DESC, created_at DESC
+       ORDER BY payment_date ASC, created_at ASC
        LIMIT ? OFFSET ?`,
       [...stallholderIds, ...stallholderIds, limitInt, offsetInt]
     );
@@ -192,8 +198,12 @@ export const getAllPaymentRecords = async (req, res) => {
       // Get penalty payments
       const [penaltyResult] = await connection.query(
         `SELECT pp.penalty_payment_id as payment_id, pp.amount, pp.payment_date, pp.payment_time, 
-                pp.payment_status, 'penalty' as payment_type, NULL as payment_for_month, 
-                pp.payment_method, pp.reference_number, pp.collected_by, pp.notes, pp.created_at,
+                pp.payment_status COLLATE utf8mb4_unicode_ci as payment_status,
+                'penalty' as payment_type, NULL as payment_for_month, 
+                pp.payment_method COLLATE utf8mb4_unicode_ci as payment_method,
+                pp.reference_number COLLATE utf8mb4_unicode_ci as reference_number,
+                pp.collected_by COLLATE utf8mb4_unicode_ci as collected_by,
+                pp.notes COLLATE utf8mb4_unicode_ci as notes, pp.created_at,
                 s.stall_number, st.stall_type as stall_type, b.branch_name as branch_name,
                 'penalty' as source
          FROM penalty_payments pp
@@ -202,7 +212,7 @@ export const getAllPaymentRecords = async (req, res) => {
          LEFT JOIN stall st ON sh.stall_id = st.stall_id
          LEFT JOIN branch b ON sh.branch_id = b.branch_id
          WHERE pp.stallholder_id = ?
-         ORDER BY pp.payment_date DESC`,
+         ORDER BY pp.payment_date ASC`,
         [shId]
       );
       allPayments = allPayments.concat(penaltyResult || []);
@@ -231,8 +241,8 @@ export const getAllPaymentRecords = async (req, res) => {
       stallType: payment.stall_type || 'N/A'
     }));
     
-    // Sort by date descending (newest first)
-    formattedPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Sort by date ascending (oldest first)
+    formattedPayments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     
     console.log(`✅ Found ${allPayments.length} total payment records for ${stallholderIds.length} stall(s)`);
     
