@@ -1,4 +1,5 @@
 <template>
+  <div>
   <v-dialog v-model="showModal" max-width="500" persistent>
     <v-card>
       <v-card-title class="text-h5 pa-4 bg-primary text-white">
@@ -93,6 +94,18 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Error Snackbar -->
+  <v-snackbar
+    v-model="showErrorSnackbar"
+    :timeout="4000"
+    location="bottom left"
+    color="#f44336"
+  >
+    <v-icon class="mr-2">mdi-alert-circle</v-icon>
+    {{ snackbarMessage }}
+  </v-snackbar>
+  </div>
 </template>
 
 <script src="./ApproveApplicants.js"></script>

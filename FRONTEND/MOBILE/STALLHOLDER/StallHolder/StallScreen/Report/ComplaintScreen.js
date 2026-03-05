@@ -101,6 +101,36 @@ const ComplaintScreen = () => {
         setUserData(user);
         console.log('📱 User data loaded:', user.stallholder_name || user.full_name || user.username);
       }
+      
+      // Fetch live stall data from API to get stall_number, branch_id, stall_id
+      try {
+        const stallsResponse = await ApiService.getOwnedStalls();
+        if (stallsResponse.success && stallsResponse.data?.stalls?.length > 0) {
+          const firstStall = stallsResponse.data.stalls[0];
+          // Merge stall info into userData for display and submission
+          setUserData(prev => ({
+            ...prev,
+            stall_number: firstStall.stall_number,
+            stall_id: firstStall.stall_id,
+            branch_id: firstStall.branch_id,
+            stallholder_id: firstStall.stallholder_id,
+            stallholder_name: firstStall.stallholder_name || prev?.stallholder_name,
+          }));
+          setFullUserData(prev => ({
+            ...prev,
+            stallholder: {
+              ...(prev?.stallholder || {}),
+              stall_number: firstStall.stall_number,
+              stall_id: firstStall.stall_id,
+              branch_id: firstStall.branch_id,
+              stallholder_id: firstStall.stallholder_id,
+            }
+          }));
+          console.log('📊 Stall data loaded for complaint:', firstStall.stall_number);
+        }
+      } catch (stallErr) {
+        console.log('⚠️ Could not fetch stall data:', stallErr.message);
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
@@ -332,7 +362,7 @@ const ComplaintScreen = () => {
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Stall:</Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
-                {userData?.stall_number || 'Loading...'}
+                {userData?.stall_number || (loadingUser ? 'Loading...' : 'N/A')}
               </Text>
             </View>
             {userData?.email && (

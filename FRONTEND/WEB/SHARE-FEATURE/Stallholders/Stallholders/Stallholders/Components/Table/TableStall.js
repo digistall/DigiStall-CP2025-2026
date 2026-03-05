@@ -336,9 +336,10 @@ export default {
           this.fetchStallholders() // Reload the list
           this.$emit('stallholder-deleted', stallholder)
           this.closeDialog()
+          this.docSnackbar = { show: true, message: 'Stallholder deleted successfully!', color: 'success' }
         } catch (error) {
           console.error('Error deleting stallholder:', error)
-          alert('Failed to delete stallholder. Please try again.')
+          this.docSnackbar = { show: true, message: 'Failed to delete stallholder. Please try again.', color: 'error' }
         }
       }
     },

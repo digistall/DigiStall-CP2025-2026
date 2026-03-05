@@ -48,27 +48,40 @@ export const getPaymentRecords = async (req, res) => {
     // Build placeholders for IN clause
     const placeholders = stallholderIds.map(() => '?').join(',');
     
-    // Get total count of payments for ALL stalls
+    // Get total count of payments for ALL stalls (including penalty payments)
     // Use query() instead of execute() to avoid prepared statement issues with IN clause
     const [countRows] = await connection.query(
-      `SELECT COUNT(*) as total FROM payments WHERE stallholder_id IN (${placeholders})`,
-      stallholderIds
+      `SELECT 
+        (SELECT COUNT(*) FROM payments WHERE stallholder_id IN (${placeholders})) +
+        (SELECT COUNT(*) FROM penalty_payments WHERE stallholder_id IN (${placeholders})) as total`,
+      [...stallholderIds, ...stallholderIds]
     );
     const totalRecords = countRows[0]?.total || 0;
     
-    // Get payment records with pagination for ALL stalls
+    // Get payment records with pagination for ALL stalls (regular + penalty payments combined)
     const [payments] = await connection.query(
-      `SELECT p.payment_id, p.amount, p.payment_date, p.payment_time, p.payment_status,
+      `(SELECT p.payment_id, p.amount, p.payment_date, p.payment_time, p.payment_status,
               p.payment_type, p.payment_for_month, p.payment_method, p.reference_number,
               p.collected_by, p.notes, p.created_at,
-              s.stall_number
+              s.stall_number,
+              'regular' as source
        FROM payments p
        LEFT JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
        LEFT JOIN stall s ON sh.stall_id = s.stall_id
-       WHERE p.stallholder_id IN (${placeholders})
-       ORDER BY p.payment_date DESC, p.created_at DESC
+       WHERE p.stallholder_id IN (${placeholders}))
+       UNION ALL
+       (SELECT pp.penalty_payment_id as payment_id, pp.amount, pp.payment_date, pp.payment_time, pp.payment_status,
+              'penalty' as payment_type, NULL as payment_for_month, pp.payment_method, pp.reference_number,
+              pp.collected_by, pp.notes, pp.created_at,
+              s.stall_number,
+              'penalty' as source
+       FROM penalty_payments pp
+       LEFT JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id
+       LEFT JOIN stall s ON sh.stall_id = s.stall_id
+       WHERE pp.stallholder_id IN (${placeholders}))
+       ORDER BY payment_date DESC, created_at DESC
        LIMIT ? OFFSET ?`,
-      [...stallholderIds, limitInt, offsetInt]
+      [...stallholderIds, ...stallholderIds, limitInt, offsetInt]
     );
     
     await connection.end();
@@ -165,15 +178,34 @@ export const getAllPaymentRecords = async (req, res) => {
     console.log('✅ Found stallholder_ids:', stallholderIds);
     console.log('📋 Fetching ALL payment records for all stallholders...');
     
-    // Fetch payments for ALL stallholders
+    // Fetch payments for ALL stallholders (regular + penalty)
     let allPayments = [];
     for (const shId of stallholderIds) {
+      // Get regular payments via stored procedure
       const [paymentResult] = await connection.execute(
         'CALL sp_getAllPaymentsByStallholder(?)',
         [shId]
       );
-      const payments = paymentResult[0] || [];
+      const payments = (paymentResult[0] || []).map(p => ({ ...p, source: 'regular' }));
       allPayments = allPayments.concat(payments);
+      
+      // Get penalty payments
+      const [penaltyResult] = await connection.query(
+        `SELECT pp.penalty_payment_id as payment_id, pp.amount, pp.payment_date, pp.payment_time, 
+                pp.payment_status, 'penalty' as payment_type, NULL as payment_for_month, 
+                pp.payment_method, pp.reference_number, pp.collected_by, pp.notes, pp.created_at,
+                s.stall_number, st.stall_type as stall_type, b.branch_name as branch_name,
+                'penalty' as source
+         FROM penalty_payments pp
+         LEFT JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id
+         LEFT JOIN stall s ON sh.stall_id = s.stall_id
+         LEFT JOIN stall st ON sh.stall_id = st.stall_id
+         LEFT JOIN branch b ON sh.branch_id = b.branch_id
+         WHERE pp.stallholder_id = ?
+         ORDER BY pp.payment_date DESC`,
+        [shId]
+      );
+      allPayments = allPayments.concat(penaltyResult || []);
     }
     
     await connection.end();
