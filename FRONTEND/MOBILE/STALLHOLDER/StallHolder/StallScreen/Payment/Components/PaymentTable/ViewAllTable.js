@@ -156,7 +156,7 @@ const ViewAllTable = ({
 
   const renderPaymentRecord = (record, index) => (
     <Animated.View
-      key={record.id}
+      key={`${record.source || 'payment'}_${record.id}_${index}`}
       style={[
         styles.recordCard,
         theme && { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
