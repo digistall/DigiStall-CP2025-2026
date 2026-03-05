@@ -76,6 +76,14 @@ export default {
         (v) => !!v || "Email is required",
         (v) => /.+@.+\..+/.test(v) || "Email must be valid",
       ],
+
+      // Snackbar for notifications
+      snackbar: {
+        show: false,
+        message: "",
+        color: "success",
+        timeout: 3000,
+      },
     };
   },
 
@@ -101,6 +109,16 @@ export default {
         this.fetchLocations(newVal);
       }, 300);
     },
+    saveSuccess(newVal) {
+      if (newVal) {
+        // Show success snackbar and close dialog
+        this.showNotification("Vendor added successfully!", "success");
+        // Close dialog after snackbar timeout
+        setTimeout(() => {
+          this.closeDialog();
+        }, this.snackbar.timeout);
+      }
+    },
   },
 
   methods: {
@@ -109,6 +127,12 @@ export default {
       if (this.isVisible !== undefined) {
         this.$emit("close");
       }
+    },
+
+    showNotification(message, color = "success") {
+      this.snackbar.message = message;
+      this.snackbar.color = color;
+      this.snackbar.show = true;
     },
 
     resetForm() {
@@ -206,6 +230,7 @@ export default {
     modelValue: { type: Boolean, default: false },
     isVisible: { type: Boolean, required: false },
     loading: { type: Boolean, default: false },
+    saveSuccess: { type: Boolean, default: false },
   },
 
   emits: ["update:modelValue", "save", "close"],

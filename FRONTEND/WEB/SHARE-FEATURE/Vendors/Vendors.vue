@@ -31,6 +31,7 @@
               <AddVendorDialog
                 :isVisible="addDialog"
                 :loading="loading"
+                :saveSuccess="vendorSaveSuccess"
                 @close="addDialog = false"
                 @save="handleSave"
               />
