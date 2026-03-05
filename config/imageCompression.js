@@ -1,227 +1,404 @@
-// ===== IMAGE COMPRESSION UTILITY =====
-// Compresses uploaded images to reduce storage and bandwidth
-// Uses sharp for high-quality compression with minimal quality loss
+// =============================================
+// IMAGE COMPRESSION UTILITY
+// =============================================
+// Purpose: Compress uploaded images using sharp
+// - Accepts high-res uploads (up to 10MB)
+// - Compresses on save to reduce storage & bandwidth
+// - Serves compressed version (still looks high quality)
+// - Supports JPEG, PNG, WebP output
+// =============================================
 
-import sharp from 'sharp';
-import path from 'path';
-import fs from 'fs';
+import sharp from "sharp";
+import fs from "fs";
+import path from "path";
 
-// Compression settings
+// Compression settings - balanced quality vs size
 const COMPRESSION_CONFIG = {
-  jpeg: { quality: 80, mozjpeg: true },
-  png: { quality: 80, compressionLevel: 8 },
-  webp: { quality: 80 },
+  // Max dimensions (maintains aspect ratio)
   maxWidth: 1920,
   maxHeight: 1920,
-  // Skip compression for files smaller than this (already small enough)
-  minSizeBytes: 50 * 1024, // 50KB
-};
 
-// Image extensions that can be compressed
-const COMPRESSIBLE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp'];
+  jpeg: {
+    quality: 80,
+    mozjpeg: true, // Use mozjpeg for better compression
+    chromaSubsampling: "4:2:0",
+  },
+
+  png: {
+    quality: 80,
+    compressionLevel: 8, // 0-9, higher = more compression
+    palette: true, // Use palette-based compression when possible
+  },
+
+  webp: {
+    quality: 80,
+    effort: 4, // 0-6, higher = slower but better
+  },
+
+  // For document images (signatures, IDs) - keep higher quality
+  document: {
+    maxWidth: 2048,
+    maxHeight: 2048,
+    jpeg: { quality: 85, mozjpeg: true },
+    png: { quality: 85, compressionLevel: 7 },
+  },
+
+  // For thumbnails / stall card previews
+  thumbnail: {
+    maxWidth: 800,
+    maxHeight: 800,
+    jpeg: { quality: 75, mozjpeg: true },
+    png: { quality: 75, compressionLevel: 9 },
+  },
+};
 
 /**
  * Compress a single image file in-place
- * @param {string} filePath - Absolute path to the image file
- * @param {object} options - Override compression settings
- * @returns {object} { compressed, originalSize, newSize, savings }
+ * @param {string} filePath - Full path to the image file
+ * @param {Object} options - Compression options
+ * @param {string} options.type - 'default' | 'document' | 'thumbnail'
+ * @param {boolean} options.keepFormat - Keep original format (default: true)
+ * @returns {Object} { originalSize, compressedSize, savings, path }
  */
 export async function compressImage(filePath, options = {}) {
+  const { type = "default", keepFormat = true } = options;
+
   try {
-    const ext = path.extname(filePath).toLowerCase();
+    // Read original file
+    const originalBuffer = fs.readFileSync(filePath);
+    const originalSize = originalBuffer.length;
 
-    // Skip non-image files
-    if (!COMPRESSIBLE_EXTENSIONS.includes(ext)) {
-      return { compressed: false, reason: 'not-image' };
-    }
-
-    // Check file size
-    const stats = fs.statSync(filePath);
-    if (stats.size < COMPRESSION_CONFIG.minSizeBytes) {
-      return { compressed: false, reason: 'too-small', originalSize: stats.size };
-    }
-
-    const originalSize = stats.size;
-
-    // Read and compress
-    let pipeline = sharp(filePath)
-      .rotate() // Auto-rotate based on EXIF
-      .resize(
-        options.maxWidth || COMPRESSION_CONFIG.maxWidth,
-        options.maxHeight || COMPRESSION_CONFIG.maxHeight,
-        { fit: 'inside', withoutEnlargement: true }
-      );
-
-    // Apply format-specific compression
-    if (ext === '.jpg' || ext === '.jpeg') {
-      pipeline = pipeline.jpeg(options.jpeg || COMPRESSION_CONFIG.jpeg);
-    } else if (ext === '.png') {
-      pipeline = pipeline.png(options.png || COMPRESSION_CONFIG.png);
-    } else if (ext === '.webp') {
-      pipeline = pipeline.webp(options.webp || COMPRESSION_CONFIG.webp);
-    } else {
-      // Convert other formats to JPEG
-      pipeline = pipeline.jpeg(options.jpeg || COMPRESSION_CONFIG.jpeg);
-    }
-
-    const compressedBuffer = await pipeline.toBuffer();
-
-    // Only save if actually smaller
-    if (compressedBuffer.length < originalSize) {
-      fs.writeFileSync(filePath, compressedBuffer);
-      const savings = ((originalSize - compressedBuffer.length) / originalSize * 100).toFixed(1);
-      console.log(`📦 Compressed: ${path.basename(filePath)} ${(originalSize / 1024).toFixed(0)}KB → ${(compressedBuffer.length / 1024).toFixed(0)}KB (${savings}% saved)`);
+    // Skip if file is already small (under 50KB)
+    if (originalSize < 50 * 1024) {
       return {
-        compressed: true,
         originalSize,
-        newSize: compressedBuffer.length,
-        savings: `${savings}%`
+        compressedSize: originalSize,
+        savings: "0%",
+        path: filePath,
+        skipped: true,
       };
     }
 
-    return { compressed: false, reason: 'already-optimal', originalSize };
-  } catch (error) {
-    console.error(`⚠️ Compression failed for ${filePath}:`, error.message);
-    return { compressed: false, reason: 'error', error: error.message };
-  }
-}
+    const ext = path.extname(filePath).toLowerCase();
+    const config =
+      type === "document"
+        ? COMPRESSION_CONFIG.document
+        : type === "thumbnail"
+          ? COMPRESSION_CONFIG.thumbnail
+          : COMPRESSION_CONFIG;
 
-/**
- * Compress an image buffer (for BLOB storage)
- * @param {Buffer} buffer - Image buffer
- * @param {string} mimeType - MIME type (e.g., 'image/jpeg')
- * @param {object} options - Override compression settings
- * @returns {Buffer} Compressed buffer
- */
-export async function compressBuffer(buffer, mimeType = 'image/jpeg', options = {}) {
-  try {
-    if (!buffer || buffer.length < COMPRESSION_CONFIG.minSizeBytes) {
-      return buffer; // Too small to bother
+    const maxWidth = config.maxWidth || COMPRESSION_CONFIG.maxWidth;
+    const maxHeight = config.maxHeight || COMPRESSION_CONFIG.maxHeight;
+
+    // Build sharp pipeline
+    let pipeline = sharp(originalBuffer)
+      .rotate() // Auto-rotate based on EXIF
+      .resize(maxWidth, maxHeight, {
+        fit: "inside", // Maintain aspect ratio
+        withoutEnlargement: true, // Don't upscale small images
+      });
+
+    // Apply format-specific compression
+    if (ext === ".jpg" || ext === ".jpeg") {
+      const jpegConfig = config.jpeg || COMPRESSION_CONFIG.jpeg;
+      pipeline = pipeline.jpeg(jpegConfig);
+    } else if (ext === ".png") {
+      const pngConfig = config.png || COMPRESSION_CONFIG.png;
+      pipeline = pipeline.png(pngConfig);
+    } else if (ext === ".webp") {
+      const webpConfig = config.webp || COMPRESSION_CONFIG.webp;
+      pipeline = pipeline.webp(webpConfig);
+    } else {
+      // Unknown format, try JPEG compression
+      pipeline = pipeline.jpeg(COMPRESSION_CONFIG.jpeg);
     }
 
-    const isImage = mimeType && mimeType.startsWith('image/');
-    if (!isImage) return buffer;
+    // Compress
+    const compressedBuffer = await pipeline.toBuffer();
+    const compressedSize = compressedBuffer.length;
 
-    let pipeline = sharp(buffer)
-      .rotate()
-      .resize(
-        options.maxWidth || COMPRESSION_CONFIG.maxWidth,
-        options.maxHeight || COMPRESSION_CONFIG.maxHeight,
-        { fit: 'inside', withoutEnlargement: true }
+    // Only write if compression actually reduced size
+    if (compressedSize < originalSize) {
+      fs.writeFileSync(filePath, compressedBuffer);
+      const savingsPercent = (
+        (1 - compressedSize / originalSize) *
+        100
+      ).toFixed(1);
+
+      console.log(
+        `🗜️  Compressed: ${path.basename(filePath)} | ${formatSize(originalSize)} → ${formatSize(compressedSize)} (${savingsPercent}% saved)`,
       );
 
-    if (mimeType.includes('png')) {
-      pipeline = pipeline.png(options.png || COMPRESSION_CONFIG.png);
-    } else if (mimeType.includes('webp')) {
-      pipeline = pipeline.webp(options.webp || COMPRESSION_CONFIG.webp);
+      return {
+        originalSize,
+        compressedSize,
+        savings: `${savingsPercent}%`,
+        path: filePath,
+        skipped: false,
+      };
     } else {
-      // Default to JPEG for most images
-      pipeline = pipeline.jpeg(options.jpeg || COMPRESSION_CONFIG.jpeg);
+      // Compressed version is larger (rare), keep original
+      return {
+        originalSize,
+        compressedSize: originalSize,
+        savings: "0%",
+        path: filePath,
+        skipped: true,
+      };
     }
-
-    const compressed = await pipeline.toBuffer();
-
-    // Only return compressed if actually smaller
-    if (compressed.length < buffer.length) {
-      const savings = ((buffer.length - compressed.length) / buffer.length * 100).toFixed(1);
-      console.log(`📦 Buffer compressed: ${(buffer.length / 1024).toFixed(0)}KB → ${(compressed.length / 1024).toFixed(0)}KB (${savings}% saved)`);
-      return compressed;
-    }
-
-    return buffer;
   } catch (error) {
-    console.error('⚠️ Buffer compression failed:', error.message);
-    return buffer; // Return original on error
+    console.error(`❌ Compression failed for ${filePath}:`, error.message);
+    // Don't throw - return original file unchanged
+    return {
+      originalSize: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
+      compressedSize: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
+      savings: "0%",
+      path: filePath,
+      skipped: true,
+      error: error.message,
+    };
   }
 }
 
 /**
- * Express middleware to compress uploaded files (multer)
- * Use after multer middleware in route chain
- * @param {object} options - { type: 'image'|'document', ...compressionOptions }
+ * Compress a buffer (for BLOB storage)
+ * @param {Buffer} inputBuffer - Original image buffer
+ * @param {string} mimeType - e.g. 'image/jpeg', 'image/png'
+ * @param {Object} options - Compression options
+ * @returns {Object} { buffer, originalSize, compressedSize, savings }
+ */
+export async function compressBuffer(
+  inputBuffer,
+  mimeType = "image/jpeg",
+  options = {},
+) {
+  const { type = "document" } = options;
+
+  try {
+    const originalSize = inputBuffer.length;
+
+    // Skip if already small (under 50KB)
+    if (originalSize < 50 * 1024) {
+      return {
+        buffer: inputBuffer,
+        originalSize,
+        compressedSize: originalSize,
+        savings: "0%",
+        skipped: true,
+      };
+    }
+
+    const config =
+      type === "document"
+        ? COMPRESSION_CONFIG.document
+        : type === "thumbnail"
+          ? COMPRESSION_CONFIG.thumbnail
+          : COMPRESSION_CONFIG;
+
+    const maxWidth = config.maxWidth || COMPRESSION_CONFIG.maxWidth;
+    const maxHeight = config.maxHeight || COMPRESSION_CONFIG.maxHeight;
+
+    let pipeline = sharp(inputBuffer).rotate().resize(maxWidth, maxHeight, {
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+
+    // Apply compression based on MIME type
+    if (mimeType.includes("jpeg") || mimeType.includes("jpg")) {
+      pipeline = pipeline.jpeg(config.jpeg || COMPRESSION_CONFIG.jpeg);
+    } else if (mimeType.includes("png")) {
+      pipeline = pipeline.png(config.png || COMPRESSION_CONFIG.png);
+    } else if (mimeType.includes("webp")) {
+      pipeline = pipeline.webp(config.webp || COMPRESSION_CONFIG.webp);
+    } else {
+      // Default to JPEG
+      pipeline = pipeline.jpeg(COMPRESSION_CONFIG.jpeg);
+    }
+
+    const compressedBuffer = await pipeline.toBuffer();
+    const compressedSize = compressedBuffer.length;
+
+    if (compressedSize < originalSize) {
+      const savingsPercent = (
+        (1 - compressedSize / originalSize) *
+        100
+      ).toFixed(1);
+      console.log(
+        `🗜️  Buffer compressed: ${formatSize(originalSize)} → ${formatSize(compressedSize)} (${savingsPercent}% saved)`,
+      );
+
+      return {
+        buffer: compressedBuffer,
+        originalSize,
+        compressedSize,
+        savings: `${savingsPercent}%`,
+        skipped: false,
+      };
+    } else {
+      return {
+        buffer: inputBuffer,
+        originalSize,
+        compressedSize: originalSize,
+        savings: "0%",
+        skipped: true,
+      };
+    }
+  } catch (error) {
+    console.error(`❌ Buffer compression failed:`, error.message);
+    return {
+      buffer: inputBuffer,
+      originalSize: inputBuffer.length,
+      compressedSize: inputBuffer.length,
+      savings: "0%",
+      skipped: true,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Express middleware: compress uploaded files after multer saves them
+ * Use AFTER multer middleware in the route chain
+ * @param {Object} options - { type: 'default' | 'document' | 'thumbnail' }
  */
 export function compressUploads(options = {}) {
   return async (req, res, next) => {
     try {
       const files = [];
 
-      // Collect files from multer
-      if (req.file) files.push(req.file);
+      // Collect files from req.file (single) or req.files (array or fields)
+      if (req.file) {
+        files.push(req.file);
+      }
       if (req.files) {
         if (Array.isArray(req.files)) {
           files.push(...req.files);
         } else {
-          // req.files is an object (multer fields)
-          Object.values(req.files).forEach(fieldFiles => {
-            if (Array.isArray(fieldFiles)) files.push(...fieldFiles);
+          // Fields object: { fieldname: [files] }
+          Object.values(req.files).forEach((fieldFiles) => {
+            if (Array.isArray(fieldFiles)) {
+              files.push(...fieldFiles);
+            }
           });
         }
       }
 
-      if (files.length === 0) return next();
+      if (files.length === 0) {
+        return next();
+      }
 
-      // Compress each uploaded file
-      for (const file of files) {
-        if (file.path) {
-          // File stored on disk
-          await compressImage(file.path, options);
-          // Update file size in multer metadata
-          try {
-            const stats = fs.statSync(file.path);
-            file.size = stats.size;
-          } catch (e) {
-            // ignore
-          }
-        } else if (file.buffer) {
-          // File stored in memory
-          file.buffer = await compressBuffer(file.buffer, file.mimetype, options);
-          file.size = file.buffer.length;
+      // Filter only image files (skip PDFs etc.)
+      const imageFiles = files.filter((f) => {
+        const ext = path
+          .extname(f.originalname || f.filename || "")
+          .toLowerCase();
+        return (
+          [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext) ||
+          (f.mimetype && f.mimetype.startsWith("image/"))
+        );
+      });
+
+      if (imageFiles.length === 0) {
+        return next();
+      }
+
+      // Compress all image files in parallel
+      const results = await Promise.all(
+        imageFiles.map((file) => compressImage(file.path, options)),
+      );
+
+      // Update file sizes in req.files metadata
+      results.forEach((result, index) => {
+        if (!result.skipped && imageFiles[index]) {
+          imageFiles[index].size = result.compressedSize;
+          imageFiles[index].compressed = true;
+          imageFiles[index].originalSize = result.originalSize;
+          imageFiles[index].compressionSavings = result.savings;
         }
+      });
+
+      const totalOriginal = results.reduce((sum, r) => sum + r.originalSize, 0);
+      const totalCompressed = results.reduce(
+        (sum, r) => sum + r.compressedSize,
+        0,
+      );
+      const totalSaved = totalOriginal - totalCompressed;
+
+      if (totalSaved > 0) {
+        console.log(
+          `🗜️  Upload compression: ${imageFiles.length} files | ${formatSize(totalOriginal)} → ${formatSize(totalCompressed)} (saved ${formatSize(totalSaved)})`,
+        );
       }
 
       next();
     } catch (error) {
-      console.error('⚠️ Upload compression middleware error:', error.message);
-      next(); // Continue even if compression fails
+      console.error("❌ Upload compression middleware error:", error);
+      // Don't block the upload if compression fails
+      next();
     }
   };
 }
 
 /**
- * Compress a base64-encoded image string
- * @param {string} base64String - Base64 image data (with or without data URI prefix)
- * @param {object} options - Compression options
- * @returns {string} Compressed base64 string
+ * Compress base64 image data (used in applicant document BLOB flow)
+ * @param {string} base64Data - Base64 encoded image data (with or without data URI prefix)
+ * @param {Object} options - { type: 'document' | 'default' }
+ * @returns {string} Compressed base64 data (with prefix if original had one)
  */
-export async function compressBase64Image(base64String, options = {}) {
+export async function compressBase64Image(
+  base64Data,
+  options = { type: "document" },
+) {
   try {
-    if (!base64String) return base64String;
+    // Extract prefix and raw data
+    let prefix = "";
+    let rawBase64 = base64Data;
+    let mimeType = "image/jpeg";
 
-    // Extract base64 data and mime type
-    let mimeType = 'image/jpeg';
-    let base64Data = base64String;
+    if (base64Data.includes(",")) {
+      const parts = base64Data.split(",");
+      prefix = parts[0] + ",";
+      rawBase64 = parts[1];
 
-    if (base64String.includes(',')) {
-      const parts = base64String.split(',');
+      // Extract mime type from prefix
       const mimeMatch = parts[0].match(/data:([^;]+)/);
-      if (mimeMatch) mimeType = mimeMatch[1];
-      base64Data = parts[1];
+      if (mimeMatch) {
+        mimeType = mimeMatch[1];
+      }
     }
 
-    const buffer = Buffer.from(base64Data, 'base64');
-    const compressed = await compressBuffer(buffer, mimeType, options);
-    const compressedBase64 = compressed.toString('base64');
-
-    // Reconstruct with data URI if original had one
-    if (base64String.includes(',')) {
-      return `data:${mimeType};base64,${compressedBase64}`;
+    // Skip non-image types (e.g., PDF)
+    if (!mimeType.startsWith("image/")) {
+      return base64Data;
     }
 
-    return compressedBase64;
+    // Convert to buffer
+    const inputBuffer = Buffer.from(rawBase64, "base64");
+
+    // Compress
+    const result = await compressBuffer(inputBuffer, mimeType, options);
+
+    if (result.skipped) {
+      return base64Data;
+    }
+
+    // Convert back to base64
+    const compressedBase64 = result.buffer.toString("base64");
+
+    return prefix ? prefix + compressedBase64 : compressedBase64;
   } catch (error) {
-    console.error('⚠️ Base64 compression failed:', error.message);
-    return base64String;
+    console.error("❌ Base64 compression failed:", error.message);
+    return base64Data; // Return original on failure
   }
+}
+
+/**
+ * Format bytes to human-readable size
+ */
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
 }
 
 export default {
@@ -229,5 +406,4 @@ export default {
   compressBuffer,
   compressUploads,
   compressBase64Image,
-  COMPRESSION_CONFIG
 };
