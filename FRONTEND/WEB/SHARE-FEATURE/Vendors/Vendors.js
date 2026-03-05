@@ -52,6 +52,8 @@ export default {
         timeout: 3000,
       },
 
+      vendorSaveSuccess: false,
+
       newVendor: {
         id: '',
         name: '',
@@ -152,7 +154,12 @@ export default {
 
         console.log('✅ Vendor created:', result)
 
-        this.showNotification('Vendor created successfully!', 'success')
+        // Signal success to the dialog
+        this.vendorSaveSuccess = true
+        // Reset the flag after a delay so the dialog can detect changes next time
+        setTimeout(() => {
+          this.vendorSaveSuccess = false
+        }, 100)
 
         // Reload vendors list
         await this.initializeVendors()

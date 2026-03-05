@@ -469,6 +469,14 @@
         </v-btn>
       </v-card-actions>
     </v-card>
+
+    <!-- Success Snackbar -->
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="snackbar.timeout" location="top">
+      {{ snackbar.message }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
+      </template>
+    </v-snackbar>
   </v-dialog>
 </template>
 
