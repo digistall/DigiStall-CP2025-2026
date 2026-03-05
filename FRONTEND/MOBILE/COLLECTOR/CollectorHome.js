@@ -72,7 +72,7 @@ const CollectorHome = ({ navigation }) => {
         recordActivity();
         return false;
       },
-    }),
+    })
   ).current;
 
   // Send heartbeat to server
@@ -83,7 +83,7 @@ const CollectorHome = ({ navigation }) => {
       const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
 
       if (token && staffId) {
-        await ApiService.staffHeartbeat(token, staffId, "collector");
+        await ApiService.staffHeartbeat(token, staffId, 'collector');
       }
     } catch (error) {
       // Silent fail for heartbeat
@@ -94,7 +94,7 @@ const CollectorHome = ({ navigation }) => {
   const performAutoLogout = useCallback(async () => {
     if (isLoggingOut) return;
 
-    console.log("Collector auto-logout triggered due to inactivity");
+    console.log('Collector auto-logout triggered due to inactivity');
     setIsLoggingOut(true);
 
     try {
@@ -103,18 +103,18 @@ const CollectorHome = ({ navigation }) => {
       const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
 
       if (token && staffId) {
-        await ApiService.staffAutoLogout(token, staffId, "collector");
+        await ApiService.staffAutoLogout(token, staffId, 'collector');
       }
 
       await UserStorageService.clearUserData();
     } catch (error) {
-      console.error("Collector auto-logout error:", error);
+      console.error('Collector auto-logout error:', error);
       await UserStorageService.clearUserData();
     } finally {
       setIsLoggingOut(false);
       navigation.reset({
         index: 0,
-        routes: [{ name: "LoginScreen", params: { reason: "inactivity" } }],
+        routes: [{ name: 'LoginScreen', params: { reason: 'inactivity' } }],
       });
     }
   }, [isLoggingOut, navigation]);
@@ -134,61 +134,45 @@ const CollectorHome = ({ navigation }) => {
         if (timeSinceActivity < INACTIVITY_TIMEOUT) {
           sendHeartbeat();
         } else {
-          console.log(
-            "Collector inactivity detected:",
-            Math.round(timeSinceActivity / 1000),
-            "seconds",
-          );
+          console.log('Collector inactivity detected:', Math.round(timeSinceActivity / 1000), 'seconds');
           performAutoLogout();
         }
       }, HEARTBEAT_INTERVAL);
     };
 
     // Handle app state changes
-    const appStateSubscription = AppState.addEventListener(
-      "change",
-      async (nextAppState) => {
-        if (
-          appStateRef.current.match(/inactive|background/) &&
-          nextAppState === "active"
-        ) {
-          // App came to foreground - check if should auto-logout
-          const timeSinceActivity = Date.now() - lastActivityRef.current;
-          if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-            performAutoLogout();
-          } else {
-            recordActivity();
-            sendHeartbeat();
-            // Restart heartbeat interval
-            startHeartbeatInterval();
-          }
-        } else if (
-          appStateRef.current === "active" &&
-          nextAppState.match(/inactive|background/)
-        ) {
-          // CRITICAL: Stop heartbeat IMMEDIATELY to prevent it re-setting online status
-          if (heartbeatIntervalRef.current) {
-            clearInterval(heartbeatIntervalRef.current);
-            heartbeatIntervalRef.current = null;
-          }
-          // Fire-and-forget auto-logout API (don't await - OS may suspend JS thread)
-          try {
-            const userData = await UserStorageService.getUserData();
-            const token = await UserStorageService.getAuthToken();
-            const staffId =
-              userData?.staff?.collector_id || userData?.staff?.staffId;
-            if (token && staffId) {
-              ApiService.staffAutoLogout(token, staffId, "collector").catch(
-                () => {},
-              );
-            }
-          } catch (e) {
-            // Silent fail - app is going to background
-          }
+    const appStateSubscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App came to foreground - check if should auto-logout
+        const timeSinceActivity = Date.now() - lastActivityRef.current;
+        if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+          performAutoLogout();
+        } else {
+          recordActivity();
+          sendHeartbeat();
+          // Restart heartbeat interval
+          startHeartbeatInterval();
         }
-        appStateRef.current = nextAppState;
-      },
-    );
+      } else if (appStateRef.current === 'active' && nextAppState.match(/inactive|background/)) {
+        // CRITICAL: Stop heartbeat IMMEDIATELY to prevent it re-setting online status
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
+        // Fire-and-forget auto-logout API (don't await - OS may suspend JS thread)
+        try {
+          const userData = await UserStorageService.getUserData();
+          const token = await UserStorageService.getAuthToken();
+          const staffId = userData?.staff?.collector_id || userData?.staff?.staffId;
+          if (token && staffId) {
+            ApiService.staffAutoLogout(token, staffId, 'collector').catch(() => {});
+          }
+        } catch (e) {
+          // Silent fail - app is going to background
+        }
+      }
+      appStateRef.current = nextAppState;
+    });
 
     return () => {
       if (heartbeatIntervalRef.current) {
@@ -318,7 +302,7 @@ const CollectorHome = ({ navigation }) => {
   const renderCurrentScreen = () => {
     switch (currentScreen) {
       case "dashboard":
-        return <DashboardScreen onNavigate={handleNavigation} />;
+        return <DashboardScreen />;
       case "payment":
         return <PaymentScreen />;
       case "vendor":
@@ -328,7 +312,7 @@ const CollectorHome = ({ navigation }) => {
       case "settings":
         return <SettingsScreen />;
       default:
-        return <DashboardScreen onNavigate={handleNavigation} />;
+        return <DashboardScreen />;
     }
   };
 

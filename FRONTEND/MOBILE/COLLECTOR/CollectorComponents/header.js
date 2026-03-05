@@ -29,7 +29,7 @@ const Header = ({
     <View style={[styles.header, { backgroundColor: colors.surface }]}>
       <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
         <Text style={[styles.menuIcon, { color: colors.textSecondary }]}>
-          Γÿ░
+          ☰
         </Text>
       </TouchableOpacity>
 

@@ -15,59 +15,62 @@
     </div>
 
     <!-- Payments Table -->
-    <div class="stallholders-table">
-      <v-card elevation="1" class="table-card">
-        <!-- Custom Table Header -->
-        <div class="table-header">
-          <div class="header-row simplified-layout">
-            <div class="header-cell collector-col">Collector's Name</div>
-            <div class="header-cell vendor-col">Vendor's Name</div>
-            <div class="header-cell amount-col">Amount</div>
-            <div class="header-cell date-col">Payment Date</div>
-            <div class="header-cell reference-col">Reference No.</div>
-            <div class="header-cell status-col">Status</div>
-          </div>
-        </div>
-
-        <!-- Table Body -->
-        <div class="table-body scrollable-table-wrapper">
-          <div
-            v-for="payment in filteredPayments"
-            :key="payment.receipt_id"
-            class="table-row simplified-layout clickable-row"
-            @click="viewPayment(payment)"
-          >
-            <div class="table-cell collector-col">
-              <div class="collector-info">
-                <div class="avatar">
-                  {{ (payment.collector_name || 'N/A').charAt(0) }}
-                </div>
-                <span class="name-text">{{ payment.collector_name || 'N/A' }}</span>
-              </div>
-            </div>
-            <div class="table-cell vendor-col">
-              <div class="vendor-info">
-                <div class="avatar vendor-avatar">
-                  {{ (payment.vendor_name || 'N/A').charAt(0) }}
-                </div>
-                <span class="name-text">{{ payment.vendor_name || 'N/A' }}</span>
-              </div>
-            </div>
-            <div class="table-cell amount-col">{{ formatCurrency(payment.amount) }}</div>
-            <div class="table-cell date-col">{{ formatDateTime(payment.time_date) }}</div>
-            <div class="table-cell reference-col">{{ payment.reference_no || 'N/A' }}</div>
-            <div class="table-cell status-col">
-              <v-chip :color="payment.statusColor" variant="flat" size="small">
-                {{ payment.status }}
-              </v-chip>
-            </div>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-if="filteredPayments.length === 0" class="empty-state">
-          <v-icon size="48" color="grey-lighten-1" class="mb-3">mdi-inbox</v-icon>
-          <p class="text-grey-lighten-1">No daily payments recorded</p>
+    <div class="payments-table-container">
+      <v-card class="payments-card" elevation="0">
+        <div class="table-wrapper">
+          <table class="payments-table">
+            <thead>
+              <tr>
+                <th>Receipt ID</th>
+                <th>Collector's Name</th>
+                <th>Vendor's Name</th>
+                <th>Amount</th>
+                <th>Payment Date</th>
+                <th>Reference No.</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filteredPayments.length === 0">
+                <td colspan="7" class="empty-state">
+                  <v-icon size="48" color="grey">mdi-inbox</v-icon>
+                  <p>No daily payments recorded</p>
+                </td>
+              </tr>
+              <tr
+                v-for="payment in filteredPayments"
+                :key="payment.receipt_id"
+                class="clickable-row"
+                @click="viewPayment(payment)"
+              >
+                <td class="id-cell">{{ payment.receipt_id }}</td>
+                <td class="name-cell">
+                  <div class="collector-info">
+                    <div class="avatar">
+                      {{ (payment.collector_name || 'N/A').charAt(0) }}
+                    </div>
+                    <span class="name">{{ payment.collector_name || 'N/A' }}</span>
+                  </div>
+                </td>
+                <td class="name-cell">
+                  <div class="vendor-info">
+                    <div class="avatar vendor-avatar">
+                      {{ (payment.vendor_name || 'N/A').charAt(0) }}
+                    </div>
+                    <span class="name">{{ payment.vendor_name || 'N/A' }}</span>
+                  </div>
+                </td>
+                <td class="amount-cell">{{ formatCurrency(payment.amount) }}</td>
+                <td class="date-cell">{{ formatDateTime(payment.time_date) }}</td>
+                <td class="reference-cell">{{ payment.reference_no || 'N/A' }}</td>
+                <td class="status-cell">
+                  <v-chip :color="payment.statusColor" variant="flat" size="small">
+                    {{ payment.status }}
+                  </v-chip>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </v-card>
     </div>
@@ -211,7 +214,9 @@
             <v-col cols="12" md="6">
               <div class="detail-item">
                 <span class="detail-label">Amount:</span>
-                <span class="detail-value">{{ formatCurrency(selectedPayment.amount) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(selectedPayment.amount)
+                }}</span>
               </div>
             </v-col>
             <v-col cols="12" md="6">
