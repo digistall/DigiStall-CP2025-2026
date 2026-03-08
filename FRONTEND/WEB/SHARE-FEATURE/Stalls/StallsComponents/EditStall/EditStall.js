@@ -40,6 +40,19 @@ export default {
       stallImages: [],
       currentImageIndex: 0,
       loadingImages: false,
+      
+      // History Tab additions
+      activeTab: 'details',
+      historyLogs: [],
+      loadingHistory: false,
+      historyHeaders: [
+        { title: 'Previous Tenant', key: 'user_fullname' },
+        { title: 'Lease Start', key: 'lease_start_date' },
+        { title: 'Lease End', key: 'lease_end_date' },
+        { title: 'Surrender Reason', key: 'surrender_reason' },
+        { title: 'Rating', key: 'spot_rating' }
+      ],
+
       imageBaseUrl: import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost',
       rules: {
         stallNumber: [
@@ -135,6 +148,8 @@ export default {
           this.populateForm(newData)
           // Fetch images from htdocs after populating form
           this.fetchStallImagesFromHtdocs(newData)
+          // Fetch history for this stall
+          this.fetchStallHistory(extractedId)
         } else {
           console.log('⚠️ stallData is empty or undefined - modal may be closing')
           // Don't clear form data when stallData becomes empty
@@ -157,7 +172,39 @@ export default {
   methods: {
     closeModal() {
       this.resetForm()
+      this.activeTab = 'details'
+      this.historyLogs = []
       this.$emit('close')
+    },
+
+    async fetchStallHistory(stallId) {
+      if (!stallId) return;
+      this.loadingHistory = true;
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const res = await fetch(`${this.apiBaseUrl}/surrender/history/${stallId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const json = await res.json();
+        if (json.success) {
+          this.historyLogs = json.data.map(log => ({
+            ...log,
+            lease_start_date: log.lease_start_date ? new Date(log.lease_start_date).toLocaleDateString() : 'N/A',
+            lease_end_date: log.lease_end_date ? new Date(log.lease_end_date).toLocaleDateString() : 'N/A'
+          }));
+        } else {
+          console.error('Error fetching history:', json.message);
+          this.historyLogs = [];
+        }
+      } catch (err) {
+        console.error('Connection error fetching history:', err);
+        this.historyLogs = [];
+      } finally {
+        this.loadingHistory = false;
+      }
     },
 
     getEmptyForm() {

@@ -50,7 +50,12 @@ export const getOwnedStalls = async (req, res) => {
         s.stall_location,
         s.price_type as stall_type,
         b.branch_name,
-        b.area as branch_area
+        b.area as branch_area,
+        (SELECT status FROM stall_surrender_requests 
+         WHERE stallholder_id = sh.stallholder_id 
+         AND stall_id = sh.stall_id 
+         AND (status = 'Pending' OR status = 'Approved')
+         ORDER BY created_at DESC LIMIT 1) as surrender_status
       FROM stallholder sh
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -161,6 +166,7 @@ export const getOwnedStalls = async (req, res) => {
         compliance_status: stall.compliance_status || 'Pending',
         contract_status: stall.contract_status || 'active',
         contract_start_date: stall.contract_start_date || null,
+        surrender_status: stall.surrender_status || null,
         branch_id: stall.branch_id,
         branch_name: stall.branch_name || 'Unknown Branch',
         branch_area: stall.branch_area || 'Unknown Area',
