@@ -4,11 +4,7 @@
       <div class="loading-content">
         <div class="loading-spinner">
           <div class="spinner-ring"></div>
-          <img 
-            src="@/assets/DigiStall-Logo.png" 
-            alt="DigiStall" 
-            class="spinner-logo"
-          />
+          <img src="@/assets/DigiStall-Logo.png" alt="DigiStall" class="spinner-logo" />
         </div>
         <p class="loading-text">{{ text }}</p>
         <div v-if="showProgress" class="loading-progress">
@@ -27,25 +23,25 @@ export default {
   props: {
     loading: {
       type: Boolean,
-      default: false
+      default: false,
     },
     text: {
       type: String,
-      default: 'Loading data...'
+      default: 'Loading data...',
     },
     fullPage: {
       type: Boolean,
-      default: false
+      default: false,
     },
     showProgress: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   data() {
     return {
       progressPercent: 0,
-      progressInterval: null
+      progressInterval: null,
     }
   },
   watch: {
@@ -55,7 +51,7 @@ export default {
       } else {
         this.stopProgress()
       }
-    }
+    },
   },
   methods: {
     startProgress() {
@@ -74,11 +70,11 @@ export default {
           this.progressPercent = 0
         }, 300)
       }
-    }
+    },
   },
   beforeUnmount() {
     this.stopProgress()
-  }
+  },
 }
 </script>
 
@@ -90,9 +86,6 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(255, 255, 255, 0.95);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 100;
   border-radius: inherit;
 }
@@ -101,10 +94,38 @@ export default {
   position: fixed;
   z-index: 9999;
   border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loading-content {
   text-align: center;
+  position: fixed;
+  top: 50vh;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+}
+
+/* Adjust for sidebar expanded */
+.v-navigation-drawer:not(.v-navigation-drawer--is-mobile):not(.v-navigation-drawer--mini-variant)
+  ~ .v-main
+  .loading-content {
+  left: calc(50% + 125px); /* Half of 250px expanded sidebar */
+}
+
+/* Adjust for sidebar collapsed */
+.v-navigation-drawer--mini-variant ~ .v-main .loading-content {
+  left: calc(50% + 30px); /* Half of 60px collapsed sidebar */
+}
+
+.loading-overlay.full-page .loading-content {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  margin: 0;
 }
 
 .loading-spinner {
@@ -119,7 +140,7 @@ export default {
   width: 100%;
   height: 100%;
   border: 3px solid #e0e0e0;
-  border-top-color: #002B5B;
+  border-top-color: #002b5b;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -136,13 +157,24 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(0.95); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
 }
 
 .loading-text {
@@ -166,7 +198,7 @@ export default {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #002B5B, #0066cc);
+  background: linear-gradient(90deg, #002b5b, #0066cc);
   border-radius: 2px;
   transition: width 0.3s ease;
 }

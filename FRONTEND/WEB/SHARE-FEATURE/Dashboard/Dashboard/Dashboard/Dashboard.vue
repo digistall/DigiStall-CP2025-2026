@@ -1,17 +1,13 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="dashboard-container">
     <div>
       <!-- Main Content -->
-      <v-main>
-        <v-container fluid class="main-content">
+      <div class="dashboard-main-content">
+        <div class="feature-content-inner">
           <!-- Standardized Loading Overlay - Fixed to viewport -->
-          <LoadingOverlay 
-            :loading="loading" 
-            text="Loading dashboard data..."
-            :full-page="true"
-          />
-          
+          <LoadingOverlay :loading="loading" text="Loading dashboard data..." :full-page="false" />
+
           <v-row>
             <v-col cols="12">
               <!-- Dashboard Header with Refresh Controls -->
@@ -24,7 +20,9 @@
                     size="small"
                     variant="flat"
                   >
-                    <v-icon start size="14">{{ subscriptionConnected ? 'mdi-broadcast' : 'mdi-broadcast-off' }}</v-icon>
+                    <v-icon start size="14">{{
+                      subscriptionConnected ? 'mdi-broadcast' : 'mdi-broadcast-off'
+                    }}</v-icon>
                     {{ subscriptionConnected ? 'Live' : 'Disconnected' }}
                   </v-chip>
                 </div>
@@ -45,7 +43,7 @@
                   </span>
                 </div>
               </div>
-              
+
               <!-- Key Metrics Cards -->
               <v-row class="mb-6">
                 <v-col cols="12" sm="6" md="3">
@@ -63,9 +61,7 @@
                     <v-card-text class="metric-content">
                       <div class="metric-title">Total Stalls</div>
                       <div class="metric-body">
-                        <v-icon size="48" color="primary" class="metric-icon"
-                          >mdi-store</v-icon
-                        >
+                        <v-icon size="48" color="primary" class="metric-icon">mdi-store</v-icon>
                         <div class="metric-number">{{ totalStalls }}</div>
                       </div>
                     </v-card-text>
@@ -112,9 +108,7 @@
                         <v-icon size="48" color="warning" class="metric-icon"
                           >mdi-currency-php</v-icon
                         >
-                        <div class="metric-number">
-                          ₱{{ totalPayments.toLocaleString() }}
-                        </div>
+                        <div class="metric-number">₱{{ totalPayments.toLocaleString() }}</div>
                       </div>
                     </v-card-text>
                   </v-card>
@@ -134,9 +128,7 @@
                     <v-card-text class="metric-content">
                       <div class="metric-title">Active Employees</div>
                       <div class="metric-body">
-                        <v-icon size="48" color="info" class="metric-icon"
-                          >mdi-account-tie</v-icon
-                        >
+                        <v-icon size="48" color="info" class="metric-icon">mdi-account-tie</v-icon>
                         <div class="metric-number">{{ totalCollectors }}</div>
                       </div>
                     </v-card-text>
@@ -210,9 +202,7 @@
                           style="border: 1px solid #e0e0e0; border-radius: 8px"
                         ></canvas>
                         <div v-if="!occupancyChart" class="chart-placeholder">
-                          <v-icon size="48" color="grey-lighten-1"
-                            >mdi-chart-donut</v-icon
-                          >
+                          <v-icon size="48" color="grey-lighten-1">mdi-chart-donut</v-icon>
                           <p class="text-grey-600 mt-2">Loading chart...</p>
                         </div>
                       </div>
@@ -320,7 +310,10 @@
               <v-row class="mb-4">
                 <v-col cols="12">
                   <v-card elevation="2" class="data-table-card" :loading="loading">
-                    <v-card-title class="table-header d-flex align-center" style="flex-wrap: nowrap;">
+                    <v-card-title
+                      class="table-header d-flex align-center"
+                      style="flex-wrap: nowrap"
+                    >
                       <v-icon left color="info" class="mr-2">mdi-account-tie</v-icon>
                       <span>Active Employees</span>
                       <v-chip size="small" color="success" variant="flat" class="ml-3">
@@ -359,7 +352,9 @@
                                   size="small"
                                   variant="flat"
                                 >
-                                  <v-icon size="12" class="mr-1">{{ employee.isOnline ? 'mdi-circle' : 'mdi-circle-outline' }}</v-icon>
+                                  <v-icon size="12" class="mr-1">{{
+                                    employee.isOnline ? 'mdi-circle' : 'mdi-circle-outline'
+                                  }}</v-icon>
                                   {{ employee.isOnline ? 'Online' : 'Offline' }}
                                 </v-chip>
                               </td>
@@ -431,8 +426,8 @@
               </v-row>
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
     </div>
 
     <!-- Warning Snackbar -->
@@ -443,9 +438,8 @@
       color="#ff9800"
     >
       <v-icon class="mr-2">mdi-alert</v-icon>
-      {{ snackbarMessage }}
     </v-snackbar>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Dashboard.js"></script>
