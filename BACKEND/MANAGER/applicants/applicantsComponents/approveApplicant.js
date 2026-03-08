@@ -286,9 +286,9 @@ export const approveApplicant = async (req, res) => {
     // 4. Update the stall to mark as occupied
     await connection.execute(
       `UPDATE stall 
-       SET is_available = 0, status = 'Occupied', updated_at = NOW()
+       SET is_available = 0, status = 'Occupied', stallholder_id = ?, updated_at = NOW()
        WHERE stall_id = ?`,
-      [application.stall_id]
+      [stallholderId, application.stall_id]
     );
     console.log(`✅ Stall ${application.stall_id} marked as occupied`);
 
