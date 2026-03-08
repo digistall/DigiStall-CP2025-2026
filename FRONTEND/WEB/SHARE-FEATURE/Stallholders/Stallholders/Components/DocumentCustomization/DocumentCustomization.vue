@@ -147,8 +147,7 @@
               </div>
             </div>
           </div>
-        </v-container>
-      </v-card-text>
+        </v-container></v-card-text>
 
       <v-divider></v-divider>
       <v-card-actions class="px-6 py-4">

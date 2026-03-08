@@ -2,14 +2,14 @@
 <!-- eslint-disable vue/valid-v-slot -->
 <!--eslint-disable-next-line vue/multi-word-component-names-->
 <template>
-  <v-app>
+  <div class="vendors-container">
     <div>
       <!-- Main Content -->
-      <v-main class="vendors-main-content">
+      <div class="vendors-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
         <LoadingOverlay :loading="loading" text="Loading vendors..." :full-page="false" />
 
-        <v-container fluid class="main-content">
+        <div class="feature-content-inner">
           <v-row>
             <v-col cols="12">
               <!-- Search Component -->
@@ -55,7 +55,7 @@
               />
             </v-col>
           </v-row>
-        </v-container>
+        </div>
 
         <!-- Snackbar for notifications -->
         <v-snackbar
@@ -69,9 +69,9 @@
             <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
           </template>
         </v-snackbar>
-      </v-main>
+      </div>
     </div>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Vendors.js"></script>

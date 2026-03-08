@@ -1,15 +1,11 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <!-- Complaints.vue -->
 <template>
-  <v-app>
+  <div class="complaints-container">
     <!-- Main Content -->
-    <v-main class="complaints-main-content">
+    <div class="complaints-main-content">
       <!-- Standardized Loading Overlay - contained within main content -->
-      <LoadingOverlay
-        :loading="isLoading"
-        text="Loading complaints..."
-        :full-page="false"
-      />
+      <LoadingOverlay :loading="isLoading" text="Loading complaints..." :full-page="false" />
 
       <v-row>
         <v-col cols="12">
@@ -36,7 +32,7 @@
           />
         </v-col>
       </v-row>
-    </v-main>
+    </div>
 
     <!-- Success Snackbar -->
     <v-snackbar
@@ -45,12 +41,14 @@
       location="bottom left"
       class="custom-snackbar success-snackbar"
     >
-      <div class="d-flex align-center" style="background-color: #ffffff;">
-        <v-icon class="mr-2" style="color: #4caf50;">mdi-check-circle</v-icon>
-        <span style="color: #2e7d32; font-weight: 500;">{{ snackbarMessage }}</span>
+      <div class="d-flex align-center" style="background-color: #ffffff">
+        <v-icon class="mr-2" style="color: #4caf50">mdi-check-circle</v-icon>
+        <span style="color: #2e7d32; font-weight: 500">{{ snackbarMessage }}</span>
       </div>
       <template v-slot:actions>
-        <v-btn variant="text" style="color: #4caf50;" @click="showSuccessSnackbar = false">Close</v-btn>
+        <v-btn variant="text" style="color: #4caf50" @click="showSuccessSnackbar = false"
+          >Close</v-btn
+        >
       </template>
     </v-snackbar>
 
@@ -61,15 +59,17 @@
       location="bottom left"
       class="custom-snackbar error-snackbar"
     >
-      <div class="d-flex align-center" style="background-color: #ffffff;">
-        <v-icon class="mr-2" style="color: #f44336;">mdi-alert-circle</v-icon>
-        <span style="color: #c62828; font-weight: 500;">{{ snackbarMessage }}</span>
+      <div class="d-flex align-center" style="background-color: #ffffff">
+        <v-icon class="mr-2" style="color: #f44336">mdi-alert-circle</v-icon>
+        <span style="color: #c62828; font-weight: 500">{{ snackbarMessage }}</span>
       </div>
-      <template v-slot:actions>
-        <v-btn variant="text" style="color: #f44336;" @click="showErrorSnackbar = false">Close</v-btn>
+      <template v-slot="actions">
+        <v-btn variant="text" style="color: #f44336" @click="showErrorSnackbar = false"
+          >Close</v-btn
+        >
       </template>
     </v-snackbar>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Complaints.js"></script>

@@ -1,13 +1,13 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="payment-container">
     <div class="payment-page">
       <!-- Main Content -->
-      <v-main class="payment-main-content">
+      <div class="payment-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
         <LoadingOverlay :loading="loading" text="Loading payment data..." :full-page="false" />
 
-        <v-container fluid class="main-content">
+        <div class="feature-content-inner">
           <v-row>
             <v-col cols="12">
               <!-- Payment Type Selector -->
@@ -34,10 +34,10 @@
               </transition>
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
     </div>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Payment.js"></script>

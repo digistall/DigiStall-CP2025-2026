@@ -35,52 +35,7 @@ export default {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
       })(),
-      moreItems: [
-        {
-          id: 6,
-          icon: 'mdi-account-tie',
-          name: 'Employees',
-          route: '/app/employees',
-          description: 'Manage employee accounts and permissions',
-          roles: ['business_manager', 'stall_business_owner', 'system_administrator'], // Available for all management roles
-        },
-        { 
-          id: 7, 
-          icon: 'mdi-account-group', 
-          name: 'Vendors', 
-          route: '/app/vendors',
-          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
-        },
-        {
-          id: 8,
-          icon: 'mdi-account-multiple',
-          name: 'Stallholders',
-          route: '/app/stallholders',
-          roles: ['business_manager', 'stall_business_owner', 'system_administrator'],
-        },
-        {
-          id: 9,
-          icon: 'mdi-store',
-          name: 'Stalls',
-          route: '/app/stalls',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
-        },
-        {
-          id: 10,
-          icon: 'mdi-account-details-outline',
-          name: 'Stall Tracker',
-          route: '/app/stall-tracker',
-          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
-        },
-        {
-          id: 13,
-          icon: 'mdi-credit-card-outline',
-          name: 'My Subscription',
-          route: '/app/subscription',
-          roles: ['stall_business_owner'], // Only for Business Owner
-          description: 'View and manage your subscription plan',
-        },
-      ],
+      moreItems: [],
     }
   },
   computed: {
@@ -282,6 +237,9 @@ export default {
 
       console.log('✅ Authentication validated, proceeding with stall types check')
       await this.checkAvailableStallTypes()
+      
+      // Emit initial sidebar state for layout synchronization
+      this.$emit('sidebar-toggle', this.isExpanded)
     }, 500) // Increased delay to ensure login process completes
 
     // Listen for stall events to update sidebar in real-time
@@ -434,6 +392,8 @@ export default {
 
     toggleSidebar() {
       this.isExpanded = !this.isExpanded
+      this.$emit('sidebar-toggle', this.isExpanded)
+      // When collpasing, also close more items
       if (!this.isExpanded) {
         this.showMoreItems = false
       }
