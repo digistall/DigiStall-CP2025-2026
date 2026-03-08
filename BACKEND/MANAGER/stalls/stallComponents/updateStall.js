@@ -231,9 +231,9 @@ export const updateStall = async (req, res) => {
         CONCAT(sh.first_name, ' ', sh.last_name) as stallholder_name
       FROM stall s
       INNER JOIN section sec ON s.section_id = sec.section_id
-      INNER JOIN floor f ON s.floor_id = f.floor_id
+      INNER JOIN floor f ON sec.floor_id = f.floor_id
       INNER JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.status = 'Active'
+      LEFT JOIN stallholder sh ON s.stallholder_id = sh.stallholder_id AND sh.status = 'Active'
       WHERE s.stall_id = ?`,
       [id]
     );

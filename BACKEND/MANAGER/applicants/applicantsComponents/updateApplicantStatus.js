@@ -294,7 +294,10 @@ export const updateApplicantStatus = async (req, res) => {
 
           const formatDate = (date) => date.toISOString().split('T')[0];
 
+          let stallholderId;
+
           if (existingStallholder.length > 0) {
+            stallholderId = existingStallholder[0].stallholder_id;
             console.log('⚠️ Stallholder already exists, updating with encrypted data...');
             
             // Update existing stallholder with new stall assignment (using ENCRYPTED values)
@@ -329,8 +332,7 @@ export const updateApplicantStatus = async (req, res) => {
             console.log('🔐 Creating new stallholder record with encrypted data...');
             
             // Create new stallholder record (using ENCRYPTED values)
-            // Column names must match actual stallholder table schema
-            await connection.execute(
+            const [stallholderResult] = await connection.execute(
               `INSERT INTO stallholder (
                 applicant_id,
                 mobile_user_id,
@@ -356,13 +358,14 @@ export const updateApplicantStatus = async (req, res) => {
                 applicant.branch_id
               ]
             );
+            stallholderId = stallholderResult.insertId;
             console.log('✅ New stallholder record created with encrypted data');
           }
 
-          // Update stall status to Occupied
+          // Update stall status to Occupied and set stallholder_id
           await connection.execute(
-            `UPDATE stall SET status = 'Occupied', is_available = 0 WHERE stall_id = ?`,
-            [applicant.stall_id]
+            `UPDATE stall SET status = 'Occupied', is_available = 0, stallholder_id = ? WHERE stall_id = ?`,
+            [stallholderId, applicant.stall_id]
           );
           console.log('✅ Stall status updated to Occupied');
 
