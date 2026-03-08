@@ -23,6 +23,7 @@ import Compliances from '@shared-features/Compliances/Compliance.vue'
 import Vendors from '@shared-features/Vendors/Vendors.vue'
 import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholders.vue'
 import Stalls from '@shared-features/Stalls/Stalls.vue'
+import StallTracker from '@shared-features/StallTracker/StallTracker.vue'
 
 // BUSINESS-MANAGER module - Manager-exclusive features
 import Employees from '@business-manager/Employees/Employees.vue'
@@ -481,6 +482,13 @@ const router = createRouter({
           component: Stalls,
           meta: { title: 'Stalls' },
           beforeEnter: requiresPermission('stalls'),
+        },
+        {
+          path: 'stall-tracker',
+          name: 'StallTracker',
+          component: StallTracker,
+          meta: { title: 'Stall Tracker' },
+          beforeEnter: requiresPermission('stalls'), // reuse stalls permission
         },
       ],
     },

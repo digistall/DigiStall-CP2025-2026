@@ -58,6 +58,7 @@ export default {
           route: '/app/stallholders',
         },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
+        stallTracker: { id: 10, icon: 'mdi-history', name: 'Stall Tracker', route: '/app/stall-tracker' },
       },
       // Define all possible menu routes including "more items" (6-10)
       allMenuRoutes: {
@@ -70,6 +71,7 @@ export default {
         7: '/app/vendors', // Vendors
         8: '/app/stallholders', // Stallholders
         9: '/app/stalls', // Stalls
+        10: '/app/stall-tracker', // Stall Tracker
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
       },
@@ -149,6 +151,7 @@ export default {
         }
         if (hasPermission('stalls')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.stalls, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.stallTracker, id: menuId++ })
         }
         // NOTE: Collectors and Inspectors are now managed through Employee Management page
 

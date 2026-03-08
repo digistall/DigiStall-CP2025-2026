@@ -1,0 +1,185 @@
+export default {
+  name: 'StallTracker',
+  data() {
+    return {
+      activeTab: 'pending',
+      loading: false,
+      importing: false,
+      searchQuery: '',
+      excelFile: null,
+      
+      pendingRequests: [],
+      historyLogs: [],
+      
+      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+      
+      pendingHeaders: [
+        { title: 'Stall', key: 'stall_number', align: 'center' },
+        { title: 'Stallholder', key: 'stallholder_name', align: 'center' },
+        { title: 'Reason', key: 'reason', align: 'center' },
+        { title: 'Requested Move Out', key: 'move_out_date', align: 'center' },
+        { title: 'Status', key: 'status', align: 'center' },
+        { title: 'Actions', key: 'action', sortable: false, align: 'center' }
+      ],
+      historyHeaders: [
+        { title: 'Stall', key: 'stall_number', align: 'center' },
+        { title: 'Previous Tenant', key: 'user_fullname', align: 'center' },
+        { title: 'Lease Start', key: 'lease_start_date', align: 'center' },
+        { title: 'Lease End', key: 'lease_end_date', align: 'center' },
+        { title: 'Surrender Reason', key: 'surrender_reason', align: 'center' },
+        { title: 'Rating', key: 'spot_rating', align: 'center' },
+        { title: 'Feedback', key: 'feedback_to_next_tenant', align: 'center' }
+      ],
+
+      snackbar: {
+        show: false,
+        message: '',
+        color: 'success'
+      }
+    }
+  },
+
+  computed: {
+    snackbarIcon() {
+      switch (this.snackbar.color) {
+        case 'success': return 'mdi-check-circle';
+        case 'error': return 'mdi-alert-circle';
+        case 'warning': return 'mdi-alert';
+        default: return 'mdi-information';
+      }
+    }
+  },
+
+  mounted() {
+    this.fetchPending();
+    this.fetchHistory();
+  },
+
+  methods: {
+    getHeaders() {
+      const token = sessionStorage.getItem('authToken');
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+    },
+
+    showSnackbar(message, color = 'success') {
+      this.snackbar.message = message;
+      this.snackbar.color = color;
+      this.snackbar.show = true;
+    },
+
+    async fetchPending() {
+      this.loading = true;
+      try {
+        const res = await fetch(`${this.apiBaseUrl}/surrender/requests`, {
+          headers: this.getHeaders()
+        });
+        const json = await res.json();
+        if (json.success) {
+          this.pendingRequests = json.data.map(req => ({
+            ...req,
+            move_out_date: req.move_out_date 
+              ? new Date(req.move_out_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+              : 'N/A'
+          }));
+        } else {
+          this.showSnackbar(json.message || 'Error fetching requests', 'error');
+        }
+      } catch (err) {
+        this.showSnackbar('Connection error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchHistory() {
+      this.loading = true;
+      try {
+        let url = `${this.apiBaseUrl}/surrender/history`;
+        if (this.searchQuery) {
+          url += `?searchName=${encodeURIComponent(this.searchQuery)}`;
+        }
+        const res = await fetch(url, { headers: this.getHeaders() });
+        const json = await res.json();
+        if (json.success) {
+          // format dates
+          this.historyLogs = json.data.map(log => ({
+            ...log,
+            lease_start_date: log.lease_start_date ? new Date(log.lease_start_date).toLocaleDateString() : 'N/A',
+            lease_end_date: log.lease_end_date ? new Date(log.lease_end_date).toLocaleDateString() : 'N/A'
+          }));
+        } else {
+          this.showSnackbar(json.message || 'Error fetching history', 'error');
+        }
+      } catch (err) {
+        this.showSnackbar('Connection error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async updateRequestStatus(requestId, status) {
+      this.loading = true;
+      try {
+        const res = await fetch(`${this.apiBaseUrl}/surrender/requests/${requestId}`, {
+          method: 'PUT',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ status })
+        });
+        const json = await res.json();
+        if (json.success) {
+          this.showSnackbar(`Request ${status} successfully`, status === 'Rejected' ? 'warning' : 'success');
+          this.fetchPending();
+        } else {
+          this.showSnackbar(json.message || 'Error updating request', 'error');
+        }
+      } catch (err) {
+        this.showSnackbar('Connection error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    approveRequest(item) {
+      if (confirm(`Approve surrender for ${item.stallholder_name} from ${item.stall_number}?`)) {
+        this.updateRequestStatus(item.request_id, 'Approved');
+      }
+    },
+
+    rejectRequest(item) {
+      if (confirm(`Reject surrender request for ${item.stallholder_name}?`)) {
+        this.updateRequestStatus(item.request_id, 'Rejected');
+      }
+    },
+
+    async importExcel() {
+      if (!this.excelFile) return;
+      this.importing = true;
+      const formData = new FormData();
+      formData.append('file', this.excelFile);
+
+      const token = sessionStorage.getItem('authToken');
+      try {
+        const res = await fetch(`${this.apiBaseUrl}/surrender/import-legacy`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }, // Content-Type omitted for FormData
+          body: formData
+        });
+        const json = await res.json();
+        if (json.success) {
+          this.showSnackbar(json.message, 'success');
+          this.excelFile = null;
+          this.fetchHistory();
+        } else {
+          this.showSnackbar(json.message || 'Import failed', 'error');
+        }
+      } catch (err) {
+        this.showSnackbar('Connection error during upload', 'error');
+      } finally {
+        this.importing = false;
+      }
+    }
+  }
+}
