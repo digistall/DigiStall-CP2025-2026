@@ -50,10 +50,6 @@ BEGIN
   UPDATE auction_participants SET status = 'Not Selected'
   WHERE auction_id = p_auction_id AND applicant_id != p_winner_applicant_id;
 
-  -- Update stall: Occupied, not available
-  UPDATE stall SET raffle_auction_status = 'Awarded', status = 'Occupied', is_available = 0, updated_at = NOW()
-  WHERE stall_id = p_stall_id;
-
   -- Create auction result record
   INSERT INTO auction_result (auction_id, winner_bid_id, final_amount, awarded_date)
   VALUES (p_auction_id, p_winner_bid_id, IFNULL(p_bid_amount, 0), NOW());
@@ -71,7 +67,12 @@ BEGIN
   IF v_stallholder_id IS NULL THEN
     INSERT INTO stallholder (applicant_id, mobile_user_id, full_name, email, contact_number, address, stall_id, branch_id, payment_status, status, compliance_status, move_in_date)
     VALUES (p_winner_applicant_id, p_winner_applicant_id, p_applicant_full_name, p_email, p_contact_number, p_address, p_stall_id, p_branch_id, 'unpaid', 'active', 'Compliant', CURDATE());
+    SET v_stallholder_id = LAST_INSERT_ID();
   END IF;
+
+  -- Update stall: Occupied, not available
+  UPDATE stall SET raffle_auction_status = 'Awarded', status = 'Occupied', is_available = 0, stallholder_id = v_stallholder_id, updated_at = NOW()
+  WHERE stall_id = p_stall_id;
 
   -- Update applicant status to approved
   UPDATE applicant SET status = 'approved', updated_at = NOW() WHERE applicant_id = p_winner_applicant_id;
