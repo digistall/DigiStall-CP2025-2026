@@ -45,15 +45,10 @@ export default {
   },
   methods: {
     onSearchInput() {
-      // Clear previous timeout to debounce search
-      if (this.searchTimeout) {
-        clearTimeout(this.searchTimeout)
-      }
-
-      // Debounce search to avoid too many emissions (reduced to 150ms for more responsive feel)
-      this.searchTimeout = setTimeout(() => {
+      // Remove debounce for instant local search
+      if (this.searchQuery !== null) {
         this.$emit('search', this.searchQuery.trim())
-      }, 150)
+      }
     },
     toggleFilter() {
       this.showFilterPanel = !this.showFilterPanel

@@ -1,8 +1,7 @@
 <template>
   <div class="search-filter-section mb-6">
     <div class="search-wrapper">
-      <!-- Search Bar -->
-      <v-col cols="12" md="6" lg="4">
+      <div class="search-input-wrapper">
         <v-text-field
           v-model="searchQuery"
           label="Search stalls"
@@ -13,7 +12,7 @@
           class="search-field"
           placeholder="Search by stall number, location, or description"
         ></v-text-field>
-      </v-col>
+      </div>
 
       <!-- Filter Button -->
       <div class="filter-sort-container">
@@ -121,8 +120,7 @@
                         class="status-btn"
                         :class="{ active: selectedPriceType === 'Auction' }"
                         @click="
-                          selectedPriceType =
-                            selectedPriceType === 'Auction' ? null : 'Auction'
+                          selectedPriceType = selectedPriceType === 'Auction' ? null : 'Auction'
                         "
                       >
                         Auction
@@ -131,8 +129,7 @@
                         class="status-btn"
                         :class="{ active: selectedPriceType === 'Raffle' }"
                         @click="
-                          selectedPriceType =
-                            selectedPriceType === 'Raffle' ? null : 'Raffle'
+                          selectedPriceType = selectedPriceType === 'Raffle' ? null : 'Raffle'
                         "
                       >
                         Raffle

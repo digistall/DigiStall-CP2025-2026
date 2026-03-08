@@ -16,7 +16,7 @@
           <ComplaintsTable
             :searchQuery="searchQuery"
             :activeFilter="activeFilter"
-            :complaintsList="complaintsList"
+            :complaintsList="filteredComplaintsList"
             @view-complaints="handleViewComplaints"
             @edit-complaints="handleEditComplaints"
             @delete-complaints="handleDeleteComplaints"
