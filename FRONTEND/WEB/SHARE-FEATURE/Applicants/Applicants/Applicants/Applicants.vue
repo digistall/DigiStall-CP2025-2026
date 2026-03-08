@@ -1,31 +1,25 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="applicants-container">
     <div>
       <!-- Main Content -->
-      <v-main>
-        <v-container fluid class="main-content">
+      <div class="applicants-main-content">
+        <div class="feature-content-inner">
           <!-- Standardized Loading Overlay -->
-          <LoadingOverlay 
-            :loading="loading && currentApplicantType === 'Stall Applicants'" 
+          <LoadingOverlay
+            :loading="loading && currentApplicantType === 'Stall Applicants'"
             text="Loading stall applicants..."
             :full-page="false"
           />
-          
+
           <v-row>
             <v-col cols="12">
               <!-- Page Title with Dropdown -->
               <div class="page-header mb-6">
                 <div class="title-dropdown-container" ref="applicantDropdown">
-                  <h2
-                    class="text-h4 font-weight-bold title-with-arrow"
-                    @click="toggleDropdown"
-                  >
+                  <h2 class="text-h4 font-weight-bold title-with-arrow" @click="toggleDropdown">
                     {{ currentApplicantType }}
-                    <v-icon
-                      :class="{ 'arrow-rotated': showDropdown }"
-                      class="dropdown-arrow"
-                    >
+                    <v-icon :class="{ 'arrow-rotated': showDropdown }" class="dropdown-arrow">
                       mdi-chevron-down
                     </v-icon>
                   </h2>
@@ -83,8 +77,8 @@
               />
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
 
       <!-- Approve Applicant Modal -->
       <ApproveApplicants
@@ -111,20 +105,15 @@
       :entity="crudLoading.entity"
       :message="crudLoading.message"
       :sub-message="crudLoading.subMessage"
-      :full-page="true"
+      :full-page="false"
     />
 
     <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showErrorSnackbar"
-      :timeout="4000"
-      location="bottom left"
-      color="#f44336"
-    >
+    <v-snackbar v-model="showErrorSnackbar" :timeout="4000" location="bottom left" color="#f44336">
       <v-icon class="mr-2">mdi-alert-circle</v-icon>
       {{ snackbarMessage }}
     </v-snackbar>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Applicants.js"></script>
