@@ -1,17 +1,13 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="stallholders-container">
     <div>
       <!-- Main Content -->
-      <v-main class="stallholders-main-content">
-        <v-container fluid class="main-content">
+      <div class="stallholders-main-content">
+        <div class="feature-content-inner">
           <!-- Standardized Loading Overlay - contained within main content -->
-          <LoadingOverlay 
-            :loading="loading" 
-            text="Loading stallholders..."
-            :full-page="false"
-          />
-          
+          <LoadingOverlay :loading="loading" text="Loading stallholders..." :full-page="false" />
+
           <v-row>
             <v-col cols="12">
               <!-- Search Component -->
@@ -52,10 +48,10 @@
               />
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
     </div>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Stallholders.js"></script>

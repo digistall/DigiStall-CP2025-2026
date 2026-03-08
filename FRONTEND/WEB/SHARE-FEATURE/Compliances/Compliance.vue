@@ -1,12 +1,12 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <!-- Compliance.vue -->
 <template>
-  <v-app>
+  <div class="compliance-container">
     <!-- Main Content -->
-    <v-main class="compliance-main-content">
+    <div class="compliance-main-content">
       <!-- Standardized Loading Overlay - contained within main content -->
-      <LoadingOverlay 
-        :loading="isLoading" 
+      <LoadingOverlay
+        :loading="isLoading"
         text="Loading compliance records..."
         :full-page="false"
       />
@@ -19,7 +19,9 @@
           <!-- Error State -->
           <v-alert v-if="error" type="error" class="ma-4" dismissible @click:close="error = null">
             <strong>Error:</strong> {{ error }}
-            <v-btn variant="text" size="small" @click="loadComplianceData" class="ml-2">Retry</v-btn>
+            <v-btn variant="text" size="small" @click="loadComplianceData" class="ml-2"
+              >Retry</v-btn
+            >
           </v-alert>
 
           <!-- Table Component -->
@@ -40,7 +42,7 @@
           />
         </v-col>
       </v-row>
-    </v-main>
+    </div>
 
     <!-- CRUD Loading Overlay -->
     <CrudLoadingOverlay
@@ -49,7 +51,7 @@
       :entity="crudLoading.entity"
       :message="crudLoading.message"
       :sub-message="crudLoading.subMessage"
-      :full-page="true"
+      :full-page="false"
     />
 
     <!-- Success Snackbar -->
@@ -64,16 +66,11 @@
     </v-snackbar>
 
     <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showErrorSnackbar"
-      :timeout="4000"
-      location="bottom left"
-      color="#f44336"
-    >
+    <v-snackbar v-model="showErrorSnackbar" :timeout="4000" location="bottom left" color="#f44336">
       <v-icon class="mr-2">mdi-alert-circle</v-icon>
       {{ snackbarMessage }}
     </v-snackbar>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Compliance.js"></script>
