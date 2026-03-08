@@ -106,13 +106,8 @@ export default {
     },
 
     debouncedSearch() {
-      if (this.searchTimeout) {
-        clearTimeout(this.searchTimeout);
-      }
-
-      this.searchTimeout = setTimeout(() => {
-        this.handleSearch();
-      }, 300);
+      // Remove debounce for instant local search
+      this.handleSearch();
     }
   },
 

@@ -1,9 +1,6 @@
 <template>
   <div class="stall-tracker-container">
     <div class="stall-tracker-main-content">
-      <!-- Standardized Loading Overlay -->
-      <LoadingOverlay :loading="loading" text="Loading stall assignments..." :full-page="false" />
-
       <!-- Stall Tracker Header -->
       <v-card elevation="2" class="rounded-lg mb-4 d-inline-flex">
         <v-tabs
@@ -22,12 +19,40 @@
 
       <!-- Data Table Container -->
       <v-window v-model="activeTab" class="bg-transparent mt-2">
+        <!--
+- [x] Standardize ComplianceSearch to match ComplaintsSearch
+- [x] Standardize SearchStall to match ComplaintsSearch
+- [x] Standardize SearchAndFilter (Stalls) to match ComplaintsSearch
+- [x] Standardize SearchVendor to match ComplaintsSearch
+- [x] Standardize EmployeeSearch to match ComplaintsSearch
+- [x] Standardize Payment Search Components
+  - [x] OnsitePayments (Template, CSS, JS search logic)
+  - [x] DailyPayments (Template, CSS)
+  - [x] OnlinePayments (Template, CSS)
+  - [x] PenaltyPayments (Template, CSS)
+- [x] Standardize Stall Tracker Search Components
+  - [x] Pending Surrenders
+  - [x] Stallholder History
+- [x] Verify Real-time Search (No Debounce)
+  - [x] ApplicantsSearch
+  - [x] EmployeeSearch
+  - [x] SearchStall
+  - [x] SearchVendor
+- [x] Remove "Feedback" column from `StallTracker.js` in history tab
+- [x] Fix search for Pending Surrenders to work with encrypted names in the database
+- [x] Refactor Compliances search to be fully realtime and locally-filtered
+- [x] Refactor Complaints search to be fully realtime and locally-filtered
+- [x] Verify the search bar and filter button work in both tabs
+- [ ] Expand Stallholder search to include Full Name (currently only email)
+- [ ] Completely remove loading overlays from Compliances search
+- [ ] Completely remove loading overlays from Stall Tracker search
+        -->
         <v-window-item value="pending">
           <!-- Filter Container (Pending) -->
           <div class="search-filter-section mb-6 mt-2">
-            <v-row align="center">
+            <div class="search-wrapper">
               <!-- Search Bar -->
-              <v-col cols="12" md="6" lg="4">
+              <div class="search-input-wrapper">
                 <v-text-field
                   v-model="searchQueryPending"
                   label="Search by Name"
@@ -38,30 +63,22 @@
                   prepend-inner-icon="mdi-magnify"
                   class="search-field"
                 ></v-text-field>
-              </v-col>
-
-              <!-- Spacer -->
-              <v-col class="d-none d-md-block"></v-col>
+              </div>
 
               <!-- Filter Button -->
-              <v-col cols="auto" class="text-right">
-                <v-btn
-                  variant="outlined"
-                  prepend-icon="mdi-filter-variant"
-                  @click="fetchPendingRequests"
-                  class="filter-btn"
-                >
+              <div class="filter-container">
+                <button class="filter-btn" @click="fetchPendingRequests">
+                  <v-icon icon="mdi-filter-variant" size="small" class="mr-1"></v-icon>
                   Filter
                   <v-icon icon="mdi-chevron-down" size="small" class="ml-1"></v-icon>
-                </v-btn>
-              </v-col>
-            </v-row>
+                </button>
+              </div>
+            </div>
           </div>
 
           <v-data-table
             :headers="pendingHeaders"
-            :items="pendingRequests"
-            :loading="loading"
+            :items="filteredPendingRequests"
             :items-per-page="-1"
             hide-default-footer
             class="elevation-2 mt-4 mb-2 custom-shadow-table"
@@ -100,9 +117,9 @@
         <v-window-item value="history">
           <!-- Filter Container (History) -->
           <div class="search-filter-section mb-6 mt-2">
-            <v-row align="center">
+            <div class="search-wrapper">
               <!-- Search Bar -->
-              <v-col cols="12" md="4" lg="4">
+              <div class="search-input-wrapper">
                 <v-text-field
                   v-model="searchQueryHistory"
                   label="Search by Name"
@@ -111,17 +128,14 @@
                   clearable
                   hide-details
                   prepend-inner-icon="mdi-magnify"
-                  @keyup.enter="fetchHistory"
                   class="search-field"
                 ></v-text-field>
-              </v-col>
+              </div>
 
-              <!-- Spacer -->
-              <v-col class="d-none d-md-block"></v-col>
-
-              <!-- Import Legacy Excel Section -->
-              <v-col cols="auto">
-                <div class="d-flex align-center gap-2">
+              <!-- Action Area -->
+              <div class="filter-container d-flex align-center gap-2">
+                <!-- Import Excel Section -->
+                <div class="d-flex align-center gap-2 mr-2">
                   <v-file-input
                     v-model="excelFile"
                     label="Select Excel File"
@@ -146,27 +160,20 @@
                     Import
                   </v-btn>
                 </div>
-              </v-col>
 
-              <!-- Filter Button -->
-              <v-col cols="auto" class="text-right">
-                <v-btn
-                  variant="outlined"
-                  prepend-icon="mdi-filter-variant"
-                  @click="fetchHistory"
-                  class="filter-btn"
-                >
+                <!-- Filter Button -->
+                <button class="filter-btn" @click="fetchHistory">
+                  <v-icon icon="mdi-filter-variant" size="small" class="mr-1"></v-icon>
                   Filter
                   <v-icon icon="mdi-chevron-down" size="small" class="ml-1"></v-icon>
-                </v-btn>
-              </v-col>
-            </v-row>
+                </button>
+              </div>
+            </div>
           </div>
 
           <v-data-table
             :headers="historyHeaders"
-            :items="historyLogs"
-            :loading="loading"
+            :items="filteredHistoryLogs"
             :items-per-page="-1"
             hide-default-footer
             class="elevation-2 mt-4 mb-2 custom-shadow-table"

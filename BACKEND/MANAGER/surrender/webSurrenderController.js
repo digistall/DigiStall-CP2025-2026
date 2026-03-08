@@ -21,18 +21,21 @@ export const getPendingRequests = async (req, res) => {
     `;
     const params = [];
 
-    if (searchName) {
-      query += ` AND sh.full_name LIKE ?`;
-      params.push(`%${searchName}%`);
-    }
-
     query += ` ORDER BY r.created_at DESC`;
 
     const [requests] = await connection.execute(query, params);
 
-    const decryptedRequests = await Promise.all(requests.map(async request => {
+    let decryptedRequests = await Promise.all(requests.map(async request => {
       return await decryptApplicantData(request);
     }));
+
+    if (searchName) {
+      const lowerSearch = searchName.toLowerCase();
+      decryptedRequests = decryptedRequests.filter(req => 
+        (req.stallholder_name && req.stallholder_name.toLowerCase().includes(lowerSearch)) ||
+        (req.stall_number && req.stall_number.toLowerCase().includes(lowerSearch))
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -113,16 +116,12 @@ export const getStallHistory = async (req, res) => {
       query += ` AND h.lease_end_date BETWEEN ? AND ?`;
       params.push(startDate, endDate);
     }
-    if (searchName) {
-      query += ` AND h.user_fullname LIKE ?`;
-      params.push(`%${searchName}%`);
-    }
 
     query += ` ORDER BY h.lease_end_date DESC`;
 
     const [logs] = await connection.execute(query, params);
 
-    const decryptedLogs = logs.map(log => {
+    let decryptedLogs = logs.map(log => {
       if (isAES256GCMEncrypted(log.user_fullname)) {
         return {
           ...log,
@@ -131,6 +130,14 @@ export const getStallHistory = async (req, res) => {
       }
       return log;
     });
+
+    if (searchName) {
+      const lowerSearch = searchName.toLowerCase();
+      decryptedLogs = decryptedLogs.filter(log => 
+        (log.user_fullname && log.user_fullname.toLowerCase().includes(lowerSearch)) ||
+        (log.stall_number && log.stall_number.toLowerCase().includes(lowerSearch))
+      );
+    }
 
     res.status(200).json({
       success: true,

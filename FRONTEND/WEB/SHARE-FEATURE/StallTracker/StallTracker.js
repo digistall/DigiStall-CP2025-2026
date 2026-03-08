@@ -1,10 +1,5 @@
-import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
-
 export default {
   name: 'StallTracker',
-  components: {
-    LoadingOverlay,
-  },
   data() {
     return {
       activeTab: 'pending',
@@ -12,6 +7,8 @@ export default {
       importing: false,
       searchQueryPending: '',
       searchQueryHistory: '',
+      searchTimeoutPending: null,
+      searchTimeoutHistory: null,
       excelFile: null,
       
       pendingRequests: [],
@@ -32,8 +29,7 @@ export default {
         { title: 'Previous Tenant', key: 'user_fullname', align: 'center' },
         { title: 'Lease Start', key: 'lease_start_date', align: 'center' },
         { title: 'Lease End', key: 'lease_end_date', align: 'center' },
-        { title: 'Surrender Reason', key: 'surrender_reason', align: 'center' },
-        { title: 'Feedback', key: 'feedback_to_next_tenant', align: 'center' }
+        { title: 'Surrender Reason', key: 'surrender_reason', align: 'center' }
       ],
 
       snackbar: {
@@ -53,7 +49,29 @@ export default {
     }
   },
 
+  watch: {
+    // No longer need to fetch on every watch change, local computed properties handle it
+  },
+
   computed: {
+    filteredPendingRequests() {
+      if (!this.searchQueryPending) return this.pendingRequests;
+      const query = this.searchQueryPending.toLowerCase().trim();
+      return this.pendingRequests.filter(req => 
+        (req.stallholder_name && req.stallholder_name.toLowerCase().includes(query)) ||
+        (req.stall_number && String(req.stall_number).toLowerCase().includes(query)) ||
+        (req.reason && req.reason.toLowerCase().includes(query))
+      );
+    },
+    filteredHistoryLogs() {
+      if (!this.searchQueryHistory) return this.historyLogs;
+      const query = this.searchQueryHistory.toLowerCase().trim();
+      return this.historyLogs.filter(log => 
+        (log.user_fullname && log.user_fullname.toLowerCase().includes(query)) ||
+        (log.stall_number && String(log.stall_number).toLowerCase().includes(query)) ||
+        (log.surrender_reason && log.surrender_reason.toLowerCase().includes(query))
+      );
+    },
     snackbarIcon() {
       switch (this.snackbar.color) {
         case 'success': return 'mdi-check-circle';
@@ -88,9 +106,6 @@ export default {
       this.loading = true;
       try {
         let url = `${this.apiBaseUrl}/surrender/requests`;
-        if (this.searchQueryPending) {
-          url += `?searchName=${encodeURIComponent(this.searchQueryPending)}`;
-        }
         const res = await fetch(url, {
           headers: this.getHeaders()
         });
@@ -116,9 +131,6 @@ export default {
       this.loading = true;
       try {
         let url = `${this.apiBaseUrl}/surrender/history`;
-        if (this.searchQueryHistory) {
-          url += `?searchName=${encodeURIComponent(this.searchQueryHistory)}`;
-        }
         const res = await fetch(url, { headers: this.getHeaders() });
         const json = await res.json();
         if (json.success) {
