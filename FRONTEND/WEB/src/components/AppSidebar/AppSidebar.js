@@ -66,6 +66,13 @@ export default {
           roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
         },
         {
+          id: 10,
+          icon: 'mdi-account-details-outline',
+          name: 'Stall Tracker',
+          route: '/app/stall-tracker',
+          roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
+        },
+        {
           id: 13,
           icon: 'mdi-credit-card-outline',
           name: 'My Subscription',

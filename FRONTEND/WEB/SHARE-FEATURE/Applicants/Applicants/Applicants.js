@@ -32,13 +32,8 @@ export default {
         message: '',
         type: 'success',
       },
-      // Dropdown functionality
+      // Tab functionality
       currentApplicantType: 'Stall Applicants',
-      showDropdown: false,
-      applicantTypes: [
-        { value: 'stall', label: 'Stall Applicants' },
-        { value: 'vendor', label: 'Vendor Applicants' },
-      ],
       // Modal states for approve/decline
       showApproveModal: false,
       showDeclineModal: false,
@@ -262,8 +257,6 @@ export default {
   },
   mounted() {
     this.initializeApplicants()
-    // Close dropdown when clicking outside
-    document.addEventListener('click', this.handleOutsideClick)
     // Fetch stall applicants when component mounts if stall applicants is selected
     if (this.currentApplicantType === 'Stall Applicants') {
       this.fetchStallApplicants()
@@ -291,7 +284,6 @@ export default {
     // this.startAutoCleanupTimer()
   },
   beforeUnmount() {
-    document.removeEventListener('click', this.handleOutsideClick)
     // Clear auto-cleanup timer
     if (this.autoCleanupTimer) {
       clearInterval(this.autoCleanupTimer)
@@ -314,33 +306,17 @@ export default {
     }
   },
   methods: {
-    // Handle dropdown toggle
-    toggleDropdown() {
-      this.showDropdown = !this.showDropdown
-    },
-
-    // Handle applicant type selection
-    selectApplicantType(type) {
-      this.currentApplicantType = type.label
-      this.showDropdown = false
-
+    // Handle tab change
+    onTabChange(newType) {
       // Clear search when switching types
       this.searchQuery = ''
 
       // Fetch data based on type
-      if (type.label === 'Stall Applicants') {
+      if (newType === 'Stall Applicants') {
         this.fetchStallApplicants()
       }
 
-      console.log('Switched to:', type.label)
-    },
-
-    // Handle clicks outside dropdown
-    handleOutsideClick(event) {
-      const dropdown = this.$refs.applicantDropdown
-      if (dropdown && !dropdown.contains(event.target)) {
-        this.showDropdown = false
-      }
+      console.log('Switched to:', newType)
     },
 
     // Initialize applicants page

@@ -6,7 +6,9 @@
         <v-card-title class="d-flex flex-column align-start justify-space-between">
           <div class="d-flex align-center w-100 justify-space-between">
             <div class="d-flex align-center">
-              <v-icon color="ffffff" class="me-3">{{ isBusinessOwner ? 'mdi-eye' : 'mdi-pencil' }}</v-icon>
+              <v-icon color="ffffff" class="me-3">{{
+                isBusinessOwner ? 'mdi-eye' : 'mdi-pencil'
+              }}</v-icon>
               <span class="text-h6">{{ isBusinessOwner ? 'View Stall' : 'Modify Stall' }}</span>
             </div>
             <v-btn icon variant="text" @click="handleClose" size="small">
@@ -16,230 +18,395 @@
 
           <!-- Subtitle / Description -->
           <span class="text-subtitle-2" style="color: white">
-            {{ isBusinessOwner ? 'View stall details (read-only access).' : 'You can modify the current stall — edit details or delete it as needed.' }}
+            {{
+              isBusinessOwner
+                ? 'View stall details (read-only access).'
+                : 'You can modify the current stall — edit details or delete it as needed.'
+            }}
           </span>
         </v-card-title>
 
         <v-divider></v-divider>
 
         <!-- Modal Body -->
-        <v-card-text class="pa-6">
-          <v-form ref="editForm" v-model="valid" lazy-validation>
-            <v-row>
-              <!-- Left Column -->
-              <v-col cols="12" md="6">
-                <!-- Stall Number -->
-                <v-text-field v-model="editForm.stallNumber" label="Stall Number" :rules="rules.stallNumber" required
-                  variant="outlined" prepend-inner-icon="mdi-numeric" :readonly="isBusinessOwner"></v-text-field>
+        <v-card-text class="pa-0">
+          <v-tabs
+            v-model="activeTab"
+            color="primary"
+            bg-color="white"
+            align-tabs="start"
+            class="px-6 mb-4"
+          >
+            <v-tab value="details">Stall Details</v-tab>
+            <v-tab value="history">History Tracker</v-tab>
+          </v-tabs>
 
-                <!-- Price -->
-                <v-text-field v-model="editForm.price" label="Price" :rules="rules.price" required variant="outlined" :readonly="isBusinessOwner"
-                  prepend-inner-icon="mdi-currency-php" placeholder="1,500 Php / Raffle"></v-text-field>
+          <v-window v-model="activeTab" class="px-6 pb-6">
+            <!-- Details Tab -->
+            <v-window-item value="details">
+              <v-form ref="editForm" v-model="valid" lazy-validation>
+                <v-row>
+                  <!-- Left Column -->
+                  <v-col cols="12" md="6">
+                    <!-- Stall Number -->
+                    <v-text-field
+                      v-model="editForm.stallNumber"
+                      label="Stall Number"
+                      :rules="rules.stallNumber"
+                      required
+                      variant="outlined"
+                      prepend-inner-icon="mdi-numeric"
+                      :readonly="isBusinessOwner"
+                    ></v-text-field>
 
-                <!-- Floor -->
-                <v-select v-model="editForm.floor" label="Floor" :items="getFloorOptions()" :rules="rules.floor"
-                  required variant="outlined" prepend-inner-icon="mdi-stairs" :readonly="isBusinessOwner" :disabled="isBusinessOwner"
-                  @update:model-value="handleFloorChange"></v-select>
+                    <!-- Price -->
+                    <v-text-field
+                      v-model="editForm.price"
+                      label="Price"
+                      :rules="rules.price"
+                      required
+                      variant="outlined"
+                      :readonly="isBusinessOwner"
+                      prepend-inner-icon="mdi-currency-php"
+                      placeholder="1,500 Php / Raffle"
+                    ></v-text-field>
 
-                <!-- Section -->
-                <v-select v-model="editForm.section" label="Section" :items="getSectionOptions()" :rules="rules.section"
-                  required variant="outlined" prepend-inner-icon="mdi-map-marker" :readonly="isBusinessOwner" :disabled="isBusinessOwner"
-                  @update:model-value="handleSectionChange"></v-select>
+                    <!-- Floor -->
+                    <v-select
+                      v-model="editForm.floor"
+                      label="Floor"
+                      :items="getFloorOptions()"
+                      :rules="rules.floor"
+                      required
+                      variant="outlined"
+                      prepend-inner-icon="mdi-stairs"
+                      :readonly="isBusinessOwner"
+                      :disabled="isBusinessOwner"
+                      @update:model-value="handleFloorChange"
+                    ></v-select>
 
-                <!-- Area (Square Meters) - NEW FIELD (Optional) -->
-                <v-text-field v-model="editForm.areaSqm" label="NEW AREA OCCUPIED (sq.m)" :rules="rules.areaSqm"
-                  variant="outlined" prepend-inner-icon="mdi-ruler-square" type="number" step="0.01" min="0.01"
-                  placeholder="e.g., 17.16, 23.50" :readonly="isBusinessOwner"
-                  hint="Optional: Enter exact area in square meters"></v-text-field>
+                    <!-- Section -->
+                    <v-select
+                      v-model="editForm.section"
+                      label="Section"
+                      :items="getSectionOptions()"
+                      :rules="rules.section"
+                      required
+                      variant="outlined"
+                      prepend-inner-icon="mdi-map-marker"
+                      :readonly="isBusinessOwner"
+                      :disabled="isBusinessOwner"
+                      @update:model-value="handleSectionChange"
+                    ></v-select>
 
-                <!-- RENTAL RATE (2010) - Base rate input (Optional) -->
-                <v-text-field v-model="editForm.baseRate" label="RENTAL RATE (2010)" :rules="rules.baseRate"
-                  variant="outlined" prepend-inner-icon="mdi-cash" type="number" step="0.01" min="0.01"
-                  placeholder="e.g., 3331.28, 3685.75" :readonly="isBusinessOwner"
-                  hint="Optional: Monthly Rent = RENTAL RATE × 2" @input="calculateRentalPrice"></v-text-field>
-              </v-col>
+                    <!-- Area (Square Meters) - NEW FIELD (Optional) -->
+                    <v-text-field
+                      v-model="editForm.areaSqm"
+                      label="NEW AREA OCCUPIED (sq.m)"
+                      :rules="rules.areaSqm"
+                      variant="outlined"
+                      prepend-inner-icon="mdi-ruler-square"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="e.g., 17.16, 23.50"
+                      :readonly="isBusinessOwner"
+                      hint="Optional: Enter exact area in square meters"
+                    ></v-text-field>
 
-              <!-- Right Column -->
-              <v-col cols="12" md="6">
-                <!-- Location -->
-                <v-text-field v-model="editForm.location" label="Location" :rules="rules.location" 
-                  required variant="outlined" prepend-inner-icon="mdi-map-marker"
-                  placeholder="Naga City People's Mall"></v-text-field>
+                    <!-- RENTAL RATE (2010) - Base rate input (Optional) -->
+                    <v-text-field
+                      v-model="editForm.baseRate"
+                      label="RENTAL RATE (2010)"
+                      :rules="rules.baseRate"
+                      variant="outlined"
+                      prepend-inner-icon="mdi-cash"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="e.g., 3331.28, 3685.75"
+                      :readonly="isBusinessOwner"
+                      hint="Optional: Monthly Rent = RENTAL RATE × 2"
+                      @input="calculateRentalPrice"
+                    ></v-text-field>
+                  </v-col>
 
-                <!-- Description -->
-                <v-textarea v-model="editForm.description" label="Description" :rules="rules.description" required
-                  variant="outlined" prepend-inner-icon="mdi-text" rows="3" counter="200" maxlength="200"></v-textarea>
+                  <!-- Right Column -->
+                  <v-col cols="12" md="6">
+                    <!-- Location -->
+                    <v-text-field
+                      v-model="editForm.location"
+                      label="Location"
+                      :rules="rules.location"
+                      required
+                      variant="outlined"
+                      prepend-inner-icon="mdi-map-marker"
+                      placeholder="Naga City People's Mall"
+                    ></v-text-field>
 
-                <!-- Image Upload - Multiple files supported -->
-                <v-file-input v-model="selectedImageFiles" label="Upload Images (up to 10)" variant="outlined"
-                  prepend-inner-icon="mdi-camera" accept="image/*" @change="handleImageUpload" :rules="imageRules"
-                  show-size counter multiple :hint="`${remainingImageSlots} more images can be uploaded`"
-                  persistent-hint>
-                  <template v-slot:selection="{ fileNames }">
-                    <template v-for="fileName in fileNames" :key="fileName">
-                      <v-chip size="small" color="primary" class="me-2">
-                        {{ fileName }}
-                      </v-chip>
-                    </template>
-                  </template>
-                </v-file-input>
+                    <!-- Description -->
+                    <v-textarea
+                      v-model="editForm.description"
+                      label="Description"
+                      :rules="rules.description"
+                      required
+                      variant="outlined"
+                      prepend-inner-icon="mdi-text"
+                      rows="3"
+                      counter="200"
+                      maxlength="200"
+                    ></v-textarea>
 
-                <!-- Pending Uploads Preview -->
-                <div v-if="imagePreviews.length > 0" class="mt-3">
-                  <p class="text-caption text-grey-darken-1 mb-2">
-                    Pending Uploads ({{ imagePreviews.length }}):
-                  </p>
-                  <div class="d-flex flex-wrap ga-2">
-                    <v-card v-for="(preview, index) in imagePreviews" :key="index" 
-                      class="pending-image-card" elevation="1" width="100" height="100">
-                      <v-img :src="preview.dataUrl" height="80" cover class="rounded-t">
-                        <v-btn icon size="x-small" class="remove-pending-btn" color="error"
-                          @click.stop="removeSelectedImage(index)">
-                          <v-icon size="14">mdi-close</v-icon>
-                        </v-btn>
-                      </v-img>
-                      <div class="text-caption text-center text-truncate pa-1">
-                        {{ formatFileSize(preview.size) }}
-                      </div>
-                    </v-card>
-                  </div>
-                </div>
-
-                <!-- Image Gallery (Multi-image display) -->
-                <div class="mt-3">
-                  <p class="text-caption text-grey-darken-1 mb-2">
-                    Current Images ({{ stallImages.length }} found):
-                  </p>
-                  
-                  <!-- Loading State -->
-                  <div v-if="loadingImages" class="d-flex align-center justify-center pa-4">
-                    <v-progress-circular color="primary" indeterminate size="32"></v-progress-circular>
-                    <span class="ml-3 text-grey">Loading images...</span>
-                  </div>
-                  
-                  <!-- Image Gallery Card -->
-                  <v-card v-else-if="stallImages.length > 0 && !imagePreview" class="image-gallery-card" elevation="2">
-                    <div class="image-gallery-container">
-                      <!-- Main Image Display -->
-                      <v-img 
-                        :src="getCurrentImage()" 
-                        height="180" 
-                        cover 
-                        class="rounded-t"
-                        @error="handleMainImageError"
-                      >
-                        <template v-slot:placeholder>
-                          <div class="d-flex align-center justify-center fill-height">
-                            <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
-                          </div>
+                    <!-- Image Upload - Multiple files supported -->
+                    <v-file-input
+                      v-model="selectedImageFiles"
+                      label="Upload Images (up to 10)"
+                      variant="outlined"
+                      prepend-inner-icon="mdi-camera"
+                      accept="image/*"
+                      @change="handleImageUpload"
+                      :rules="imageRules"
+                      show-size
+                      counter
+                      multiple
+                      :hint="`${remainingImageSlots} more images can be uploaded`"
+                      persistent-hint
+                    >
+                      <template v-slot:selection="{ fileNames }">
+                        <template v-for="fileName in fileNames" :key="fileName">
+                          <v-chip size="small" color="primary" class="me-2">
+                            {{ fileName }}
+                          </v-chip>
                         </template>
-                        <template v-slot:error>
-                          <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
-                            <v-icon color="error" size="48">mdi-image-broken</v-icon>
-                            <p class="text-caption text-error mt-2">Failed to load image</p>
+                      </template>
+                    </v-file-input>
+
+                    <!-- Pending Uploads Preview -->
+                    <div v-if="imagePreviews.length > 0" class="mt-3">
+                      <p class="text-caption text-grey-darken-1 mb-2">
+                        Pending Uploads ({{ imagePreviews.length }}):
+                      </p>
+                      <div class="d-flex flex-wrap ga-2">
+                        <v-card
+                          v-for="(preview, index) in imagePreviews"
+                          :key="index"
+                          class="pending-image-card"
+                          elevation="1"
+                          width="100"
+                          height="100"
+                        >
+                          <v-img :src="preview.dataUrl" height="80" cover class="rounded-t">
+                            <v-btn
+                              icon
+                              size="x-small"
+                              class="remove-pending-btn"
+                              color="error"
+                              @click.stop="removeSelectedImage(index)"
+                            >
+                              <v-icon size="14">mdi-close</v-icon>
+                            </v-btn>
+                          </v-img>
+                          <div class="text-caption text-center text-truncate pa-1">
+                            {{ formatFileSize(preview.size) }}
                           </div>
-                        </template>
-
-                        <!-- Navigation Arrows (only show if multiple images) -->
-                        <div v-if="stallImages.length > 1" class="gallery-navigation">
-                          <v-btn 
-                            icon 
-                            size="small" 
-                            class="nav-btn prev-btn" 
-                            @click.stop="prevImage"
-                            color="white"
-                          >
-                            <v-icon>mdi-chevron-left</v-icon>
-                          </v-btn>
-                          <v-btn 
-                            icon 
-                            size="small" 
-                            class="nav-btn next-btn" 
-                            @click.stop="nextImage"
-                            color="white"
-                          >
-                            <v-icon>mdi-chevron-right</v-icon>
-                          </v-btn>
-                        </div>
-
-                        <!-- Image Counter Badge -->
-                        <div v-if="stallImages.length > 1" class="image-counter">
-                          {{ currentImageIndex + 1 }} / {{ stallImages.length }}
-                        </div>
-
-                        <!-- Delete Current Image Button -->
-                        <v-btn
-                          icon
-                          size="small"
-                          class="delete-image-btn"
-                          color="error"
-                          @click.stop="confirmDeleteImage(currentImageIndex)"
-                          title="Delete this image"
-                        >
-                          <v-icon size="small">mdi-delete</v-icon>
-                        </v-btn>
-                      </v-img>
-
-                      <!-- Thumbnail Strip (for multiple images) -->
-                      <div v-if="stallImages.length > 1" class="thumbnail-strip pa-2">
-                        <div 
-                          v-for="(img, index) in stallImages" 
-                          :key="index" 
-                          class="thumbnail-item"
-                          :class="{ 'active': index === currentImageIndex }"
-                          @click="goToImage(index)"
-                        >
-                          <v-img :src="typeof img === 'object' ? img.url : img" height="40" width="50" cover class="rounded"></v-img>
-                          <!-- Mini delete button on thumbnail -->
-                          <v-btn
-                            icon
-                            size="x-small"
-                            class="thumbnail-delete-btn"
-                            color="error"
-                            @click.stop="confirmDeleteImage(index)"
-                          >
-                            <v-icon size="x-small">mdi-close</v-icon>
-                          </v-btn>
-                        </div>
+                        </v-card>
                       </div>
                     </div>
-                  </v-card>
 
-                  <!-- New Image Preview (when uploading) -->
-                  <v-card v-else-if="imagePreview" class="image-preview" elevation="2">
-                    <p class="text-caption text-success pa-2 mb-0">
-                      <v-icon size="small" color="success">mdi-check-circle</v-icon>
-                      New image selected
-                    </p>
-                    <v-img :src="imagePreview" height="150" cover class="rounded-b">
-                      <template v-slot:placeholder>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
+                    <!-- Image Gallery (Multi-image display) -->
+                    <div class="mt-3">
+                      <p class="text-caption text-grey-darken-1 mb-2">
+                        Current Images ({{ stallImages.length }} found):
+                      </p>
+
+                      <!-- Loading State -->
+                      <div v-if="loadingImages" class="d-flex align-center justify-center pa-4">
+                        <v-progress-circular
+                          color="primary"
+                          indeterminate
+                          size="32"
+                        ></v-progress-circular>
+                        <span class="ml-3 text-grey">Loading images...</span>
+                      </div>
+
+                      <!-- Image Gallery Card -->
+                      <v-card
+                        v-else-if="stallImages.length > 0 && !imagePreview"
+                        class="image-gallery-card"
+                        elevation="2"
+                      >
+                        <div class="image-gallery-container">
+                          <!-- Main Image Display -->
+                          <v-img
+                            :src="getCurrentImage()"
+                            height="180"
+                            cover
+                            class="rounded-t"
+                            @error="handleMainImageError"
+                          >
+                            <template v-slot:placeholder>
+                              <div class="d-flex align-center justify-center fill-height">
+                                <v-progress-circular
+                                  color="grey-lighten-4"
+                                  indeterminate
+                                ></v-progress-circular>
+                              </div>
+                            </template>
+                            <template v-slot:error>
+                              <div
+                                class="d-flex align-center justify-center fill-height bg-grey-lighten-3"
+                              >
+                                <v-icon color="error" size="48">mdi-image-broken</v-icon>
+                                <p class="text-caption text-error mt-2">Failed to load image</p>
+                              </div>
+                            </template>
+
+                            <!-- Navigation Arrows (only show if multiple images) -->
+                            <div v-if="stallImages.length > 1" class="gallery-navigation">
+                              <v-btn
+                                icon
+                                size="small"
+                                class="nav-btn prev-btn"
+                                @click.stop="prevImage"
+                                color="white"
+                              >
+                                <v-icon>mdi-chevron-left</v-icon>
+                              </v-btn>
+                              <v-btn
+                                icon
+                                size="small"
+                                class="nav-btn next-btn"
+                                @click.stop="nextImage"
+                                color="white"
+                              >
+                                <v-icon>mdi-chevron-right</v-icon>
+                              </v-btn>
+                            </div>
+
+                            <!-- Image Counter Badge -->
+                            <div v-if="stallImages.length > 1" class="image-counter">
+                              {{ currentImageIndex + 1 }} / {{ stallImages.length }}
+                            </div>
+
+                            <!-- Delete Current Image Button -->
+                            <v-btn
+                              icon
+                              size="small"
+                              class="delete-image-btn"
+                              color="error"
+                              @click.stop="confirmDeleteImage(currentImageIndex)"
+                              title="Delete this image"
+                            >
+                              <v-icon size="small">mdi-delete</v-icon>
+                            </v-btn>
+                          </v-img>
+
+                          <!-- Thumbnail Strip (for multiple images) -->
+                          <div v-if="stallImages.length > 1" class="thumbnail-strip pa-2">
+                            <div
+                              v-for="(img, index) in stallImages"
+                              :key="index"
+                              class="thumbnail-item"
+                              :class="{ active: index === currentImageIndex }"
+                              @click="goToImage(index)"
+                            >
+                              <v-img
+                                :src="typeof img === 'object' ? img.url : img"
+                                height="40"
+                                width="50"
+                                cover
+                                class="rounded"
+                              ></v-img>
+                              <!-- Mini delete button on thumbnail -->
+                              <v-btn
+                                icon
+                                size="x-small"
+                                class="thumbnail-delete-btn"
+                                color="error"
+                                @click.stop="confirmDeleteImage(index)"
+                              >
+                                <v-icon size="x-small">mdi-close</v-icon>
+                              </v-btn>
+                            </div>
+                          </div>
                         </div>
-                      </template>
-                    </v-img>
-                    <v-card-actions class="pa-2">
-                      <v-spacer></v-spacer>
-                      <v-btn size="small" color="error" variant="text" @click="removeImage">
-                        <v-icon size="small">mdi-delete</v-icon>
-                        Remove
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
+                      </v-card>
 
-                  <!-- No Images Found -->
-                  <v-card v-else class="pa-4 text-center bg-grey-lighten-4" elevation="0">
-                    <v-icon size="48" color="grey">mdi-image-off</v-icon>
-                    <p class="text-grey mt-2 mb-0">No images found for this stall</p>
-                  </v-card>
-                </div>
+                      <!-- New Image Preview (when uploading) -->
+                      <v-card v-else-if="imagePreview" class="image-preview" elevation="2">
+                        <p class="text-caption text-success pa-2 mb-0">
+                          <v-icon size="small" color="success">mdi-check-circle</v-icon>
+                          New image selected
+                        </p>
+                        <v-img :src="imagePreview" height="150" cover class="rounded-b">
+                          <template v-slot:placeholder>
+                            <div class="d-flex align-center justify-center fill-height">
+                              <v-progress-circular
+                                color="grey-lighten-4"
+                                indeterminate
+                              ></v-progress-circular>
+                            </div>
+                          </template>
+                        </v-img>
+                        <v-card-actions class="pa-2">
+                          <v-spacer></v-spacer>
+                          <v-btn size="small" color="error" variant="text" @click="removeImage">
+                            <v-icon size="small">mdi-delete</v-icon>
+                            Remove
+                          </v-btn>
+                        </v-card-actions>
+                      </v-card>
 
-                <!-- Availability Toggle -->
-                <v-switch v-model="editForm.isAvailable" label="Available for Rent" color="primary" inset
-                  class="mt-3"></v-switch>
-              </v-col>
-            </v-row>
-          </v-form>
+                      <!-- No Images Found -->
+                      <v-card v-else class="pa-4 text-center bg-grey-lighten-4" elevation="0">
+                        <v-icon size="48" color="grey">mdi-image-off</v-icon>
+                        <p class="text-grey mt-2 mb-0">No images found for this stall</p>
+                      </v-card>
+                    </div>
+
+                    <!-- Availability Toggle -->
+                    <v-switch
+                      v-model="editForm.isAvailable"
+                      label="Available for Rent"
+                      color="primary"
+                      inset
+                      class="mt-3"
+                    ></v-switch>
+                  </v-col>
+                </v-row>
+              </v-form>
+            </v-window-item>
+
+            <!-- History Tab -->
+            <v-window-item value="history">
+              <v-data-table
+                :headers="historyHeaders"
+                :items="historyLogs"
+                :loading="loadingHistory"
+                class="elevation-0 mt-4"
+                hover
+              >
+                <template v-slot:item.spot_rating="{ item }">
+                  <v-rating
+                    :model-value="item.spot_rating || 0"
+                    color="warning"
+                    density="compact"
+                    readonly
+                    halv-increments
+                    size="small"
+                  ></v-rating>
+                </template>
+                <template v-slot:no-data>
+                  <div class="pa-4 text-center">
+                    <v-icon size="48" color="grey lighten-1">mdi-history</v-icon>
+                    <div class="mt-2 text-grey-darken-1">
+                      No historical records found for this stall.
+                    </div>
+                  </div>
+                </template>
+              </v-data-table>
+            </v-window-item>
+          </v-window>
         </v-card-text>
 
         <!-- Modal Footer -->
@@ -258,7 +425,13 @@
             Cancel
           </v-btn>
 
-          <v-btn color="primary" variant="elevated" @click="handleSave" :loading="loading || uploadingImages" class="ml-2">
+          <v-btn
+            color="primary"
+            variant="elevated"
+            @click="handleSave"
+            :loading="loading || uploadingImages"
+            class="ml-2"
+          >
             <v-icon left>mdi-content-save</v-icon>
             {{ uploadingImages ? 'Uploading Images...' : 'Update Stall' }}
           </v-btn>
@@ -272,8 +445,13 @@
       </v-card>
 
       <!-- Delete Stall Component -->
-      <DeleteStall :stallData="editForm" :showModal="showDeleteConfirm" @close="cancelDelete"
-        @deleted="handleStallDeleted" @error="handleDeleteError" />
+      <DeleteStall
+        :stallData="editForm"
+        :showModal="showDeleteConfirm"
+        @close="cancelDelete"
+        @deleted="handleStallDeleted"
+        @error="handleDeleteError"
+      />
 
       <!-- Image Delete Confirmation Dialog -->
       <v-dialog v-model="showImageDeleteDialog" max-width="500" persistent>
@@ -294,12 +472,7 @@
 
             <!-- Image Preview -->
             <v-card v-if="imageToDelete" class="mx-auto" max-width="300" elevation="2">
-              <v-img 
-                :src="getCurrentImage()" 
-                height="200" 
-                cover
-                class="rounded"
-              >
+              <v-img :src="getCurrentImage()" height="200" cover class="rounded">
                 <template v-slot:placeholder>
                   <div class="d-flex align-center justify-center fill-height">
                     <v-progress-circular color="grey-lighten-4" indeterminate></v-progress-circular>
@@ -316,9 +489,9 @@
           <v-divider></v-divider>
 
           <v-card-actions class="pa-4">
-            <v-btn 
-              variant="text" 
-              color="grey-darken-1" 
+            <v-btn
+              variant="text"
+              color="grey-darken-1"
               @click="cancelDeleteImage"
               :disabled="deletingImage"
             >
@@ -326,8 +499,8 @@
               Cancel
             </v-btn>
             <v-spacer></v-spacer>
-            <v-btn 
-              color="error" 
+            <v-btn
+              color="error"
               variant="elevated"
               @click="deleteStallImage"
               :loading="deletingImage"
