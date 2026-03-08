@@ -12,7 +12,8 @@
           <v-btn
             icon
             @click.stop="toggleSidebar"
-            class="hamburger-btn circle-hover mr-1"
+            class="hamburger-btn circle-hover"
+            :class="{ 'mr-1': isExpanded }"
             variant="text"
           >
             <v-icon color="#333" size="28">mdi-menu</v-icon>
