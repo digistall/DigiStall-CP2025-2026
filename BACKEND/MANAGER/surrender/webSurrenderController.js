@@ -6,8 +6,9 @@ export const getPendingRequests = async (req, res) => {
   let connection;
   try {
     connection = await createConnection();
-    
-    const [requests] = await connection.execute(`
+    const { searchName } = req.query;
+
+    let query = `
       SELECT 
         r.request_id, r.reason, r.move_out_date, r.status, r.created_at,
         sh.full_name as stallholder_name, sh.contact_number,
@@ -17,8 +18,17 @@ export const getPendingRequests = async (req, res) => {
       JOIN stallholder sh ON r.stallholder_id = sh.stallholder_id
       JOIN stall s ON r.stall_id = s.stall_id
       WHERE r.status = 'Pending'
-      ORDER BY r.created_at DESC
-    `);
+    `;
+    const params = [];
+
+    if (searchName) {
+      query += ` AND sh.full_name LIKE ?`;
+      params.push(`%${searchName}%`);
+    }
+
+    query += ` ORDER BY r.created_at DESC`;
+
+    const [requests] = await connection.execute(query, params);
 
     const decryptedRequests = await Promise.all(requests.map(async request => {
       return await decryptApplicantData(request);

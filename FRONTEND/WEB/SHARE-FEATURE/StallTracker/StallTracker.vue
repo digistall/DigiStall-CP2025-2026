@@ -16,8 +16,42 @@
 
     <!-- Data Table Container -->
     <v-window v-model="activeTab" class="bg-transparent mt-2">
-      <!-- Pending Surrenders Tab -->
       <v-window-item value="pending">
+        <!-- Filter Container (Pending) -->
+        <div class="search-filter-section mb-6 mt-2">
+          <v-row align="center">
+            <!-- Search Bar -->
+            <v-col cols="12" md="6" lg="4">
+              <v-text-field
+                v-model="searchQueryPending"
+                label="Search by Name"
+                placeholder="Search stallholder..."
+                variant="outlined"
+                clearable
+                hide-details
+                prepend-inner-icon="mdi-magnify"
+                class="search-field"
+              ></v-text-field>
+            </v-col>
+
+            <!-- Spacer -->
+            <v-col class="d-none d-md-block"></v-col>
+
+            <!-- Filter Button -->
+            <v-col cols="auto" class="text-right">
+              <v-btn
+                variant="outlined"
+                prepend-icon="mdi-filter-variant"
+                @click="fetchPendingRequests"
+                class="filter-btn"
+              >
+                Filter
+                <v-icon icon="mdi-chevron-down" size="small" class="ml-1"></v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
+        </div>
+
         <v-data-table
           :headers="pendingHeaders"
           :items="pendingRequests"
@@ -58,42 +92,69 @@
 
       <!-- History Database Tab -->
       <v-window-item value="history">
-        <div class="d-flex align-center mb-4 mt-4 gap-4 flex-wrap">
-          <v-text-field
-            v-model="searchQuery"
-            label="Search by Name"
-            prepend-inner-icon="mdi-magnify"
-            variant="outlined"
-            density="compact"
-            hide-details
-            style="max-width: 300px"
-            @keyup.enter="fetchHistory"
-          ></v-text-field>
+        <!-- Filter Container (History) -->
+        <div class="search-filter-section mb-6 mt-2">
+          <v-row align="center">
+            <!-- Search Bar -->
+            <v-col cols="12" md="4" lg="4">
+              <v-text-field
+                v-model="searchQueryHistory"
+                label="Search by Name"
+                placeholder="Search previous tenant..."
+                variant="outlined"
+                clearable
+                hide-details
+                prepend-inner-icon="mdi-magnify"
+                @keyup.enter="fetchHistory"
+                class="search-field"
+              ></v-text-field>
+            </v-col>
 
-          <v-btn color="primary" @click="fetchHistory" prepend-icon="mdi-filter"> Filter </v-btn>
+            <!-- Spacer -->
+            <v-col class="d-none d-md-block"></v-col>
 
-          <v-spacer></v-spacer>
+            <!-- Import Legacy Excel Section -->
+            <v-col cols="auto">
+              <div class="d-flex align-center gap-2">
+                <v-file-input
+                  v-model="excelFile"
+                  label="Select Excel File"
+                  accept=".xlsx,.xls"
+                  variant="outlined"
+                  hide-details
+                  density="compact"
+                  prepend-inner-icon="mdi-file-excel"
+                  prepend-icon=""
+                  class="search-field"
+                  style="width: 250px"
+                ></v-file-input>
+                <v-btn
+                  variant="outlined"
+                  color="primary"
+                  @click="importExcel"
+                  :loading="importing"
+                  :disabled="!excelFile"
+                  class="filter-btn"
+                >
+                  <v-icon icon="mdi-file-upload-outline" size="small" class="mr-1"></v-icon>
+                  Import
+                </v-btn>
+              </div>
+            </v-col>
 
-          <v-file-input
-            v-model="excelFile"
-            label="Import Legacy Excel"
-            accept=".xlsx,.xls"
-            variant="outlined"
-            density="compact"
-            hide-details
-            prepend-icon="mdi-file-excel"
-            style="max-width: 300px"
-            class="mr-2"
-          ></v-file-input>
-          <v-btn
-            color="secondary"
-            @click="importExcel"
-            :loading="importing"
-            :disabled="!excelFile"
-            prepend-icon="mdi-upload"
-          >
-            Import
-          </v-btn>
+            <!-- Filter Button -->
+            <v-col cols="auto" class="text-right">
+              <v-btn
+                variant="outlined"
+                prepend-icon="mdi-filter-variant"
+                @click="fetchHistory"
+                class="filter-btn"
+              >
+                Filter
+                <v-icon icon="mdi-chevron-down" size="small" class="ml-1"></v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
         </div>
 
         <v-data-table

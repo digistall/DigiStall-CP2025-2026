@@ -5,7 +5,8 @@ export default {
       activeTab: 'pending',
       loading: false,
       importing: false,
-      searchQuery: '',
+      searchQueryPending: '',
+      searchQueryHistory: '',
       excelFile: null,
       
       pendingRequests: [],
@@ -51,7 +52,7 @@ export default {
   },
 
   mounted() {
-    this.fetchPending();
+    this.fetchPendingRequests();
     this.fetchHistory();
   },
 
@@ -70,10 +71,14 @@ export default {
       this.snackbar.show = true;
     },
 
-    async fetchPending() {
+    async fetchPendingRequests() {
       this.loading = true;
       try {
-        const res = await fetch(`${this.apiBaseUrl}/surrender/requests`, {
+        let url = `${this.apiBaseUrl}/surrender/requests`;
+        if (this.searchQueryPending) {
+          url += `?searchName=${encodeURIComponent(this.searchQueryPending)}`;
+        }
+        const res = await fetch(url, {
           headers: this.getHeaders()
         });
         const json = await res.json();
@@ -98,8 +103,8 @@ export default {
       this.loading = true;
       try {
         let url = `${this.apiBaseUrl}/surrender/history`;
-        if (this.searchQuery) {
-          url += `?searchName=${encodeURIComponent(this.searchQuery)}`;
+        if (this.searchQueryHistory) {
+          url += `?searchName=${encodeURIComponent(this.searchQueryHistory)}`;
         }
         const res = await fetch(url, { headers: this.getHeaders() });
         const json = await res.json();
@@ -131,7 +136,7 @@ export default {
         const json = await res.json();
         if (json.success) {
           this.showSnackbar(`Request ${status} successfully`, status === 'Rejected' ? 'warning' : 'success');
-          this.fetchPending();
+          this.fetchPendingRequests();
         } else {
           this.showSnackbar(json.message || 'Error updating request', 'error');
         }
