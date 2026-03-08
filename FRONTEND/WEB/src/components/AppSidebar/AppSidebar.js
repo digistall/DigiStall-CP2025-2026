@@ -67,7 +67,7 @@ export default {
         },
         {
           id: 10,
-          icon: 'mdi-history',
+          icon: 'mdi-account-details-outline',
           name: 'Stall Tracker',
           route: '/app/stall-tracker',
           roles: ['branch_manager', 'business_manager', 'stall_business_owner'],
