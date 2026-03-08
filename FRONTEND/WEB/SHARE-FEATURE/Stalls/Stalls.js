@@ -331,11 +331,12 @@ export default {
           if (userType === 'business_manager' || userType === 'business_employee') {
             const originalCount = this.stallsData.length
             this.stallsData = this.stallsData.filter(stall => {
-              // Keep stalls that are NOT occupied (is_available = true means Available/Unavailable)
+              // Keep stalls that are NOT occupied and NOT Unavailable
               // Occupied stalls have availabilityStatus = 'Occupied' and isAvailable = false with stallholder assigned
               const isOccupied = stall.availabilityStatus === 'Occupied' || 
                                  (stall.isAvailable === false && stall.stallholderId)
-              return !isOccupied
+              const isUnavailable = stall.availabilityStatus === 'Unavailable'
+              return !isOccupied && !isUnavailable
             })
             console.log(`🏪 Filtered out occupied stalls for ${userType}: ${originalCount} → ${this.stallsData.length} stalls visible`)
           }
