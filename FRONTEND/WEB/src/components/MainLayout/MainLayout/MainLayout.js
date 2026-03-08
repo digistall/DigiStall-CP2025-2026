@@ -34,7 +34,7 @@ export default {
         { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees' },
-        { id: 10, icon: 'mdi-history', name: 'Stall Tracker', route: '/app/stall-tracker' },
+        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
         { id: 13, icon: 'mdi-credit-card-outline', name: 'My Subscription', route: '/app/subscription' },
         { id: 14, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
       ],
@@ -48,7 +48,7 @@ export default {
         { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
         { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees' },
-        { id: 10, icon: 'mdi-history', name: 'Stall Tracker', route: '/app/stall-tracker' },
+        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
       ],
       // Business Employee menu items based on permissions
       businessEmployeeMenuItems: {
@@ -70,7 +70,7 @@ export default {
           route: '/app/stallholders',
         },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
-        stallTracker: { id: 10, icon: 'mdi-history', name: 'Stall Tracker', route: '/app/stall-tracker' },
+        stallTracker: { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
       },
       // Define all possible menu routes including "more items" (6-10)
       allMenuRoutes: {
