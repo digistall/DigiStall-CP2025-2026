@@ -166,26 +166,51 @@
           class="elevation-2 mt-4 mb-2 custom-shadow-table"
           hover
         >
-          <template v-slot:item.spot_rating="{ item }">
-            <v-rating
-              :model-value="item.spot_rating || 0"
-              color="warning"
-              density="compact"
-              readonly
-              halv-increments
-              size="small"
-            ></v-rating>
-          </template>
         </v-data-table>
       </v-window-item>
     </v-window>
+
+    <!-- Confirmation Dialog -->
+    <v-dialog v-model="confirmDialog.show" max-width="450">
+      <v-card class="rounded-lg">
+        <v-card-title class="pa-4 flex-nowrap d-flex align-center bg-grey-lighten-4">
+          <v-icon :color="confirmDialog.color" class="mr-3">
+            {{ confirmDialog.action === 'Approved' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+          </v-icon>
+          <span class="text-h6 font-weight-bold">{{ confirmDialog.title }}</span>
+        </v-card-title>
+
+        <v-card-text class="pa-6 text-body-1">
+          {{ confirmDialog.message }}
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" rounded="pill" class="px-6" @click="confirmDialog.show = false">
+            Cancel
+          </v-btn>
+          <v-btn
+            :color="confirmDialog.color"
+            variant="flat"
+            rounded="pill"
+            class="px-6 ml-2"
+            @click="executeConfirmAction"
+            :loading="loading"
+          >
+            Confirm
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Snackbar for Notifications -->
     <v-snackbar
       v-model="snackbar.show"
       :color="snackbar.color"
       :timeout="3000"
-      location="top right"
+      location="bottom left"
       elevation="24"
     >
       <div class="d-flex align-center">

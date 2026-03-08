@@ -153,10 +153,10 @@ export const submitExitSurvey = async (req, res) => {
   try {
     connection = await createConnection();
     const userId = req.user.userId;
-    const { requestId, stall_id, rating, feedback } = req.body;
+    const { requestId, stall_id, feedback } = req.body;
 
-    if (!requestId || !stall_id || !rating || !feedback) {
-       return res.status(400).json({ success: false, message: 'Request ID, Stall ID, rating, and feedback are required.' });
+    if (!requestId || !stall_id || !feedback) {
+       return res.status(400).json({ success: false, message: 'Request ID, Stall ID, and feedback are required.' });
     }
 
     // Get the stallholder
@@ -186,8 +186,8 @@ export const submitExitSurvey = async (req, res) => {
 
     // Execute ATOMIC Stored Procedure
     await connection.execute(
-      'CALL sp_ProcessStallSurrender(?, ?, ?, ?, ?, ?)',
-      [requestId, stallId, stallholderId, employeeId, rating, feedback]
+      'CALL sp_ProcessStallSurrender(?, ?, ?, ?, ?)',
+      [requestId, stallId, stallholderId, employeeId, feedback]
     );
 
     return res.status(200).json({

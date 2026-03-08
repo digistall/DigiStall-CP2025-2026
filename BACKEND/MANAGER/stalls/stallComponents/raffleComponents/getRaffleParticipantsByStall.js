@@ -99,7 +99,7 @@ export const getRaffleParticipantsByStall = async (req, res) => {
           rp.registration_date,
           rp.status as participant_status
         FROM raffle_participants rp
-        WHERE rp.raffle_id = ?
+        WHERE rp.raffle_id = ? AND rp.status != 'Removed'
         ORDER BY rp.registration_date ASC`,
         [raffleData.raffle_id]
       );
