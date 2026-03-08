@@ -1,10 +1,10 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="applicants-container">
     <div>
       <!-- Main Content -->
-      <v-main>
-        <v-container fluid class="main-content">
+      <div class="applicants-main-content">
+        <div class="feature-content-inner">
           <!-- Standardized Loading Overlay -->
           <LoadingOverlay
             :loading="loading && currentApplicantType === 'Stall Applicants'"
@@ -69,8 +69,8 @@
               />
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
 
       <!-- Approve Applicant Modal -->
       <ApproveApplicants
@@ -97,7 +97,7 @@
       :entity="crudLoading.entity"
       :message="crudLoading.message"
       :sub-message="crudLoading.subMessage"
-      :full-page="true"
+      :full-page="false"
     />
 
     <!-- Error Snackbar -->
@@ -105,7 +105,7 @@
       <v-icon class="mr-2">mdi-alert-circle</v-icon>
       {{ snackbarMessage }}
     </v-snackbar>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Applicants.js"></script>

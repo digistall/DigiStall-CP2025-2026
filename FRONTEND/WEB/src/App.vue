@@ -1,5 +1,5 @@
-/** * FRONTEND - App.vue * ========================== * Main app component that uses
-RouterView * All views are imported from MVC role folders */
+/** * FRONTEND - App.vue * ========================== * Main app component that uses RouterView *
+All views are imported from MVC role folders */
 <template>
   <v-app>
     <router-view />
@@ -44,5 +44,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
+html, body {
+  overflow: hidden !important;
+  height: 100%;
+}
+
 /* Global styles */
+
 </style>
