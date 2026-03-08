@@ -84,11 +84,11 @@ export default {
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase()
         filtered = filtered.filter(stallholder =>
-          stallholder.fullName?.toLowerCase().includes(query) ||
+          stallholder.stallholder_name?.toLowerCase().includes(query) ||
           stallholder.email?.toLowerCase().includes(query) ||
-          stallholder.phoneNumber?.toLowerCase().includes(query) ||
-          stallholder.stallNumber?.toLowerCase().includes(query) ||
-          stallholder.businessName?.toLowerCase().includes(query)
+          stallholder.contact_number?.toLowerCase().includes(query) ||
+          stallholder.stall_no?.toLowerCase().includes(query) ||
+          stallholder.business_name?.toLowerCase().includes(query)
         )
       }
 

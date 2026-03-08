@@ -33,6 +33,29 @@ export default {
       error: null,
     }
   },
+  computed: {
+    filteredComplianceList() {
+      let filtered = [...this.complianceList];
+
+      if (this.activeFilter && this.activeFilter !== 'all') {
+        filtered = filtered.filter(item => item.status === this.activeFilter);
+      }
+
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(item => 
+          (item.stallholder && item.stallholder.toLowerCase().includes(query)) ||
+          (item.id && item.id.toLowerCase().includes(query)) ||
+          (item.inspector && item.inspector.toLowerCase().includes(query)) ||
+          (item.type && item.type.toLowerCase().includes(query)) ||
+          (item.branch_name && item.branch_name.toLowerCase().includes(query)) ||
+          (item.stall_no && String(item.stall_no).toLowerCase().includes(query))
+        );
+      }
+
+      return filtered;
+    }
+  },
   mounted() {
     this.initializeCompliance()
   },
@@ -42,8 +65,7 @@ export default {
       this.searchQuery = searchData.query
       this.activeFilter = searchData.filter
       console.log("Search data:", searchData)
-      // Reload data with new filters
-      this.loadComplianceData()
+      // Local filtering happens automatically via computed property
     },
 
     // Table actions
@@ -118,21 +140,10 @@ export default {
           return
         }
 
-        // Build query parameters
-        const params = {}
-        if (this.activeFilter && this.activeFilter !== 'all') {
-          params.status = this.activeFilter
-        }
-        if (this.searchQuery) {
-          params.search = this.searchQuery
-        }
+        // We now fetch all records and filter locally
+        console.log("🔄 Fetching all compliance data")
 
-        console.log("🔄 Fetching compliance data")
-        console.log("📋 Query params:", params)
-
-        const response = await apiClient.get('/compliances', {
-          params
-        })
+        const response = await apiClient.get('/compliances')
 
         console.log("📥 Response received:", response.status, response.data)
 
