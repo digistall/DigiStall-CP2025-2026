@@ -97,7 +97,7 @@
 }
 
 .sidebar-item.collapsed {
-  margin: 4px 12px;
+  margin: 4px auto;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -227,7 +227,7 @@
 /* Stalls Submenu Styles - FIXED ICON ALIGNMENT */
 /* When sidebar is collapsed (not hovered) */
 .sidebar-item.collapsed.has-submenu {
-  margin: 4px 12px;
+  margin: 4px auto;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
