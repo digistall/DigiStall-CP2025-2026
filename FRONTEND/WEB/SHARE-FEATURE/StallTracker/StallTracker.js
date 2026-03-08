@@ -1,5 +1,10 @@
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
+
 export default {
   name: 'StallTracker',
+  components: {
+    LoadingOverlay,
+  },
   data() {
     return {
       activeTab: 'pending',

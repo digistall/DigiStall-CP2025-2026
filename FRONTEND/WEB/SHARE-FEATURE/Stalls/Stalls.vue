@@ -1,14 +1,10 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="stalls-container">
     <!-- Main Content -->
-    <v-main class="stalls-main-content">
+    <div class="stalls-main-content">
       <!-- Standardized Loading Overlay - contained within main content -->
-      <LoadingOverlay 
-        :loading="loading" 
-        text="Loading stalls..."
-        :full-page="false"
-      />
+      <LoadingOverlay :loading="loading" text="Loading stalls..." :full-page="false" />
 
       <!-- Error State -->
       <v-alert v-if="error && !loading" type="error" prominent border="start" class="ma-4">
@@ -45,31 +41,21 @@
                 <v-icon size="64" color="grey-lighten-2">mdi-store-off</v-icon>
                 <h3 class="text-h6 mt-4 mb-2 text-grey-darken-1">No stalls found</h3>
                 <p class="text-body-2 text-grey">
-                  No stalls are available in the database. Use the floating add button to get started.
+                  No stalls are available in the database. Use the floating add button to get
+                  started.
                 </p>
               </v-card>
             </div>
 
             <!-- Empty State when filtered results are empty -->
-            <div
-              v-if="hasStalls && displayStalls.length === 0 && !loading"
-              class="empty-state"
-            >
+            <div v-if="hasStalls && displayStalls.length === 0 && !loading" class="empty-state">
               <v-card class="pa-8 text-center" elevation="2">
                 <v-icon size="64" color="grey-lighten-2">mdi-filter-off</v-icon>
-                <h3 class="text-h6 mt-4 mb-2 text-grey-darken-1">
-                  No stalls match your filters
-                </h3>
+                <h3 class="text-h6 mt-4 mb-2 text-grey-darken-1">No stalls match your filters</h3>
                 <p class="text-body-2 text-grey">
-                  Try adjusting your search criteria or clear all filters to see all
-                  stalls.
+                  Try adjusting your search criteria or clear all filters to see all stalls.
                 </p>
-                <v-btn
-                  color="primary"
-                  variant="outlined"
-                  @click="refreshStalls"
-                  class="mt-4"
-                >
+                <v-btn color="primary" variant="outlined" @click="refreshStalls" class="mt-4">
                   <v-icon left>mdi-refresh</v-icon>
                   Clear Filters
                 </v-btn>
@@ -119,37 +105,23 @@
         @winner-selected="handleAuctionWinnerSelected"
         @show-message="handleShowMessage"
       />
-    </v-main>
+    </div>
 
     <!-- Warning Container Dialog -->
-    <v-dialog 
-      v-model="showWarningContainer" 
-      max-width="400" 
-      persistent
-    >
+    <v-dialog v-model="showWarningContainer" max-width="400" persistent>
       <v-card>
         <v-card-title class="text-h6 bg-primary text-white">
           <v-icon class="mr-2" color="white">mdi-information</v-icon>
           {{ warningData.title }}
         </v-card-title>
         <v-card-text class="pt-4">
-          <v-alert 
-            type="info" 
-            variant="tonal" 
-            class="mb-0"
-          >
+          <v-alert type="info" variant="tonal" class="mb-0">
             {{ warningData.message }}
           </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn 
-            color="primary" 
-            variant="flat"
-            @click="closeWarningAndShowModal"
-          >
-            Continue
-          </v-btn>
+          <v-btn color="primary" variant="flat" @click="closeWarningAndShowModal"> Continue </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -169,9 +141,9 @@
       :entity="crudLoading.entity"
       :message="crudLoading.message"
       :sub-message="crudLoading.subMessage"
-      :full-page="true"
+      :full-page="false"
     />
-  </v-app>
+  </div>
 </template>
 
 <script src="./Stalls.js"></script>

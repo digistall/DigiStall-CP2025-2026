@@ -1,9 +1,10 @@
 <template>
-  <v-app>
+  <v-layout class="layout-container" fill-height>
     <AppSidebar
       ref="appSidebar"
       :items="menuItems"
       @menu-item-click="handleMenuItemClick"
+      @sidebar-toggle="handleSidebarToggle"
     />
 
     <AppHeader
@@ -30,12 +31,12 @@
     />
 
     <!-- Logout Loading Screen -->
-    <LogoutLoadingScreen 
-      :isVisible="isLoggingOut && !showLogoutConfirm" 
+    <LogoutLoadingScreen
+      :isVisible="isLoggingOut && !showLogoutConfirm"
       :userName="currentUserName"
       message="Please wait while we securely log you out"
     />
-  </v-app>
+  </v-layout>
 </template>
 
 <script src="./MainLayout.js"></script>
