@@ -1,17 +1,20 @@
 <template>
   <div class="daily-payments">
-    <!-- Search Bar -->
-    <div class="search-container">
-      <v-text-field
-        v-model="searchQuery"
-        placeholder="Search by receipt ID, collector, vendor, reference..."
-        variant="outlined"
-        density="comfortable"
-        prepend-inner-icon="mdi-magnify"
-        clearable
-        hide-details
-        class="search-field"
-      ></v-text-field>
+    <div class="search-filter-section mb-6">
+      <div class="search-wrapper">
+        <div class="search-input-wrapper">
+          <v-text-field
+            v-model="searchQuery"
+            placeholder="Search by receipt ID, collector, vendor, reference..."
+            variant="outlined"
+            density="comfortable"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            class="search-field"
+          ></v-text-field>
+        </div>
+      </div>
     </div>
 
     <!-- Payments Table -->
