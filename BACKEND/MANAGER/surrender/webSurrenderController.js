@@ -58,15 +58,38 @@ export const updateRequestStatus = async (req, res) => {
        return res.status(400).json({ success: false, message: 'Invalid status update.' });
     }
 
-    await connection.execute(
-       'UPDATE stall_surrender_requests SET status = ?, remarks = ?, manager_id = ?, updated_at = NOW() WHERE request_id = ?',
-       [status, remarks || null, managerId, requestId]
+    // 1. Get request details first
+    const [requestInfo] = await connection.execute(
+       'SELECT stall_id, stallholder_id FROM stall_surrender_requests WHERE request_id = ?',
+       [requestId]
     );
 
-    res.status(200).json({ success: true, message: `Request successfully ${status.toLowerCase()}` });
+    if (requestInfo.length === 0) {
+       return res.status(404).json({ success: false, message: 'Surrender request not found.' });
+    }
+
+    const { stall_id, stallholder_id } = requestInfo[0];
+
+    if (status === 'Approved') {
+       // CALL ATOMIC Stored Procedure to finalize the surrender
+       // Use default rating (5) and feedback since manager is bypass-approving
+       await connection.execute(
+         'CALL sp_ProcessStallSurrender(?, ?, ?, ?, ?)',
+         [requestId, stall_id, stallholder_id, managerId, remarks || 'Management Approved Surrender']
+       );
+    } else {
+       // Just update to Rejected
+       await connection.execute(
+          'UPDATE stall_surrender_requests SET status = ?, remarks = ?, manager_id = ?, updated_at = NOW() WHERE request_id = ?',
+          [status, remarks || null, managerId, requestId]
+       );
+    }
+
+    const message = status === 'Approved' ? 'Surrender approved and stall is now available.' : 'Surrender request rejected.';
+    res.status(200).json({ success: true, message });
   } catch (error) {
     console.error('Error updating request:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   } finally {
     if (connection) await connection.end();
   }

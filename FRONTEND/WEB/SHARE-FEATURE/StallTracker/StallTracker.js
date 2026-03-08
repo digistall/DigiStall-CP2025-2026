@@ -28,7 +28,6 @@ export default {
         { title: 'Lease Start', key: 'lease_start_date', align: 'center' },
         { title: 'Lease End', key: 'lease_end_date', align: 'center' },
         { title: 'Surrender Reason', key: 'surrender_reason', align: 'center' },
-        { title: 'Rating', key: 'spot_rating', align: 'center' },
         { title: 'Feedback', key: 'feedback_to_next_tenant', align: 'center' }
       ],
 
@@ -36,6 +35,15 @@ export default {
         show: false,
         message: '',
         color: 'success'
+      },
+
+      confirmDialog: {
+        show: false,
+        title: '',
+        message: '',
+        color: 'primary',
+        action: null,
+        item: null
       }
     }
   },
@@ -148,15 +156,33 @@ export default {
     },
 
     approveRequest(item) {
-      if (confirm(`Approve surrender for ${item.stallholder_name} from ${item.stall_number}?`)) {
-        this.updateRequestStatus(item.request_id, 'Approved');
-      }
+      this.confirmDialog = {
+        show: true,
+        title: 'Approve Surrender',
+        message: `Are you sure you want to approve the surrender request for ${item.stallholder_name} (Stall: ${item.stall_number})?`,
+        color: 'success',
+        action: 'Approved',
+        item: item
+      };
     },
 
     rejectRequest(item) {
-      if (confirm(`Reject surrender request for ${item.stallholder_name}?`)) {
-        this.updateRequestStatus(item.request_id, 'Rejected');
-      }
+      this.confirmDialog = {
+        show: true,
+        title: 'Reject Surrender',
+        message: `Are you sure you want to reject the surrender request for ${item.stallholder_name} (Stall: ${item.stall_number})?`,
+        color: 'error',
+        action: 'Rejected',
+        item: item
+      };
+    },
+
+    async executeConfirmAction() {
+      if (!this.confirmDialog.item || !this.confirmDialog.action) return;
+      
+      const { item, action } = this.confirmDialog;
+      this.confirmDialog.show = false;
+      await this.updateRequestStatus(item.request_id, action);
     },
 
     async importExcel() {

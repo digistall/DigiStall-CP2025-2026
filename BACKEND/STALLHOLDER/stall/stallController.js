@@ -17,7 +17,7 @@ export const getAllStalls = async (req, res) => {
     // Check if this is a general applicant (approved status but no stall applications)
     const [applicantStatusRows] = await connection.execute(
       `SELECT a.applicant_id, a.status, 
-              (SELECT COUNT(*) FROM application app WHERE app.applicant_id = a.applicant_id) as application_count
+              (SELECT COUNT(*) FROM application app WHERE app.applicant_id = a.applicant_id AND app.application_status IN ('Pending', 'Under Review')) as application_count
        FROM applicant a 
        WHERE a.applicant_id = ?`,
       [applicant_id]
@@ -216,7 +216,7 @@ export const getStallsByType = async (req, res) => {
     // Check if this is a general applicant (approved status but no stall applications)
     const [applicantStatusRows] = await connection.execute(
       `SELECT a.applicant_id, a.status, 
-              (SELECT COUNT(*) FROM application app WHERE app.applicant_id = a.applicant_id) as application_count
+              (SELECT COUNT(*) FROM application app WHERE app.applicant_id = a.applicant_id AND app.application_status IN ('Pending', 'Under Review')) as application_count
        FROM applicant a 
        WHERE a.applicant_id = ?`,
       [applicant_id]
@@ -264,7 +264,11 @@ export const getStallsByType = async (req, res) => {
       console.log(`✅ ${type} stalls found for general applicant: ${stalls.length}`)
     } else {
       // Regular applicants: use area-restricted stored procedure
-      const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, null])
+      // Build area list for stored procedure (quoted values for IN clause)
+      const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
+      console.log(`📋 Regular applicant - calling sp_getStallsByTypeForApplicant('${type}', ${applicant_id}, "${areaList}")`)
+      
+      const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, areaList])
       stalls = stallsRows[0]
 
       // Get raffle/auction participation status (only needed for regular applicants; SP handles it for general)
@@ -272,7 +276,7 @@ export const getStallsByType = async (req, res) => {
         `SELECT DISTINCT r.stall_id 
          FROM raffle_participants rp 
          INNER JOIN raffle r ON rp.raffle_id = r.raffle_id 
-         WHERE rp.applicant_id = ?`,
+         WHERE rp.applicant_id = ? AND rp.status != 'Removed'`,
         [applicant_id]
       )
       joinedRaffleStallIds = new Set(raffleParticipations.map(r => r.stall_id))
@@ -283,7 +287,7 @@ export const getStallsByType = async (req, res) => {
           `SELECT DISTINCT a.stall_id 
            FROM auction_participants ap 
            INNER JOIN auction a ON ap.auction_id = a.auction_id 
-           WHERE ap.applicant_id = ?`,
+           WHERE ap.applicant_id = ? AND ap.status != 'Removed'`,
           [applicant_id]
         )
         joinedAuctionStallIds = new Set(auctionParticipations.map(a => a.stall_id))
@@ -304,11 +308,11 @@ export const getStallsByType = async (req, res) => {
     // Filter out stalls that this user has already joined via raffle or auction
     if (applicant_id) {
       const [joinedRaffleRows] = await connection.execute(
-        `SELECT DISTINCT r.stall_id FROM raffle_participants rp JOIN raffle r ON rp.raffle_id = r.raffle_id WHERE rp.applicant_id = ?`,
+        `SELECT DISTINCT r.stall_id FROM raffle_participants rp JOIN raffle r ON rp.raffle_id = r.raffle_id WHERE rp.applicant_id = ? AND rp.status != 'Removed'`,
         [applicant_id]
       )
       const [joinedAuctionRows] = await connection.execute(
-        `SELECT DISTINCT a.stall_id FROM auction_participants ap JOIN auction a ON ap.auction_id = a.auction_id WHERE ap.applicant_id = ?`,
+        `SELECT DISTINCT a.stall_id FROM auction_participants ap JOIN auction a ON ap.auction_id = a.auction_id WHERE ap.applicant_id = ? AND ap.status != 'Removed'`,
         [applicant_id]
       )
       const joinedStallIds = new Set([

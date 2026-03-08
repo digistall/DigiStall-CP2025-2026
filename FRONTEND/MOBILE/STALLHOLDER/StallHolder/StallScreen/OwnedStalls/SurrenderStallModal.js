@@ -26,7 +26,6 @@ const SurrenderStallModal = ({ visible, onClose, stall, theme, isDarkMode, onSuc
   const [submitting, setSubmitting] = useState(false);
   
   // Form State - Survey
-  const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
 
   // Local popup states for blending with mobile app design
@@ -56,7 +55,6 @@ const SurrenderStallModal = ({ visible, onClose, stall, theme, isDarkMode, onSuc
     setReason('');
     setMoveOutDate(new Date());
     setShowDatePicker(false);
-    setRating(0);
     setFeedback('');
     setStatusResult(null);
     setLocalFeedback(null);
@@ -150,10 +148,6 @@ const SurrenderStallModal = ({ visible, onClose, stall, theme, isDarkMode, onSuc
   };
 
   const submitSurvey = async () => {
-    if (rating === 0) {
-      setLocalFeedback({ type: 'error', message: 'Please provide a rating' });
-      return;
-    }
     setSubmitting(true);
     try {
       const token = await UserStorageService.getAuthToken();
@@ -167,7 +161,6 @@ const SurrenderStallModal = ({ visible, onClose, stall, theme, isDarkMode, onSuc
         body: JSON.stringify({
           requestId: statusResult?.existing_request?.request_id,
           stall_id: stall.stall_id,
-          rating,
           feedback
         })
       });
@@ -243,19 +236,6 @@ const SurrenderStallModal = ({ visible, onClose, stall, theme, isDarkMode, onSuc
             Your surrender request has been approved. Please complete this brief survey to finalize the surrender process.
           </Text>
           
-          <Text style={[styles.label, { color: colors.text }]}>How would you rate this stall location?</Text>
-          <View style={styles.ratingContainer}>
-            {[1, 2, 3, 4, 5].map(star => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                <Ionicons 
-                  name={rating >= star ? "star" : "star-outline"} 
-                  size={36} 
-                  color="#f59e0b" 
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-
           <Text style={[styles.label, { color: colors.text, marginTop: 16 }]}>Message for the next tenant (Optional)</Text>
           <TextInput
             style={[styles.input, styles.textArea, { 
