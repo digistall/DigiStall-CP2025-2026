@@ -233,11 +233,15 @@
 }
 
 .table-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 16px 24px !important;
+  background: rgb(0, 33, 129) !important;
+  color: white !important;
+  border-bottom: none !important;
+  padding: 16px 20px !important;
   font-size: 1.1rem !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
 }
 
 /* Custom Table Styles */
@@ -248,20 +252,20 @@
 }
 
 .custom-table :deep(thead th:first-child) {
-  padding-left: 12px !important;
+  padding-left: 16px !important;
 }
 
 .custom-table :deep(thead th) {
   background-color: rgb(0, 33, 129) !important;
   color: #ffffff !important;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 16px 12px;
-  border-bottom: 2px solid #e0e0e0;
+  padding: 12px 16px;
+  border-bottom: 2px solid #1565c0;
   white-space: nowrap;
-  text-align: center !important;
+  text-align: left !important;
   /* For sticky header support */
   position: sticky;
   top: 0;
@@ -278,16 +282,18 @@
 }
 
 .custom-table tbody td {
-  padding: 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   vertical-align: middle;
-  font-size: 0.9rem;
-  text-align: center !important;
+  font-size: 14px;
+  font-weight: 400;
+  color: #2c3e50;
+  text-align: left !important;
 }
 
 .custom-table tbody td:first-child {
-  text-align: center !important;
-  padding-left: 12px !important;
+  text-align: left !important;
+  padding-left: 16px !important;
 }
 
 .initials-avatar {
