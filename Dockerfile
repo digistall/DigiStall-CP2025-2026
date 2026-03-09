@@ -7,7 +7,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies for native modules (sharp, bcrypt, etc.)
-RUN apk add --no-cache python3 make g++ vips-dev
+RUN apk add --no-cache python3 make g++ vips-dev libc6-compat
 
 # Copy package files
 COPY package*.json ./
