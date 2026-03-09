@@ -1,20 +1,35 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="payment-container">
     <div class="payment-page">
       <!-- Main Content -->
-      <v-main class="payment-main-content">
+      <div class="payment-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
         <LoadingOverlay :loading="loading" text="Loading payment data..." :full-page="false" />
 
-        <v-container fluid class="main-content">
+        <div class="feature-content-inner">
           <v-row>
             <v-col cols="12">
-              <!-- Payment Type Selector -->
-              <PaymentTypeSelector
-                :selected-type="selectedPaymentType"
-                @update:selected-type="handleTypeChange"
-              />
+              <!-- Tab Navigation Container -->
+              <v-card elevation="2" class="rounded-lg mb-4 d-inline-flex">
+                <v-tabs
+                  v-model="selectedPaymentType"
+                  color="primary"
+                  bg-color="white"
+                  slider-color="primary"
+                  align-tabs="start"
+                >
+                  <v-tab value="stall" class="text-subtitle-1 font-weight-bold"
+                    >STALL APPLICANTS</v-tab
+                  >
+                  <v-tab value="daily" class="text-subtitle-1 font-weight-bold"
+                    >DAILY PAYMENTS</v-tab
+                  >
+                  <v-tab value="penalty" class="text-subtitle-1 font-weight-bold"
+                    >PENALTY PAYMENTS</v-tab
+                  >
+                </v-tabs>
+              </v-card>
 
               <!-- Stall Applicants Payment Section -->
               <transition name="slide-fade" mode="out-in">
@@ -34,10 +49,10 @@
               </transition>
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
     </div>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Payment.js"></script>

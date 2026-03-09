@@ -2,7 +2,7 @@
   <div class="search-filter-section mb-6">
     <div class="search-wrapper">
       <!-- Search Bar -->
-      <v-col cols="12" md="6" lg="4">
+      <div class="search-input-wrapper">
         <v-text-field
           v-model="searchQuery"
           label="Search anything"
@@ -13,7 +13,7 @@
           class="search-field"
           placeholder="Search ID, Type, Inspector, Stallholder, or Status..."
         ></v-text-field>
-      </v-col>
+      </div>
 
       <!-- Filter Button -->
       <div class="filter-container" ref="filterContainer">
@@ -185,5 +185,3 @@
 
 <script src="./ComplianceSearch.js"></script>
 <style scoped src="./ComplianceSearch.css"></style>
-
-

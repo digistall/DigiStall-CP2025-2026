@@ -114,8 +114,7 @@
                       ></v-select>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Business Information Tab -->
               <v-window-item>
@@ -195,8 +194,7 @@
                       ></v-select>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Contract & Payment Tab -->
               <v-window-item>
@@ -288,12 +286,10 @@
                       ></v-textarea>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
             </v-window>
           </v-form>
-        </v-container>
-      </v-card-text>
+        </v-container></v-card-text>
 
       <v-divider></v-divider>
       <v-card-actions class="px-6 py-4">

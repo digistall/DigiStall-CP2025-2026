@@ -1,4 +1,3 @@
-import PaymentTypeSelector from './Components/PaymentTypeSelector/PaymentTypeSelector.vue'
 import StallPayments from './Components/StallPayments/StallPayments.vue'
 import DailyPayments from './Components/DailyPayments/DailyPayments.vue'
 import PenaltyPayments from './Components/PenaltyPayments/PenaltyPayments.vue'
@@ -7,7 +6,6 @@ import LoadingOverlay from '@common/LoadingOverlay/LoadingOverlay.vue'
 export default {
   name: 'Payment',
   components: {
-    PaymentTypeSelector,
     StallPayments,
     DailyPayments,
     PenaltyPayments,

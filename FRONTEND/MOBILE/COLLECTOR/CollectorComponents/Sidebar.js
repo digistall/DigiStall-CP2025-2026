@@ -47,15 +47,15 @@ const Sidebar = ({
       try {
         const storedUserData = await UserStorageService.getUserData();
         console.log(
-          "Collector Sidebar - Retrieved user data:",
+          "🔌 Collector Sidebar - Retrieved user data:",
           JSON.stringify(storedUserData, null, 2)
         );
         if (storedUserData && (storedUserData.staff || storedUserData.user)) {
           const userData = storedUserData.staff || storedUserData.user;
           setUserData(userData);
-          console.log("Collector Sidebar - Set user data:", userData);
+          console.log("👤 Collector Sidebar - Set user data:", userData);
         } else {
-          console.log("Γ¥î Collector Sidebar - No user data found");
+          console.log("⚠ Collector Sidebar - No user data found");
         }
       } catch (error) {
         console.error("Error loading user data for collector sidebar:", error);
@@ -212,12 +212,14 @@ const Sidebar = ({
               onPress={() => onMenuItemPress("logout")}
               activeOpacity={0.7}
             >
-              <Image
-                source={require("../../assets/Home-Image/LogoutIcon.png")}
-                style={{ width: 24, height: 24, tintColor: '#ef4444' }}
-              />
+              <View style={styles.logoutIconContainer}>
+                <Image
+                  source={require('../../assets/Home-Image/LogoutIcon.png')}
+                  style={{ width: 24, height: 24, tintColor: '#ef4444' }}
+                />
+              </View>
               <Text style={[styles.menuItemText, styles.logoutText]}>
-                Logout
+                Sign Out
               </Text>
             </TouchableOpacity>
           </ScrollView>

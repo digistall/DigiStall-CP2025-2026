@@ -17,7 +17,7 @@
 
 /* Tab content container */
 .tab-content {
-  min-height: calc(100vh - 180px);
+  min-height: 100%;
 }
 
 /* Main container */

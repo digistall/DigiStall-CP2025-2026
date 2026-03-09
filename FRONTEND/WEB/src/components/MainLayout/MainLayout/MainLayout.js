@@ -14,6 +14,7 @@ export default {
       isLoggingOut: false,
       showLogoutConfirm: false,
       currentUserName: '',
+      isSidebarExpanded: false,
       // Base menu items - will be updated based on user type
       menuItems: [],
       // Define menu items for different user types
@@ -25,18 +26,29 @@ export default {
       ],
       businessOwnerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
+        { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
+        { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
+        { id: 8, icon: 'mdi-account-multiple', name: 'Stallholders', route: '/app/stallholders' },
+        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors' },
+        { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
+        { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
-        { id: 3, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
-        { id: 4, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
-        { id: 5, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
-        { id: 50, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
+        { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees' },
+        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
+        { id: 13, icon: 'mdi-credit-card-outline', name: 'My Subscription', route: '/app/subscription' },
+        { id: 14, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
       ],
       businessManagerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
-        { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
+        { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
         { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
+        { id: 8, icon: 'mdi-account-multiple', name: 'Stallholders', route: '/app/stallholders' },
+        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors' },
         { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
         { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
+        { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
+        { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees' },
+        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
       ],
       // Business Employee menu items based on permissions
       businessEmployeeMenuItems: {
@@ -58,6 +70,7 @@ export default {
           route: '/app/stallholders',
         },
         stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
+        stallTracker: { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
       },
       // Define all possible menu routes including "more items" (6-10)
       allMenuRoutes: {
@@ -70,6 +83,7 @@ export default {
         7: '/app/vendors', // Vendors
         8: '/app/stallholders', // Stallholders
         9: '/app/stalls', // Stalls
+        10: '/app/stall-tracker', // Stall Tracker
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
       },
@@ -149,6 +163,7 @@ export default {
         }
         if (hasPermission('stalls')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.stalls, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.stallTracker, id: menuId++ })
         }
         // NOTE: Collectors and Inspectors are now managed through Employee Management page
 
@@ -250,6 +265,12 @@ export default {
       if (this.$refs.appSidebar && this.$refs.appSidebar.refreshStallTypes) {
         await this.$refs.appSidebar.refreshStallTypes()
       }
+    },
+
+    // Handle sidebar toggle for content responsiveness
+    handleSidebarToggle(expanded) {
+      console.log('🔧 MainLayout: Sidebar toggle received:', expanded)
+      this.isSidebarExpanded = expanded
     },
   },
 }

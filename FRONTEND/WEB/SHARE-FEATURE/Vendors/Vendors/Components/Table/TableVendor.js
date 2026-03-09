@@ -45,4 +45,32 @@ export default {
       this.currentPage = 1
     },
   },
+  methods: {
+    openAddVendor() {
+      this.showChoiceModal = true
+    },
+    closeChoiceModal() {
+      this.showChoiceModal = false
+    },
+    handleVendorAdded(vendorData) {
+      this.$emit('vendor-added', vendorData)
+    },
+    handleImportCompleted(importData) {
+      this.$emit('import-completed', importData)
+    },
+    handleShowMessage(messageData) {
+      this.$emit('show-message', messageData)
+    },
+    handleRefreshVendors() {
+      this.$emit('refresh-vendors')
+    },
+    getInitials(name) {
+      if (!name) return '??'
+      const parts = name.split(' ')
+      if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+      }
+      return name.charAt(0).toUpperCase()
+    },
+  },
 }

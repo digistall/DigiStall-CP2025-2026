@@ -1,4 +1,4 @@
-﻿﻿<template>
+<template>
   <v-dialog v-model="visibleModel" max-width="1200px" persistent scrollable>
     <v-card>
       <!-- Header -->
@@ -142,7 +142,10 @@
                   <!-- Spouse Section -->
                   <v-row dense>
                     <v-col cols="12">
-                      <div class="text-subtitle-1 mb-2 mt-2">Spouse Information</div>
+                      <div class="text-subtitle-1 mb-2 mt-2">
+                        Spouse Information
+                        <span class="text-caption">(if applicable)</span>
+                      </div>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -240,8 +243,7 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Business Information Tab -->
               <v-window-item>
@@ -297,7 +299,8 @@
                         hint="e.g., Panganiban Sidewalk, Naga City Public Market"
                         persistent-hint
                         required
-                      ></v-text-field>
+                        @update:search-input="form.locationSearch = $event"
+                      ></v-autocomplete>
                     </v-col>
                     <v-col cols="12" md="6">
                       <v-text-field
@@ -335,8 +338,7 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Documents Tab -->
               <v-window-item>
@@ -433,18 +435,16 @@
                       <v-alert type="info" variant="tonal" density="compact" class="mb-0">
                         <div class="text-caption">
                           <v-icon size="small" class="mr-1">mdi-information</v-icon>
-                          Documents can be uploaded during vendor creation or added later through
-                          the vendor details page.
+                          Documents can be uploaded during vendor creation or added later
+                          through the vendor details page.
                         </div>
                       </v-alert>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
             </v-window>
           </v-form>
-        </v-container>
-      </v-card-text>
+        </v-container></v-card-text>
 
       <v-divider></v-divider>
       <!-- Action Buttons (matching Stallholders) -->
@@ -465,6 +465,14 @@
         @close="toast.show = false"
       />
     </v-card>
+
+    <!-- Success Snackbar -->
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="snackbar.timeout" location="top">
+      {{ snackbar.message }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
+      </template>
+    </v-snackbar>
   </v-dialog>
 </template>
 

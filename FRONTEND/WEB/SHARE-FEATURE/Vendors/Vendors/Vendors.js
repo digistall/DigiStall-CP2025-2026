@@ -57,6 +57,8 @@ export default {
         timeout: 3000,
       },
 
+      vendorSaveSuccess: false,
+
       newVendor: {
         id: '',
         name: '',
@@ -187,14 +189,21 @@ export default {
           body: JSON.stringify(payload),
         })
 
+        const result = await response.json()
+
         if (!response.ok) {
-          throw new Error(`Failed to create vendor: ${response.status}`)
+          const serverMsg = result?.error || result?.message || `Status ${response.status}`
+          throw new Error(serverMsg)
         }
 
-        const result = await response.json()
         console.log('✅ Vendor created:', result)
 
-        this.showNotification('Vendor created successfully!', 'success')
+        // Signal success to the dialog
+        this.vendorSaveSuccess = true
+        // Reset the flag after a delay so the dialog can detect changes next time
+        setTimeout(() => {
+          this.vendorSaveSuccess = false
+        }, 100)
 
         // Reload vendors list
         await this.initializeVendors()

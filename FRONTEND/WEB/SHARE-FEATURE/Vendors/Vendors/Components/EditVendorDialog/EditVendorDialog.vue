@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <v-dialog v-model="model" max-width="1200px" persistent scrollable>
     <v-card>
       <!-- Header with gradient matching VendorDetailsDialog -->
@@ -241,8 +241,7 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Business Information Tab -->
               <v-window-item>
@@ -328,8 +327,7 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Documents Tab -->
               <v-window-item>
@@ -426,12 +424,10 @@
                       ></v-file-input>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
             </v-window>
           </v-form>
-        </v-container>
-      </v-card-text>
+        </v-container></v-card-text>
 
       <v-card-actions class="px-6 py-4">
         <v-spacer></v-spacer>

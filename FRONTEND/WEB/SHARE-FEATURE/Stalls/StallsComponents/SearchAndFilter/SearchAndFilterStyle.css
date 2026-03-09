@@ -20,9 +20,13 @@
 }
 
 /* Search input */
-.search-field {
+.search-input-wrapper {
   flex: 1;
   max-width: 450px;
+}
+
+.search-field {
+  width: 100%;
 }
 
 .search-field .v-field {

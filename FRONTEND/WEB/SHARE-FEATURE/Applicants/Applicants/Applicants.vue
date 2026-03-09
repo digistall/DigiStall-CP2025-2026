@@ -1,51 +1,37 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-  <v-app>
+  <div class="applicants-container">
     <div>
       <!-- Main Content -->
-      <v-main>
-        <v-container fluid class="main-content">
+      <div class="applicants-main-content">
+        <div class="feature-content-inner">
           <!-- Standardized Loading Overlay -->
-          <LoadingOverlay 
-            :loading="loading && currentApplicantType === 'Stall Applicants'" 
+          <LoadingOverlay
+            :loading="loading && currentApplicantType === 'Stall Applicants'"
             text="Loading stall applicants..."
             :full-page="false"
           />
-          
+
           <v-row>
             <v-col cols="12">
-              <!-- Page Title with Dropdown -->
-              <div class="page-header mb-6">
-                <div class="title-dropdown-container" ref="applicantDropdown">
-                  <h2
-                    class="text-h4 font-weight-bold title-with-arrow"
-                    @click="toggleDropdown"
+              <!-- Tab Navigation Container -->
+              <v-card elevation="2" class="rounded-lg mb-4 d-inline-flex">
+                <v-tabs
+                  v-model="currentApplicantType"
+                  color="primary"
+                  bg-color="white"
+                  slider-color="primary"
+                  align-tabs="start"
+                  @update:modelValue="onTabChange"
+                >
+                  <v-tab value="Stall Applicants" class="text-subtitle-1 font-weight-bold"
+                    >STALL APPLICANTS</v-tab
                   >
-                    {{ currentApplicantType }}
-                    <v-icon
-                      :class="{ 'arrow-rotated': showDropdown }"
-                      class="dropdown-arrow"
-                    >
-                      mdi-chevron-down
-                    </v-icon>
-                  </h2>
-
-                  <!-- Dropdown Menu -->
-                  <transition name="dropdown">
-                    <div v-if="showDropdown" class="dropdown-menu">
-                      <div
-                        v-for="type in applicantTypes"
-                        :key="type.value"
-                        class="dropdown-item"
-                        :class="{ active: currentApplicantType === type.label }"
-                        @click="selectApplicantType(type)"
-                      >
-                        {{ type.label }}
-                      </div>
-                    </div>
-                  </transition>
-                </div>
-              </div>
+                  <v-tab value="Vendor Applicants" class="text-subtitle-1 font-weight-bold"
+                    >VENDOR APPLICANTS</v-tab
+                  >
+                </v-tabs>
+              </v-card>
 
               <!-- Search and Filter Section -->
               <VendorSearchFilter @search="handleSearch" @filter="handleFilter" />
@@ -83,8 +69,8 @@
               />
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
+      </div>
 
       <!-- Approve Applicant Modal -->
       <ApproveApplicants
@@ -111,20 +97,15 @@
       :entity="crudLoading.entity"
       :message="crudLoading.message"
       :sub-message="crudLoading.subMessage"
-      :full-page="true"
+      :full-page="false"
     />
 
     <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showErrorSnackbar"
-      :timeout="4000"
-      location="bottom left"
-      color="#f44336"
-    >
+    <v-snackbar v-model="showErrorSnackbar" :timeout="4000" location="bottom left" color="#f44336">
       <v-icon class="mr-2">mdi-alert-circle</v-icon>
       {{ snackbarMessage }}
     </v-snackbar>
-  </v-app>
+  </div>
 </template>
 
 <script src="./Applicants.js"></script>

@@ -78,6 +78,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+  justify-content: center !important;
 }
 
 .table-cell {
@@ -89,16 +90,16 @@
   vertical-align: middle;
 }
 
-/* Column specific styles */
-.id-col {
-  justify-content: center;
-  font-weight: 600;
-  color: #1976d2;
+/* Column specific styles - all centered */
+.name-col {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  font-weight: 400 !important;
 }
 
-.name-col {
-  justify-content: flex-start;
-  font-weight: 500;
+.header-cell.name-col {
+  justify-content: center !important;
+  text-align: center !important;
 }
 
 .business-col {
@@ -122,6 +123,57 @@
 
 .status-col {
   justify-content: center;
+  text-align: center;
+}
+
+.compliance-col {
+  justify-content: center;
+  text-align: center;
+}
+
+.actions-col {
+  justify-content: center;
+  gap: 8px;
+}
+
+.vendor-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #002181;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.vendor-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-weight: 400 !important;
+  color: #2c3e50;
+}
+
+.actions-col .v-btn {
+  transition: all 0.2s ease;
+}
+
+.actions-col .v-btn:hover {
+  background-color: rgba(0, 33, 129, 0.1);
+  transform: scale(1.1);
 }
 
 /* Business info styling */

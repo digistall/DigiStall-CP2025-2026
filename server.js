@@ -62,6 +62,8 @@ import loginRouter from './routes/loginRouter.js';
 // STALL-HOLDER Mobile routes
 import stallholderMobileRoutes from './routes/stallholderRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import mobileSurrenderRoutes from './routes/mobileSurrenderRoutes.js';
+import webSurrenderRoutes from './routes/webSurrenderRoutes.js';
 
 // Activity Log routes
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
@@ -102,6 +104,7 @@ app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRo
 app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
 app.use('/api/stallholders', stallholdersManagementRoutes);  // Stallholders management (admin/manager)
 app.use('/api/documents', documentRoutes);  // Document submissions (web)
+app.use('/api/surrender', enhancedAuthMiddleware.authenticateToken, webSurrenderRoutes);
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
@@ -120,6 +123,7 @@ console.log('✅ EMPLOYEE routes loaded');
 app.use('/api/mobile/stallholder', stallholderMobileRoutes);
 app.use('/api/mobile/user', userRoutes);
 app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
+app.use('/api/mobile/surrender', enhancedAuthMiddleware.authenticateToken, mobileSurrenderRoutes);
 console.log('✅ STALL-HOLDER routes loaded');
 
 // ACTIVITY LOG ROUTES

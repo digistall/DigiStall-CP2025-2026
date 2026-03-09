@@ -72,42 +72,49 @@ export async function createVendor(req, res) {
 
     console.log(`🏪 Creating vendor with relations: ${firstName} ${lastName}`);
 
-    // Create vendor using stored procedure with all relations
-    const [insertResult] = await connection.execute(
-      `CALL createVendorWithRelations(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        // Vendor personal info
-        firstName,
-        lastName,
-        middleName || null,
-        suffix || null,
-        contactNumber || null,
-        email || null,
-        birthdate || null,
-        gender || null,
-        address || null,
-        vendorIdentifier || null,
-        status || "Active",
-        // Spouse info
-        spouseFullName || null,
-        spouseAge || null,
-        spouseBirthdate || null,
-        spouseEducation || null,
-        spouseContact || null,
-        spouseOccupation || null,
-        // Child info
-        childFullName || null,
-        childAge || null,
-        childBirthdate || null,
-        // Business info
-        businessName || null,
-        businessType || null,
-        businessDescription || null,
-        vendingTimeStart || null,
-        vendingTimeEnd || null,
-        // Location info
-        locationName || null,
-      ]
+    // Build parameter array for the stored procedure (27 params)
+    const params = [
+      // Vendor personal info (11)
+      firstName,
+      lastName,
+      middleName || null,
+      suffix || null,
+      contactNumber || null,
+      email || null,
+      formatDateForDB(birthdate),
+      gender || null,
+      address || null,
+      vendorIdentifier || null,
+      status || "Active",
+      // Spouse info (6)
+      spouseFullName || null,
+      spouseAge ? parseInt(spouseAge, 10) : null,
+      formatDateForDB(spouseBirthdate),
+      spouseEducation || null,
+      spouseContact || null,
+      spouseOccupation || null,
+      // Child info (3)
+      childFullName || null,
+      childAge ? parseInt(childAge, 10) : null,
+      formatDateForDB(childBirthdate),
+      // Business info (5)
+      businessName || null,
+      businessType || null,
+      businessDescription || null,
+      vendingTimeStart || null,
+      vendingTimeEnd || null,
+      // Location info (2)
+      assignedLocationId ? parseInt(assignedLocationId, 10) : null,
+      locationName || null,
+    ];
+
+    console.log("📦 Create vendor params:", JSON.stringify(params));
+
+    // Use query() instead of execute() to avoid prepared statement protocol
+    // issues with mysql2 and DigitalOcean MySQL ANSI mode
+    const [insertResult] = await connection.query(
+      `CALL createVendorWithRelations(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params,
     );
 
     const vendorId = insertResult[0]?.[0]?.vendor_id;
@@ -126,11 +133,13 @@ export async function createVendor(req, res) {
       },
     });
   } catch (error) {
-    console.error("❌ Error creating vendor:", error);
+    console.error("❌ Error creating vendor:", error.message);
+    console.error("   SQL State:", error.sqlState, "| Code:", error.code, "| Errno:", error.errno);
+    console.error("   SQL Message:", error.sqlMessage || error.message);
     res.status(500).json({
       success: false,
       message: "Failed to create vendor",
-      error: error.message,
+      error: error.sqlMessage || error.message,
     });
   } finally {
     if (connection) await connection.end();
@@ -266,43 +275,65 @@ export async function updateVendor(req, res) {
 
     console.log(`🔄 Updating vendor with relations: ${id}`);
 
-    // Update vendor with all relations using stored procedure
-    await connection.execute(
-      `CALL updateVendorWithRelations(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        // Vendor personal info
-        firstName,
-        lastName,
-        middleName || null,
-        suffix || null,
-        contactNumber || null,
-        email || null,
-        birthdate || null,
-        gender || null,
-        address || null,
-        vendorIdentifier || null,
-        status || "Active",
-        // Spouse info
-        spouseFullName || null,
-        spouseAge || null,
-        spouseBirthdate || null,
-        spouseEducation || null,
-        spouseContact || null,
-        spouseOccupation || null,
-        // Child info
-        childFullName || null,
-        childAge || null,
-        childBirthdate || null,
-        // Business info
-        businessName || null,
-        businessType || null,
-        businessDescription || null,
-        vendingTimeStart || null,
-        vendingTimeEnd || null,
-        // Location info
-        locationName || null,
-      ]
+    console.log("📦 Update payload received:", {
+      id,
+      firstName,
+      lastName,
+      suffix,
+      birthdate,
+      spouseFullName,
+      spouseAge,
+      spouseBirthdate,
+      childFullName,
+      childAge,
+      childBirthdate,
+      businessName,
+      vendingTimeStart,
+      vendingTimeEnd,
+      assignedLocationId,
+    });
+
+    // Build parameter array for the stored procedure (28 params)
+    const updateParams = [
+      id,
+      // Vendor personal info (11)
+      firstName,
+      lastName,
+      middleName || null,
+      suffix || null,
+      contactNumber || null,
+      email || null,
+      formatDateForDB(birthdate),
+      gender || null,
+      address || null,
+      vendorIdentifier || null,
+      status || "Active",
+      // Spouse info (6)
+      spouseFullName || null,
+      spouseAge ? parseInt(spouseAge, 10) : null,
+      formatDateForDB(spouseBirthdate),
+      spouseEducation || null,
+      spouseContact || null,
+      spouseOccupation || null,
+      // Child info (3)
+      childFullName || null,
+      childAge ? parseInt(childAge, 10) : null,
+      formatDateForDB(childBirthdate),
+      // Business info (5)
+      businessName || null,
+      businessType || null,
+      businessDescription || null,
+      vendingTimeStart || null,
+      vendingTimeEnd || null,
+      // Location info (2)
+      assignedLocationId ? parseInt(assignedLocationId, 10) : null,
+      locationName || null,
+    ];
+
+    // Use query() instead of execute() to avoid prepared statement protocol issues
+    const [updateResult] = await connection.query(
+      `CALL updateVendorWithRelations(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      updateParams,
     );
 
     console.log("✅ Vendor updated successfully");

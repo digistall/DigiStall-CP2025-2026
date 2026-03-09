@@ -84,11 +84,11 @@ export default {
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase()
         filtered = filtered.filter(stallholder =>
-          stallholder.fullName?.toLowerCase().includes(query) ||
+          stallholder.stallholder_name?.toLowerCase().includes(query) ||
           stallholder.email?.toLowerCase().includes(query) ||
-          stallholder.phoneNumber?.toLowerCase().includes(query) ||
-          stallholder.stallNumber?.toLowerCase().includes(query) ||
-          stallholder.businessName?.toLowerCase().includes(query)
+          stallholder.contact_number?.toLowerCase().includes(query) ||
+          stallholder.stall_no?.toLowerCase().includes(query) ||
+          stallholder.business_name?.toLowerCase().includes(query)
         )
       }
 
@@ -167,6 +167,14 @@ export default {
     }
   },
   methods: {
+    getInitials(name) {
+      if (!name) return '?'
+      const names = name.split(' ')
+      if (names.length >= 2) {
+        return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase()
+      }
+      return name.charAt(0).toUpperCase()
+    },
     async fetchStallholders() {
       this.loading = true
       this.dataReady = false // Reset data ready state
@@ -593,6 +601,11 @@ export default {
       } finally {
         this.processingDocId = null
       }
+    },
+
+    handleRejectDocument(doc) {
+      this.openRejectDialog(doc)
+      this.showDocPreviewDialog = false
     },
 
     openRejectDialog(doc) {

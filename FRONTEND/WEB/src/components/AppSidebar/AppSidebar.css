@@ -1,15 +1,8 @@
-/* Sidebar Styles - FIXED POSITION */
 .sidebar {
-  background-color: #f8f9fa;
+  background-color: #ffffff !important;
   border-right: 1px solid #e0e0e0;
   height: 100vh !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 80px;
-  transition: width 0.3s ease;
-  z-index: 1500 !important; /* Highest z-index - above header */
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   overflow: hidden;
 }
 
@@ -20,10 +13,39 @@
 
 /* Logo Section */
 .logo-section {
-  padding: 16px;
-  cursor: pointer;
+  padding: 0;
+  cursor: default;
   position: relative;
   z-index: 1;
+}
+
+.hamburger-btn {
+  transition: transform 0.2s ease;
+  margin: 0 !important;
+}
+
+.sidebar:not(.v-navigation-drawer--is-mobile) .v-list-item.collapsed {
+  display: flex !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.sidebar:not(.v-navigation-drawer--is-mobile) .v-list-item.collapsed .item-container {
+  justify-content: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.sidebar:not(.v-navigation-drawer--is-mobile) .v-list-item.collapsed .sidebar-icon {
+  margin-right: 0 !important;
+}
+
+.hamburger-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.clickable {
+  cursor: pointer;
 }
 
 .logo-container {
@@ -75,7 +97,7 @@
 }
 
 .sidebar-item.collapsed {
-  margin: 4px 12px;
+  margin: 4px auto;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -205,7 +227,7 @@
 /* Stalls Submenu Styles - FIXED ICON ALIGNMENT */
 /* When sidebar is collapsed (not hovered) */
 .sidebar-item.collapsed.has-submenu {
-  margin: 4px 12px;
+  margin: 4px auto;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;

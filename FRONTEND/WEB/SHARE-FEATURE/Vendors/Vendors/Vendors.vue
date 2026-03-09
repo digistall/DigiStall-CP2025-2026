@@ -2,18 +2,14 @@
 <!-- eslint-disable vue/valid-v-slot -->
 <!--eslint-disable-next-line vue/multi-word-component-names-->
 <template>
-  <v-app>
+  <div class="vendors-container">
     <div>
       <!-- Main Content -->
-      <v-main class="vendors-main-content">
+      <div class="vendors-main-content">
         <!-- Standardized Loading Overlay - contained within main content -->
-        <LoadingOverlay 
-          :loading="loading" 
-          text="Loading vendors..."
-          :full-page="false"
-        />
+        <LoadingOverlay :loading="loading" text="Loading vendors..." :full-page="false" />
 
-        <v-container fluid class="main-content">
+        <div class="feature-content-inner">
           <v-row>
             <v-col cols="12">
               <!-- Search Component -->
@@ -31,6 +27,8 @@
               <!-- Add Vendor Dialog -->
               <AddVendorDialog
                 :isVisible="addDialog"
+                :loading="loading"
+                :saveSuccess="vendorSaveSuccess"
                 @close="addDialog = false"
                 @save="handleSave"
               />
@@ -52,29 +50,23 @@
               />
             </v-col>
           </v-row>
-        </v-container>
-      </v-main>
+        </div>
 
-      <!-- Floating Action Button for Add Vendor -->
-      <v-btn
-        icon="mdi-plus"
-        fab
-        color="primary"
-        size="large"
-        class="floating-add-btn"
-        @click="openAddDialog"
-        aria-label="Add vendor"
-      ></v-btn>
+        <!-- Snackbar for notifications -->
+        <v-snackbar
+          v-model="snackbar.show"
+          :color="snackbar.color"
+          :timeout="snackbar.timeout"
+          location="top"
+        >
+          {{ snackbar.message }}
+          <template v-slot:actions>
+            <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
+          </template>
+        </v-snackbar>
+      </div>
     </div>
-    <!-- CRUD Loading Overlay -->
-    <CrudLoadingOverlay
-      :visible="crudLoading.visible"
-      :operation="crudLoading.operation"
-      :entity="crudLoading.entity"
-      :message="crudLoading.message"
-      :sub-message="crudLoading.subMessage"
-      :full-page="true"
-    />  </v-app>
+  </div>
 </template>
 
 <script src="./Vendors.js"></script>
