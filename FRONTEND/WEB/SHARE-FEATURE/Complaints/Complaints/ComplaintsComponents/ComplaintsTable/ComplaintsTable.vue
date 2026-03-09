@@ -8,7 +8,7 @@
             <th>Complaint ID</th>
             <th>Date</th>
             <th>Type</th>
-            <th class="sender-header">Sender</th>
+            <th>Sender</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -24,16 +24,12 @@
             <td>{{ complaints.id }}</td>
             <td>{{ complaints.date }}</td>
             <td>{{ complaints.type }}</td>
-            <td class="complaints-name-cell">
-              <div class="complaints-name-wrapper">
-                <div class="complaints-avatar">
-                  {{ complaints.sender ? complaints.sender.charAt(0).toUpperCase() : '?' }}
-                </div>
-                <span>{{ complaints.sender }}</span>
-              </div>
-            </td>
+            <td>{{ complaints.sender }}</td>
             <td>
-              <span class="complaints-status-badge" :class="getStatusClass(complaints.status)">
+              <span
+                class="complaints-status-badge"
+                :class="getStatusClass(complaints.status)"
+              >
                 {{ complaints.status.toUpperCase() }}
               </span>
             </td>
@@ -43,26 +39,14 @@
 
       <!-- Empty State -->
       <div v-if="filteredComplaints.length === 0" class="complaints-empty-state">
-        <svg
-          class="complaints-empty-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
+        <svg class="complaints-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
           <line x1="8" y1="2" x2="8" y2="6"></line>
           <line x1="3" y1="10" x2="21" y2="10"></line>
         </svg>
         <h3>No complaints records found</h3>
-        <p>
-          {{
-            searchQuery
-              ? 'Try adjusting your search criteria'
-              : 'No complaints records available yet'
-          }}
-        </p>
+        <p>{{ searchQuery ? 'Try adjusting your search criteria' : 'No complaints records available yet' }}</p>
       </div>
     </div>
 
@@ -76,7 +60,9 @@
         ← Previous
       </button>
 
-      <span class="complaints-page-info"> Page {{ currentPage }} of {{ totalPages }} </span>
+      <span class="complaints-page-info">
+        Page {{ currentPage }} of {{ totalPages }}
+      </span>
 
       <button
         class="complaints-page-btn"

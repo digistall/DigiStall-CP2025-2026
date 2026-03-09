@@ -30,14 +30,9 @@
   border-top-right-radius: 8px;
 }
 
-.name-header {
-  text-align: center !important;
-  padding-left: 0 !important;
-}
-
 .compliance-table th {
   padding: 16px 12px;
-  text-align: center !important;
+  text-align: center;
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -82,19 +77,8 @@
 .compliance-name-wrapper {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  text-align: left !important;
+  justify-content: center;
   gap: 12px;
-}
-
-.compliance-name-wrapper span {
-  font-weight: 400 !important;
-}
-
-.compliance-name-cell {
-  text-align: left !important;
-  padding-left: 16px !important;
-  min-width: 200px;
 }
 
 .compliance-avatar {
