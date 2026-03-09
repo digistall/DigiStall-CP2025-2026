@@ -17,9 +17,13 @@
       </v-col>
 
       <!-- Buttons Container -->
-      <div class="d-flex align-center gap-2">
+      <div class="d-flex align-center gap-4">
         <!-- Activity Log Button -->
-        <button v-if="showActivityLog" class="activity-log-btn" @click="$emit('open-activity-log')">
+        <button
+          v-if="showActivityLog"
+          class="activity-log-btn mr-3"
+          @click="$emit('open-activity-log')"
+        >
           <v-icon icon="mdi-history" size="small"></v-icon>
           Activity Log
         </button>

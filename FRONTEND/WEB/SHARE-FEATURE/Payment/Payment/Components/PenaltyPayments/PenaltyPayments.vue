@@ -24,7 +24,7 @@
           <table class="payments-table">
             <thead>
               <tr>
-                <th>Stallholder Name</th>
+                <th class="name-header">Stallholder Name</th>
                 <th>Violation</th>
                 <th>Offense #</th>
                 <th>Amount</th>

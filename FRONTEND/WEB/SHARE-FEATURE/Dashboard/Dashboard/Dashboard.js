@@ -2009,5 +2009,13 @@ export default {
       this.downloadExcel(wb, 'collector-performance-report')
       console.log('✅ Collector performance data exported to Excel')
     },
+    getInitials(name) {
+      if (!name) return '??'
+      const parts = name.split(' ')
+      if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+      }
+      return name.charAt(0).toUpperCase()
+    },
   },
 }

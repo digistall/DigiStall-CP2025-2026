@@ -193,7 +193,23 @@
 .name-cell .stallholder-info {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
+}
+
+.name-header, .name-cell {
+  text-align: left !important;
+}
+
+.name-header {
+  justify-content: center !important;
+  text-align: center !important;
+  padding-left: 0 !important;
+}
+
+.name-data {
+  text-align: left !important;
+  padding-left: 16px !important;
 }
 
 .avatar {
@@ -212,11 +228,12 @@
 .name-details {
   display: flex;
   flex-direction: column;
+  text-align: left;
   gap: 2px;
 }
 
 .name {
-  font-weight: 600;
+  font-weight: 400 !important;
   color: #1a1a1a;
 }
 
