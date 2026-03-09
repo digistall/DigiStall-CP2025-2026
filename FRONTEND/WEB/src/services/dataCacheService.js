@@ -8,6 +8,44 @@ class DataCacheService {
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes default
     this.cacheTimers = new Map();
+    this.loadFromStorage();
+  }
+
+  /**
+   * Load cache from localStorage
+   */
+  loadFromStorage() {
+    try {
+      const stored = localStorage.getItem('data_cache');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const now = Date.now();
+        for (const [key, value] of parsed) {
+          if (now - value.timestamp < value.timeout) {
+            this.cache.set(key, value);
+            const remaining = value.timeout - (now - value.timestamp);
+            const timer = setTimeout(() => {
+              this.delete(key);
+            }, remaining);
+            this.cacheTimers.set(key, timer);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load cache from storage', e);
+    }
+  }
+
+  /**
+   * Save cache to localStorage
+   */
+  saveToStorage() {
+    try {
+      const serializableCache = Array.from(this.cache.entries());
+      localStorage.setItem('data_cache', JSON.stringify(serializableCache));
+    } catch (e) {
+       console.warn('Could not save cache to storage', e);
+    }
   }
 
   /**
@@ -44,6 +82,7 @@ class DataCacheService {
 
     this.cacheTimers.set(key, timer);
     
+    this.saveToStorage();
     console.log(`📦 Cached data for: ${key} (expires in ${timeout/1000}s)`);
   }
 
@@ -80,6 +119,7 @@ class DataCacheService {
     
     const deleted = this.cache.delete(key);
     if (deleted) {
+      this.saveToStorage();
       console.log(`📦 Cache cleared for: ${key}`);
     }
     return deleted;
@@ -96,6 +136,7 @@ class DataCacheService {
     
     this.cache.clear();
     this.cacheTimers.clear();
+    this.saveToStorage();
     console.log('📦 All cache cleared');
   }
 

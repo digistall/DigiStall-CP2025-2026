@@ -3,6 +3,7 @@ import { markRaw } from 'vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import * as XLSX from 'xlsx'
 import dashboardSubscription from '@/services/dashboardSubscriptionService.js'
+import { eventBus, EVENTS } from '@/eventBus'
 
 export default {
   name: 'Dashboard',
@@ -90,6 +91,8 @@ export default {
     this.initializeDashboard()
     // Start subscription for real-time updates (replaces polling)
     this.startSubscription()
+    // Listen for global refresh events (e.g., when regaining internet connection)
+    eventBus.on(EVENTS.DATA_REFRESH, this.refreshDashboardData)
   },
   beforeUnmount() {
     this._isMounted = false
@@ -109,6 +112,9 @@ export default {
     // Stop subscription and legacy auto-refresh
     this.stopSubscription()
     this.stopAutoRefresh()
+    
+    // Remove global refresh event listener
+    eventBus.off(EVENTS.DATA_REFRESH, this.refreshDashboardData)
   },
   methods: {
     // ===== SUBSCRIPTION METHODS (Replaces polling) =====

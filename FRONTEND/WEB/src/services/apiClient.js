@@ -8,6 +8,9 @@
 
 import axios from 'axios';
 import authService from './authService';
+import offlineSyncService from './offlineSyncService';
+import dataCacheService from './dataCacheService';
+import { eventBus, EVENTS } from '@/eventBus';
 
 // Create axios instance
 const apiClient = axios.create({
@@ -69,17 +72,68 @@ apiClient.interceptors.request.use(
 // Automatically refresh token on 401 errors
 apiClient.interceptors.response.use(
   (response) => {
-    // Response logging disabled for security
+    // Transparently cache successful GET requests for offline use
+    if (response.config.method?.toLowerCase() === 'get' && response.data) {
+      // Use config.url as a base; if params exist they shouldn't be ignored, but axios usually appends them to url or sends them in config.params.
+      const cacheKey = dataCacheService.generateKey(response.config.url, response.config.params || {});
+      dataCacheService.set(cacheKey, response.data);
+    }
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
+    // Check for offline network errors
+    const isOfflineError = error.code === 'ERR_NETWORK' || !navigator.onLine;
+    
+    if (isOfflineError && originalRequest && !originalRequest._isOfflineRetry) {
+      const method = originalRequest.method?.toLowerCase();
+      
+      // If it's a GET request, try to return from cache
+      if (method === 'get') {
+        const cacheKey = dataCacheService.generateKey(originalRequest.url, originalRequest.params || {});
+        const cachedData = dataCacheService.get(cacheKey);
+        
+        if (cachedData) {
+          console.log(`📡 [OFFLINE] Serving cached data for: ${originalRequest.url}`);
+          return Promise.resolve({
+            data: cachedData,
+            status: 200,
+            statusText: 'OK (Cached)',
+            config: originalRequest,
+            headers: {}
+          });
+        }
+      } 
+      // If it's a mutation (POST, PUT, PATCH, DELETE), queue it offline
+      else if (['post', 'put', 'patch', 'delete'].includes(method)) {
+        offlineSyncService.addRequestToQueue(originalRequest);
+        
+        // Return simulated success response so the UI doesn't crash
+        return Promise.resolve({
+          data: { success: true, message: 'Saved offline. Will sync automatically when connection is restored.' },
+          status: 200,
+          statusText: 'OK',
+          config: originalRequest,
+          headers: {}
+        });
+      }
+    }
+
+    // Handle 500+ Server Errors gracefully
+    if (error.response?.status >= 500) {
+      console.error('🔥 Server Error detected:', error.response.status);
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: 'Server error encountered. Please try again later or contact support.',
+        type: 'error'
+      });
+    }
+
     // If error is not 401 or request is already retried, reject immediately
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    if (error.response?.status !== 401 || originalRequest?._retry) {
       console.error('❌ API Error:', {
         status: error.response?.status,
-        url: originalRequest.url,
+        url: originalRequest?.url,
         message: error.response?.data?.message || error.message
       });
       return Promise.reject(error);
