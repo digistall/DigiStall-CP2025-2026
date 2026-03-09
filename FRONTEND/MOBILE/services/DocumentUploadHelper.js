@@ -72,11 +72,11 @@ class DocumentUploadHelper {
   }
 
   /**
-   * Prepare document for upload (convert to base64 and create payload)
+   * Prepare document for upload (URI-based, no base64 — uses FormData multipart upload)
    * @param {object} file - File object from ImagePicker or DocumentPicker
    * @param {number} stallholderId - Stallholder ID
    * @param {number} documentTypeId - Document type ID
-   * @returns {Promise<object>} - Upload payload with base64 document_data
+   * @returns {Promise<object>} - Upload payload with file URI (no base64)
    */
   static async prepareDocumentForUpload(file, stallholderId, documentTypeId) {
     try {
@@ -124,16 +124,12 @@ class DocumentUploadHelper {
         throw new Error(`File size exceeds 5 MB limit (${(fileSize / 1024 / 1024).toFixed(1)} MB). Please choose a smaller file.`);
       }
 
-      // Convert to base64
-      console.log('📝 Converting file to base64...');
-      const base64Data = await this.convertToBase64(uri);
-      console.log('✅ Base64 conversion complete, length:', base64Data.length);
-
-      // Return base64 payload for JSON upload
+      // Return URI-based payload — no base64 conversion.
+      // ApiService will attach the URI directly to FormData for multipart upload.
       return {
         stallholder_id: stallholderId,
         document_type_id: documentTypeId,
-        document_data: `data:${mimeType};base64,${base64Data}`,
+        uri,
         mime_type: mimeType,
         file_name: fileName,
         file_size: fileSize,

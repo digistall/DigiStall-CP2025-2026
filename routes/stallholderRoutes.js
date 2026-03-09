@@ -89,6 +89,20 @@ const upload = multer({
   }
 });
 
+// In-memory multer for BLOB uploads (React Native FormData — no disk storage)
+const blobUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and PDF are allowed.'));
+    }
+  }
+});
+
 // ===== STALLHOLDER DOCUMENT ROUTES =====
 
 /**
@@ -120,12 +134,12 @@ router.post('/documents/upload', upload.single('file'), compressUploads({ type: 
 
 /**
  * @route POST /api/mobile/stallholder/documents/blob/upload
- * @desc Upload document as BLOB (base64 JSON) to cloud database
- * @body stallholder_id, document_type_id, document_data (base64), mime_type, file_name
- * Note: This endpoint accepts JSON with base64-encoded document_data.
- *       No multer middleware needed - express.json() handles the body parsing.
+ * @desc Upload document as BLOB (multipart FormData or legacy base64 JSON) to cloud database
+ * @body stallholder_id, document_type_id, mime_type, file_name + file (multipart)
+ * Note: blobUpload multer middleware handles multipart FormData from React Native.
+ *       Legacy base64 JSON bodies are also accepted as a fallback.
  */
-router.post('/documents/blob/upload', uploadStallholderDocumentBlob);
+router.post('/documents/blob/upload', blobUpload.single('file'), uploadStallholderDocumentBlob);
 
 /**
  * @route POST /api/mobile/stallholder/documents/submission/blob/upload
