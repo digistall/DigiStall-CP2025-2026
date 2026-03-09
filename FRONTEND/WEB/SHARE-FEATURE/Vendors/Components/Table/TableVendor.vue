@@ -21,14 +21,7 @@
           class="table-row simplified-layout clickable-row"
           @click="$emit('view', vendor.raw || vendor)"
         >
-          <div class="table-cell name-col">
-            <div class="vendor-info">
-              <div class="avatar">{{ getInitials(vendor.name) }}</div>
-              <div class="vendor-details">
-                <div class="name">{{ vendor.name }}</div>
-              </div>
-            </div>
-          </div>
+          <div class="table-cell name-col">{{ vendor.name }}</div>
           <div class="table-cell business-col">{{ vendor.business }}</div>
           <div class="table-cell email-col">{{ vendor.email || 'N/A' }}</div>
           <div class="table-cell phone-col">{{ vendor.phone || 'N/A' }}</div>

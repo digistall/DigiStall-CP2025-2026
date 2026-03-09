@@ -102,7 +102,6 @@
   letter-spacing: 0.5px;
   white-space: nowrap;
   text-align: center;
-  justify-content: center !important;
 }
 
 .table-cell {
@@ -116,14 +115,9 @@
 
 /* Column specific styles - all centered */
 .name-col {
-  justify-content: flex-start !important;
-  text-align: left !important;
-  font-weight: 400 !important;
-}
-
-.header-cell.name-col {
-  justify-content: center !important;
-  text-align: center !important;
+  justify-content: center;
+  text-align: center;
+  font-weight: 500;
 }
 
 .business-col {
@@ -162,37 +156,6 @@
 .actions-col {
   justify-content: center;
   gap: 8px;
-}
-
-.vendor-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #002181;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.vendor-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.name {
-  font-weight: 400 !important;
-  color: #2c3e50;
 }
 
 .actions-col .v-btn {

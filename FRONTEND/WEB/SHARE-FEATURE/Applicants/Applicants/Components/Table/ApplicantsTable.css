@@ -104,55 +104,12 @@
   justify-content: center;
 }
 
-.name-col {
-  justify-content: flex-start;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.header-cell.name-col {
-  justify-content: center !important;
-  text-align: center !important;
-  padding-left: 0 !important;
-}
-
-.table-cell.name-col {
-  padding-left: 16px !important;
-  justify-content: flex-start !important;
-}
-
+.name-col,
 .email-col {
   justify-content: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.applicant-name-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.applicant-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #002181;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.applicant-name-text {
-  font-weight: 400;
-  color: #2c3e50;
 }
 
 .phone-col {
