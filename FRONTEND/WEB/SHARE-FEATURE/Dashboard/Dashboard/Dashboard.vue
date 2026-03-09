@@ -275,9 +275,7 @@
                           </thead>
                           <tbody>
                             <tr v-for="payment in recentPayments" :key="payment.id">
-                              <td>
-                                <span>{{ payment.stallholder }}</span>
-                              </td>
+                              <td class="font-weight-medium">{{ payment.stallholder }}</td>
                               <td>
                                 <v-chip
                                   :color="getPaymentTypeColor(payment.paymentType)"
@@ -346,9 +344,7 @@
                           </thead>
                           <tbody>
                             <tr v-for="employee in activeCollectors" :key="employee.id">
-                              <td>
-                                <span>{{ employee.name }}</span>
-                              </td>
+                              <td class="font-weight-medium">{{ employee.name }}</td>
                               <td>
                                 <v-chip
                                   :color="getRoleColor(employee.type)"
@@ -403,7 +399,7 @@
                         >
                           <thead>
                             <tr>
-                              <th>Stall Number</th>
+                              <th>Stall ID</th>
                               <th>Stallholder</th>
                               <th>Location</th>
                               <th>Monthly Fee</th>
@@ -413,12 +409,10 @@
                           </thead>
                           <tbody>
                             <tr v-for="stall in stallOverview" :key="stall.id">
-                              <td class="font-weight-bold text-primary text-center">
+                              <td class="font-weight-bold text-primary">
                                 {{ stall.stallId }}
                               </td>
-                              <td>
-                                <span>{{ stall.stallholder }}</span>
-                              </td>
+                              <td class="font-weight-medium">{{ stall.stallholder }}</td>
                               <td class="text-grey-600">{{ stall.location }}</td>
                               <td class="text-success font-weight-bold">
                                 ₱{{ stall.monthlyFee.toLocaleString() }}

@@ -65,27 +65,6 @@
 
 .complaints-name-cell {
   min-width: 200px;
-  text-align: left !important;
-}
-
-.sender-header {
-  text-align: left !important;
-}
-
-.complaints-name-wrapper span {
-  font-weight: 400;
-}
-
-.sender-header, .complaints-name-cell {
-  text-align: left !important;
-}
-
-.sender-header {
-  padding-left: 64px !important;
-}
-
-.complaints-name-wrapper span {
-  font-weight: 400;
 }
 
 .complaints-name-wrapper {

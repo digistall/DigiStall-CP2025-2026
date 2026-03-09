@@ -1,4 +1,4 @@
-.employee-table {
+﻿.employee-table {
   background: white;
   border-radius: 8px;
   overflow: hidden;
@@ -62,19 +62,12 @@
   font-size: 13px;
   color: white;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center !important;
-  justify-content: center !important;
-  padding: 0 8px; /* Removed vertical padding from header cells */
-}
-
-.name-col-header {
-  padding-left: 0 !important;
-  text-align: left !important; /* Changed to left for name column */
-  justify-content: flex-start !important; /* Changed to flex-start for name column */
+  justify-content: center;
+  text-align: center;
 }
 
 .table-cell {
@@ -85,13 +78,11 @@
 }
 
 .employee-col.header-cell {
-  justify-content: flex-start;
-  text-align: left;
+  justify-content: center;
 }
 
 .employee-col.table-cell {
-  justify-content: flex-start;
-  text-align: left;
+  justify-content: center;
 }
 
 .role-col,
@@ -118,7 +109,7 @@
 }
 
 .employee-name {
-  font-weight: 400 !important;
+  font-weight: 600;
   color: #2c3e50;
   font-size: 15px;
   line-height: 1.3;
@@ -498,17 +489,6 @@
   letter-spacing: 0 !important;
   transition: all 0.2s ease !important;
   height: auto !important;
-}
-
-.header-cell.name-col {
-  justify-content: center !important;
-  text-align: center !important;
-  padding-left: 0 !important;
-}
-
-.table-cell.name-col {
-  padding-left: 16px !important;
-  justify-content: flex-start !important;
 }
 
 .action-btn .action-text {

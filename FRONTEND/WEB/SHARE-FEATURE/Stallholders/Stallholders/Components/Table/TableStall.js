@@ -167,14 +167,6 @@ export default {
     }
   },
   methods: {
-    getInitials(name) {
-      if (!name) return '?'
-      const names = name.split(' ')
-      if (names.length >= 2) {
-        return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase()
-      }
-      return name.charAt(0).toUpperCase()
-    },
     async fetchStallholders() {
       this.loading = true
       this.dataReady = false // Reset data ready state
@@ -601,11 +593,6 @@ export default {
       } finally {
         this.processingDocId = null
       }
-    },
-
-    handleRejectDocument(doc) {
-      this.openRejectDialog(doc)
-      this.showDocPreviewDialog = false
     },
 
     openRejectDialog(doc) {

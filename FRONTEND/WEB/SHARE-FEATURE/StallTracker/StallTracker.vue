@@ -84,14 +84,6 @@
             class="elevation-2 mt-4 mb-2 custom-shadow-table"
             hover
           >
-            <template v-slot:item.stallholder_name="{ item }">
-              <div class="d-flex align-center">
-                <div class="st-initials-avatar mr-3">
-                  {{ getInitials(item.stallholder_name) }}
-                </div>
-                <span class="st-name-text">{{ item.stallholder_name }}</span>
-              </div>
-            </template>
             <template v-slot:item.action="{ item }">
               <div class="d-flex justify-center">
                 <v-btn
@@ -187,14 +179,6 @@
             class="elevation-2 mt-4 mb-2 custom-shadow-table"
             hover
           >
-            <template v-slot:item.user_fullname="{ item }">
-              <div class="d-flex align-center">
-                <div class="st-initials-avatar mr-3">
-                  {{ getInitials(item.user_fullname) }}
-                </div>
-                <span class="st-name-text">{{ item.user_fullname }}</span>
-              </div>
-            </template>
           </v-data-table>
         </v-window-item>
       </v-window>

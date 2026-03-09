@@ -151,20 +151,8 @@
 /* Column specific styles - all centered */
 .collector-col,
 .vendor-col {
-  justify-content: flex-start;
-  text-align: left;
-}
-
-.header-cell.collector-col,
-.collector-col, .vendor-col {
-  justify-content: center !important;
-  text-align: center !important;
-  padding-left: 0 !important;
-}
-
-.collector-data, .vendor-data {
-  text-align: left !important;
-  padding-left: 16px !important;
+  justify-content: center;
+  text-align: center;
 }
 
 .collector-info,
@@ -193,7 +181,7 @@
 }
 
 .name-text {
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .amount-col {
