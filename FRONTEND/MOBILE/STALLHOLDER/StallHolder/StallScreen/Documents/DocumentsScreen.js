@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from "../../../../services/ApiService";
 import UserStorageService from "../../../../services/UserStorageService";
 import DocumentUploadHelper from "../../../../services/DocumentUploadHelper";
+import PickerActiveFlag from "../../../../services/PickerActiveFlag";
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import AuthenticatedImage from './AuthenticatedImage';
@@ -196,12 +197,17 @@ const DocumentsScreen = () => {
         return;
       }
 
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
+      PickerActiveFlag.set(true);
+      let result;
+      try {
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
+          allowsEditing: false,
+          quality: 0.8,
+        });
+      } finally {
+        PickerActiveFlag.set(false);
+      }
 
       if (!result.canceled && result.assets[0]) {
         await performUpload(result.assets[0], documentTypeId, stallholderId);
@@ -221,12 +227,17 @@ const DocumentsScreen = () => {
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
+      PickerActiveFlag.set(true);
+      let result;
+      try {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],  // Updated from deprecated MediaTypeOptions
+          allowsEditing: false,
+          quality: 0.8,
+        });
+      } finally {
+        PickerActiveFlag.set(false);
+      }
 
       if (!result.canceled && result.assets[0]) {
         await performUpload(result.assets[0], documentTypeId, stallholderId);
@@ -239,10 +250,16 @@ const DocumentsScreen = () => {
 
   const uploadDocument = async (documentTypeId, stallholderId) => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'],
-        copyToCacheDirectory: true,
-      });
+      PickerActiveFlag.set(true);
+      let result;
+      try {
+        result = await DocumentPicker.getDocumentAsync({
+          type: ['application/pdf', 'image/*'],
+          copyToCacheDirectory: true,
+        });
+      } finally {
+        PickerActiveFlag.set(false);
+      }
 
       console.log('📄 Document picker result:', JSON.stringify(result, null, 2));
 
@@ -263,7 +280,7 @@ const DocumentsScreen = () => {
   const performUpload = async (file, documentTypeId, stallholderId) => {
     try {
       setUploading(true);
-      startLoading('upload', 'document');
+      startLoading('upload', 'Document');
 
       // Note: Token is optional for document uploads (backend endpoint is public)
       // We'll still try to get the token for future-proofing when auth is added
@@ -272,7 +289,6 @@ const DocumentsScreen = () => {
         currentToken = await UserStorageService.getAuthToken();
         console.log('📌 Token retrieved from storage:', !!currentToken);
       }
-
       // Continue without token - backend upload endpoint is currently public
       if (!currentToken) {
         console.log('⚠️ No token available, proceeding with upload anyway (endpoint is public)');
@@ -664,13 +680,6 @@ const DocumentsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {uploading && (
-        <View style={styles.uploadingOverlay}>
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.uploadingText}>Uploading...</Text>
-        </View>
-      )}
-
       {/* Document Preview Modal */}
       <DocumentPreviewModal
         visible={previewModalVisible}

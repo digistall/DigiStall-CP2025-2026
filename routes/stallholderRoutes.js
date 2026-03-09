@@ -120,8 +120,10 @@ router.post('/documents/upload', upload.single('file'), compressUploads({ type: 
 
 /**
  * @route POST /api/mobile/stallholder/documents/blob/upload
- * @desc Upload document as BLOB (base64) to cloud database
+ * @desc Upload document as BLOB (base64 JSON) to cloud database
  * @body stallholder_id, document_type_id, document_data (base64), mime_type, file_name
+ * Note: This endpoint accepts JSON with base64-encoded document_data.
+ *       No multer middleware needed - express.json() handles the body parsing.
  */
 router.post('/documents/blob/upload', uploadStallholderDocumentBlob);
 

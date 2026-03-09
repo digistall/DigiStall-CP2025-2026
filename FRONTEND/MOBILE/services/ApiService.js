@@ -1394,39 +1394,35 @@ class ApiService {
    * @param {string} documentData.document_data - Base64 data with data:mime/type;base64, prefix
    * @param {string} documentData.mime_type
    * @param {string} documentData.file_name
-   * @param {string} documentData.expiry_date - Optional
-   * @param {string} documentData.notes - Optional
-   * @param {string} authToken - Optional token (if not provided, will try to retrieve from storage)
+   * @param {string} authToken - Optional token
    */
   static async uploadStallholderDocumentBlob(documentData, authToken = null) {
     try {
       const server = await NetworkUtils.getActiveServer();
       
-      // Use provided token or try to get from storage (token is optional for this endpoint)
+      // Use provided token or try to get from storage
       let token = authToken;
       if (!token) {
         token = await UserStorageService.getAuthToken();
       }
 
-      // Token is optional - backend endpoint is public
-      // Just log a warning but continue with the upload
       if (!token) {
         console.log('⚠️ No authentication token available - proceeding without auth (endpoint is public)');
       } else {
         console.log('🔐 Using token:', token.substring(0, 20) + '...');
       }
 
-      console.log('📤 Uploading stallholder document BLOB...');
-      console.log('� Payload:', {
+      console.log('📤 Uploading stallholder document BLOB (base64)...');
+      console.log('📋 Payload:', {
         stallholder_id: documentData.stallholder_id,
         document_type_id: documentData.document_type_id,
         file_name: documentData.file_name,
         mime_type: documentData.mime_type,
         file_size: documentData.file_size,
-        has_document_data: !!documentData.document_data
+        document_data_length: documentData.document_data?.length || 0,
       });
 
-      // Build headers - include auth token only if available
+      // Build headers
       const headers = {
         ...API_CONFIG.HEADERS,
       };
@@ -1434,11 +1430,15 @@ class ApiService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      console.log('📤 Sending JSON request to:', `${server}/api/mobile/stallholder/documents/blob/upload`);
+
       const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/upload`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(documentData),
       });
+
+      console.log('📡 Response status:', response.status);
 
       const data = await response.json();
       console.log('📡 Upload response:', JSON.stringify(data, null, 2));
@@ -1457,7 +1457,7 @@ class ApiService {
       console.error('❌ Upload Stallholder Document BLOB API Error:', error);
       return {
         success: false,
-        message: error.message || 'Network error occurred'
+        message: error.message || 'Network error occurred',
       };
     }
   }

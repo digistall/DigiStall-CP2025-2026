@@ -5,11 +5,10 @@
 // For cloud deployment (DigitalOcean) - no local file storage
 // Features: Upload, Get, Delete, Update (all as base64/BLOB)
 // Works for both stallholder_documents and stallholder_document_submissions tables
-// Max: 10MB per document, Images and PDFs allowed
+// Max: 5MB per document, Images and PDFs allowed
 // =============================================
 
 import { createConnection } from '../../../config/database.js'
-import { compressBuffer } from '../../../config/imageCompression.js'
 
 // =============================================
 // UPLOAD STALLHOLDER DOCUMENT AS BLOB
@@ -18,10 +17,13 @@ export async function uploadStallholderDocumentBlob(req, res) {
   let connection
   
   try {
+    console.log('📥 [BLOB Upload] Request received')
+    console.log('📥 [BLOB Upload] req.body keys:', Object.keys(req.body))
+    
     const { 
       stallholder_id, 
       document_type_id,
-      document_data, 
+      document_data,
       mime_type, 
       file_name,
       expiry_date,
@@ -30,15 +32,23 @@ export async function uploadStallholderDocumentBlob(req, res) {
     
     // Validate required fields
     if (!stallholder_id || !document_type_id || !document_data) {
+      console.log('❌ [BLOB Upload] Missing required fields:', { stallholder_id, document_type_id, has_document_data: !!document_data })
       return res.status(400).json({
         success: false,
         message: 'stallholder_id, document_type_id, and document_data (base64) are required'
       })
     }
+
+    // Parse base64 data
+    const base64Data = document_data.replace(/^data:[^;]+;base64,/, '')
+    const documentBuffer = Buffer.from(base64Data, 'base64')
+    const actualMimeType = mime_type || 'image/jpeg'
+    const resolvedFileName = file_name || `doc_${Date.now()}`
+    
+    console.log('📥 [BLOB Upload] Buffer size:', documentBuffer.length, 'bytes')
     
     // Validate mime type
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf']
-    const actualMimeType = mime_type || 'image/jpeg'
     if (!allowedMimeTypes.includes(actualMimeType)) {
       return res.status(400).json({
         success: false,
@@ -46,21 +56,12 @@ export async function uploadStallholderDocumentBlob(req, res) {
       })
     }
     
-    // Convert base64 to buffer
-    const base64Data = document_data.replace(/^data:[^;]+;base64,/, '')
-    let documentBuffer = Buffer.from(base64Data, 'base64')
-    
-    // Compress image documents before storing (skip PDFs)
-    if (actualMimeType.startsWith('image/')) {
-      documentBuffer = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
-    }
-    
-    // Check file size (10MB limit for documents)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // Check file size (5MB limit for documents)
+    const maxSize = 5 * 1024 * 1024 // 5MB
     if (documentBuffer.length > maxSize) {
       return res.status(400).json({
         success: false,
-        message: 'Document size exceeds 10MB limit'
+        message: 'Document size exceeds 5MB limit'
       })
     }
     
@@ -83,7 +84,7 @@ export async function uploadStallholderDocumentBlob(req, res) {
     // Generate filename for reference
     const timestamp = Date.now()
     const extension = actualMimeType === 'application/pdf' ? 'pdf' : actualMimeType.split('/')[1]
-    const generatedFileName = file_name || `stallholder_${stallholder_id}_doc_${document_type_id}_${timestamp}.${extension}`
+    const generatedFileName = resolvedFileName || `stallholder_${stallholder_id}_doc_${document_type_id}_${timestamp}.${extension}`
     const virtualFilePath = `/api/mobile/stallholder/documents/blob/${stallholder_id}/${document_type_id}`
     
     // Check if document already exists for this stallholder/document type using stored procedure
