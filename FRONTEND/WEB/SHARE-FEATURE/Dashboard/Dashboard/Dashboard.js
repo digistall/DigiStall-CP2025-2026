@@ -3,6 +3,7 @@ import { markRaw } from 'vue'
 import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
 import * as XLSX from 'xlsx'
 import dashboardSubscription from '@/services/dashboardSubscriptionService.js'
+import { eventBus, EVENTS } from '@/eventBus'
 
 export default {
   name: 'Dashboard',
@@ -90,6 +91,8 @@ export default {
     this.initializeDashboard()
     // Start subscription for real-time updates (replaces polling)
     this.startSubscription()
+    // Listen for global refresh events (e.g., when regaining internet connection)
+    eventBus.on(EVENTS.DATA_REFRESH, this.refreshDashboardData)
   },
   beforeUnmount() {
     this._isMounted = false
@@ -109,6 +112,9 @@ export default {
     // Stop subscription and legacy auto-refresh
     this.stopSubscription()
     this.stopAutoRefresh()
+    
+    // Remove global refresh event listener
+    eventBus.off(EVENTS.DATA_REFRESH, this.refreshDashboardData)
   },
   methods: {
     // ===== SUBSCRIPTION METHODS (Replaces polling) =====
@@ -186,8 +192,8 @@ export default {
       
       // Update recent payments if changed
       if (updates.recentPayments) {
-        this.recentPayments = updates.recentPayments.map(p => ({
-          id: p.payment_id,
+        this.recentPayments = updates.recentPayments.map((p, index) => ({
+          id: p.unique_id || `payment_${p.payment_id || index}`,
           stallholder: p.stallholder_name || 'Unknown',
           amount: parseFloat(p.amount_paid) || 0,
           date: this.formatDate(p.payment_date),
@@ -391,8 +397,8 @@ export default {
           })
           this.totalStallholders = uniqueStallholders.size
           
-          // Transform stalls for overview table (limit to 6)
-          this.stallOverview = stalls.slice(0, 6).map((stall, index) => {
+          // Transform stalls for overview table (No synthetic limit; use scroll)
+          this.stallOverview = stalls.map((stall, index) => {
             // Use last_payment_date from stored procedure (only rental payments)
             // Fall back to lastPaymentsByStallholder only if not available from stored procedure
             const lastPaymentDate = stall.last_payment_date || (stall.stallholder_id 
@@ -400,7 +406,7 @@ export default {
               : null)
             
             return {
-              id: stall.stall_id || index + 1,
+              id: stall.stall_id ? `stall_${stall.stall_id}` : `stall_idx_${index}`,
               stallId: stall.stall_no || stall.stall_number || stall.stall_code || `S${String(index + 1).padStart(3, '0')}`,
               stallholder: stall.stallholder_name || stall.current_stallholder || 'Vacant Stall',
               location: `${stall.section_name || 'Section'} - ${stall.area || stall.branch_name || 'Area'}`,
@@ -534,9 +540,9 @@ export default {
               }
             })
             
-            // Transform for display (limit to 7) - use correct API field names
-            this.recentPayments = payments.slice(0, 7).map((payment, index) => ({
-              id: payment.id || payment.payment_id || index + 1,
+            // Transform for display (limit to 50 to prevent frontend lag securely) - use correct API field names
+            this.recentPayments = payments.slice(0, 50).map((payment, index) => ({
+              id: payment.unique_id || `payment_${payment.id || payment.payment_id || index}`,
               stallholder: payment.stallholderName || payment.stallholder_name || payment.payer_name || 'Unknown',
               amount: parseFloat(payment.amountPaid) || parseFloat(payment.amount) || 0,
               date: this.formatDate(payment.paymentDate || payment.payment_date || payment.createdAt || payment.created_at),
@@ -1050,8 +1056,8 @@ export default {
           return getSecondsAgo(a.lastActivity) - getSecondsAgo(b.lastActivity)
         })
         
-        this.activeCollectors = allActiveEmployees.slice(0, 7).map((emp, index) => ({
-          id: emp.id || index + 1,
+        this.activeCollectors = allActiveEmployees.map((emp, index) => ({
+          id: emp.id ? `emp_${emp.id}_${emp.type || 'unknown'}` : `emp_idx_${index}`,
           name: emp.name,
           area: emp.area,
           collections: emp.type === 'collector' ? (collectorsData.find(c => c.id === emp.id)?.collections || 0) : '-',
@@ -1833,11 +1839,12 @@ export default {
         return
       }
       
-      const headers = ['Payment ID', 'Stallholder', 'Amount (₱)', 'Payment Date', 'Status']
+      const headers = ['Payment ID', 'Stallholder', 'Amount (₱)', 'Type', 'Payment Date', 'Status']
       const rows = this.recentPayments.map(payment => [
         payment.id,
         payment.stallholder,
         payment.amount,
+        this.formatPaymentType(payment.paymentType),
         payment.date,
         payment.status
       ])

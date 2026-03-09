@@ -16,6 +16,7 @@ import {
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import ApiService from '../../../../services/ApiService';
+import SurrenderStallModal from './SurrenderStallModal';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,10 @@ const OwnedStallsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Surrender Modal State
+  const [surrenderModalVisible, setSurrenderModalVisible] = useState(false);
+  const [selectedStallForSurrender, setSelectedStallForSurrender] = useState(null);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -298,21 +303,39 @@ const OwnedStallsScreen = () => {
               </Text>
             </View>
           </View>
-          <View style={[
-            styles.statusBadge,
-            { backgroundColor: getPaymentStatusBg(item.payment_status) }
-          ]}>
+          {item.surrender_status ? (
             <View style={[
-              styles.statusDot,
-              { backgroundColor: getPaymentStatusColor(item.payment_status) }
-            ]} />
-            <Text style={[
-              styles.statusText,
-              { color: getPaymentStatusColor(item.payment_status) }
+              styles.statusBadge,
+              { backgroundColor: item.surrender_status === 'Pending' ? (isDarkMode ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)') : (isDarkMode ? 'rgba(30, 156, 0, 0.2)' : 'rgba(30, 156, 0, 0.1)') }
             ]}>
-              {(item.payment_status || 'unpaid').charAt(0).toUpperCase() + (item.payment_status || 'unpaid').slice(1)}
-            </Text>
-          </View>
+              <View style={[
+                styles.statusDot,
+                { backgroundColor: item.surrender_status === 'Pending' ? colors.warning : colors.success }
+              ]} />
+              <Text style={[
+                styles.statusText,
+                { color: item.surrender_status === 'Pending' ? colors.warning : colors.success }
+              ]}>
+                {item.surrender_status} Surrender
+              </Text>
+            </View>
+          ) : (
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: getPaymentStatusBg(item.payment_status) }
+            ]}>
+              <View style={[
+                styles.statusDot,
+                { backgroundColor: getPaymentStatusColor(item.payment_status) }
+              ]} />
+              <Text style={[
+                styles.statusText,
+                { color: getPaymentStatusColor(item.payment_status) }
+              ]}>
+                {(item.payment_status || 'unpaid').charAt(0).toUpperCase() + (item.payment_status || 'unpaid').slice(1)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Stall Image (if available) */}
@@ -400,6 +423,45 @@ const OwnedStallsScreen = () => {
             </Text>
           </View>
         )}
+
+        {/* Action Buttons */}
+        <View style={[styles.actionsRow, { borderTopColor: colors.border }]}>
+          <TouchableOpacity 
+            style={[
+              styles.surrenderBtn, 
+              { borderColor: item.surrender_status ? colors.border : colors.error, opacity: item.surrender_status ? 0.6 : 1 }
+            ]}
+            onPress={() => {
+              if (item.surrender_status === 'Approved') {
+                // If already approved, open modal to show exit survey
+                setSelectedStallForSurrender(item);
+                setSurrenderModalVisible(true);
+                return;
+              }
+              if (item.surrender_status === 'Pending') {
+                // If pending, just show the status modal
+                setSelectedStallForSurrender(item);
+                setSurrenderModalVisible(true);
+                return;
+              }
+              setSelectedStallForSurrender(item);
+              setSurrenderModalVisible(true);
+            }}
+            disabled={item.surrender_status === 'Pending' && false} // Actually keep it clickable so they can see the status modal
+          >
+            <Ionicons 
+              name={item.surrender_status ? "information-circle-outline" : "exit-outline"} 
+              size={16} 
+              color={item.surrender_status ? colors.textSecondary : colors.error} 
+            />
+            <Text style={[
+              styles.surrenderBtnText, 
+              { color: item.surrender_status ? colors.textSecondary : colors.error }
+            ]}>
+              {item.surrender_status ? "Surrender Status" : "Stall Surrender"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     );
   };
@@ -471,7 +533,6 @@ const OwnedStallsScreen = () => {
         }
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -480,6 +541,15 @@ const OwnedStallsScreen = () => {
             tintColor={colors.primary}
           />
         }
+      />
+
+      <SurrenderStallModal
+        visible={surrenderModalVisible}
+        onClose={() => setSurrenderModalVisible(false)}
+        stall={selectedStallForSurrender}
+        theme={theme}
+        isDarkMode={isDarkMode}
+        onSuccess={() => fetchOwnedStalls()} // refresh stalls on success
       />
     </View>
   );
@@ -830,6 +900,27 @@ const styles = StyleSheet.create({
   lastPaymentValue: {
     fontSize: 11,
     fontWeight: '600',
+  },
+
+  // ===== Action Buttons =====
+  actionsRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    alignItems: 'baseline',
+  },
+  surrenderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  surrenderBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 
   // ===== Empty State =====

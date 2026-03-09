@@ -98,6 +98,9 @@ export default {
       eventBus.on(EVENTS.STALL_ADDED, this.handleEventBusStallAdded)
       eventBus.on(EVENTS.STALL_UPDATED, this.handleEventBusStallUpdated)
       eventBus.on(EVENTS.STALL_DELETED, this.handleEventBusStallDeleted)
+
+      // Listen for global data refresh (e.g. after connection restores)
+      eventBus.on(EVENTS.DATA_REFRESH, this.handleGlobalRefresh)
     },
 
     // Cleanup event bus listeners
@@ -110,6 +113,8 @@ export default {
       eventBus.off(EVENTS.STALL_ADDED, this.handleEventBusStallAdded)
       eventBus.off(EVENTS.STALL_UPDATED, this.handleEventBusStallUpdated)
       eventBus.off(EVENTS.STALL_DELETED, this.handleEventBusStallDeleted)
+      
+      eventBus.off(EVENTS.DATA_REFRESH, this.handleGlobalRefresh)
     },
 
     // Handle floor/section updates from event bus
@@ -125,6 +130,13 @@ export default {
           console.log('✅ Floors and sections are now available via event bus!')
         }
       }
+    },
+
+    // Handle global data refresh
+    async handleGlobalRefresh() {
+      console.log('🔄 Global data refresh triggered in Stalls.js')
+      dataCacheService.invalidatePattern('stalls')
+      await this.fetchStalls(true)
     },
 
     // Handle stall added from event bus (real-time updates)
@@ -331,11 +343,12 @@ export default {
           if (userType === 'business_manager' || userType === 'business_employee') {
             const originalCount = this.stallsData.length
             this.stallsData = this.stallsData.filter(stall => {
-              // Keep stalls that are NOT occupied (is_available = true means Available/Unavailable)
+              // Keep stalls that are NOT occupied and NOT Unavailable
               // Occupied stalls have availabilityStatus = 'Occupied' and isAvailable = false with stallholder assigned
               const isOccupied = stall.availabilityStatus === 'Occupied' || 
                                  (stall.isAvailable === false && stall.stallholderId)
-              return !isOccupied
+              const isUnavailable = stall.availabilityStatus === 'Unavailable'
+              return !isOccupied && !isUnavailable
             })
             console.log(`🏪 Filtered out occupied stalls for ${userType}: ${originalCount} → ${this.stallsData.length} stalls visible`)
           }

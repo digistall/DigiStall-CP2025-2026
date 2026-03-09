@@ -9,13 +9,29 @@
   margin-bottom: 20px;
 }
 
-.search-container {
-  margin-bottom: 24px;
-  padding: 0 2px;
+/* Search & Filter Section (Standardized) */
+.search-filter-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 }
 
-.search-field {
-  max-width: 500px;
+.search-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  max-width: 450px;
+}
+
+.search-field :deep(.v-field__input) {
+  color: #2c3e50;
+  font-size: 15px;
 }
 
 .section-title {

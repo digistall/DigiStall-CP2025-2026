@@ -1,84 +1,75 @@
 ════════════════════════════════════════════════════════════════
 DATABASE STRUCTURE SUMMARY
-Exported: 2026-03-02T13:18:55.311Z
+Exported: 2026-03-08T14:07:59.801Z
 ════════════════════════════════════════════════════════════════
 
 TABLES:
-  - applicant (5 rows)
-  - applicant_documents (12 rows)
-  - application (2 rows)
+  - applicant (7 rows)
+  - applicant_documents (15 rows)
+  - application (5 rows)
   - assigned_location (2 rows)
   - auction (2 rows)
   - auction_bids (0 rows)
   - auction_participants (5 rows)
-  - auction_result (0 rows)
+  - auction_result (2 rows)
   - branch (1 rows)
   - branch_document_requirements (6 rows)
-  - branch_document_requirements_backup (0 rows)
   - branch_manager (0 rows)
-  - business_employee (2 rows)
-  - business_information (5 rows)
+  - business_employee (4 rows)
+  - business_information (7 rows)
   - business_manager (1 rows)
   - business_owner_managers (0 rows)
   - business_owner_subscriptions (2 rows)
   - collector (1 rows)
   - collector_action_log (2 rows)
   - collector_assignment (2 rows)
-  - complaint (5 rows)
-  - credential (4 rows)
-  - daily_payment (0 rows)
+  - complaint (7 rows)
+  - credential (6 rows)
+  - daily_payments (3 rows)
   - document_types (15 rows)
-  - employee_activity_log (0 rows)
-  - employee_credential_log (0 rows)
   - employee_email_template (4 rows)
-  - employee_password_reset (0 rows)
   - employee_session (0 rows)
   - encryption_keys (2 rows)
   - floor (3 rows)
   - inspector (1 rows)
-  - inspector_action_log (0 rows)
   - inspector_assignment (2 rows)
-  - migrations (0 rows)
-  - other_information (5 rows)
-  - payment (0 rows)
+  - other_information (7 rows)
   - payment_status_log (3 rows)
-  - payments (3 rows)
-  - penalty_payments (2 rows)
-  - raffle (1 rows)
-  - raffle_auction_log (0 rows)
-  - raffle_participants (1 rows)
-  - raffle_result (0 rows)
-  - section (3 rows)
+  - payments (9 rows)
+  - penalty_payments (7 rows)
+  - raffle (3 rows)
+  - raffle_auction_log (3 rows)
+  - raffle_participants (3 rows)
+  - raffle_result (1 rows)
+  - section (4 rows)
   - spouse (1 rows)
-  - staff_activity_log (93 rows)
-  - staff_session (69 rows)
-  - stall (4 rows)
-  - stall_applications (0 rows)
+  - staff_activity_log (29 rows)
+  - staff_session (49 rows)
+  - stall (10 rows)
   - stall_business_owner (1 rows)
-  - stall_images (9 rows)
-  - stallholder (2 rows)
-  - stallholder_document_submissions (0 rows)
-  - stallholder_documents (5 rows)
+  - stall_images (21 rows)
+  - stall_surrender_requests (1 rows)
+  - stallholder (7 rows)
+  - stallholder_documents (7 rows)
+  - stallholder_history_logs (1 rows)
   - subscription_payment_receipts (1 rows)
-  - subscription_payments (0 rows)
   - subscription_plans (4 rows)
   - system_administrator (1 rows)
-  - vendor (1 rows)
-  - vendor_business (1 rows)
+  - vendor (4 rows)
+  - vendor_business (5 rows)
   - vendor_child (1 rows)
   - vendor_documents (0 rows)
   - vendor_spouse (1 rows)
   - violation (5 rows)
   - violation_penalty (22 rows)
-  - violation_report (2 rows)
+  - violation_report (8 rows)
 
 VIEWS:
   - penalty_payments_view
-  - view_available_stalls
-  - view_violation_penalty
 
 STORED PROCEDURES:
   - addBranchDocumentRequirement
+  - addDailyPayment
   - addStallImage
   - approveApplication
   - assignManagerToBranch
@@ -96,6 +87,7 @@ STORED PROCEDURES:
   - createSpouse
   - createStall
   - createVendorWithRelations
+  - deleteDailyPayment
   - deleteFloor
   - deleteSection
   - deleteStall
@@ -110,20 +102,24 @@ STORED PROCEDURES:
   - getAllBusinessManagers
   - getAllBusinessOwnersWithSubscription
   - getAllCollectors
+  - getAllCollectorsForDailyPayments
   - getAllComplaints
   - getAllComplaintsDecrypted
   - getAllComplianceRecordsDecrypted
+  - getAllDailyPayments
   - getAllInspectors
   - getAllPayments
   - getAllSpouses
   - getAllStallholders
   - getAllStalls
   - getAllSubscriptionPlans
+  - getAllVendorsForDailyPayments
   - getAllVendorsWithRelations
   - getApplicantAdditionalInfo
   - getApplicantApplicationsDetailed
   - getApplicantByUsername
   - getAppliedAreasByApplicant
+  - getAssignedLocations
   - getAvailableStalls
   - getAvailableStallsByApplicant
   - getBranchById
@@ -144,6 +140,7 @@ STORED PROCEDURES:
   - getCollectorsByBranch
   - getComplaintById
   - getComplaintsByBranch
+  - getDailyPaymentById
   - getEmployeesByBranches
   - getFloorsByBranch
   - getInspectorByEmail
@@ -188,6 +185,7 @@ STORED PROCEDURES:
   - sp_autoLogoutBusinessManager
   - sp_autoLogoutCollector
   - sp_autoLogoutInspector
+  - sp_auto_remove_max_stall_participants
   - sp_checkApplicantAreaAccess
   - sp_checkApplicantExists
   - sp_checkBusinessEmployeeExists
@@ -262,6 +260,8 @@ STORED PROCEDURES:
   - sp_endEmployeeSession
   - sp_endStaffSession
   - sp_ensureComplaintTableExists
+  - sp_finalize_auction_winner
+  - sp_finalize_raffle_winner
   - sp_generate_receipt_number
   - sp_getActiveRefreshToken
   - sp_getActivitySummaryByAction
@@ -417,6 +417,7 @@ STORED PROCEDURES:
   - sp_getStallImages
   - sp_getStallImagesPublic
   - sp_getStallImagesWithData
+  - sp_getStallInfoByApplicant
   - sp_getStallPrimaryImage
   - sp_getStallsByAreaForApplicant
   - sp_getStallsByAreaOrBranch
@@ -467,6 +468,7 @@ STORED PROCEDURES:
   - sp_logStaffActivityLogout
   - sp_logTokenActivity
   - sp_mobileStaffLogin
+  - sp_ProcessStallSurrender
   - sp_resetCollectorPassword
   - sp_resetInspectorPassword
   - sp_reviewStallholderDocument
@@ -526,6 +528,7 @@ STORED PROCEDURES:
   - updateCollector
   - updateCollectorLastLogin
   - updateCredentialLastLogin
+  - updateDailyPayment
   - updateFloor
   - updateInspector
   - updateInspectorLastLogin

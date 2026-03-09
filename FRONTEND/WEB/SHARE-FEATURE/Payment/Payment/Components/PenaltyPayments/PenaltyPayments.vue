@@ -1,17 +1,20 @@
 <template>
   <div class="penalty-payments">
-    <!-- Search Bar -->
-    <div class="search-container">
-      <v-text-field
-        v-model="searchQuery"
-        placeholder="Search by ID, name, reference number..."
-        variant="outlined"
-        density="comfortable"
-        prepend-inner-icon="mdi-magnify"
-        clearable
-        hide-details
-        class="search-field"
-      ></v-text-field>
+    <div class="search-filter-section mb-6">
+      <div class="search-wrapper">
+        <div class="search-input-wrapper">
+          <v-text-field
+            v-model="searchQuery"
+            placeholder="Search by ID, name, reference number..."
+            variant="outlined"
+            density="comfortable"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            class="search-field"
+          ></v-text-field>
+        </div>
+      </div>
     </div>
 
     <!-- Payments Table -->
@@ -42,7 +45,9 @@
                 <td colspan="8" class="empty-state">
                   <v-icon size="48" color="error">mdi-alert-circle-outline</v-icon>
                   <p>{{ error }}</p>
-                  <v-btn color="primary" size="small" @click="fetchPenaltyPayments">Try Again</v-btn>
+                  <v-btn color="primary" size="small" @click="fetchPenaltyPayments"
+                    >Try Again</v-btn
+                  >
                 </td>
               </tr>
               <tr v-else-if="filteredPayments.length === 0">
@@ -60,18 +65,22 @@
                 <td class="name-cell">
                   <div class="stallholder-info">
                     <div class="avatar">
-                      {{ (payment.stallholderName || "N/A").charAt(0) }}
+                      {{ (payment.stallholderName || 'N/A').charAt(0) }}
                     </div>
                     <div class="name-details">
-                      <span class="name">{{ payment.stallholderName || "N/A" }}</span>
-                      <span v-if="payment.branchName" class="branch-name">{{ payment.branchName }}</span>
+                      <span class="name">{{ payment.stallholderName || 'N/A' }}</span>
+                      <span v-if="payment.branchName" class="branch-name">{{
+                        payment.branchName
+                      }}</span>
                     </div>
                   </div>
                 </td>
                 <td class="violation-cell">
                   <div class="violation-info">
                     <span class="violation-type">{{ payment.violationType || 'N/A' }}</span>
-                    <span v-if="payment.ordinanceNo" class="ordinance-no">{{ payment.ordinanceNo }}</span>
+                    <span v-if="payment.ordinanceNo" class="ordinance-no">{{
+                      payment.ordinanceNo
+                    }}</span>
                   </div>
                 </td>
                 <td class="offense-cell">
@@ -84,7 +93,11 @@
                 <td class="collector-cell">{{ payment.collectedBy || '-' }}</td>
                 <td class="receipt-cell">{{ payment.referenceNumber || '-' }}</td>
                 <td class="status-cell">
-                  <v-chip :color="getStatusColor(payment.paymentStatus)" variant="flat" size="small">
+                  <v-chip
+                    :color="getStatusColor(payment.paymentStatus)"
+                    variant="flat"
+                    size="small"
+                  >
                     {{ payment.paymentStatus || 'completed' }}
                   </v-chip>
                 </td>
@@ -125,21 +138,15 @@
               </div>
               <div class="detail-item">
                 <span class="detail-label">Amount:</span>
-                <span class="detail-value amount">{{
-                  formatAmount(selectedPayment.amount)
-                }}</span>
+                <span class="detail-value amount">{{ formatAmount(selectedPayment.amount) }}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Payment Date:</span>
-                <span class="detail-value">{{
-                  formatDate(selectedPayment.paymentDate)
-                }}</span>
+                <span class="detail-value">{{ formatDate(selectedPayment.paymentDate) }}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Payment Time:</span>
-                <span class="detail-value">{{
-                  formatTime(selectedPayment.paymentTime)
-                }}</span>
+                <span class="detail-value">{{ formatTime(selectedPayment.paymentTime) }}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Collected By:</span>
@@ -151,7 +158,11 @@
               </div>
               <div class="detail-item">
                 <span class="detail-label">Status:</span>
-                <v-chip :color="getStatusColor(selectedPayment.paymentStatus)" variant="flat" size="small">
+                <v-chip
+                  :color="getStatusColor(selectedPayment.paymentStatus)"
+                  variant="flat"
+                  size="small"
+                >
                   {{ selectedPayment.paymentStatus || 'completed' }}
                 </v-chip>
               </div>

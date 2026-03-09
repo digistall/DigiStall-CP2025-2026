@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <v-dialog v-model="visibleModel" max-width="1200px" persistent scrollable>
     <v-card>
       <!-- Header -->
@@ -243,8 +243,7 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Business Information Tab -->
               <v-window-item>
@@ -342,8 +341,7 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
 
               <!-- Documents Tab -->
               <v-window-item>
@@ -446,12 +444,10 @@
                       </v-alert>
                     </v-col>
                   </v-row>
-                </v-container>
-              </v-window-item>
+                </v-container></v-window-item>
             </v-window>
           </v-form>
-        </v-container>
-      </v-card-text>
+        </v-container></v-card-text>
 
       <v-divider></v-divider>
       <!-- Action Buttons (matching Stallholders) -->
