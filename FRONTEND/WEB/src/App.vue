@@ -147,7 +147,6 @@ onBeforeUnmount(() => {
 <style>
 html,
 body {
-  overflow: hidden !important;
   height: 100%;
 }
 
