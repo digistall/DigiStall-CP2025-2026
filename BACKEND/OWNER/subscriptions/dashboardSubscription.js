@@ -58,12 +58,13 @@ export const subscribeToDashboard = async (req, res) => {
       // Check stalls data
       const [stallsData] = await connection.execute(`
         SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN stallholder_id IS NOT NULL AND status = 'Active' THEN 1 ELSE 0 END) as occupied,
-          SUM(CASE WHEN stallholder_id IS NULL OR status != 'Active' THEN 1 ELSE 0 END) as vacant
-        FROM stall 
-        WHERE branch_id = (SELECT branch_id FROM business_employee WHERE business_employee_id = ? LIMIT 1)
-      `, [req.user?.userId || 1]);
+          COUNT(s.stall_id) as total,
+          SUM(CASE WHEN sh.stallholder_id IS NOT NULL THEN 1 ELSE 0 END) as occupied,
+          SUM(CASE WHEN sh.stallholder_id IS NULL THEN 1 ELSE 0 END) as vacant
+        FROM stall s
+        LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.status = 'Active'
+        WHERE s.branch_id = ?
+      `, [req.user?.branchId || 1]);
       
       const stallsHash = calculateHash(stallsData);
       if (lastDataHashes.get(`${connectionId}-stalls`) !== stallsHash) {
@@ -75,10 +76,10 @@ export const subscribeToDashboard = async (req, res) => {
       // Check stallholders count
       const [stallholdersData] = await connection.execute(`
         SELECT COUNT(DISTINCT stallholder_id) as total
-        FROM stall 
-        WHERE stallholder_id IS NOT NULL 
-        AND branch_id = (SELECT branch_id FROM business_employee WHERE business_employee_id = ? LIMIT 1)
-      `, [req.user?.userId || 1]);
+        FROM stallholder 
+        WHERE status = 'Active' 
+        AND branch_id = ?
+      `, [req.user?.branchId || 1]);
       
       const stallholdersHash = calculateHash(stallholdersData);
       if (lastDataHashes.get(`${connectionId}-stallholders`) !== stallholdersHash) {
@@ -88,14 +89,23 @@ export const subscribeToDashboard = async (req, res) => {
       }
 
       // Check payments data
-      const [paymentsData] = await connection.execute(`
-        SELECT 
-          COUNT(*) as totalPayments,
-          COALESCE(SUM(amount), 0) as totalAmount
+      const [regPayments] = await connection.execute(`
+        SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as amt
         FROM payments 
-        WHERE DATE(payment_date) = CURDATE()
-        AND branch_id = (SELECT branch_id FROM business_manager WHERE business_manager_id = ? LIMIT 1)
-      `, [req.user?.userId || 1]);
+        WHERE DATE(payment_date) = CURDATE() AND branch_id = ?
+      `, [req.user?.branchId || 1]);
+      
+      const [penPayments] = await connection.execute(`
+        SELECT COUNT(*) as cnt, COALESCE(SUM(pp.amount), 0) as amt
+        FROM penalty_payments pp
+        JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id
+        WHERE DATE(pp.payment_date) = CURDATE() AND sh.branch_id = ?
+      `, [req.user?.branchId || 1]);
+      
+      const paymentsData = [{
+        totalPayments: parseInt(regPayments[0].cnt) + parseInt(penPayments[0].cnt),
+        totalAmount: parseFloat(regPayments[0].amt) + parseFloat(penPayments[0].amt)
+      }];
       
       const paymentsHash = calculateHash(paymentsData);
       if (lastDataHashes.get(`${connectionId}-payments`) !== paymentsHash) {
@@ -105,7 +115,7 @@ export const subscribeToDashboard = async (req, res) => {
       }
 
       // Check recent payments (last 5)
-      const [recentPayments] = await connection.execute(`
+      const [regularPayments] = await connection.execute(`
         SELECT 
           p.payment_id,
           p.amount as amount_paid,
@@ -114,17 +124,42 @@ export const subscribeToDashboard = async (req, res) => {
           p.payment_type,
           p.payment_status,
           s.full_name as stallholder_name,
-          st.stall_number
+          st.stall_number,
+          p.created_at
         FROM payments p
         LEFT JOIN stallholder s ON p.stallholder_id = s.stallholder_id
         LEFT JOIN stall st ON s.stall_id = st.stall_id
-        WHERE p.branch_id = (SELECT branch_id FROM business_manager WHERE business_manager_id = ? LIMIT 1)
+        WHERE p.branch_id = ?
         ORDER BY p.payment_date DESC, p.created_at DESC
         LIMIT 5
-      `, [req.user?.userId || 1]);
+      `, [req.user?.branchId || 1]);
       
-      // Decrypt stallholder names if encrypted
+      const [penaltyPayments] = await connection.execute(`
+        SELECT 
+          pp.penalty_payment_id as payment_id,
+          pp.amount as amount_paid,
+          pp.payment_date,
+          pp.payment_method,
+          'penalty' as payment_type,
+          'completed' as payment_status,
+          s.full_name as stallholder_name,
+          st.stall_number,
+          pp.created_at
+        FROM penalty_payments pp
+        LEFT JOIN stallholder s ON pp.stallholder_id = s.stallholder_id
+        LEFT JOIN stall st ON s.stall_id = st.stall_id
+        WHERE s.branch_id = ?
+        ORDER BY pp.payment_date DESC, pp.created_at DESC
+        LIMIT 5
+      `, [req.user?.branchId || 1]);
+      
+      const recentPayments = [...regularPayments, ...penaltyPayments]
+        .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date) || new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
+      
+      // Decrypt stallholder names if encrypted, and enforce unique key
       const decryptedPayments = recentPayments.map(payment => {
+        payment.unique_id = `${payment.payment_type}_${payment.payment_id}`;
         if (payment.stallholder_name && typeof payment.stallholder_name === 'string' && payment.stallholder_name.includes(':')) {
           try {
             payment.stallholder_name = decryptData(payment.stallholder_name);
@@ -167,7 +202,9 @@ export const subscribeToDashboard = async (req, res) => {
       }
 
     } catch (error) {
-      console.error(`❌ Error checking dashboard data: ${error.message}`);
+      if (error.code !== 'ETIMEDOUT') {
+        console.error(`❌ Error checking dashboard data: ${error.message}`);
+      }
       // Don't close connection on error, just skip this check
     } finally {
       if (connection) await connection.end();

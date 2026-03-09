@@ -258,7 +258,12 @@
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <div class="table-scroll-container">
-                        <v-table class="custom-table" v-if="recentPayments.length > 0">
+                        <v-table
+                          class="custom-table"
+                          v-if="recentPayments.length > 0"
+                          fixed-header
+                          height="350px"
+                        >
                           <thead>
                             <tr>
                               <th>Stallholder</th>
@@ -269,7 +274,7 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="payment in recentPayments.slice(0, 7)" :key="payment.id">
+                            <tr v-for="payment in recentPayments" :key="payment.id">
                               <td class="font-weight-medium">{{ payment.stallholder }}</td>
                               <td>
                                 <v-chip
@@ -322,7 +327,12 @@
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <div class="table-scroll-container">
-                        <v-table class="custom-table" v-if="activeCollectors.length > 0">
+                        <v-table
+                          class="custom-table"
+                          v-if="activeCollectors.length > 0"
+                          fixed-header
+                          height="350px"
+                        >
                           <thead>
                             <tr>
                               <th>Name</th>
@@ -333,7 +343,7 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="employee in activeCollectors.slice(0, 7)" :key="employee.id">
+                            <tr v-for="employee in activeCollectors" :key="employee.id">
                               <td class="font-weight-medium">{{ employee.name }}</td>
                               <td>
                                 <v-chip
@@ -381,7 +391,12 @@
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <div class="table-scroll-container">
-                        <v-table class="custom-table" v-if="stallOverview.length > 0">
+                        <v-table
+                          class="custom-table"
+                          v-if="stallOverview.length > 0"
+                          fixed-header
+                          height="350px"
+                        >
                           <thead>
                             <tr>
                               <th>Stall ID</th>
@@ -393,7 +408,7 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="stall in stallOverview.slice(0, 7)" :key="stall.id">
+                            <tr v-for="stall in stallOverview" :key="stall.id">
                               <td class="font-weight-bold text-primary">
                                 {{ stall.stallId }}
                               </td>

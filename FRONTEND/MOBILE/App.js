@@ -1,10 +1,11 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, AppState } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, AppState, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import NetInfo from '@react-native-community/netinfo';
 
 // Theme Provider
 import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
@@ -38,10 +39,27 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('LoginScreen');
   const [userData, setUserData] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [showOnline, setShowOnline] = useState(false);
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     checkAuthStatus();
+    
+    let wasOffline = false;
+
+    // Network listener
+    const unsubscribeNet = NetInfo.addEventListener(state => {
+      // isInternetReachable can be null on first mount - only mark offline if explicitly false
+      const offline = state.isConnected === false || state.isInternetReachable === false;
+      setIsOffline(offline);
+
+      if (wasOffline && !offline) {
+        setShowOnline(true);
+        setTimeout(() => setShowOnline(false), 3000); // Hide after 3 seconds
+      }
+      wasOffline = offline;
+    });
     
     // Auto-logout when app goes to background
     const subscription = AppState.addEventListener('change', async nextAppState => {
@@ -105,6 +123,7 @@ export default function App() {
 
     return () => {
       subscription.remove();
+      unsubscribeNet();
     };
   }, []);
 
@@ -191,6 +210,21 @@ export default function App() {
                 initialParams={userData ? { userData } : undefined}
               />
             </Stack.Navigator>
+            
+            {/* Global Offline Indicator */}
+            {isOffline && (
+              <View style={styles.offlineBanner}>
+                <Text style={styles.offlineText}>No Internet Connection</Text>
+              </View>
+            )}
+
+            {/* Global Online Indicator */}
+            {showOnline && !isOffline && (
+              <View style={[styles.offlineBanner, styles.onlineBanner]}>
+                <Text style={styles.offlineText}>Connection Restored</Text>
+              </View>
+            )}
+            
           </NavigationContainer>
         </ThemeProvider>
       </SafeAreaProvider>
@@ -215,4 +249,29 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginTop: 10,
   },
+  offlineBanner: {
+    position: 'absolute',
+    top: 50,
+    left: '5%',
+    width: '90%',
+    backgroundColor: '#D32F2F',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 9999,
+  },
+  onlineBanner: {
+    backgroundColor: '#4CAF50',
+  },
+  offlineText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  }
 });
