@@ -413,7 +413,7 @@
                           </thead>
                           <tbody>
                             <tr v-for="stall in stallOverview" :key="stall.id">
-                              <td class="font-weight-bold text-primary text-center">
+                              <td class="font-weight-bold text-primary">
                                 {{ stall.stallId }}
                               </td>
                               <td>
