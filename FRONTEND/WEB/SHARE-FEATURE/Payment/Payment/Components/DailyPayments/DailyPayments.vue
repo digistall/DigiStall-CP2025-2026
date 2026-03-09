@@ -23,11 +23,11 @@
         <!-- Custom Table Header -->
         <div class="table-header">
           <div class="header-row simplified-layout">
+            <div class="header-cell reference-col">Reference No.</div>
             <div class="header-cell collector-col">Collector's Name</div>
             <div class="header-cell vendor-col">Vendor's Name</div>
             <div class="header-cell amount-col">Amount</div>
             <div class="header-cell date-col">Payment Date</div>
-            <div class="header-cell reference-col">Reference No.</div>
             <div class="header-cell status-col">Status</div>
           </div>
         </div>
@@ -40,6 +40,7 @@
             class="table-row simplified-layout clickable-row"
             @click="viewPayment(payment)"
           >
+            <div class="table-cell reference-col">{{ payment.reference_no || 'N/A' }}</div>
             <div class="table-cell collector-col">
               <div class="collector-info">
                 <div class="avatar">
@@ -58,7 +59,6 @@
             </div>
             <div class="table-cell amount-col">{{ formatCurrency(payment.amount) }}</div>
             <div class="table-cell date-col">{{ formatDateTime(payment.time_date) }}</div>
-            <div class="table-cell reference-col">{{ payment.reference_no || 'N/A' }}</div>
             <div class="table-cell status-col">
               <v-chip :color="payment.statusColor" variant="flat" size="small">
                 {{ payment.status }}

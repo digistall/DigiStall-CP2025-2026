@@ -78,5 +78,21 @@ export default {
       }
       return name.charAt(0).toUpperCase()
     },
+    // Compliance status helpers - consistent with Stallholder module
+    getComplianceColor(compliance) {
+      // Handle undefined, null, empty string, or 'Compliant' as compliant (green)
+      if (!compliance || compliance === 'Compliant') {
+        return 'green'
+      }
+      // Non-Compliant or any other status shows as red
+      return 'red'
+    },
+    getComplianceIcon(compliance) {
+      // Handle undefined, null, empty string, or 'Compliant' as compliant
+      if (!compliance || compliance === 'Compliant') {
+        return 'mdi-check-circle'
+      }
+      return 'mdi-alert-circle'
+    },
   },
 }

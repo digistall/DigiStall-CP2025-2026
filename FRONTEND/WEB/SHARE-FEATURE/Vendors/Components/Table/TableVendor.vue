@@ -56,12 +56,10 @@
           </div>
           <div class="table-cell compliance-col" @click.stop>
             <v-chip
-              :color="vendor.compliance === 'Compliant' ? 'green' : 'red'"
+              :color="getComplianceColor(vendor.compliance)"
               size="small"
               variant="flat"
-              :prepend-icon="
-                vendor.compliance === 'Compliant' ? 'mdi-check-circle' : 'mdi-alert-circle'
-              "
+              :prepend-icon="getComplianceIcon(vendor.compliance)"
             >
               {{ vendor.compliance || 'Compliant' }}
             </v-chip>

@@ -21,18 +21,17 @@
           <table class="payments-table">
             <thead>
               <tr>
-                <th>Receipt ID</th>
+                <th>Reference No.</th>
                 <th>Collector's Name</th>
                 <th>Vendor's Name</th>
                 <th>Amount</th>
                 <th>Payment Date</th>
-                <th>Reference No.</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="filteredPayments.length === 0">
-                <td colspan="7" class="empty-state">
+                <td colspan="6" class="empty-state">
                   <v-icon size="48" color="grey">mdi-inbox</v-icon>
                   <p>No daily payments recorded</p>
                 </td>
@@ -43,7 +42,7 @@
                 class="clickable-row"
                 @click="viewPayment(payment)"
               >
-                <td class="id-cell">{{ payment.receipt_id }}</td>
+                <td class="reference-cell">{{ payment.reference_no || 'N/A' }}</td>
                 <td class="name-cell">
                   <div class="collector-info">
                     <div class="avatar">
@@ -62,7 +61,6 @@
                 </td>
                 <td class="amount-cell">{{ formatCurrency(payment.amount) }}</td>
                 <td class="date-cell">{{ formatDateTime(payment.time_date) }}</td>
-                <td class="reference-cell">{{ payment.reference_no || 'N/A' }}</td>
                 <td class="status-cell">
                   <v-chip :color="payment.statusColor" variant="flat" size="small">
                     {{ payment.status }}
@@ -214,9 +212,7 @@
             <v-col cols="12" md="6">
               <div class="detail-item">
                 <span class="detail-label">Amount:</span>
-                <span class="detail-value">{{
-                  formatCurrency(selectedPayment.amount)
-                }}</span>
+                <span class="detail-value">{{ formatCurrency(selectedPayment.amount) }}</span>
               </div>
             </v-col>
             <v-col cols="12" md="6">

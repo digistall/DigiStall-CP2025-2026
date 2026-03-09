@@ -114,6 +114,8 @@ export default {
             email: vendor.email || 'N/A',
             phone: vendor.contact_number || 'N/A',
             status: vendor.status,
+            // Use compliance_status from API if available, otherwise default to 'Compliant'
+            compliance: vendor.compliance_status || 'Compliant',
             raw: vendor,
           }))
 

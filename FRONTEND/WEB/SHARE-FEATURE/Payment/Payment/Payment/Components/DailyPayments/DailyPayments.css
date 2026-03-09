@@ -61,6 +61,7 @@
   font-size: 14px;
   white-space: nowrap;
   border-bottom: 2px solid #001557;
+  color: white !important;
 }
 
 .payments-table tbody tr {
@@ -81,7 +82,6 @@
   font-size: 14px;
   vertical-align: middle;
   text-align: center;
-  
 }
 
 /* Cell Specific Styles */
