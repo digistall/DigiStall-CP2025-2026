@@ -18,7 +18,7 @@ export default {
       
       pendingHeaders: [
         { title: 'Stall', key: 'stall_number', align: 'center' },
-        { title: 'Stallholder', key: 'stallholder_name', align: 'start' },
+        { title: 'Stallholder', key: 'stallholder_name', align: 'center' },
         { title: 'Reason', key: 'reason', align: 'center' },
         { title: 'Requested Move Out', key: 'move_out_date', align: 'center' },
         { title: 'Status', key: 'status', align: 'center' },
@@ -26,7 +26,7 @@ export default {
       ],
       historyHeaders: [
         { title: 'Stall', key: 'stall_number', align: 'center' },
-        { title: 'Previous Tenant', key: 'user_fullname', align: 'start' },
+        { title: 'Previous Tenant', key: 'user_fullname', align: 'center' },
         { title: 'Lease Start', key: 'lease_start_date', align: 'center' },
         { title: 'Lease End', key: 'lease_end_date', align: 'center' },
         { title: 'Surrender Reason', key: 'surrender_reason', align: 'center' }
@@ -228,14 +228,6 @@ export default {
       } finally {
         this.importing = false;
       }
-    },
-    getInitials(name) {
-      if (!name) return '??'
-      const parts = name.split(' ')
-      if (parts.length >= 2) {
-        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
-      }
-      return name.charAt(0).toUpperCase()
     }
   }
 }

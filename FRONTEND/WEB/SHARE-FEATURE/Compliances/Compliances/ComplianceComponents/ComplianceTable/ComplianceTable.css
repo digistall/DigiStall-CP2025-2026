@@ -74,27 +74,11 @@
   min-width: 200px;
 }
 
-.compliance-table th:nth-child(4),
-.compliance-table th:nth-child(5) {
-  text-align: center !important;
-  padding-left: 0 !important;
-}
-
-.compliance-table td:nth-child(4),
-.compliance-table td:nth-child(5) {
-  text-align: left !important;
-  padding-left: 16px !important;
-}
-
 .compliance-name-wrapper {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 12px;
-}
-
-.compliance-name-wrapper span {
-  font-weight: 400 !important;
 }
 
 .compliance-avatar {

@@ -118,7 +118,7 @@ const PaymentController = {
              AND p.payment_status = 'completed') as current_month_paid_amount,
             (SELECT COUNT(*) FROM violation_report vr 
              WHERE vr.stallholder_id = sh.stallholder_id 
-             AND vr.status = 'Open') as unpaid_violations_count
+             AND vr.payment_status IN ('unpaid', 'pending')) as unpaid_violations_count
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
@@ -161,7 +161,7 @@ const PaymentController = {
              AND p.payment_status = 'completed') as current_month_paid_amount,
             (SELECT COUNT(*) FROM violation_report vr 
              WHERE vr.stallholder_id = sh.stallholder_id 
-             AND vr.status = 'Open') as unpaid_violations_count
+             AND vr.payment_status IN ('unpaid', 'pending')) as unpaid_violations_count
           FROM stallholder sh
           LEFT JOIN stall s ON sh.stall_id = s.stall_id
           LEFT JOIN branch b ON sh.branch_id = b.branch_id

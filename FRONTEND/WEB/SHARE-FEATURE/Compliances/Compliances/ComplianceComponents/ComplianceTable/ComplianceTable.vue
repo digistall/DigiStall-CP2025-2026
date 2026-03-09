@@ -26,14 +26,7 @@
             <td>{{ compliance.id || 'N/A' }}</td>
             <td>{{ compliance.date || 'N/A' }}</td>
             <td>{{ compliance.type || 'N/A' }}</td>
-            <td class="compliance-name-cell">
-              <div class="compliance-name-wrapper">
-                <div class="compliance-avatar">
-                  {{ getInitials(compliance.inspector || 'N/A') }}
-                </div>
-                <span>{{ compliance.inspector || 'N/A' }}</span>
-              </div>
-            </td>
+            <td>{{ compliance.inspector || 'N/A' }}</td>
             <td class="compliance-name-cell">
               <div class="compliance-name-wrapper">
                 <div class="compliance-avatar">
