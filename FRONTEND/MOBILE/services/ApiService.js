@@ -1387,11 +1387,11 @@ class ApiService {
   // ===== STALLHOLDER DOCUMENT BLOB METHODS =====
 
   /**
-   * Upload stallholder document as BLOB (base64) to database
-   * @param {object} documentData - Document data with base64
+   * Upload stallholder document as multipart FormData to database
+   * @param {object} documentData - Document data with file URI
    * @param {number} documentData.stallholder_id
    * @param {number} documentData.document_type_id
-   * @param {string} documentData.document_data - Base64 data with data:mime/type;base64, prefix
+   * @param {string} documentData.uri - Local file URI (from ImagePicker / DocumentPicker)
    * @param {string} documentData.mime_type
    * @param {string} documentData.file_name
    * @param {string} authToken - Optional token
@@ -1399,7 +1399,7 @@ class ApiService {
   static async uploadStallholderDocumentBlob(documentData, authToken = null) {
     try {
       const server = await NetworkUtils.getActiveServer();
-      
+
       // Use provided token or try to get from storage
       let token = authToken;
       if (!token) {
@@ -1412,30 +1412,39 @@ class ApiService {
         console.log('🔐 Using token:', token.substring(0, 20) + '...');
       }
 
-      console.log('📤 Uploading stallholder document BLOB (base64)...');
+      console.log('📤 Uploading stallholder document BLOB...');
       console.log('📋 Payload:', {
         stallholder_id: documentData.stallholder_id,
         document_type_id: documentData.document_type_id,
         file_name: documentData.file_name,
         mime_type: documentData.mime_type,
         file_size: documentData.file_size,
-        document_data_length: documentData.document_data?.length || 0,
       });
 
-      // Build headers
-      const headers = {
-        ...API_CONFIG.HEADERS,
-      };
+      // Build FormData — RN sends as multipart/form-data natively.
+      // Do NOT set Content-Type manually; RN sets the multipart boundary automatically.
+      const formData = new FormData();
+      formData.append('stallholder_id', String(documentData.stallholder_id));
+      formData.append('document_type_id', String(documentData.document_type_id));
+      formData.append('mime_type', documentData.mime_type);
+      formData.append('file_name', documentData.file_name);
+      formData.append('file', {
+        uri: documentData.uri,
+        type: documentData.mime_type,
+        name: documentData.file_name,
+      });
+
+      const headers = { 'Accept': 'application/json' };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      console.log('📤 Sending JSON request to:', `${server}/api/mobile/stallholder/documents/blob/upload`);
+      console.log('📤 Sending FormData request to:', `${server}/api/mobile/stallholder/documents/blob/upload`);
 
       const response = await fetch(`${server}/api/mobile/stallholder/documents/blob/upload`, {
         method: 'POST',
-        headers: headers,
-        body: JSON.stringify(documentData),
+        headers,
+        body: formData,
       });
 
       console.log('📡 Response status:', response.status);
