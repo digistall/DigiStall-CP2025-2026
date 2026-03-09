@@ -61,7 +61,7 @@
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Stallholder Name</th>
+                <th class="name-header">Stallholder Name</th>
                 <th>Payment Method</th>
                 <th>Amount</th>
                 <th>Reference No.</th>

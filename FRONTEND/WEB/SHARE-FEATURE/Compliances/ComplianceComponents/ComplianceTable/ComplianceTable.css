@@ -39,6 +39,11 @@
   letter-spacing: 0.5px;
 }
 
+.name-header {
+  text-align: left !important;
+  padding-left: 60px !important;
+}
+
 .compliance-table tbody tr {
   border-bottom: 1px solid #e0e0e0;
   transition: all 0.2s ease;
@@ -77,7 +82,8 @@
 .compliance-name-wrapper {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  text-align: left;
   gap: 12px;
 }
 
