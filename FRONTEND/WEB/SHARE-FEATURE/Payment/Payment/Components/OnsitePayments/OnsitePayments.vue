@@ -144,7 +144,7 @@
             <thead>
               <tr>
                 <th>Stall Number</th>
-                <th>Stallholder Name</th>
+                <th class="name-header">Stallholder Name</th>
                 <th>Monthly Rental</th>
                 <th>Section</th>
                 <th>Floor</th>
