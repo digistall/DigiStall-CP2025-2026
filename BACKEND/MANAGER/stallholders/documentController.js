@@ -176,52 +176,22 @@ export const createBranchDocumentRequirement = async (req, res) => {
       });
     }
 
-    // Apply to all branches with correct manager for each
+    // Apply to all branches — one SP call per branch
     let totalAffected = 0;
     let createdRequirements = [];
-    
-    // Verify document type exists
-    const [docTypes] = await connection.execute(
-      'SELECT document_type_id, type_name FROM document_types WHERE document_type_id = ? AND status = ?',
-      [document_type_id, 'Active']
-    );
-    
-    if (docTypes.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or inactive document type'
-      });
-    }
-    
+
     for (const pair of branchManagerPairs) {
-      // Check if requirement already exists for this branch and document type
-      const [existing] = await connection.execute(
-        'SELECT requirement_id FROM branch_document_requirements WHERE branch_id = ? AND document_type_id = ?',
-        [pair.branchId, document_type_id]
+      const [rows] = await connection.execute(
+        'CALL sp_createBranchDocumentRequirement(?, ?, ?, ?, ?)',
+        [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
       );
-      
-      let requirementId;
-      if (existing.length > 0) {
-        // Update existing requirement
-        await connection.execute(
-          'UPDATE branch_document_requirements SET is_required = ?, instructions = ?, updated_at = NOW() WHERE requirement_id = ?',
-          [isRequiredValue, instructions || null, existing[0].requirement_id]
-        );
-        requirementId = existing[0].requirement_id;
-      } else {
-        // Insert new requirement
-        const [insertResult] = await connection.execute(
-          'INSERT INTO branch_document_requirements (branch_id, document_type_id, is_required, instructions, created_by_business_manager, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-          [pair.branchId, document_type_id, isRequiredValue, instructions || null, pair.managerId]
-        );
-        requirementId = insertResult.insertId;
-      }
-      
-      totalAffected += 1;
+      const result = rows[0][0]; // First row of first result set
+      totalAffected += result.affected_rows || 0;
       createdRequirements.push({
-        branch_id: pair.branchId,
-        manager_id: pair.managerId,
-        requirement_id: requirementId
+        branch_id:      pair.branchId,
+        manager_id:     pair.managerId,
+        requirement_id: result.requirement_id,
+        action:         result.action
       });
     }
 
@@ -307,16 +277,18 @@ export const setBranchDocumentRequirement = async (req, res) => {
       branchIds = [branch_id];
     }
 
-    // Direct UPDATE scoped to the user's branch(es) for security
-    const placeholders = branchIds.map(() => '?').join(', ');
-    const [result] = await connection.execute(
-      `UPDATE branch_document_requirements
-       SET is_required = ?, instructions = ?, updated_at = NOW()
-       WHERE requirement_id = ? AND branch_id IN (${placeholders})`,
-      [isRequiredValue, instructions || null, requirementId, ...branchIds]
-    );
+    // Call SP once per branch — scoped to branch_id for security
+    let totalAffected = 0;
+    for (const branchId of branchIds) {
+      const [rows] = await connection.execute(
+        'CALL sp_updateBranchDocumentRequirement(?, ?, ?, ?)',
+        [requirementId, branchId, isRequiredValue, instructions || null]
+      );
+      const result = rows[0][0]; // First row of first result set
+      totalAffected += result.affected_rows || 0;
+    }
 
-    if (result.affectedRows === 0) {
+    if (totalAffected === 0) {
       return res.status(404).json({
         success: false,
         message: 'Document requirement not found or access denied'
@@ -326,7 +298,7 @@ export const setBranchDocumentRequirement = async (req, res) => {
     res.json({
       success: true,
       message: 'Document requirement updated successfully',
-      affected_rows: result.affectedRows,
+      affected_rows: totalAffected,
       updated_by_role: isBusinessOwner ? 'business_owner' : 'manager'
     });
 
