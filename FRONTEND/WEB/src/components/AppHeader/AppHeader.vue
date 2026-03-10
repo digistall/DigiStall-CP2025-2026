@@ -1,6 +1,6 @@
 <!-- components/AppHeader.vue -->
 <template>
-  <v-app-bar app color="white" elevation="1" height="80">
+  <v-app-bar app color="white" elevation="1" height="90">
     <div class="d-flex align-center">
       <v-btn
         icon
