@@ -4,7 +4,8 @@ import {
   // Unified authentication
   login,
   verifyToken as verifyTokenHandler,
-  getCurrentUser
+  getCurrentUser,
+  updateProfile
 } from '../BACKEND/AUTH/auth/unifiedAuthController.js'
 
 // Import logout and heartbeat from enhanced auth controller
@@ -58,5 +59,6 @@ router.use(authMiddleware.authenticateToken) // Apply auth middleware to routes 
 router.get('/me', getCurrentUser)                      // GET /api/auth/me - Get current user info
 router.get('/business-manager-info', getCurrentUser)    // GET /api/auth/business-manager-info - Get business manager info (alias for backward compatibility)
 router.get('/business-owner-info', getCurrentUser)             // GET /api/auth/business-owner-info - Get business owner info (alias for backward compatibility)
+router.put('/profile/update', updateProfile)          // PUT /api/auth/profile/update - Update profile
 
 export default router

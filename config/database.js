@@ -44,7 +44,7 @@ export async function createConnection() {
     await connection.execute("SET time_zone = '+08:00'")
     return connection
   } catch (error) {
-    console.error('❌ Mobile App Database connection failed:', error)
+    console.error('❌ Mobile App Database connection failed:', error.code || error.message)
     throw error
   }
 }
