@@ -13,6 +13,7 @@
       @profile-click="handleProfileClick"
       @settings-click="handleSettingsClick"
       @logout-click="handleLogoutClick"
+      @sidebar-toggle="handleSidebarToggleInHeader"
     />
 
     <v-main class="main-content-wrapper">
