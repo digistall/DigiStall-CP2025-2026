@@ -15,7 +15,7 @@
         </div>
         </div>
 
-        <v-divider class="my-2"></v-divider>
+        <v-divider></v-divider>
 
         <div class="sidebar-scroll-area">
           <!-- Grouped Menu Items -->
