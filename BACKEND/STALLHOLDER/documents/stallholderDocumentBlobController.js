@@ -5,11 +5,10 @@
 // For cloud deployment (DigitalOcean) - no local file storage
 // Features: Upload, Get, Delete, Update (all as base64/BLOB)
 // Works for both stallholder_documents and stallholder_document_submissions tables
-// Max: 10MB per document, Images and PDFs allowed
+// Max: 5MB per document, Images and PDFs allowed
 // =============================================
 
 import { createConnection } from '../../../config/database.js'
-import { compressBuffer } from '../../../config/imageCompression.js'
 
 // =============================================
 // UPLOAD STALLHOLDER DOCUMENT AS BLOB
@@ -18,27 +17,58 @@ export async function uploadStallholderDocumentBlob(req, res) {
   let connection
   
   try {
-    const { 
-      stallholder_id, 
+    console.log('📥 [BLOB Upload] Request received')
+    console.log('📥 [BLOB Upload] req.body keys:', Object.keys(req.body))
+    console.log('📥 [BLOB Upload] req.file:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'none')
+
+    const {
+      stallholder_id,
       document_type_id,
-      document_data, 
-      mime_type, 
+      document_data,  // legacy base64 fallback
+      mime_type,
       file_name,
       expiry_date,
       notes
     } = req.body
-    
+
     // Validate required fields
-    if (!stallholder_id || !document_type_id || !document_data) {
+    if (!stallholder_id || !document_type_id) {
+      console.log('❌ [BLOB Upload] Missing required fields:', { stallholder_id, document_type_id })
       return res.status(400).json({
         success: false,
-        message: 'stallholder_id, document_type_id, and document_data (base64) are required'
+        message: 'stallholder_id and document_type_id are required'
       })
     }
+
+    let documentBuffer
+    let actualMimeType
+    let resolvedFileName
+
+    if (req.file) {
+      // --- Multipart FormData path (React Native) ---
+      documentBuffer = req.file.buffer
+      actualMimeType = mime_type || req.file.mimetype || 'image/jpeg'
+      resolvedFileName = file_name || req.file.originalname || `doc_${Date.now()}`
+      console.log('📥 [BLOB Upload] Using multipart file buffer, size:', documentBuffer.length, 'bytes')
+    } else if (document_data) {
+      // --- Legacy base64 JSON path ---
+      const base64Data = document_data.replace(/^data:[^;]+;base64,/, '')
+      documentBuffer = Buffer.from(base64Data, 'base64')
+      actualMimeType = mime_type || 'image/jpeg'
+      resolvedFileName = file_name || `doc_${Date.now()}`
+      console.log('📥 [BLOB Upload] Using base64 body, buffer size:', documentBuffer.length, 'bytes')
+    } else {
+      console.log('❌ [BLOB Upload] No file or document_data provided')
+      return res.status(400).json({
+        success: false,
+        message: 'A file (multipart) or document_data (base64) is required'
+      })
+    }
+
+    console.log('📥 [BLOB Upload] Buffer size:', documentBuffer.length, 'bytes')
     
     // Validate mime type
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf']
-    const actualMimeType = mime_type || 'image/jpeg'
     if (!allowedMimeTypes.includes(actualMimeType)) {
       return res.status(400).json({
         success: false,
@@ -46,21 +76,12 @@ export async function uploadStallholderDocumentBlob(req, res) {
       })
     }
     
-    // Convert base64 to buffer
-    const base64Data = document_data.replace(/^data:[^;]+;base64,/, '')
-    let documentBuffer = Buffer.from(base64Data, 'base64')
-    
-    // Compress image documents before storing (skip PDFs)
-    if (actualMimeType.startsWith('image/')) {
-      documentBuffer = await compressBuffer(documentBuffer, actualMimeType, { type: 'document' })
-    }
-    
-    // Check file size (10MB limit for documents)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // Check file size (5MB limit for documents)
+    const maxSize = 5 * 1024 * 1024 // 5MB
     if (documentBuffer.length > maxSize) {
       return res.status(400).json({
         success: false,
-        message: 'Document size exceeds 10MB limit'
+        message: 'Document size exceeds 5MB limit'
       })
     }
     
@@ -83,7 +104,7 @@ export async function uploadStallholderDocumentBlob(req, res) {
     // Generate filename for reference
     const timestamp = Date.now()
     const extension = actualMimeType === 'application/pdf' ? 'pdf' : actualMimeType.split('/')[1]
-    const generatedFileName = file_name || `stallholder_${stallholder_id}_doc_${document_type_id}_${timestamp}.${extension}`
+    const generatedFileName = resolvedFileName || `stallholder_${stallholder_id}_doc_${document_type_id}_${timestamp}.${extension}`
     const virtualFilePath = `/api/mobile/stallholder/documents/blob/${stallholder_id}/${document_type_id}`
     
     // Check if document already exists for this stallholder/document type using stored procedure
@@ -345,26 +366,17 @@ export async function getStallholderDocumentBlobById(req, res) {
     
     let documents = []
     
-    // Try stored procedure first, fallback to raw query
-    try {
-      const [rows] = await connection.execute(
-        'CALL sp_getStallholderDocumentBlobById(?)',
-        [document_id]
-      )
-      documents = rows[0]
-    } catch (spError) {
-      console.log('⚠️ Stored procedure not found, using raw query:', spError.message)
-      // Fallback to raw query if stored procedure doesn't exist
-      const [rows] = await connection.execute(
-        `SELECT document_data, document_name as original_filename, document_mime_type as mime_type
-         FROM stallholder_documents 
-         WHERE document_id = ? 
-           AND document_data IS NOT NULL`,
-        [document_id]
-      )
-      documents = rows
-    }
-    
+    // Direct raw query — stored procedure sp_getStallholderDocumentBlobById has a
+    // stale column reference that causes errors, so we query directly.
+    const [rows] = await connection.execute(
+      `SELECT document_data, document_name AS original_filename, document_mime_type AS mime_type
+       FROM stallholder_documents 
+       WHERE document_id = ? 
+         AND document_data IS NOT NULL`,
+      [document_id]
+    )
+    documents = rows
+
     if (!documents || documents.length === 0) {
       console.log(`⚠️ Document not found for ID: ${document_id}`)
       return res.status(404).json({
@@ -372,9 +384,9 @@ export async function getStallholderDocumentBlobById(req, res) {
         message: 'Document not found or no blob data available'
       })
     }
-    
+
     const doc = documents[0]
-    
+
     if (!doc.document_data) {
       console.log(`⚠️ Document ${document_id} has no blob data`)
       return res.status(404).json({
@@ -382,7 +394,7 @@ export async function getStallholderDocumentBlobById(req, res) {
         message: 'Document blob data not found'
       })
     }
-    
+
     // Detect mime type from filename extension
     const extension = doc.original_filename?.split('.').pop()?.toLowerCase()
     let mimeType = 'application/octet-stream'
@@ -390,16 +402,16 @@ export async function getStallholderDocumentBlobById(req, res) {
     else if (extension === 'png') mimeType = 'image/png'
     else if (extension === 'gif') mimeType = 'image/gif'
     else if (extension === 'pdf') mimeType = 'application/pdf'
-    
+
     console.log(`✅ Sending document blob: ${doc.original_filename} (${mimeType}, ${doc.document_data.length} bytes)`)
-    
+
     res.set({
       'Content-Type': mimeType,
       'Content-Disposition': `inline; filename="${doc.original_filename || 'document'}"`,
       'Cache-Control': 'public, max-age=3600'
     })
     res.send(doc.document_data)
-    
+
   } catch (error) {
     console.error('❌ Error getting stallholder document blob by ID:', error)
     res.status(500).json({
@@ -628,26 +640,17 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
     
     let documents = []
     
-    // Try stored procedure first, fallback to raw query
-    try {
-      const [rows] = await connection.execute(
-        'CALL sp_getStallholderDocumentBlobById(?)',
-        [document_id]
-      )
-      documents = rows[0]
-    } catch (spError) {
-      console.log('⚠️ Stored procedure not found, using raw query:', spError.message)
-      // Fallback to raw query if stored procedure doesn't exist
-      const [rows] = await connection.execute(
-        `SELECT document_data, document_name as original_filename, document_mime_type as mime_type
-         FROM stallholder_documents 
-         WHERE document_id = ? 
-           AND document_data IS NOT NULL`,
-        [document_id]
-      )
-      documents = rows
-    }
-    
+    // Direct raw query — stored procedure sp_getStallholderDocumentBlobById has a
+    // stale column reference that causes errors, so we query directly.
+    const [rows] = await connection.execute(
+      `SELECT document_data, document_name AS original_filename, document_mime_type AS mime_type
+       FROM stallholder_documents 
+       WHERE document_id = ? 
+         AND document_data IS NOT NULL`,
+      [document_id]
+    )
+    documents = rows
+
     if (!documents || documents.length === 0) {
       console.log(`⚠️ Document not found for ID: ${document_id}`)
       return res.status(404).json({
@@ -655,9 +658,9 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
         message: 'Document not found or no blob data available'
       })
     }
-    
+
     const doc = documents[0]
-    
+
     if (!doc.document_data) {
       console.log(`⚠️ Document ${document_id} has no blob data`)
       return res.status(404).json({
@@ -665,7 +668,7 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
         message: 'Document blob data not found'
       })
     }
-    
+
     // Detect mime type from filename extension
     const extension = doc.original_filename?.split('.').pop()?.toLowerCase()
     let mimeType = 'application/octet-stream'
@@ -673,20 +676,20 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
     else if (extension === 'png') mimeType = 'image/png'
     else if (extension === 'gif') mimeType = 'image/gif'
     else if (extension === 'pdf') mimeType = 'application/pdf'
-    
+
     // Convert buffer to base64 string
     const base64Data = doc.document_data.toString('base64')
     const dataUri = `data:${mimeType};base64,${base64Data}`
-    
+
     console.log(`✅ Sending document as base64 JSON: ${doc.original_filename} (${mimeType}, ${base64Data.length} chars)`)
-    
+
     res.status(200).json({
       success: true,
       data: dataUri,
       mimeType: mimeType,
       fileName: doc.original_filename || 'document'
     })
-    
+
   } catch (error) {
     console.error('❌ Error getting stallholder document blob by ID as base64:', error)
     res.status(500).json({
