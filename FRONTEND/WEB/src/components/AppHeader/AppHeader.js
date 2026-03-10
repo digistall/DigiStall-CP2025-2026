@@ -56,15 +56,17 @@ export default {
       // Show the actual username from database
       return this.currentUserData?.username || (this.isAdmin ? 'admin' : 'manager')
     },
+    displayFullName() {
+      if (this.currentUserData) {
+        return this.currentUserData.fullName || `${this.currentUserData.firstName || ''} ${this.currentUserData.lastName || ''}`.trim() || this.currentUserData.username || 'User'
+      }
+      return this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Administrator' : 'Business Manager'
+    },
     displayDesignation() {
       // Show the full name and area/location designation
-      if (this.currentUserData) {
-        const fullName =
-          this.currentUserData.fullName || (this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Administrator' : 'Business Manager')
-        const designation = this.currentUserData.designation || ''
-        return designation ? `${fullName} - ${designation}` : fullName
-      }
-      return this.isSystemAdministrator ? 'System Administrator' : this.isAdmin ? 'Stall Business Owner' : 'Business Manager'
+      const fullName = this.displayFullName
+      const designation = this.currentUserData?.designation || ''
+      return designation ? `${fullName} - ${designation}` : fullName
     },
     displayLocation() {
       // Show area and location
@@ -466,16 +468,11 @@ export default {
       this.$emit('notification-click')
     },
 
-    handleProfileClick() {
-      console.log('Profile clicked')
+    // handleProfileClick is for the "My Profile" item now
+    handleMyProfileClick() {
+      console.log('My Profile clicked')
       this.closeProfilePopup()
-      this.$emit('profile-click')
-    },
-
-    handleSettingsClick() {
-      console.log('Settings clicked')
-      this.closeProfilePopup()
-      this.$emit('settings-click')
+      this.$emit('profile-click') // Can potentially route to user profile view if it exists
     },
 
     handleLogoutClick() {
@@ -488,6 +485,11 @@ export default {
       // 3. Navigates to /logout page for animated logout screen
       // 4. Logout page redirects to / after animation
       this.$emit('logout-click')
+    },
+
+    toggleSidebar() {
+      console.log('Header: Toggle sidebar clicked')
+      this.$emit('sidebar-toggle')
     },
 
     toggleProfilePopup() {
@@ -510,13 +512,13 @@ export default {
     },
 
     calculatePopupPosition() {
-      const button = this.$refs.profileButton.$el
-      const buttonRect = button.getBoundingClientRect()
+      const container = this.$refs.profileContainer
+      const rect = container.getBoundingClientRect()
 
       this.popupPosition = {
         position: 'fixed',
-        top: `${buttonRect.bottom + 8}px`,
-        right: `${window.innerWidth - buttonRect.right}px`,
+        top: `${rect.bottom + 8}px`,
+        right: `${window.innerWidth - rect.right}px`,
         zIndex: '9999',
       }
     },

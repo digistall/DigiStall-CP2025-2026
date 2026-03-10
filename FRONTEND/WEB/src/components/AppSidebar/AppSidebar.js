@@ -61,6 +61,61 @@ export default {
       return userType === 'business_employee' || currentUser.userType === 'business_employee'
     },
 
+    currentUserData() {
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      if (this.isSystemAdministrator || this.isAdmin) {
+         return JSON.parse(sessionStorage.getItem('adminData') || null) || currentUser
+      }
+      if (this.isEmployee) {
+         return currentUser
+      }
+      return JSON.parse(sessionStorage.getItem('branchManagerData') || null) || currentUser
+    },
+
+    displayFullName() {
+      const d = this.currentUserData
+      if(d) {
+         return d.fullName || `${d.firstName || d.first_name || ''} ${d.lastName || d.last_name || ''}`.trim() || d.username || 'User'
+      }
+      return 'User'
+    },
+
+    displayLocationText() {
+       const userType = sessionStorage.getItem('userType')
+       if (userType === 'system_administrator') return 'System Administration'
+       if (userType === 'stall_business_owner') return 'Business Owner Portal'
+       
+       const d = this.currentUserData
+       const branchName = d?.branchName || d?.branch_name || d?.branch?.branch_name || d?.branch?.name || null
+       if (this.isEmployee) return branchName || 'Branch Location'
+       if (d?.area && d?.location) return `${d.area} - ${d.location}`
+       return branchName || 'Branch Location'
+    },
+
+    defaultEmail() {
+      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')
+      if (currentUser.email) return currentUser.email
+      if (this.isAdmin) return 'admin@nagastall.com'
+      if (this.isEmployee) return 'employee@nagastall.com'
+      return 'manager@nagastall.com'
+    },
+
+    groupedMenuItems() {
+       const groups = {}
+       const groupOrder = ['Activity', 'Stalls', 'Users', 'Operations', 'Other']
+       
+       this.menuItems.forEach(item => {
+          const g = item.group || 'Other'
+          if (!groups[g]) groups[g] = []
+          groups[g].push(item)
+       })
+       
+       return groupOrder.filter(g => groups[g] && groups[g].length > 0).map(g => ({
+          name: g,
+          items: groups[g]
+       }))
+    },
+
     // Get current user permissions - Return as object { permission: true/false }
     userPermissions() {
       const userType = sessionStorage.getItem('userType')
@@ -447,6 +502,16 @@ export default {
       // This method is called when route changes
       // The active state is now determined by isActiveRoute method
       // which compares current route with item route
+    },
+
+    handleSettingsClick() {
+      console.log('Sidebar: Settings clicked')
+      this.$router.push('/app/subscription').catch(err => console.log('Navigation handled:', err.message));
+    },
+
+    handleLogoutClick() {
+      console.log('Sidebar: Logout clicked')
+      eventBus.emit('trigger-logout');
     },
 
     // Method to refresh stall types (can be called from parent components)
