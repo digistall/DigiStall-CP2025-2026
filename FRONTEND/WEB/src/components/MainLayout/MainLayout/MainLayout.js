@@ -19,58 +19,60 @@ export default {
       menuItems: [],
       // Define menu items for different user types
       systemAdministratorMenuItems: [
-        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/system-admin/dashboard' },
-        { id: 2, icon: 'mdi-account-multiple', name: 'Business Owners', route: '/system-admin/business-owners' },
-        { id: 3, icon: 'mdi-cash-multiple', name: 'Payments', route: '/system-admin/payments' },
-        { id: 4, icon: 'mdi-chart-box', name: 'Reports', route: '/system-admin/reports' },
+        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/system-admin/dashboard', group: 'Activity' },
+        { id: 2, icon: 'mdi-account-multiple', name: 'Business Owners', route: '/system-admin/business-owners', group: 'Users' },
+        { id: 3, icon: 'mdi-cash-multiple', name: 'Payments', route: '/system-admin/payments', group: 'Operations' },
+        { id: 4, icon: 'mdi-chart-box', name: 'Reports', route: '/system-admin/reports', group: 'Operations' },
       ],
       businessOwnerMenuItems: [
-        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
-        { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
-        { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
-        { id: 8, icon: 'mdi-account-multiple', name: 'Stallholders', route: '/app/stallholders' },
-        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors' },
-        { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
-        { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
-        { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
-        { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees' },
-        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
-        { id: 13, icon: 'mdi-credit-card-outline', name: 'My Subscription', route: '/app/subscription' },
-        { id: 14, icon: 'mdi-domain', name: 'Branch', route: '/app/branch' },
+        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard', group: 'Activity' },
+        { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls', group: 'Stalls' },
+        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker', group: 'Stalls' },
+        { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants', group: 'Users' },
+        { id: 8, icon: 'mdi-account-multiple', name: 'Stallholders', route: '/app/stallholders', group: 'Users' },
+        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors', group: 'Users' },
+        { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees', group: 'Users' },
+        { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints', group: 'Operations' },
+        { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances', group: 'Operations' },
+        { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment', group: 'Operations' },
+        { id: 13, icon: 'mdi-credit-card-outline', name: 'My Subscription', route: '/app/subscription', group: 'Operations' },
+        { id: 14, icon: 'mdi-domain', name: 'Branch', route: '/app/branch', group: 'Operations' },
       ],
       businessManagerMenuItems: [
-        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
-        { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
-        { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
-        { id: 8, icon: 'mdi-account-multiple', name: 'Stallholders', route: '/app/stallholders' },
-        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors' },
-        { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
-        { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances' },
-        { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
-        { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees' },
-        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
+        { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard', group: 'Activity' },
+        { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls', group: 'Stalls' },
+        { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker', group: 'Stalls' },
+        { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants', group: 'Users' },
+        { id: 8, icon: 'mdi-account-multiple', name: 'Stallholders', route: '/app/stallholders', group: 'Users' },
+        { id: 7, icon: 'mdi-account-group', name: 'Vendors', route: '/app/vendors', group: 'Users' },
+        { id: 6, icon: 'mdi-account-tie', name: 'Employees', route: '/app/employees', group: 'Users' },
+        { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints', group: 'Operations' },
+        { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances', group: 'Operations' },
+        { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment', group: 'Operations' },
       ],
       // Business Employee menu items based on permissions
       businessEmployeeMenuItems: {
-        dashboard: { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard' },
-        payments: { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment' },
-        applicants: { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants' },
-        complaints: { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints' },
-        compliances: {
-          id: 5,
-          icon: 'mdi-shield-check',
-          name: 'Compliances',
-          route: '/app/compliances',
-        },
-        vendors: { id: 6, icon: 'mdi-account-multiple', name: 'Vendors', route: '/app/vendors' },
+        dashboard: { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard', group: 'Activity' },
+        stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls', group: 'Stalls' },
+        stallTracker: { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker', group: 'Stalls' },
+        applicants: { id: 3, icon: 'mdi-account-group', name: 'Applicants', route: '/app/applicants', group: 'Users' },
         stallholders: {
           id: 7,
           icon: 'mdi-account-group',
           name: 'Stallholders',
           route: '/app/stallholders',
+          group: 'Users'
         },
-        stalls: { id: 9, icon: 'mdi-store', name: 'Stalls', route: '/app/stalls' },
-        stallTracker: { id: 10, icon: 'mdi-store-search', name: 'Stall Tracker', route: '/app/stall-tracker' },
+        vendors: { id: 6, icon: 'mdi-account-multiple', name: 'Vendors', route: '/app/vendors', group: 'Users' },
+        complaints: { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints', group: 'Operations' },
+        compliances: {
+          id: 5,
+          icon: 'mdi-shield-check',
+          name: 'Compliances',
+          route: '/app/compliances',
+          group: 'Operations'
+        },
+        payments: { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment', group: 'Operations' },
       },
       // Define all possible menu routes including "more items" (6-10)
       allMenuRoutes: {
@@ -271,6 +273,14 @@ export default {
     handleSidebarToggle(expanded) {
       console.log('🔧 MainLayout: Sidebar toggle received:', expanded)
       this.isSidebarExpanded = expanded
+    },
+
+    // Handle sidebar toggle triggered from header hamburger menu
+    handleSidebarToggleInHeader() {
+      console.log('🔧 MainLayout: Header-triggered sidebar toggle')
+      if (this.$refs.appSidebar) {
+        this.$refs.appSidebar.toggleSidebar()
+      }
     },
   },
 }
