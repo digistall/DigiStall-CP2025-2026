@@ -6,8 +6,15 @@
 .main-content-wrapper {
   background-color: #fafafa;
   height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Global reset for MainLayout to prevent double scrollbars */
+:global(html),
+:global(body) {
+  overflow: hidden !important;
+  height: 100% !important;
 }
 
 .main-content {
