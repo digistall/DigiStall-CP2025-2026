@@ -130,7 +130,7 @@
 .header-cell {
   font-weight: 600;
   font-size: 13px;
-  color: white;
+  color: white !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -156,13 +156,15 @@
 }
 
 .header-cell.collector-col,
-.collector-col, .vendor-col {
+.collector-col,
+.vendor-col {
   justify-content: center !important;
   text-align: center !important;
   padding-left: 0 !important;
 }
 
-.collector-data, .vendor-data {
+.collector-data,
+.vendor-data {
   text-align: left !important;
   padding-left: 16px !important;
 }
