@@ -1212,4 +1212,3 @@ const DocumentController = {
 };
 
 export default DocumentController;
-
