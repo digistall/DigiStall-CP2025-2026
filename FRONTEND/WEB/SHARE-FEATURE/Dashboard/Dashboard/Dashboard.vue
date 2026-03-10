@@ -108,7 +108,7 @@
                         <v-icon size="48" color="warning" class="metric-icon"
                           >mdi-currency-php</v-icon
                         >
-                        <div class="metric-number">₱{{ totalPayments.toLocaleString() }}</div>
+                        <div class="metric-number">{{ totalPayments.toLocaleString() }}</div>
                       </div>
                     </v-card-text>
                   </v-card>
