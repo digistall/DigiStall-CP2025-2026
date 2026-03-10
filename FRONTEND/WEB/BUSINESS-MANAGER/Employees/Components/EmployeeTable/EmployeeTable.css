@@ -1,4 +1,4 @@
-﻿.employee-table {
+.employee-table {
   background: white;
   border-radius: 8px;
   overflow: hidden;
@@ -62,12 +62,19 @@
   font-size: 13px;
   color: white;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  justify-content: center;
-  text-align: center;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  padding: 0 8px;
+}
+
+.name-col-header {
+  padding-left: 0 !important;
+  text-align: left !important; /* Changed to left for name column */
+  justify-content: flex-start !important; /* Changed to flex-start for name column */
 }
 
 .table-cell {
@@ -78,22 +85,24 @@
 }
 
 .employee-col.header-cell {
-  justify-content: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .employee-col.table-cell {
-  justify-content: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .role-col,
 .status-col,
 .login-col,
 .actions-col {
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .permissions-col {
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .employee-info {
@@ -109,7 +118,7 @@
 }
 
 .employee-name {
-  font-weight: 600;
+  font-weight: 400 !important;
   color: #2c3e50;
   font-size: 15px;
   line-height: 1.3;
@@ -125,7 +134,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
 }
 
@@ -147,7 +156,7 @@
 .action-buttons {
   display: flex;
   gap: 2px;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
 }
 
@@ -155,13 +164,13 @@
   font-size: 13px;
   color: #2c3e50;
   font-weight: 500;
-  text-align: center;
+  text-align: left;
 }
 
 .login-time {
   font-size: 12px;
   color: #6c757d;
-  text-align: center;
+  text-align: left;
 }
 
 .no-data-container {
@@ -489,6 +498,17 @@
   letter-spacing: 0 !important;
   transition: all 0.2s ease !important;
   height: auto !important;
+}
+
+.header-cell.name-col {
+  justify-content: center !important;
+  text-align: center !important;
+  padding-left: 0 !important;
+}
+
+.table-cell.name-col {
+  padding-left: 16px !important;
+  justify-content: flex-start !important;
 }
 
 .action-btn .action-text {

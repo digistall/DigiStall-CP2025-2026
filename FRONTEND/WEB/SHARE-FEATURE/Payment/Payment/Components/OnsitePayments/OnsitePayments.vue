@@ -2,9 +2,9 @@
   <div class="onsite-payments">
     <!-- Search & Filter Section -->
     <div class="search-filter-section mb-6">
-      <v-row align="center">
+      <div class="search-wrapper">
         <!-- Search Bar -->
-        <v-col cols="12" md="6" lg="4">
+        <div class="search-input-wrapper">
           <v-text-field
             v-model="searchQuery"
             label="Search Stallholders"
@@ -15,146 +15,125 @@
             prepend-inner-icon="mdi-magnify"
             class="search-field"
           ></v-text-field>
-        </v-col>
-
-        <!-- Spacer -->
-        <v-col cols="12" md="4" lg="6" class="d-none d-md-block"></v-col>
+        </div>
 
         <!-- Filter Button -->
-        <v-col cols="12" md="2" lg="2" class="text-right">
-          <div class="filter-container" ref="filterContainer">
-            <v-btn
-              variant="outlined"
-              prepend-icon="mdi-filter-variant"
-              @click="toggleFilter"
-              class="filter-btn"
-              :class="{ 'filter-active': showFilterPanel }"
-            >
-              Filter
-              <v-icon
-                :icon="showFilterPanel ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-                size="small"
-                class="ml-1"
-              ></v-icon>
-            </v-btn>
+        <div class="filter-container" ref="filterContainer">
+          <button
+            class="filter-btn"
+            :class="{ 'filter-active': showFilterPanel }"
+            @click="toggleFilter"
+          >
+            <v-icon icon="mdi-filter-variant" size="small" class="mr-1"></v-icon>
+            Filter
+            <v-icon
+              :icon="showFilterPanel ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              size="small"
+              class="ml-1"
+            ></v-icon>
+          </button>
 
-            <!-- Filter Dropdown Panel -->
-            <transition name="slide-down">
-              <div v-show="showFilterPanel" class="filter-dropdown">
-                <v-card elevation="8" class="filter-card">
-                  <div class="filter-header">
-                    <div class="d-flex align-center">
-                      <v-icon icon="mdi-filter-variant" size="small" class="mr-2"></v-icon>
-                      <span class="filter-title">FILTER OPTIONS</span>
+          <!-- Filter Dropdown Panel -->
+          <transition name="slide-down">
+            <div v-show="showFilterPanel" class="filter-dropdown">
+              <div class="filter-card">
+                <div class="filter-header">
+                  <div class="filter-header-content">
+                    <v-icon icon="mdi-filter-variant" size="small" class="mr-2"></v-icon>
+                    <h6 class="filter-title">Filter Options</h6>
+                  </div>
+                  <button class="close-btn" @click="showFilterPanel = false">
+                    <v-icon icon="mdi-close" size="small"></v-icon>
+                  </button>
+                </div>
+
+                <div class="filter-content">
+                  <!-- Stall Number Sort -->
+                  <div class="filter-group">
+                    <label class="filter-label">STALL NUMBER</label>
+                    <div class="status-buttons">
+                      <button
+                        v-for="option in stallNumberSortOptions"
+                        :key="option.value"
+                        class="status-btn"
+                        :class="{ active: filters.stallNumberSort === option.value }"
+                        @click="
+                          filters.stallNumberSort =
+                            filters.stallNumberSort === option.value ? null : option.value
+                        "
+                      >
+                        {{ option.title }}
+                      </button>
                     </div>
-                    <v-btn
-                      icon="mdi-close"
-                      variant="text"
-                      size="small"
-                      class="close-btn"
-                      @click="showFilterPanel = false"
-                    ></v-btn>
                   </div>
 
-                  <div class="filter-content">
-                    <!-- Stall Number Sort -->
-                    <div class="filter-group">
-                      <div class="filter-label">STALL NUMBER</div>
-                      <div class="status-buttons">
-                        <v-btn
-                          v-for="option in stallNumberSortOptions"
-                          :key="option.value"
-                          :variant="filters.stallNumberSort === option.value ? 'flat' : 'outlined'"
-                          :color="filters.stallNumberSort === option.value ? 'primary' : 'default'"
-                          class="status-btn"
-                          @click="filters.stallNumberSort = filters.stallNumberSort === option.value ? null : option.value"
-                        >
-                          {{ option.title }}
-                        </v-btn>
-                      </div>
-                    </div>
+                  <!-- Section -->
+                  <div class="filter-group">
+                    <label class="filter-label">SECTION</label>
+                    <v-select
+                      v-model="filters.section"
+                      :items="sectionFilterOptions"
+                      placeholder="All Sections"
+                      variant="outlined"
+                      density="compact"
+                      clearable
+                      hide-details
+                      class="filter-select"
+                    ></v-select>
+                  </div>
 
-                    <!-- Section -->
-                    <div class="filter-group">
-                      <div class="filter-label">SECTION</div>
-                      <v-select
-                        v-model="filters.section"
-                        :items="sectionFilterOptions"
-                        placeholder="All Sections"
-                        variant="outlined"
-                        density="compact"
-                        clearable
-                        hide-details
-                        class="filter-select"
-                      ></v-select>
-                    </div>
+                  <!-- Floor -->
+                  <div class="filter-group">
+                    <label class="filter-label">FLOOR</label>
+                    <v-select
+                      v-model="filters.floor"
+                      :items="floorFilterOptions"
+                      placeholder="All Floors"
+                      variant="outlined"
+                      density="compact"
+                      clearable
+                      hide-details
+                      class="filter-select"
+                    ></v-select>
+                  </div>
 
-                    <!-- Floor -->
-                    <div class="filter-group">
-                      <div class="filter-label">FLOOR</div>
-                      <v-select
-                        v-model="filters.floor"
-                        :items="floorFilterOptions"
-                        placeholder="All Floors"
-                        variant="outlined"
-                        density="compact"
-                        clearable
-                        hide-details
-                        class="filter-select"
-                      ></v-select>
-                    </div>
-
-                    <!-- Status -->
-                    <div class="filter-group">
-                      <div class="filter-label">STATUS</div>
-                      <div class="status-buttons">
-                        <v-btn
-                          :variant="!filters.status ? 'flat' : 'outlined'"
-                          :color="!filters.status ? 'primary' : 'default'"
-                          class="status-btn"
-                          @click="filters.status = null"
-                        >
-                          All
-                        </v-btn>
-                        <v-btn
-                          v-for="status in statusFilterOptions"
-                          :key="status"
-                          :variant="filters.status === status ? 'flat' : 'outlined'"
-                          :color="filters.status === status ? 'primary' : 'default'"
-                          class="status-btn"
-                          @click="filters.status = status"
-                        >
-                          {{ status }}
-                        </v-btn>
-                      </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="filter-actions">
-                      <v-btn
-                        variant="outlined"
-                        color="grey"
-                        class="action-btn clear-btn"
-                        @click="clearFilters"
+                  <!-- Status -->
+                  <div class="filter-group">
+                    <label class="filter-label">STATUS</label>
+                    <div class="status-buttons">
+                      <button
+                        class="status-btn"
+                        :class="{ active: !filters.status }"
+                        @click="filters.status = null"
                       >
-                        Clear All
-                      </v-btn>
-                      <v-btn
-                        variant="flat"
-                        color="primary"
-                        class="action-btn apply-btn"
-                        @click="applyFilters"
+                        All
+                      </button>
+                      <button
+                        v-for="status in statusFilterOptions"
+                        :key="status"
+                        class="status-btn"
+                        :class="{ active: filters.status === status }"
+                        @click="filters.status = status"
                       >
-                        Apply Filters
-                      </v-btn>
+                        {{ status }}
+                      </button>
                     </div>
                   </div>
-                </v-card>
+
+                  <!-- Action Buttons -->
+                  <div class="filter-actions">
+                    <button class="reset-btn" @click="clearFilters">
+                      <v-icon icon="mdi-refresh" size="small"></v-icon>
+                      Reset
+                    </button>
+                    <button class="apply-btn" @click="applyFilters">Apply Filters</button>
+                  </div>
+                </div>
               </div>
-            </transition>
-          </div>
-        </v-col>
-      </v-row>
+            </div>
+          </transition>
+        </div>
+      </div>
     </div>
 
     <!-- Stall Payment Tracker Table -->
@@ -165,7 +144,7 @@
             <thead>
               <tr>
                 <th>Stall Number</th>
-                <th>Stallholder Name</th>
+                <th class="name-header">Stallholder Name</th>
                 <th>Monthly Rental</th>
                 <th>Section</th>
                 <th>Floor</th>
@@ -204,11 +183,7 @@
                 <td class="floor-cell">{{ stall.floorName || 'N/A' }}</td>
                 <td class="location-cell">{{ stall.stallLocation || 'N/A' }}</td>
                 <td class="status-cell center-td">
-                  <v-chip
-                    :color="getStatusConfig(stall).color"
-                    variant="flat"
-                    size="small"
-                  >
+                  <v-chip :color="getStatusConfig(stall).color" variant="flat" size="small">
                     {{ getStatusConfig(stall).label }}
                   </v-chip>
                 </td>
@@ -256,10 +231,7 @@
                   variant="outlined"
                   density="comfortable"
                   type="number"
-                  :rules="[
-                    (v) => !!v || 'Required',
-                    (v) => v > 0 || 'Must be greater than 0',
-                  ]"
+                  :rules="[(v) => !!v || 'Required', (v) => v > 0 || 'Must be greater than 0']"
                   prepend-inner-icon="mdi-currency-php"
                 ></v-text-field>
               </v-col>
@@ -318,11 +290,15 @@
                   density="comfortable"
                   prepend-inner-icon="mdi-alert-circle"
                   :rules="[(v) => !!v || 'Please select a violation']"
-                  :no-data-text="!form.stallholderId ? 'Select a stallholder first' : 'No unpaid violations found'"
+                  :no-data-text="
+                    !form.stallholderId
+                      ? 'Select a stallholder first'
+                      : 'No unpaid violations found'
+                  "
                   return-object
                   item-title="title"
                   item-value="value"
-                  @update:modelValue="(item) => form.selectedViolation = item?.value"
+                  @update:modelValue="(item) => (form.selectedViolation = item?.value)"
                 >
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
@@ -339,7 +315,11 @@
                         >
                           {{ item.raw.violation?.severity }}
                         </v-chip>
-                        <span>Offense #{{ item.raw.violation?.offenseNo }} - ₱{{ item.raw.violation?.penaltyAmount?.toLocaleString() }}</span>
+                        <span
+                          >Offense #{{ item.raw.violation?.offenseNo }} - ₱{{
+                            item.raw.violation?.penaltyAmount?.toLocaleString()
+                          }}</span
+                        >
                       </v-list-item-subtitle>
                     </v-list-item>
                   </template>
@@ -358,7 +338,12 @@
                       <span class="font-weight-bold">Selected Violation Details</span>
                     </div>
                     <div class="violation-info">
-                      <div v-for="v in unpaidViolations.filter(x => x.violationId === form.selectedViolation)" :key="v.violationId">
+                      <div
+                        v-for="v in unpaidViolations.filter(
+                          (x) => x.violationId === form.selectedViolation,
+                        )"
+                        :key="v.violationId"
+                      >
                         <div class="d-flex justify-space-between mb-1">
                           <span class="text-caption">Type:</span>
                           <span class="font-weight-medium">{{ v.violationType }}</span>
@@ -369,7 +354,9 @@
                         </div>
                         <div class="d-flex justify-space-between mb-1">
                           <span class="text-caption">Penalty Amount:</span>
-                          <span class="font-weight-bold text-error">₱{{ v.penaltyAmount?.toLocaleString() }}</span>
+                          <span class="font-weight-bold text-error"
+                            >₱{{ v.penaltyAmount?.toLocaleString() }}</span
+                          >
                         </div>
                         <div class="d-flex justify-space-between">
                           <span class="text-caption">Date Reported:</span>
@@ -400,7 +387,11 @@
                   density="comfortable"
                   :rules="[(v) => !!v || 'Required']"
                   prepend-inner-icon="mdi-receipt"
-                  :placeholder="isPenaltyPayment ? 'Enter payment reference (e.g., REF-001)' : 'Enter receipt number (e.g., RCP-001)'"
+                  :placeholder="
+                    isPenaltyPayment
+                      ? 'Enter payment reference (e.g., REF-001)'
+                      : 'Enter receipt number (e.g., RCP-001)'
+                  "
                 ></v-text-field>
               </v-col>
               <v-col cols="12">
@@ -460,19 +451,23 @@
                   <span class="detail-card-label">STALLHOLDER NAME</span>
                   <span class="detail-card-value stallholder-name-value">
                     {{ selectedStall.name }}
-                    <v-chip color="#002181" variant="flat" size="x-small" class="ml-2">{{ selectedStall.stallNo }}</v-chip>
+                    <v-chip color="#002181" variant="flat" size="x-small" class="ml-2">{{
+                      selectedStall.stallNo
+                    }}</v-chip>
                   </span>
                 </div>
                 <div class="detail-card detail-card-row">
                   <div class="detail-card-half">
                     <span class="detail-card-label">
-                      <v-icon size="14" color="#6b7280" class="mr-1">mdi-home-outline</v-icon>SECTION
+                      <v-icon size="14" color="#6b7280" class="mr-1">mdi-home-outline</v-icon
+                      >SECTION
                     </span>
                     <span class="detail-card-value">{{ selectedStall.sectionName || 'N/A' }}</span>
                   </div>
                   <div class="detail-card-half">
                     <span class="detail-card-label">
-                      <v-icon size="14" color="#6b7280" class="mr-1">mdi-map-marker-outline</v-icon>FLOOR
+                      <v-icon size="14" color="#6b7280" class="mr-1">mdi-map-marker-outline</v-icon
+                      >FLOOR
                     </span>
                     <span class="detail-card-value">{{ selectedStall.floorName || 'N/A' }}</span>
                   </div>
@@ -483,9 +478,12 @@
                 </div>
                 <div class="detail-card detail-card-rental">
                   <span class="detail-card-label rental-label">
-                    <v-icon size="16" color="white" class="mr-1">mdi-currency-usd</v-icon>MONTHLY RENTAL
+                    <v-icon size="16" color="white" class="mr-1">mdi-currency-usd</v-icon>MONTHLY
+                    RENTAL
                   </span>
-                  <span class="detail-card-value rental-value">{{ formatCurrency(selectedStall.monthlyRental) }}</span>
+                  <span class="detail-card-value rental-value">{{
+                    formatCurrency(selectedStall.monthlyRental)
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -501,7 +499,11 @@
                 </div>
 
                 <div v-if="trackerLoading" class="tracker-loading">
-                  <v-progress-circular indeterminate color="#002181" size="28"></v-progress-circular>
+                  <v-progress-circular
+                    indeterminate
+                    color="#002181"
+                    size="28"
+                  ></v-progress-circular>
                   <span>Loading payment history...</span>
                 </div>
 
@@ -517,7 +519,7 @@
                     class="tracker-grid-card"
                     :class="`tracker-${entry.status.toLowerCase()}`"
                     @click="openEntryDetail(entry)"
-                    style="cursor: pointer;"
+                    style="cursor: pointer"
                   >
                     <div class="tracker-card-top">
                       <div class="tracker-icon-wrap">
@@ -527,7 +529,9 @@
                       </div>
                       <div class="tracker-date-block">
                         <span class="tracker-due-label">{{ entry.dueDateFormatted }}</span>
-                        <span v-if="entry.receiptNo" class="tracker-receipt-no">{{ entry.receiptNo }}</span>
+                        <span v-if="entry.receiptNo" class="tracker-receipt-no">{{
+                          entry.receiptNo
+                        }}</span>
                       </div>
                     </div>
                     <div class="tracker-card-bottom">
@@ -552,7 +556,10 @@
     <!-- Entry Detail Modal -->
     <v-dialog v-model="showEntryDetail" max-width="480px">
       <v-card v-if="selectedEntry" class="entry-detail-card">
-        <v-card-title class="entry-detail-header" :class="`entry-header-${selectedEntry.status.toLowerCase()}`">
+        <v-card-title
+          class="entry-detail-header"
+          :class="`entry-header-${selectedEntry.status.toLowerCase()}`"
+        >
           <div class="entry-header-left">
             <div class="entry-header-icon">
               <v-icon size="20" color="white">
@@ -583,7 +590,9 @@
               </div>
               <div class="entry-info-item">
                 <span class="entry-info-label">Payment Date</span>
-                <span class="entry-info-value">{{ formatDateTime(selectedEntry.paymentDate, selectedEntry.paymentTime) }}</span>
+                <span class="entry-info-value">{{
+                  formatDateTime(selectedEntry.paymentDate, selectedEntry.paymentTime)
+                }}</span>
               </div>
               <div class="entry-info-item">
                 <span class="entry-info-label">Collected By</span>
@@ -610,7 +619,12 @@
               <div class="entry-info-item">
                 <span class="entry-info-label">Status</span>
                 <span class="entry-info-value">
-                  <v-chip :color="getTrackerStatusConfig(selectedEntry.status).color" variant="flat" size="x-small">{{ selectedEntry.status }}</v-chip>
+                  <v-chip
+                    :color="getTrackerStatusConfig(selectedEntry.status).color"
+                    variant="flat"
+                    size="x-small"
+                    >{{ selectedEntry.status }}</v-chip
+                  >
                 </span>
               </div>
             </div>
@@ -627,7 +641,11 @@
                 v-for="(item, i) in getEntryBreakdown(selectedEntry)"
                 :key="i"
                 class="breakdown-row"
-                :class="{ 'breakdown-total': item.isTotal, 'breakdown-discount': item.isDiscount, 'breakdown-fee': item.isFee }"
+                :class="{
+                  'breakdown-total': item.isTotal,
+                  'breakdown-discount': item.isDiscount,
+                  'breakdown-fee': item.isFee,
+                }"
               >
                 <span class="breakdown-label">{{ item.label }}</span>
                 <span class="breakdown-value">{{ item.value }}</span>

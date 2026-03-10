@@ -70,5 +70,29 @@ export default {
     handleRefreshVendors() {
       this.$emit('refresh-vendors')
     },
+    getInitials(name) {
+      if (!name) return '??'
+      const parts = name.split(' ')
+      if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+      }
+      return name.charAt(0).toUpperCase()
+    },
+    // Compliance status helpers - consistent with Stallholder module
+    getComplianceColor(compliance) {
+      // Handle undefined, null, empty string, or 'Compliant' as compliant (green)
+      if (!compliance || compliance === 'Compliant') {
+        return 'green'
+      }
+      // Non-Compliant or any other status shows as red
+      return 'red'
+    },
+    getComplianceIcon(compliance) {
+      // Handle undefined, null, empty string, or 'Compliant' as compliant
+      if (!compliance || compliance === 'Compliant') {
+        return 'mdi-check-circle'
+      }
+      return 'mdi-alert-circle'
+    },
   },
 }

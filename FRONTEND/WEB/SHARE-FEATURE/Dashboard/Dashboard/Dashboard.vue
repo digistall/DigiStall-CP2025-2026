@@ -258,7 +258,12 @@
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <div class="table-scroll-container">
-                        <v-table class="custom-table" v-if="recentPayments.length > 0">
+                        <v-table
+                          class="custom-table"
+                          v-if="recentPayments.length > 0"
+                          fixed-header
+                          height="350px"
+                        >
                           <thead>
                             <tr>
                               <th>Stallholder</th>
@@ -269,8 +274,10 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="payment in recentPayments.slice(0, 7)" :key="payment.id">
-                              <td class="font-weight-medium">{{ payment.stallholder }}</td>
+                            <tr v-for="payment in recentPayments" :key="payment.id">
+                              <td>
+                                <span>{{ payment.stallholder }}</span>
+                              </td>
                               <td>
                                 <v-chip
                                   :color="getPaymentTypeColor(payment.paymentType)"
@@ -322,7 +329,12 @@
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <div class="table-scroll-container">
-                        <v-table class="custom-table" v-if="activeCollectors.length > 0">
+                        <v-table
+                          class="custom-table"
+                          v-if="activeCollectors.length > 0"
+                          fixed-header
+                          height="350px"
+                        >
                           <thead>
                             <tr>
                               <th>Name</th>
@@ -333,8 +345,10 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="employee in activeCollectors.slice(0, 7)" :key="employee.id">
-                              <td class="font-weight-medium">{{ employee.name }}</td>
+                            <tr v-for="employee in activeCollectors" :key="employee.id">
+                              <td>
+                                <span>{{ employee.name }}</span>
+                              </td>
                               <td>
                                 <v-chip
                                   :color="getRoleColor(employee.type)"
@@ -381,10 +395,15 @@
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <div class="table-scroll-container">
-                        <v-table class="custom-table" v-if="stallOverview.length > 0">
+                        <v-table
+                          class="custom-table"
+                          v-if="stallOverview.length > 0"
+                          fixed-header
+                          height="350px"
+                        >
                           <thead>
                             <tr>
-                              <th>Stall ID</th>
+                              <th>Stall Number</th>
                               <th>Stallholder</th>
                               <th>Location</th>
                               <th>Monthly Fee</th>
@@ -393,11 +412,13 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="stall in stallOverview.slice(0, 7)" :key="stall.id">
+                            <tr v-for="stall in stallOverview" :key="stall.id">
                               <td class="font-weight-bold text-primary">
                                 {{ stall.stallId }}
                               </td>
-                              <td class="font-weight-medium">{{ stall.stallholder }}</td>
+                              <td>
+                                <span>{{ stall.stallholder }}</span>
+                              </td>
                               <td class="text-grey-600">{{ stall.location }}</td>
                               <td class="text-success font-weight-bold">
                                 ₱{{ stall.monthlyFee.toLocaleString() }}

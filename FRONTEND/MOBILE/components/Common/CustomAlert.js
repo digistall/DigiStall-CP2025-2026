@@ -7,6 +7,7 @@ import {
   Modal,
   Animated,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -178,23 +179,28 @@ const CustomAlert = ({
     const isCancel = button.style === 'cancel';
     const isDestructive = button.style === 'destructive';
     const isSingleButton = totalButtons === 1;
+    const isStacked = totalButtons > 2; // 3+ buttons render stacked vertically
 
     let buttonStyle = [styles.button];
     let textStyle = [styles.buttonText];
 
-    if (isSingleButton) {
+    if (isSingleButton || isStacked) {
       buttonStyle.push(styles.buttonFull);
+    }
+
+    if (isSingleButton || (!isCancel && !isDestructive)) {
       buttonStyle.push({ backgroundColor: config.accentColor });
       textStyle.push({ color: '#FFFFFF' });
-    } else if (isCancel) {
+    }
+
+    if (isCancel) {
       buttonStyle.push(styles.buttonOutline);
       buttonStyle.push({ borderColor: '#D1D5DB' });
+      // Override background set above for cancel
+      buttonStyle.push({ backgroundColor: 'transparent' });
       textStyle.push({ color: '#6B7280' });
     } else if (isDestructive) {
       buttonStyle.push({ backgroundColor: '#EF4444' });
-      textStyle.push({ color: '#FFFFFF' });
-    } else {
-      buttonStyle.push({ backgroundColor: config.accentColor });
       textStyle.push({ color: '#FFFFFF' });
     }
 
@@ -226,8 +232,10 @@ const CustomAlert = ({
             },
           ]}
         >
-          {/* Top accent line */}
-          <View style={[styles.accentLine, { backgroundColor: config.accentColor }]} />
+          {/* Top accent line — wrapped so overflow:hidden clips it without clipping the rest */}
+          <View style={styles.accentLineWrapper}>
+            <View style={[styles.accentLine, { backgroundColor: config.accentColor }]} />
+          </View>
 
           {/* Icon circle */}
           <Animated.View
@@ -257,15 +265,26 @@ const CustomAlert = ({
             <Text style={styles.messageText}>{message}</Text>
           ) : null}
 
-          {/* Buttons */}
-          <View
-            style={[
-              styles.buttonRow,
-              alertButtons.length === 1 && styles.buttonRowSingle,
-            ]}
-          >
-            {alertButtons.map((btn, i) => renderButton(btn, i, alertButtons.length))}
-          </View>
+          {/* Buttons — scroll when stacked to prevent cut-off */}
+          {alertButtons.length > 2 ? (
+            <ScrollView
+              style={styles.buttonScrollView}
+              contentContainerStyle={styles.buttonRowStacked}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {alertButtons.map((btn, i) => renderButton(btn, i, alertButtons.length))}
+            </ScrollView>
+          ) : (
+            <View
+              style={[
+                styles.buttonRow,
+                alertButtons.length === 1 && styles.buttonRowSingle,
+              ]}
+            >
+              {alertButtons.map((btn, i) => renderButton(btn, i, alertButtons.length))}
+            </View>
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -293,13 +312,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 24,
     elevation: 20,
-    overflow: 'hidden',
+    // No overflow:hidden here — that was clipping stacked buttons
   },
-  accentLine: {
+  accentLineWrapper: {
     width: '120%',
-    height: 4,
+    overflow: 'hidden',
     marginBottom: 24,
     alignSelf: 'center',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  accentLine: {
+    width: '100%',
+    height: 4,
   },
   iconCircle: {
     width: 60,
@@ -342,6 +367,15 @@ const styles = StyleSheet.create({
   },
   buttonRowSingle: {
     justifyContent: 'center',
+  },
+  buttonScrollView: {
+    width: '100%',
+    maxHeight: 260, // fits ~4 buttons; scrollable if more
+  },
+  buttonRowStacked: {
+    flexDirection: 'column',
+    gap: 8,
+    paddingBottom: 2,
   },
   button: {
     flex: 1,

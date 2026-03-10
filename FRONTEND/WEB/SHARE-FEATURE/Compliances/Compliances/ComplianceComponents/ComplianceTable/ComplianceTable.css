@@ -32,7 +32,7 @@
 
 .compliance-table th {
   padding: 16px 12px;
-  text-align: center;
+  text-align: left;
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -66,7 +66,7 @@
 .compliance-table td {
   padding: 16px 12px;
   vertical-align: middle;
-  text-align: center;
+  text-align: left;
   
 }
 
@@ -74,11 +74,27 @@
   min-width: 200px;
 }
 
+.compliance-table th:nth-child(4),
+.compliance-table th:nth-child(5) {
+  text-align: center !important;
+  padding-left: 0 !important;
+}
+
+.compliance-table td:nth-child(4),
+.compliance-table td:nth-child(5) {
+  text-align: left !important;
+  padding-left: 16px !important;
+}
+
 .compliance-name-wrapper {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
+}
+
+.compliance-name-wrapper span {
+  font-weight: 400 !important;
 }
 
 .compliance-avatar {

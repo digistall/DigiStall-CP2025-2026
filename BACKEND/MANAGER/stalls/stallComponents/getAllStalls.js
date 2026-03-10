@@ -69,7 +69,7 @@ export const getAllStalls = async (req, res) => {
       LEFT JOIN branch b ON s.branch_id = b.branch_id
       LEFT JOIN floor f ON s.floor_id = f.floor_id
       LEFT JOIN section sec ON s.section_id = sec.section_id
-      LEFT JOIN stallholder sh ON sh.stall_id = s.stall_id
+      LEFT JOIN stallholder sh ON s.stall_id = sh.stall_id AND sh.status = 'Active'
       LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.branch_id = ?
       ORDER BY s.created_at DESC`,

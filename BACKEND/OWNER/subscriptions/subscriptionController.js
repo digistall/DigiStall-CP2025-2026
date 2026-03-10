@@ -181,7 +181,7 @@ export const getAllBusinessOwnersWithSubscription = async (req, res) => {
     );
     
     // Decrypt sensitive fields and add monthly_fee
-    const { decryptData } = await import('../../services/encryptionService.js');
+    const { decryptData } = await import('../../../services/encryptionService.js');
     const decryptedOwners = businessOwners.map(owner => ({
       ...owner,
       full_name: decryptData(owner.owner_full_name),
@@ -251,10 +251,28 @@ export const getBusinessOwnerPaymentHistory = async (req, res) => {
     
     connection = await createConnection();
     
-    const [[payments]] = await connection.execute(
-      'CALL getBusinessOwnerPaymentHistory(?)',
-      [businessOwnerId]
-    );
+    const [[payments]] = await connection.execute(`
+      SELECT 
+        sp.payment_id,
+        sp.subscription_id,
+        sp.business_owner_id,
+        sp.amount,
+        sp.payment_date,
+        sp.payment_method,
+        sp.reference_number,
+        sp.reference_number as receipt_number,
+        sp.period_start as payment_period_start,
+        sp.period_end as payment_period_end,
+        sp.notes,
+        sp.status as payment_status,
+        sp.created_at,
+        p.plan_name
+      FROM subscription_payments sp
+      JOIN business_owner_subscriptions bos ON sp.subscription_id = bos.subscription_id
+      JOIN subscription_plans p ON bos.plan_id = p.plan_id
+      WHERE sp.business_owner_id = ?
+      ORDER BY sp.payment_date DESC, sp.created_at DESC
+    `, [businessOwnerId]);
     
     res.status(200).json({
       success: true,

@@ -29,7 +29,7 @@
             v-if="!error"
             :searchQuery="searchQuery"
             :activeFilter="activeFilter"
-            :complianceList="complianceList"
+            :complianceList="filteredComplianceList"
             @view-compliance="handleViewCompliance"
             @edit-compliance="handleEditCompliance"
             @delete-compliance="handleDeleteCompliance"

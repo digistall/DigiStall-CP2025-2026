@@ -100,20 +100,63 @@
 }
 
 .id-col {
-  font-weight: 600;
-  justify-content: center;
+  font-weight: 400;
+  justify-content: flex-start;
 }
 
-.name-col,
-.email-col {
-  justify-content: center;
+.name-col {
+  justify-content: flex-start;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.phone-col {
+.header-cell.name-col {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: 0 !important;
+}
+
+.table-cell.name-col {
+  padding-left: 16px !important;
+  justify-content: flex-start !important;
+}
+
+.email-col {
+  justify-content: flex-start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.applicant-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.applicant-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #002181;
+  color: white;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.applicant-name-text {
+  font-weight: 400;
+  color: #2c3e50;
+}
+
+.phone-col {
+  justify-content: flex-start;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -121,7 +164,7 @@
 
 .address-col {
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .address-text {
@@ -132,14 +175,14 @@
   line-clamp: 2;
   -webkit-box-orient: vertical;
   word-break: break-word;
-  text-align: center;
+  text-align: left;
   width: 100%;
   font-size: 13px;
 }
 
 .stall-col {
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .stall-info {
@@ -194,7 +237,7 @@
 }
 
 .info-col {
-  justify-content: center;
+  justify-content: flex-start;
   padding: 18px 14px;
 }
 
@@ -217,12 +260,12 @@
 
 .action-col,
 .status-col {
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .date-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .table-cell.date-col {

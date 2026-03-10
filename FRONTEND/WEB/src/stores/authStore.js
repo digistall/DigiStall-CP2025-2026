@@ -10,6 +10,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import axios from 'axios';
 import SecureLogger from '../utils/secureLogger.js';
+import offlineSyncService from '../services/offlineSyncService.js';
 
 // API Base URL - Uses environment variable for production, fallback for local dev
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -302,6 +303,20 @@ export const useAuthStore = defineStore('auth', () => {
    * Logout user
    */
   async function logout() {
+    // Check for pending offline changes and warn the user
+    if (offlineSyncService && offlineSyncService.hasPendingRequests()) {
+      const confirmLogout = window.confirm(
+        'WARNING: You have unsynced offline changes!\n\nIf you log out now, these changes will be permanently lost. Are you sure you want to log out?'
+      );
+      
+      if (!confirmLogout) {
+        return { success: false, message: 'Logout cancelled due to pending offline changes' };
+      }
+      
+      // If they confirm to completely log out, we must securely clear the offline queue
+      offlineSyncService.clearQueue();
+    }
+
     try {
       isLoading.value = true;
       

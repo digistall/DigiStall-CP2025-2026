@@ -23,7 +23,12 @@
           @click="viewMoreInfo(stallholder)"
         >
           <div class="table-cell name-col">
-            {{ stallholder.stallholder_name }}
+            <div class="stallholder-name-wrapper">
+              <div class="stallholder-avatar">
+                {{ getInitials(stallholder.stallholder_name) }}
+              </div>
+              <span class="stallholder-name-text">{{ stallholder.stallholder_name }}</span>
+            </div>
           </div>
           <div class="table-cell business-col">
             <div class="business-info">
@@ -53,12 +58,14 @@
               <div
                 class="status-badge"
                 :class="{
-                  'status-active': stallholder.contract_status === 'Active' && stallholder.payment_status !== 'overdue',
+                  'status-active':
+                    stallholder.contract_status === 'Active' &&
+                    stallholder.payment_status !== 'overdue',
                   'status-expired': stallholder.contract_status === 'Expired',
                   'status-terminated': stallholder.contract_status === 'Terminated',
                   'status-current': stallholder.payment_status === 'current',
                   'status-overdue': stallholder.payment_status === 'overdue',
-                  'status-grace': stallholder.payment_status === 'grace_period'
+                  'status-grace': stallholder.payment_status === 'grace_period',
                 }"
               >
                 <v-icon
@@ -79,7 +86,11 @@
               :color="stallholder.compliance_status === 'Compliant' ? 'green' : 'red'"
               size="small"
               variant="flat"
-              :prepend-icon="stallholder.compliance_status === 'Compliant' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+              :prepend-icon="
+                stallholder.compliance_status === 'Compliant'
+                  ? 'mdi-check-circle'
+                  : 'mdi-alert-circle'
+              "
             >
               {{ stallholder.compliance_status || 'Compliant' }}
             </v-chip>
@@ -87,12 +98,9 @@
         </div>
       </div>
 
-
       <!-- Empty State -->
       <div v-if="stallholders.length === 0" class="empty-state">
-        <v-icon size="48" color="grey-lighten-1" class="mb-3">
-          mdi-account-tie
-        </v-icon>
+        <v-icon size="48" color="grey-lighten-1" class="mb-3"> mdi-account-tie </v-icon>
         <p class="text-grey-lighten-1">No stallholders found</p>
       </div>
 
@@ -204,31 +212,41 @@
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Contract Start:</span>
-                      <span class="info-value">{{ formatDate(selectedStallholder?.contract_start_date) }}</span>
+                      <span class="info-value">{{
+                        formatDate(selectedStallholder?.contract_start_date)
+                      }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Contract End:</span>
-                      <span class="info-value">{{ formatDate(selectedStallholder?.contract_end_date) }}</span>
+                      <span class="info-value">{{
+                        formatDate(selectedStallholder?.contract_end_date)
+                      }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Monthly Rent:</span>
-                      <span class="info-value price">₱{{ selectedStallholder?.monthly_rent?.toLocaleString() }}</span>
+                      <span class="info-value price"
+                        >₱{{ selectedStallholder?.monthly_rent?.toLocaleString() }}</span
+                      >
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Total Lease Amount:</span>
-                      <span class="info-value price">₱{{ selectedStallholder?.lease_amount?.toLocaleString() }}</span>
+                      <span class="info-value price"
+                        >₱{{ selectedStallholder?.lease_amount?.toLocaleString() }}</span
+                      >
                     </div>
                   </v-col>
                   <v-col cols="12">
                     <div class="info-item">
                       <span class="info-label">Notes:</span>
-                      <span class="info-value">{{ selectedStallholder?.notes || 'No notes available' }}</span>
+                      <span class="info-value">{{
+                        selectedStallholder?.notes || 'No notes available'
+                      }}</span>
                     </div>
                   </v-col>
                 </v-row>
@@ -243,7 +261,9 @@
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Last Payment Date:</span>
-                      <span class="info-value">{{ formatDate(selectedStallholder?.last_payment_date) || 'No payment yet' }}</span>
+                      <span class="info-value">{{
+                        formatDate(selectedStallholder?.last_payment_date) || 'No payment yet'
+                      }}</span>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
@@ -251,7 +271,9 @@
                       <span class="info-label">Compliance Status:</span>
                       <span class="info-value">
                         <v-chip
-                          :color="selectedStallholder?.compliance_status === 'Compliant' ? 'green' : 'red'"
+                          :color="
+                            selectedStallholder?.compliance_status === 'Compliant' ? 'green' : 'red'
+                          "
                           size="small"
                           variant="flat"
                         >
@@ -260,10 +282,16 @@
                       </span>
                     </div>
                   </v-col>
-                  <v-col cols="12" v-if="selectedStallholder?.compliance_status === 'Non-Compliant'">
+                  <v-col
+                    cols="12"
+                    v-if="selectedStallholder?.compliance_status === 'Non-Compliant'"
+                  >
                     <div class="info-item">
                       <span class="info-label">Last Violation Date:</span>
-                      <span class="info-value">{{ formatDate(selectedStallholder?.last_violation_date) || 'No violations recorded' }}</span>
+                      <span class="info-value">{{
+                        formatDate(selectedStallholder?.last_violation_date) ||
+                        'No violations recorded'
+                      }}</span>
                     </div>
                   </v-col>
                 </v-row>
@@ -314,7 +342,11 @@
 
                 <!-- Loading State -->
                 <div v-if="loadingDocuments" class="text-center py-6">
-                  <v-progress-circular indeterminate color="primary" size="40"></v-progress-circular>
+                  <v-progress-circular
+                    indeterminate
+                    color="primary"
+                    size="40"
+                  ></v-progress-circular>
                   <p class="text-grey mt-2">Loading documents...</p>
                 </div>
 
@@ -324,7 +356,9 @@
                     mdi-file-document-outline
                   </v-icon>
                   <p class="text-grey-lighten-1 text-h6">No Documents Uploaded</p>
-                  <p class="text-grey text-body-2">This stallholder has not uploaded any documents yet.</p>
+                  <p class="text-grey text-body-2">
+                    This stallholder has not uploaded any documents yet.
+                  </p>
                 </div>
 
                 <!-- Documents List -->
@@ -340,8 +374,8 @@
                       <div class="d-flex align-start">
                         <!-- Document Icon -->
                         <div class="document-icon-wrapper mr-3">
-                          <v-icon 
-                            :color="getDocFileTypeColor(doc.file_type || doc.document_mime_type)" 
+                          <v-icon
+                            :color="getDocFileTypeColor(doc.file_type || doc.document_mime_type)"
                             size="36"
                           >
                             {{ getDocFileTypeIcon(doc.file_type || doc.document_mime_type) }}
@@ -354,8 +388,10 @@
                             <div>
                               <h4 class="document-name text-body-1 font-weight-medium">
                                 {{ doc.document_type || doc.document_name }}
-                            </h4>
-                              <p class="text-caption text-grey mb-0">{{ doc.document_mime_type || doc.file_type }}</p>
+                              </h4>
+                              <p class="text-caption text-grey mb-0">
+                                {{ doc.document_mime_type || doc.file_type }}
+                              </p>
                             </div>
                             <v-chip
                               :color="getDocStatusColor(doc.status)"
@@ -386,15 +422,22 @@
                           </v-alert>
 
                           <!-- Review Info -->
-                          <div v-if="doc.reviewed_by_name && doc.status !== 'pending'" class="mt-2 text-caption">
+                          <div
+                            v-if="doc.reviewed_by_name && doc.status !== 'pending'"
+                            class="mt-2 text-caption"
+                          >
                             <v-icon size="14" class="mr-1">mdi-account-check</v-icon>
-                            Reviewed by {{ doc.reviewed_by_name }} on {{ formatDate(doc.reviewed_at) }}
+                            Reviewed by {{ doc.reviewed_by_name }} on
+                            {{ formatDate(doc.reviewed_at) }}
                           </div>
                         </div>
                       </div>
 
                       <!-- Actions for Pending Documents -->
-                      <div v-if="doc.status === 'pending'" class="document-actions mt-3 pt-3 border-t">
+                      <div
+                        v-if="doc.status === 'pending'"
+                        class="document-actions mt-3 pt-3 border-t"
+                      >
                         <v-btn
                           color="primary"
                           variant="text"
@@ -475,14 +518,18 @@
                       <v-col cols="12" sm="4" class="text-center">
                         <div class="summary-stat">
                           <v-icon size="28" color="error" class="mb-1">mdi-alert-octagon</v-icon>
-                          <div class="stat-value text-h5 font-weight-bold">{{ violationHistory.length }}</div>
+                          <div class="stat-value text-h5 font-weight-bold">
+                            {{ violationHistory.length }}
+                          </div>
                           <div class="stat-label text-caption text-grey">Total Violations</div>
                         </div>
                       </v-col>
                       <v-col cols="12" sm="4" class="text-center">
                         <div class="summary-stat">
                           <v-icon size="28" color="warning" class="mb-1">mdi-clock-outline</v-icon>
-                          <div class="stat-value text-h5 font-weight-bold">{{ pendingViolationsCount }}</div>
+                          <div class="stat-value text-h5 font-weight-bold">
+                            {{ pendingViolationsCount }}
+                          </div>
                           <div class="stat-label text-caption text-grey">Pending</div>
                         </div>
                       </v-col>
@@ -490,7 +537,11 @@
                         <div class="summary-stat total-penalty">
                           <v-icon size="28" color="error" class="mb-1">mdi-cash-multiple</v-icon>
                           <div class="stat-value text-h5 font-weight-bold text-error">
-                            ₱{{ unpaidPenaltyAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                            ₱{{
+                              unpaidPenaltyAmount.toLocaleString('en-PH', {
+                                minimumFractionDigits: 2,
+                              })
+                            }}
                           </div>
                           <div class="stat-label text-caption text-grey">Unpaid Penalties</div>
                         </div>
@@ -500,11 +551,17 @@
                     <v-row>
                       <v-col cols="6" class="text-center">
                         <span class="text-caption text-grey">Total Penalties (All Time):</span>
-                        <strong class="ml-1">₱{{ totalPenaltyAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</strong>
+                        <strong class="ml-1"
+                          >₱{{
+                            totalPenaltyAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })
+                          }}</strong
+                        >
                       </v-col>
                       <v-col cols="6" class="text-center">
                         <span class="text-caption text-grey">Resolved:</span>
-                        <strong class="ml-1 text-success">{{ resolvedViolationsCount }} of {{ violationHistory.length }}</strong>
+                        <strong class="ml-1 text-success"
+                          >{{ resolvedViolationsCount }} of {{ violationHistory.length }}</strong
+                        >
                       </v-col>
                     </v-row>
                   </v-card-text>
@@ -512,7 +569,11 @@
 
                 <!-- Loading State -->
                 <div v-if="loadingViolations" class="text-center py-4">
-                  <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+                  <v-progress-circular
+                    indeterminate
+                    color="primary"
+                    size="32"
+                  ></v-progress-circular>
                   <p class="text-grey mt-2">Loading violation history...</p>
                 </div>
 
@@ -566,7 +627,9 @@
                         </v-col>
                         <v-col cols="6">
                           <span class="text-grey">Penalty:</span>
-                          <strong class="ml-1 text-error">₱{{ Number(violation.penalty_amount || 0).toLocaleString() }}</strong>
+                          <strong class="ml-1 text-error"
+                            >₱{{ Number(violation.penalty_amount || 0).toLocaleString() }}</strong
+                          >
                         </v-col>
                         <v-col cols="6" v-if="violation.receipt_number">
                           <span class="text-grey">Receipt #:</span>
@@ -600,11 +663,7 @@
         </v-card-text>
 
         <v-card-actions class="pa-4">
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="editStallholder(selectedStallholder)"
-          >
+          <v-btn color="primary" variant="flat" @click="editStallholder(selectedStallholder)">
             <v-icon class="mr-2">mdi-pencil</v-icon>
             Edit Stallholder
           </v-btn>
@@ -666,24 +725,47 @@
     />
 
     <!-- Document Preview Dialog -->
-    <v-dialog v-model="showDocPreviewDialog" max-width="900" scrollable class="document-preview-dialog">
+    <v-dialog
+      v-model="showDocPreviewDialog"
+      max-width="900"
+      scrollable
+      class="document-preview-dialog"
+    >
       <v-card v-if="previewingDocument" class="document-preview-card">
         <v-card-title class="d-flex justify-space-between align-center bg-primary text-white pa-4">
           <div class="d-flex align-center">
             <v-icon class="mr-2">mdi-file-document</v-icon>
             <div>
-              <div class="text-subtitle-1 font-weight-medium">{{ previewingDocument.document_type || previewingDocument.document_name }}</div>
-              <div class="text-caption opacity-80">{{ previewingDocument.document_mime_type || previewingDocument.file_type }}</div>
+              <div class="text-subtitle-1 font-weight-medium">
+                {{ previewingDocument.document_type || previewingDocument.document_name }}
+              </div>
+              <div class="text-caption opacity-80">
+                {{ previewingDocument.document_mime_type || previewingDocument.file_type }}
+              </div>
             </div>
           </div>
           <div class="d-flex align-center ga-2">
             <!-- Zoom controls for images -->
             <template v-if="isImageDocument(previewingDocument)">
-              <v-btn icon size="small" variant="text" color="white" @click="zoomOut" :disabled="imageZoom <= 0.5">
+              <v-btn
+                icon
+                size="small"
+                variant="text"
+                color="white"
+                @click="zoomOut"
+                :disabled="imageZoom <= 0.5"
+              >
                 <v-icon>mdi-magnify-minus</v-icon>
               </v-btn>
               <span class="text-caption">{{ Math.round(imageZoom * 100) }}%</span>
-              <v-btn icon size="small" variant="text" color="white" @click="zoomIn" :disabled="imageZoom >= 3">
+              <v-btn
+                icon
+                size="small"
+                variant="text"
+                color="white"
+                @click="zoomIn"
+                :disabled="imageZoom >= 3"
+              >
                 <v-icon>mdi-magnify-plus</v-icon>
               </v-btn>
               <v-btn icon size="small" variant="text" color="white" @click="resetZoom" class="mr-2">
@@ -698,17 +780,36 @@
 
         <v-card-text class="pa-0 preview-content">
           <!-- Loading State -->
-          <div v-if="!documentPreviewUrl && !documentPreviewError" class="preview-loading pa-8 text-center" style="min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <v-progress-circular indeterminate color="primary" size="64" width="5"></v-progress-circular>
+          <div
+            v-if="!documentPreviewUrl && !documentPreviewError"
+            class="preview-loading pa-8 text-center"
+            style="
+              min-height: 300px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <v-progress-circular
+              indeterminate
+              color="primary"
+              size="64"
+              width="5"
+            ></v-progress-circular>
             <p class="mt-4 text-grey text-body-1">Loading document preview...</p>
             <p class="text-caption text-grey-lighten-1">Fetching image data from server</p>
           </div>
 
           <!-- Image Preview -->
-          <div v-else-if="isImageDocument(previewingDocument)" class="preview-image-container" ref="imageContainer">
+          <div
+            v-else-if="isImageDocument(previewingDocument)"
+            class="preview-image-container"
+            ref="imageContainer"
+          >
             <div class="image-wrapper" :style="{ transform: `scale(${imageZoom})` }">
-              <img 
-                :src="documentPreviewUrl" 
+              <img
+                :src="documentPreviewUrl"
                 :alt="previewingDocument.document_type || previewingDocument.document_name"
                 class="preview-image"
                 @error="documentPreviewError = true"
@@ -718,7 +819,12 @@
             <div v-if="documentPreviewError" class="preview-error pa-8 text-center">
               <v-icon size="64" color="grey">mdi-image-off</v-icon>
               <p class="mt-2 text-grey">Unable to load image preview</p>
-              <v-btn color="primary" variant="outlined" class="mt-4" @click="downloadDocument(previewingDocument)">
+              <v-btn
+                color="primary"
+                variant="outlined"
+                class="mt-4"
+                @click="downloadDocument(previewingDocument)"
+              >
                 <v-icon start>mdi-download</v-icon>
                 Download Instead
               </v-btn>
@@ -727,12 +833,7 @@
 
           <!-- PDF Preview -->
           <div v-else-if="isPdfDocument(previewingDocument)" class="preview-pdf-container">
-            <iframe 
-              :src="documentPreviewUrl" 
-              width="100%" 
-              height="600"
-              frameborder="0"
-            ></iframe>
+            <iframe :src="documentPreviewUrl" width="100%" height="600" frameborder="0"></iframe>
           </div>
 
           <!-- Generic File -->
@@ -753,28 +854,38 @@
                   <v-icon size="small" color="grey" class="mr-1">mdi-file</v-icon>
                   <span class="text-caption text-grey">File Size</span>
                 </div>
-                <div class="text-body-2 font-weight-medium">{{ formatFileSize(previewingDocument.file_size) }}</div>
+                <div class="text-body-2 font-weight-medium">
+                  {{ formatFileSize(previewingDocument.file_size) }}
+                </div>
               </v-col>
               <v-col cols="12" sm="6" md="3">
                 <div class="detail-item">
                   <v-icon size="small" color="grey" class="mr-1">mdi-calendar</v-icon>
                   <span class="text-caption text-grey">Uploaded</span>
                 </div>
-                <div class="text-body-2 font-weight-medium">{{ formatDate(previewingDocument.uploaded_at) }}</div>
+                <div class="text-body-2 font-weight-medium">
+                  {{ formatDate(previewingDocument.uploaded_at) }}
+                </div>
               </v-col>
               <v-col cols="12" sm="6" md="3">
                 <div class="detail-item">
                   <v-icon size="small" color="grey" class="mr-1">mdi-tag</v-icon>
                   <span class="text-caption text-grey">Document Type</span>
                 </div>
-                <div class="text-body-2 font-weight-medium">{{ previewingDocument.document_type || previewingDocument.document_name }}</div>
+                <div class="text-body-2 font-weight-medium">
+                  {{ previewingDocument.document_type || previewingDocument.document_name }}
+                </div>
               </v-col>
               <v-col cols="12" sm="6" md="3">
                 <div class="detail-item">
                   <v-icon size="small" color="grey" class="mr-1">mdi-check-circle</v-icon>
                   <span class="text-caption text-grey">Status</span>
                 </div>
-                <v-chip :color="getDocStatusColor(previewingDocument.status)" size="small" class="mt-1">
+                <v-chip
+                  :color="getDocStatusColor(previewingDocument.status)"
+                  size="small"
+                  class="mt-1"
+                >
                   {{ previewingDocument.status?.toUpperCase() }}
                 </v-chip>
               </v-col>
@@ -784,16 +895,12 @@
 
         <v-card-actions class="pa-4" v-if="previewingDocument.status === 'pending'">
           <v-spacer></v-spacer>
-          <v-btn 
-            color="error" 
-            variant="outlined"
-            @click="openRejectDialog(previewingDocument); showDocPreviewDialog = false"
-          >
+          <v-btn color="error" variant="outlined" @click="handleRejectDocument(previewingDocument)">
             <v-icon start>mdi-close</v-icon>
             Reject
           </v-btn>
-          <v-btn 
-            color="success" 
+          <v-btn
+            color="success"
             variant="flat"
             @click="approveDocument(previewingDocument)"
             :loading="processingDocId === previewingDocument.submission_id"
@@ -824,14 +931,14 @@
             rows="3"
             counter
             maxlength="500"
-            :rules="[v => !!v || 'Rejection reason is required']"
+            :rules="[(v) => !!v || 'Rejection reason is required']"
           ></v-textarea>
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="showDocRejectDialog = false">Cancel</v-btn>
-          <v-btn 
-            color="error" 
+          <v-btn
+            color="error"
             variant="flat"
             @click="rejectStallholderDocument"
             :disabled="!docRejectionReason"
@@ -851,5 +958,6 @@
       </template>
     </v-snackbar>
   </div>
-</template><script src="./TableStall.js"></script>
+</template>
+<script src="./TableStall.js"></script>
 <style scoped src="./TableStall.css"></style>

@@ -450,12 +450,8 @@ export default {
       ]
     },
     onSearchInput() {
-      if (this.searchTimeout) {
-        clearTimeout(this.searchTimeout)
-      }
-      this.searchTimeout = setTimeout(() => {
-        // The watcher on filteredAndSortedStalls will automatically emit the filtered results
-      }, 150)
+      // Instant search without loading overlay
+      // The watcher on searchQuery calls this and handles the filtering
     },
     toggleFilter() {
       this.showFilters = !this.showFilters
