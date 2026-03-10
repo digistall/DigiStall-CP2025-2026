@@ -1,0 +1,78 @@
+.profile-page-fluid {
+  padding: 24px;
+  width: 100%;
+  background-color: #f1f5f9;
+  min-height: 100vh;
+}
+
+.business-header {
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.business-data-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 600px) {
+  .business-data-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.data-item .label {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.data-item .value {
+  font-size: 1rem;
+  color: #1e293b;
+  font-weight: 600;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.access-chip {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #166534;
+  display: flex;
+  align-items: center;
+}
+
+.header-actions .v-btn {
+  text-transform: none !important;
+  font-weight: 600;
+}
+@media (max-width: 960px) {
+  .contact-brief {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .contact-brief span {
+    margin-right: 0 !important;
+  }
+  
+  .header-actions {
+    margin-top: 1.5rem;
+    width: 100%;
+    justify-content: center;
+    display: flex;
+  }
+}

@@ -211,6 +211,7 @@ export default {
     },
     handleProfileClick() {
       console.log('Profile clicked')
+      this.$router.push('/app/profile')
     },
     handleSettingsClick() {
       console.log('Settings clicked')
