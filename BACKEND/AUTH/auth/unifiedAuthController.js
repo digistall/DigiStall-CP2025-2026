@@ -487,8 +487,27 @@ export const getCurrentUser = async (req, res) => {
         break;
       case 'business_manager':
         {
-          const [result] = await connection.execute('CALL sp_getBusinessManagerWithBranch(?)', [userId]);
-          userRows = result[0] || [];
+          // Fetch full manager details joined with branch
+          const [result] = await connection.execute(`
+            SELECT 
+              bm.*, 
+              b.branch_name, 
+              b.area, 
+              b.location as branch_location,
+              b.address as branch_address
+            FROM business_manager bm
+            LEFT JOIN branch b ON bm.branch_id = b.branch_id
+            WHERE bm.business_manager_id = ?
+          `, [userId]);
+          
+          console.log(`🔍 [DEBUG] business_manager query result:`, JSON.stringify(result, null, 2));
+          
+          // Result might be an array of objects
+          if (Array.isArray(result)) {
+            userRows = result;
+          } else {
+            userRows = [result];
+          }
         }
         break;
       case 'business_employee':
@@ -517,13 +536,30 @@ export const getCurrentUser = async (req, res) => {
     // Remove password from response
     delete user.password;
     
-    // Decrypt sensitive fields for display
-    if (user.first_name) user.first_name = decryptSafe(user.first_name);
-    if (user.last_name) user.last_name = decryptSafe(user.last_name);
-    if (user.email) user.email = decryptSafe(user.email);
-    if (user.contact_number) user.contact_number = decryptSafe(user.contact_number);
-    if (user.phone_number) user.phone_number = decryptSafe(user.phone_number);
-    if (user.address) user.address = decryptSafe(user.address);
+    // Decrypt sensitive fields for display (handles both camelCase and snake_case based on SP return)
+    const fieldsToDecrypt = [
+      'first_name', 'firstName', 
+      'last_name', 'lastName', 
+      'email', 
+      'contact_number', 'contactNumber',
+      'phone_number', 'phoneNumber',
+      'address'
+    ];
+    
+    fieldsToDecrypt.forEach(field => {
+      if (user[field]) {
+        user[field] = decryptSafe(user[field]);
+      }
+    });
+    
+    // Ensure both cases are available for frontend compatibility
+    if (user.firstName && !user.first_name) user.first_name = user.firstName;
+    if (user.lastName && !user.last_name) user.last_name = user.lastName;
+    if (user.contactNumber && !user.contact_number) user.contact_number = user.contactNumber;
+    if (user.phoneNumber && !user.phone_number) user.phone_number = user.phoneNumber;
+    
+    // Ensure userType is included in the user object
+    user.userType = userType;
     
     console.log('📤 getCurrentUser - Sending data for', userType, ':', JSON.stringify(user, null, 2));
     
@@ -534,6 +570,72 @@ export const getCurrentUser = async (req, res) => {
     };
     
     // Add user-type specific keys for backward compatibility
+    // Add expanded business statistics for Managers and Employees
+    if (userType === 'business_manager' || userType === 'business_employee') {
+      const bId = user.branch_id || user.branchId;
+      if (bId) {
+        try {
+          // Fetch aggregate business stats for this branch
+          console.log(`📊 [DEBUG] Stats for branch ID: ${bId}`);
+          
+          // 1. Managed Stalls count
+          const [stallsResult] = await connection.execute(
+            'SELECT COUNT(*) as count FROM stall WHERE branch_id = ?',
+            [bId]
+          );
+          console.log(`📊 [DEBUG] managedStalls: ${stallsResult[0]?.count}`);
+          
+          // 2. Total Approved Revenue (Regular + Penalty)
+          const [regRevenueResult] = await connection.execute(
+            'SELECT SUM(amount) as total FROM payments WHERE branch_id = ? AND status = "Approved"',
+            [bId]
+          );
+          
+          const [penRevenueResult] = await connection.execute(
+            'SELECT SUM(pp.amount) as total FROM penalty_payments pp JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id WHERE sh.branch_id = ?',
+            [bId]
+          );
+          
+          const totalRevenue = (parseFloat(regRevenueResult[0]?.total) || 0) + (parseFloat(penRevenueResult[0]?.total) || 0);
+          console.log(`📊 [DEBUG] totalRevenue: ${totalRevenue} (Reg: ${regRevenueResult[0]?.total}, Pen: ${penRevenueResult[0]?.total})`);
+
+          // 3. Active Personnel count
+          const [employeesResult] = await connection.execute(
+            'SELECT COUNT(*) as count FROM business_employee WHERE branch_id = ? AND status = "Active"',
+            [bId]
+          );
+          console.log(`📊 [DEBUG] activePersonnel: ${employeesResult[0]?.count}`);
+
+          // 4. Active Stallholders count
+          const [stallholdersResult] = await connection.execute(
+            'SELECT COUNT(*) as count FROM stallholder WHERE branch_id = ? AND status = "Active"',
+            [bId]
+          );
+          console.log(`📊 [DEBUG] activeStallholders: ${stallholdersResult[0]?.count}`);
+
+          // 5. Pending Applications count
+          const [appsResult] = await connection.execute(
+            'SELECT COUNT(*) as count FROM application a JOIN stall s ON a.stall_id = s.stall_id WHERE s.branch_id = ? AND a.status = "Pending"',
+            [bId]
+          );
+          console.log(`📊 [DEBUG] pendingApplications: ${appsResult[0]?.count}`);
+
+          user.stats = {
+            managedStalls: stallsResult[0]?.count || 0,
+            totalRevenue: totalRevenue,
+            activePersonnel: employeesResult[0]?.count || 0,
+            activeStallholders: stallholdersResult[0]?.count || 0,
+            pendingApplications: appsResult[0]?.count || 0
+          };
+          
+          console.log(`📊 Expanded statistics fetched for branch ${bId}:`, user.stats);
+        } catch (statsError) {
+          console.error('⚠️ Error fetching business statistics:', statsError.message);
+          user.stats = { managedStalls: 0, totalRevenue: 0, activePersonnel: 0, activeStallholders: 0, pendingApplications: 0 };
+        }
+      }
+    }
+
     if (userType === 'business_manager') {
       responseData.businessManager = user;
     } else if (userType === 'stall_business_owner') {
@@ -629,3 +731,81 @@ export const logout = async (req, res) => {
   }
 };
 
+// ===== UPDATE PROFILE =====
+export const updateProfile = async (req, res) => {
+  let connection;
+  
+  try {
+    connection = await createConnection();
+    
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication data missing'
+      });
+    }
+    
+    const { userId, userType } = req.user;
+    const { firstName, lastName, phone, address, dob, gender } = req.body;
+    
+    console.log('📝 updateProfile called with:', { userId, userType, body: req.body });
+    
+    // Encrypt sensitive fields (consistent with system encryption)
+    const encryptedFirstName = encryptData(firstName);
+    const encryptedLastName = encryptData(lastName);
+    const encryptedPhone = encryptData(phone);
+    const encryptedAddress = encryptData(address);
+    
+    const phTime = getPhilippineTime();
+    
+    // Convert dob string to MySQL format if provided
+    const formattedDob = dob ? new Date(dob).toISOString().split('T')[0] : null;
+
+    // Direct SQL update per user type
+    switch (userType) {
+      case 'system_administrator':
+        await connection.execute(
+          `UPDATE system_administrator SET first_name = ?, last_name = ?, contact_number = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE system_admin_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, formattedDob, gender, phTime, userId]
+        );
+        break;
+      case 'stall_business_owner':
+        await connection.execute(
+          `UPDATE stall_business_owner SET first_name = ?, last_name = ?, contact_number = ?, address = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE business_owner_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, encryptedAddress, formattedDob, gender, phTime, userId]
+        );
+        break;
+      case 'business_manager':
+        await connection.execute(
+          `UPDATE business_manager SET first_name = ?, last_name = ?, contact_number = ?, address = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE business_manager_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, encryptedAddress, formattedDob, gender, phTime, userId]
+        );
+        break;
+      case 'business_employee':
+        await connection.execute(
+          `UPDATE business_employee SET first_name = ?, last_name = ?, phone_number = ?, address = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE business_employee_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, encryptedAddress, formattedDob, gender, phTime, userId]
+        );
+        break;
+      default:
+        return res.status(400).json({ success: false, message: `Invalid user type: ${userType}` });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully'
+    });
+    
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user profile',
+      error: error.message
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+};

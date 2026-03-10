@@ -24,6 +24,7 @@ import Vendors from '@shared-features/Vendors/Vendors.vue'
 import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholders.vue'
 import Stalls from '@shared-features/Stalls/Stalls.vue'
 import StallTracker from '@shared-features/StallTracker/StallTracker.vue'
+import Profile from '@shared-features/Profile/Profile.vue'
 
 // BUSINESS-MANAGER module - Manager-exclusive features
 import Employees from '@business-manager/Employees/Employees.vue'
@@ -490,6 +491,12 @@ const router = createRouter({
           meta: { title: 'Stall Tracker' },
           beforeEnter: requiresPermission('stalls'), // reuse stalls permission
         },
+        {
+          path: 'profile',
+          name: 'Profile',
+          component: Profile,
+          meta: { title: 'My Profile' },
+        },
       ],
     },
 
@@ -526,6 +533,12 @@ const router = createRouter({
           name: 'SubscriptionReports',
           component: Reports,
           meta: { title: 'Subscription Reports', requiresRole: ['system_administrator'] },
+        },
+        {
+          path: 'profile',
+          name: 'SystemAdminProfile',
+          component: Profile,
+          meta: { title: 'My Profile', requiresRole: ['system_administrator'] },
         },
       ],
     },
