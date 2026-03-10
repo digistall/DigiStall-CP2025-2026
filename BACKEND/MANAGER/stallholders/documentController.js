@@ -146,7 +146,27 @@ export const createBranchDocumentRequirement = async (req, res) => {
           message: 'Access denied: No branch associated with user'
         });
       }
-      branchManagerPairs = [{ branchId: branch_id, managerId: userId }];
+
+      // If the user is a business_employee their userId is a business_employee_id,
+      // NOT a business_manager_id — resolve the actual manager for this branch instead.
+      const userType = req.user.userType || req.user.role;
+      let resolvedManagerId = userId;
+
+      if (userType === 'business_employee') {
+        const [managerRows] = await connection.execute(
+          'SELECT business_manager_id FROM business_manager WHERE branch_id = ? LIMIT 1',
+          [branch_id]
+        );
+        if (managerRows.length === 0) {
+          return res.status(403).json({
+            success: false,
+            message: 'No manager found for this branch'
+          });
+        }
+        resolvedManagerId = managerRows[0].business_manager_id;
+      }
+
+      branchManagerPairs = [{ branchId: branch_id, managerId: resolvedManagerId }];
     }
 
     if (!document_type_id) {
@@ -240,25 +260,28 @@ export const createBranchDocumentRequirement = async (req, res) => {
 
 /**
  * Update a document requirement
+ * NOTE: The route param is :documentTypeId but the frontend sends requirement_id.
+ * We use a direct UPDATE by requirement_id and scope it to the user's branch for security.
  */
 export const setBranchDocumentRequirement = async (req, res) => {
   let connection;
   try {
-    const { documentTypeId } = req.params;
+    // The URL param is named :documentTypeId in the route, but the frontend passes requirement_id
+    const requirementId = req.params.documentTypeId;
     const { is_required, instructions } = req.body;
     // Ensure is_required is always a valid integer (default to 1 if not provided or empty)
     const isRequiredValue = (is_required === '' || is_required === null || is_required === undefined) ? 1 : parseInt(is_required, 10) || 1;
-    let branch_id = req.user.branchId || req.user.branch_id;
-    const userId = req.user.userId || req.user.user_id || req.user.id || req.user.businessManagerId;
     const isBusinessOwner = req.user.role === 'stall_business_owner';
+    const userId = req.user.userId || req.user.user_id || req.user.id;
+    let branch_id = req.user.branchId || req.user.branch_id;
 
     connection = await createConnection();
 
-    // Business owners: apply to all their branches with correct manager_id
-    let branchManagerPairs = [];
+    let branchIds = [];
     if (isBusinessOwner) {
+      // Business owners: apply to all their branches
       const [ownerBranches] = await connection.execute(`
-        SELECT DISTINCT bm.branch_id, bm.business_manager_id
+        SELECT DISTINCT bm.branch_id
         FROM business_owner_managers bom
         INNER JOIN business_manager bm ON bom.business_manager_id = bm.business_manager_id
         INNER JOIN branch b ON bm.branch_id = b.branch_id
@@ -272,34 +295,28 @@ export const setBranchDocumentRequirement = async (req, res) => {
           message: 'No branches found for business owner'
         });
       }
-
-      branchManagerPairs = ownerBranches.map(b => ({
-        branchId: b.branch_id,
-        managerId: b.business_manager_id
-      }));
+      branchIds = ownerBranches.map(b => b.branch_id);
     } else {
-      // Regular manager: just their branch
+      // Manager or Employee: use branch from token
       if (!branch_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied: No branch associated with user'
         });
       }
-      branchManagerPairs = [{ branchId: branch_id, managerId: userId }];
+      branchIds = [branch_id];
     }
 
-    // Apply to all branches
-    let totalAffected = 0;
-    for (const pair of branchManagerPairs) {
-      const [rows] = await connection.execute(
-        'CALL setBranchDocumentRequirement(?, ?, ?, ?, ?)',
-        [pair.branchId, documentTypeId, isRequiredValue, instructions || null, pair.managerId]
-      );
-      const result = rows[0][0]; // First row of first result set
-      totalAffected += result.affected_rows || 0;
-    }
+    // Direct UPDATE scoped to the user's branch(es) for security
+    const placeholders = branchIds.map(() => '?').join(', ');
+    const [result] = await connection.execute(
+      `UPDATE branch_document_requirements
+       SET is_required = ?, instructions = ?, updated_at = NOW()
+       WHERE requirement_id = ? AND branch_id IN (${placeholders})`,
+      [isRequiredValue, instructions || null, requirementId, ...branchIds]
+    );
 
-    if (totalAffected === 0) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: 'Document requirement not found or access denied'
@@ -308,9 +325,8 @@ export const setBranchDocumentRequirement = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Document requirement updated for ${branchManagerPairs.length} branch(es)`,
-      affected_rows: totalAffected,
-      branches_updated: branchManagerPairs.length,
+      message: 'Document requirement updated successfully',
+      affected_rows: result.affectedRows,
       updated_by_role: isBusinessOwner ? 'business_owner' : 'manager'
     });
 

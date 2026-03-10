@@ -89,14 +89,26 @@ export default {
       try {
         // For business owners, don't pass branchId - they manage all branches
         // For branch managers, backend will use their assigned branchId from token
+        console.log('[DocumentCustomization] 🔄 loadBranchRequirements() called')
+        console.log('[DocumentCustomization] 👤 Current user:', JSON.stringify(this.authStore.user?.value || this.authStore.user || {}))
+        console.log('[DocumentCustomization] 🎭 Role:', this.userRole)
+        console.log('[DocumentCustomization] 📡 Fetching: GET /stallholders/documents/types')
+        console.log('[DocumentCustomization] 📡 Fetching: GET /stallholders/documents/requirements')
+
         const [typesResponse, requirementsResponse] = await Promise.all([
           apiClient.get('/stallholders/documents/types'),
           apiClient.get('/stallholders/documents/requirements')
         ])
 
+        console.log('[DocumentCustomization] ✅ Types response:', typesResponse.data)
+        console.log('[DocumentCustomization] ✅ Requirements response:', requirementsResponse.data)
+
         this.availableDocumentTypes = typesResponse.data?.data || typesResponse.data || []
         this.branchRequirements = requirementsResponse.data?.data || requirementsResponse.data || []
         
+        console.log('[DocumentCustomization] 📦 availableDocumentTypes count:', this.availableDocumentTypes.length)
+        console.log('[DocumentCustomization] 📦 branchRequirements count:', this.branchRequirements.length)
+
         // Map requirements to include document type info
         this.documentTypes = this.branchRequirements.map(req => ({
           ...req,
@@ -111,7 +123,10 @@ export default {
         // Expand all panels by default
         this.expandedPanels = this.documentTypes.map((_, index) => index)
       } catch (error) {
-        console.error('Error loading document requirements:', error)
+        console.error('[DocumentCustomization] ❌ Error loading document requirements:', error)
+        console.error('[DocumentCustomization] ❌ Error status:', error.response?.status)
+        console.error('[DocumentCustomization] ❌ Error URL:', error.config?.url)
+        console.error('[DocumentCustomization] ❌ Error response data:', error.response?.data)
         this.showErrorMessage('Failed to load document requirements')
       } finally {
         this.loading = false
@@ -146,14 +161,17 @@ export default {
           instructions: this.selectedInstructions
         }
 
+        console.log('[DocumentCustomization] 📡 POST /stallholders/documents/requirements — payload:', payload)
         // Create new document requirement
-        await apiClient.post('/stallholders/documents/requirements', payload)
+        const response = await apiClient.post('/stallholders/documents/requirements', payload)
+        console.log('[DocumentCustomization] ✅ Create requirement response:', response.data)
         this.showSuccessMessage('Document requirement created successfully')
 
         this.showDocTypeDialog = false
         await this.loadBranchRequirements() // Reload the list
       } catch (error) {
-        console.error('Error saving document requirement:', error)
+        console.error('[DocumentCustomization] ❌ Error saving document requirement:', error)
+        console.error('[DocumentCustomization] ❌ Error response data:', error.response?.data)
         this.showErrorMessage(error.response?.data?.message || 'Failed to save document requirement')
       } finally {
         this.savingDocType = false
@@ -177,13 +195,16 @@ export default {
 
       this.deleting = true
       try {
-        await apiClient.delete(`/stallholders/documents/requirements/${this.docTypeToDelete.requirement_id}`)
+        console.log('[DocumentCustomization] 📡 DELETE /stallholders/documents/requirements/:id — id:', this.docTypeToDelete.requirement_id, '| doc:', this.docTypeToDelete)
+        const response = await apiClient.delete(`/stallholders/documents/requirements/${this.docTypeToDelete.requirement_id}`)
+        console.log('[DocumentCustomization] ✅ Delete requirement response:', response.data)
         this.showSuccessMessage('Document requirement removed successfully')
         this.showDeleteDialog = false
         this.docTypeToDelete = null
         await this.loadBranchRequirements() // Reload the list
       } catch (error) {
-        console.error('Error deleting document requirement:', error)
+        console.error('[DocumentCustomization] ❌ Error deleting document requirement:', error)
+        console.error('[DocumentCustomization] ❌ Error response data:', error.response?.data)
         this.showErrorMessage('Failed to remove document requirement')
       } finally {
         this.deleting = false
@@ -197,11 +218,14 @@ export default {
           instructions: docType.instructions
         }
         
-        await apiClient.put(`/stallholders/documents/requirements/${docType.requirement_id}`, payload)
+        console.log('[DocumentCustomization] 📡 PUT /stallholders/documents/requirements/:id — id:', docType.requirement_id, '| payload:', payload)
+        const response = await apiClient.put(`/stallholders/documents/requirements/${docType.requirement_id}`, payload)
+        console.log('[DocumentCustomization] ✅ Update requirement response:', response.data)
         this.markAsChanged()
         this.showSuccessMessage('Document requirement updated')
       } catch (error) {
-        console.error('Error updating document requirement:', error)
+        console.error('[DocumentCustomization] ❌ Error updating document requirement:', error)
+        console.error('[DocumentCustomization] ❌ Error response data:', error.response?.data)
         this.showErrorMessage('Failed to update document requirement')
       }
     },
