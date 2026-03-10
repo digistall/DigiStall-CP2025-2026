@@ -4,6 +4,7 @@ import AppSidebar from '@/components/AppSidebar/AppSidebar.vue'
 import LogoutLoadingScreen from '@common/LogoutLoadingScreen/LogoutLoadingScreen.vue'
 import LogoutConfirmationDialog from '@common/LogoutConfirmationDialog/LogoutConfirmationDialog.vue'
 import { useAuthStore } from '@/stores/authStore'
+import { eventBus } from '@eventBus'
 
 export default {
   name: 'MainLayout',
@@ -94,6 +95,11 @@ export default {
   mounted() {
     this.setMenuItemsBasedOnUserType()
     this.loadCurrentUserName()
+    // Listen for sidebar logout event (trigger-logout from eventBus)
+    eventBus.on('trigger-logout', this.handleLogoutClick)
+  },
+  beforeUnmount() {
+    eventBus.off('trigger-logout', this.handleLogoutClick)
   },
   watch: {
     // update header title on route change

@@ -499,7 +499,15 @@ export const getCurrentUser = async (req, res) => {
             LEFT JOIN branch b ON bm.branch_id = b.branch_id
             WHERE bm.business_manager_id = ?
           `, [userId]);
-          userRows = result || [];
+          
+          console.log(`🔍 [DEBUG] business_manager query result:`, JSON.stringify(result, null, 2));
+          
+          // Result might be an array of objects
+          if (Array.isArray(result)) {
+            userRows = result;
+          } else {
+            userRows = [result];
+          }
         }
         break;
       case 'business_employee':
@@ -568,39 +576,53 @@ export const getCurrentUser = async (req, res) => {
       if (bId) {
         try {
           // Fetch aggregate business stats for this branch
+          console.log(`📊 [DEBUG] Stats for branch ID: ${bId}`);
+          
           // 1. Managed Stalls count
           const [stallsResult] = await connection.execute(
-            'SELECT COUNT(*) as count FROM stall s JOIN section sec ON s.section_id = sec.section_id JOIN floor f ON sec.floor_id = f.floor_id WHERE f.branch_id = ?',
+            'SELECT COUNT(*) as count FROM stall WHERE branch_id = ?',
+            [bId]
+          );
+          console.log(`📊 [DEBUG] managedStalls: ${stallsResult[0]?.count}`);
+          
+          // 2. Total Approved Revenue (Regular + Penalty)
+          const [regRevenueResult] = await connection.execute(
+            'SELECT SUM(amount) as total FROM payments WHERE branch_id = ? AND status = "Approved"',
             [bId]
           );
           
-          // 2. Total Approved Revenue
-          const [revenueResult] = await connection.execute(
-            'SELECT SUM(amount) as total FROM payments p JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id WHERE sh.branch_id = ? AND p.status = "Approved"',
+          const [penRevenueResult] = await connection.execute(
+            'SELECT SUM(pp.amount) as total FROM penalty_payments pp JOIN stallholder sh ON pp.stallholder_id = sh.stallholder_id WHERE sh.branch_id = ?',
             [bId]
           );
           
+          const totalRevenue = (parseFloat(regRevenueResult[0]?.total) || 0) + (parseFloat(penRevenueResult[0]?.total) || 0);
+          console.log(`📊 [DEBUG] totalRevenue: ${totalRevenue} (Reg: ${regRevenueResult[0]?.total}, Pen: ${penRevenueResult[0]?.total})`);
+
           // 3. Active Personnel count
           const [employeesResult] = await connection.execute(
             'SELECT COUNT(*) as count FROM business_employee WHERE branch_id = ? AND status = "Active"',
             [bId]
           );
+          console.log(`📊 [DEBUG] activePersonnel: ${employeesResult[0]?.count}`);
 
           // 4. Active Stallholders count
           const [stallholdersResult] = await connection.execute(
             'SELECT COUNT(*) as count FROM stallholder WHERE branch_id = ? AND status = "Active"',
             [bId]
           );
+          console.log(`📊 [DEBUG] activeStallholders: ${stallholdersResult[0]?.count}`);
 
           // 5. Pending Applications count
           const [appsResult] = await connection.execute(
-            'SELECT COUNT(*) as count FROM application a JOIN stall s ON a.stall_id = s.stall_id JOIN section sec ON s.section_id = sec.section_id JOIN floor f ON sec.floor_id = f.floor_id WHERE f.branch_id = ? AND a.status = "Pending"',
+            'SELECT COUNT(*) as count FROM application a JOIN stall s ON a.stall_id = s.stall_id WHERE s.branch_id = ? AND a.status = "Pending"',
             [bId]
           );
+          console.log(`📊 [DEBUG] pendingApplications: ${appsResult[0]?.count}`);
 
           user.stats = {
             managedStalls: stallsResult[0]?.count || 0,
-            totalRevenue: revenueResult[0]?.total || 0,
+            totalRevenue: totalRevenue,
             activePersonnel: employeesResult[0]?.count || 0,
             activeStallholders: stallholdersResult[0]?.count || 0,
             pendingApplications: appsResult[0]?.count || 0
@@ -724,7 +746,7 @@ export const updateProfile = async (req, res) => {
     }
     
     const { userId, userType } = req.user;
-    const { firstName, lastName, phone, address, bio, dob, gender } = req.body;
+    const { firstName, lastName, phone, address, dob, gender } = req.body;
     
     console.log('📝 updateProfile called with:', { userId, userType, body: req.body });
     
@@ -733,30 +755,41 @@ export const updateProfile = async (req, res) => {
     const encryptedLastName = encryptData(lastName);
     const encryptedPhone = encryptData(phone);
     const encryptedAddress = encryptData(address);
-    // Bio is generally not encrypted unless sensitive, but following system pattern for PII-adjacent fields
-    const encryptedBio = bio ? encryptData(bio) : null;
     
     const phTime = getPhilippineTime();
     
     // Convert dob string to MySQL format if provided
     const formattedDob = dob ? new Date(dob).toISOString().split('T')[0] : null;
 
-    // Call shared stored procedure
-    const [result] = await connection.execute(
-      'CALL sp_updateUserProfile(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        userId, 
-        userType, 
-        encryptedFirstName, 
-        encryptedLastName, 
-        encryptedPhone, 
-        encryptedAddress, 
-        encryptedBio, 
-        formattedDob, 
-        gender, 
-        phTime
-      ]
-    );
+    // Direct SQL update per user type
+    switch (userType) {
+      case 'system_administrator':
+        await connection.execute(
+          `UPDATE system_administrator SET first_name = ?, last_name = ?, contact_number = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE system_admin_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, formattedDob, gender, phTime, userId]
+        );
+        break;
+      case 'stall_business_owner':
+        await connection.execute(
+          `UPDATE stall_business_owner SET first_name = ?, last_name = ?, contact_number = ?, address = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE business_owner_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, encryptedAddress, formattedDob, gender, phTime, userId]
+        );
+        break;
+      case 'business_manager':
+        await connection.execute(
+          `UPDATE business_manager SET first_name = ?, last_name = ?, contact_number = ?, address = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE business_manager_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, encryptedAddress, formattedDob, gender, phTime, userId]
+        );
+        break;
+      case 'business_employee':
+        await connection.execute(
+          `UPDATE business_employee SET first_name = ?, last_name = ?, phone_number = ?, address = ?, date_of_birth = ?, gender = ?, updated_at = ? WHERE business_employee_id = ?`,
+          [encryptedFirstName, encryptedLastName, encryptedPhone, encryptedAddress, formattedDob, gender, phTime, userId]
+        );
+        break;
+      default:
+        return res.status(400).json({ success: false, message: `Invalid user type: ${userType}` });
+    }
     
     res.status(200).json({
       success: true,

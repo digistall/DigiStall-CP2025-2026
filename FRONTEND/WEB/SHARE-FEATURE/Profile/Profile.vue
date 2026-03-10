@@ -1,204 +1,192 @@
 <template>
   <div class="profile-page-fluid">
-    <v-overlay :model-value="loading" class="align-center justify-center" persistent>
-      <v-progress-circular color="primary" indeterminate size="64"></v-progress-circular>
-    </v-overlay>
+    <LoadingScreen :visible="loading" message="Loading profile..." />
 
-    <!-- Business Header -->
-    <v-card v-if="userData" class="business-header" flat border>
-      <div class="header-content d-flex align-center pa-6">
-        <v-avatar size="100" class="elevation-2 bg-white" border>
+    <!-- Header Bar -->
+    <div v-if="userData" class="profile-header">
+      <div class="header-left">
+        <v-avatar size="52" class="header-avatar">
           <v-img :src="avatarUrl" cover v-if="avatarUrl"></v-img>
-          <v-icon size="50" color="primary" v-else>{{ userRoleIcon }}</v-icon>
+          <v-icon size="28" color="white" v-else>{{ userRoleIcon }}</v-icon>
         </v-avatar>
-        
-        <div class="ml-6">
-          <div class="d-flex align-center">
-            <h1 class="text-h4 font-weight-bold">{{ displayFullName }}</h1>
-            <v-chip color="success" size="x-small" label class="ml-3 font-weight-bold">AUTHORIZED</v-chip>
+        <div>
+          <div class="d-flex align-center ga-2">
+            <h1 class="header-name">{{ displayFullName }}</h1>
+            <v-chip color="success" size="x-small" label class="font-weight-bold">AUTHORIZED</v-chip>
           </div>
-          <div class="text-body-1 text-grey-darken-1 mt-1">
-            <v-icon size="18" class="mr-1">mdi-briefcase-variant</v-icon> {{ displayRole }}
-            <span class="mx-2">•</span>
-            <v-icon size="18" class="mr-1">mdi-store</v-icon> {{ displayLocation }}
+          <div class="header-meta">
+            {{ displayRole }}<template v-if="userType !== 'system_administrator'"> <span class="mx-1">•</span> {{ displayLocation }}</template>
           </div>
-        </div>
-        
-        <v-spacer></v-spacer>
-        
-        <div class="header-actions">
-          <v-btn color="primary" @click="openEditDialog" prepend-icon="mdi-account-edit">Manage Profile</v-btn>
         </div>
       </div>
-    </v-card>
+      <v-btn variant="outlined" color="primary" @click="openEditDialog" prepend-icon="mdi-account-edit" size="small" class="manage-btn">Manage Profile</v-btn>
+    </div>
 
-    <!-- Main Data Grid -->
-    <v-container v-if="userData" fluid class="mt-6 pa-0">
-      <v-row>
+    <!-- Quick Actions -->
+    <div v-if="userData" class="quick-actions-bar">
+      <template v-if="userType === 'system_administrator'">
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-view-dashboard" size="x-small" @click="$router.push('/system-admin/dashboard')">Dashboard</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-account-multiple" size="x-small" @click="$router.push('/system-admin/business-owners')">Business Owners</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-cash-multiple" size="x-small" @click="$router.push('/system-admin/payments')">Payments</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-chart-box" size="x-small" @click="$router.push('/system-admin/reports')">Reports</v-btn>
+      </template>
+      <template v-else-if="userType === 'stall_business_owner'">
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-view-dashboard" size="x-small" @click="$router.push('/app/dashboard')">Dashboard</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-domain" size="x-small" @click="$router.push('/app/branch')">Branches</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-store" size="x-small" @click="$router.push('/app/stalls')">Stalls</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-account-tie" size="x-small" @click="$router.push('/app/employees')">Employees</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-credit-card-outline" size="x-small" @click="$router.push('/app/subscription')">Subscription</v-btn>
+      </template>
+      <template v-else-if="userType === 'business_manager'">
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-view-dashboard" size="x-small" @click="$router.push('/app/dashboard')">Dashboard</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-store" size="x-small" @click="$router.push('/app/stalls')">Stalls</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-account-group" size="x-small" @click="$router.push('/app/applicants')">Applicants</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-credit-card" size="x-small" @click="$router.push('/app/payment')">Payments</v-btn>
+        <v-btn variant="tonal" color="primary" prepend-icon="mdi-account-multiple" size="x-small" @click="$router.push('/app/stallholders')">Stallholders</v-btn>
+      </template>
+      <template v-else-if="userType === 'business_employee'">
+        <v-btn v-if="hasPermission('dashboard')" variant="tonal" color="primary" prepend-icon="mdi-view-dashboard" size="x-small" @click="$router.push('/app/dashboard')">Dashboard</v-btn>
+        <v-btn v-if="hasPermission('payments')" variant="tonal" color="primary" prepend-icon="mdi-credit-card" size="x-small" @click="$router.push('/app/payment')">Payments</v-btn>
+        <v-btn v-if="hasPermission('applicants')" variant="tonal" color="primary" prepend-icon="mdi-account-group" size="x-small" @click="$router.push('/app/applicants')">Applicants</v-btn>
+        <v-btn v-if="hasPermission('complaints')" variant="tonal" color="primary" prepend-icon="mdi-chart-line" size="x-small" @click="$router.push('/app/complaints')">Complaints</v-btn>
+        <v-btn v-if="hasPermission('stalls')" variant="tonal" color="primary" prepend-icon="mdi-store" size="x-small" @click="$router.push('/app/stalls')">Stalls</v-btn>
+        <v-btn v-if="hasPermission('stallholders')" variant="tonal" color="primary" prepend-icon="mdi-account-multiple" size="x-small" @click="$router.push('/app/stallholders')">Stallholders</v-btn>
+      </template>
+    </div>
+
+    <!-- Content Area -->
+    <div v-if="userData" class="profile-content">
+      <!-- Row 1: Two card columns -->
+      <div class="cards-row">
         <!-- Personnel Details -->
-        <v-col cols="12" md="6">
-          <v-card flat border height="100%">
-            <v-card-title class="px-6 pt-6 text-subtitle-1 font-weight-bold">
-              <v-icon color="primary" class="mr-2">mdi-account-details</v-icon> Personnel Details
-            </v-card-title>
-            <v-card-text class="pa-6">
-              <div class="business-data-grid">
-                <div class="data-item">
-                  <div class="label">First Name</div>
-                  <div class="value">{{ userData.first_name || userData.firstName || '—' }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Last Name</div>
-                  <div class="value">{{ userData.last_name || userData.lastName || '—' }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Gender</div>
-                  <div class="value">{{ displayGender }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Date of Birth</div>
-                  <div class="value">{{ displayDOB }}</div>
-                </div>
-                <div class="data-item" v-if="displayAddress !== 'N/A'">
-                  <div class="label">Home Address</div>
-                  <div class="value">{{ displayAddress }}</div>
-                </div>
+        <div class="card-col">
+          <v-card class="info-card" flat>
+            <v-card-title class="card-header"><v-icon color="primary" class="mr-2" size="18">mdi-account-details</v-icon> Personnel Details</v-card-title>
+            <v-card-text class="card-body">
+              <div class="info-grid">
+                <div class="info-item"><div class="info-label">First Name</div><div class="info-value">{{ userData.first_name || userData.firstName || '—' }}</div></div>
+                <div class="info-item"><div class="info-label">Last Name</div><div class="info-value">{{ userData.last_name || userData.lastName || '—' }}</div></div>
+                <div class="info-item"><div class="info-label">Gender</div><div class="info-value">{{ displayGender }}</div></div>
+                <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">{{ displayDOB }}</div></div>
+                <div class="info-item"><div class="info-label">Primary Residence</div><div class="info-value">{{ displayAddress }}</div></div>
+                <div class="info-item"><div class="info-label">Email Address</div><div class="info-value">{{ displayEmail }}</div></div>
               </div>
+              <!-- Access -->
+              <div class="access-row">
+                <span class="access-title"><v-icon size="12" color="primary" class="mr-1">mdi-shield-key</v-icon>
+                  <template v-if="userType === 'system_administrator'">System Access</template>
+                  <template v-else-if="userType === 'business_employee'">Granted Permissions</template>
+                  <template v-else>Access Level</template>
+                </span>
+                <div v-if="userType === 'business_employee' && permissionsList.length > 0" class="d-flex flex-wrap ga-1 mt-1">
+                  <v-chip v-for="perm in permissionsList" :key="perm" size="x-small" color="success" variant="tonal" label>{{ formatPermission(perm) }}</v-chip>
+                </div>
+                <div v-else-if="userType === 'system_administrator'" class="d-flex flex-wrap ga-1 mt-1">
+                  <v-chip size="x-small" color="error" variant="tonal" label>Full Admin</v-chip>
+                </div>
+                <span v-else class="access-value">Full administrative access</span>
+              </div>
+            </v-card-text>
+          </v-card>
+        </div>
 
-              <!-- Integrated System Access -->
-              <div class="mt-4 pt-4 border-top">
-                <div class="text-caption text-uppercase font-weight-bold text-grey-darken-1 mb-2 d-flex align-center">
-                  <v-icon size="14" color="primary" class="mr-1">mdi-shield-key</v-icon> System Access
-                </div>
-                <div v-if="permissions.length > 0" class="d-flex flex-wrap gap-2">
-                  <div v-for="perm in permissions" :key="perm" class="access-chip-mini">
-                    <v-icon size="12" color="success" class="mr-1">mdi-check-decagram</v-icon>
-                    {{ formatPermission(perm) }}
-                  </div>
-                </div>
-                <div v-else class="text-body-2 text-grey-darken-1 font-italic">
-                  Full administrative access granted.
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <!-- Business Affiliation -->
-        <v-col cols="12" md="6">
-          <v-card flat border height="100%">
-            <v-card-title class="px-6 pt-6 text-subtitle-1 font-weight-bold">
-              <v-icon color="primary" class="mr-2">mdi-office-building</v-icon> Business Affiliation
+        <!-- Business Affiliation / System Admin -->
+        <div class="card-col">
+          <v-card class="info-card" flat>
+            <v-card-title class="card-header">
+              <v-icon color="primary" class="mr-2" size="18">{{ userType === 'system_administrator' ? 'mdi-server-security' : 'mdi-office-building' }}</v-icon>
+              {{ userType === 'system_administrator' ? 'System Administration' : 'Business Affiliation' }}
             </v-card-title>
-            <v-card-text class="pa-6">
-              <div class="business-data-grid">
-                <div class="data-item">
-                  <div class="label">Work Email</div>
-                  <div class="value">{{ displayEmail }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Contact Number</div>
-                  <div class="value">{{ displayPhone }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Official Role</div>
-                  <div class="value">{{ displayRole }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Assigned Unit/Branch</div>
-                  <div class="value">{{ displayLocation }}</div>
-                </div>
-                <div class="data-item">
-                  <div class="label">Employment Date</div>
-                  <div class="value">{{ displayJoinDate }}</div>
-                </div>
+            <v-card-text class="card-body">
+              <div class="info-grid">
+                <div class="info-item"><div class="info-label">Contact Number</div><div class="info-value">{{ displayPhone }}</div></div>
+                <div class="info-item"><div class="info-label">Official Role</div><div class="info-value">{{ displayRole }}</div></div>
+                <template v-if="userType !== 'system_administrator'">
+                  <div class="info-item"><div class="info-label">{{ userType === 'stall_business_owner' ? 'Business Portfolio' : (userType === 'business_employee' ? 'Assigned Branch' : 'Assigned Unit/Branch') }}</div><div class="info-value">{{ displayLocation }}</div></div>
+                </template>
+                <template v-else>
+                  <div class="info-item"><div class="info-label">Security Level</div><div class="info-value">Level 5 (Full Admin)</div></div>
+                </template>
+                <div class="info-item"><div class="info-label">{{ userType === 'stall_business_owner' ? 'Registration Date' : (userType === 'system_administrator' ? 'Account Created' : 'Employment Date') }}</div><div class="info-value">{{ displayJoinDate }}</div></div>
+                <div class="info-item"><div class="info-label">Account Status</div><div class="info-value"><v-chip size="x-small" color="success" label class="font-weight-bold">ACTIVE</v-chip></div></div>
+                <!-- Employee extras -->
+                <template v-if="userType === 'business_employee'">
+                  <div class="info-item"><div class="info-label">Designation</div><div class="info-value">{{ userData.designation || 'Operational Staff' }}</div></div>
+                </template>
+                <!-- System Admin extras -->
+                <template v-if="userType === 'system_administrator'">
+                  <div class="info-item"><div class="info-label">Platform</div><div class="info-value">DigiStall v2.0</div></div>
+                </template>
               </div>
             </v-card-text>
           </v-card>
-        </v-col>
+        </div>
+      </div>
 
-        <!-- Business Overview Stats -->
-        <v-col cols="12">
-          <v-card flat border class="mt-4">
-            <v-card-title class="px-6 pt-6 text-subtitle-1 font-weight-bold">
-              <v-icon color="primary" class="mr-2">mdi-chart-line</v-icon> Business Overview (Current Branch)
-            </v-card-title>
-            <v-card-text class="pa-6">
-              <v-row>
-                <v-col cols="12" sm="4">
-                  <div class="stat-box text-center pa-4 rounded-lg bg-blue-lighten-5">
-                    <div class="text-caption text-uppercase font-weight-bold text-blue-darken-3">Managed Stalls</div>
-                    <div class="text-h4 font-weight-bold text-blue-darken-4 mt-1">{{ stats.managedStalls }}</div>
-                  </div>
-                </v-col>
-                <v-col cols="12" sm="4">
-                  <div class="stat-box text-center pa-4 rounded-lg bg-green-lighten-5">
-                    <div class="text-caption text-uppercase font-weight-bold text-green-darken-3">Total Revenue</div>
-                    <div class="text-h4 font-weight-bold text-green-darken-4 mt-1">{{ formatCurrency(stats.totalRevenue) }}</div>
-                  </div>
-                </v-col>
-                <v-col cols="12" sm="4">
-                  <div class="stat-box text-center pa-4 rounded-lg bg-purple-lighten-5">
-                    <div class="text-caption text-uppercase font-weight-bold text-purple-darken-3">Active Personnel</div>
-                    <div class="text-h4 font-weight-bold text-purple-darken-4 mt-1">{{ stats.activePersonnel }}</div>
-                  </div>
-                </v-col>
-                <v-col cols="12" sm="6" md="6">
-                  <div class="stat-box text-center pa-4 rounded-lg bg-orange-lighten-5 mt-4">
-                    <div class="text-caption text-uppercase font-weight-bold text-orange-darken-3">Active Stallholders</div>
-                    <div class="text-h4 font-weight-bold text-orange-darken-4 mt-1">{{ stats.activeStallholders || 0 }}</div>
-                  </div>
-                </v-col>
-                <v-col cols="12" sm="6" md="6">
-                  <div class="stat-box text-center pa-4 rounded-lg bg-red-lighten-5 mt-4">
-                    <div class="text-caption text-uppercase font-weight-bold text-red-darken-3">Pending Applications</div>
-                    <div class="text-h4 font-weight-bold text-red-darken-4 mt-1">{{ stats.pendingApplications || 0 }}</div>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
+      <!-- Row 2: Business Overview (Owner/Manager) -->
+      <div v-if="userType === 'business_manager' || userType === 'stall_business_owner'" class="stats-section">
+        <v-card class="info-card" flat>
+          <v-card-title class="card-header">
+            <v-icon color="primary" class="mr-2" size="18">mdi-chart-line</v-icon>
+            {{ userType === 'stall_business_owner' ? 'Business Portfolio Overview' : 'Business Overview (Current Branch)' }}
+          </v-card-title>
+          <v-card-text class="card-body">
+            <div class="stats-row">
+              <div class="stat-mini stat-blue"><div class="stat-mini-icon"><v-icon size="22" color="white">mdi-store</v-icon></div><div><div class="stat-mini-val">{{ stats.managedStalls }}</div><div class="stat-mini-label">Managed Stalls</div></div></div>
+              <div class="stat-mini stat-green"><div class="stat-mini-icon"><v-icon size="22" color="white">mdi-cash-multiple</v-icon></div><div><div class="stat-mini-val">{{ formatCurrency(stats.totalRevenue) }}</div><div class="stat-mini-label">Total Revenue</div></div></div>
+              <div class="stat-mini stat-purple"><div class="stat-mini-icon"><v-icon size="22" color="white">mdi-account-group</v-icon></div><div><div class="stat-mini-val">{{ stats.activePersonnel }}</div><div class="stat-mini-label">Active Personnel</div></div></div>
+              <div class="stat-mini stat-orange"><div class="stat-mini-icon"><v-icon size="22" color="white">mdi-account-multiple-check</v-icon></div><div><div class="stat-mini-val">{{ stats.activeStallholders }}</div><div class="stat-mini-label">Active Stallholders</div></div></div>
+              <div class="stat-mini stat-red"><div class="stat-mini-icon"><v-icon size="22" color="white">mdi-clipboard-text-clock</v-icon></div><div><div class="stat-mini-val">{{ stats.pendingApplications }}</div><div class="stat-mini-label">Pending Apps</div></div></div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+    </div>
 
     <!-- Edit Profile Dialog -->
-    <v-dialog v-model="editDialog" max-width="600px" persistent>
-      <v-card rounded="lg">
-        <v-card-title class="pa-4 bg-primary text-white">Update Profile Data</v-card-title>
-        <v-card-text class="pt-6">
+    <v-dialog v-model="editDialog" max-width="640px" persistent>
+      <v-card rounded="xl" class="edit-dialog-card">
+        <v-card-title class="edit-dialog-header">
+          <v-icon color="white" class="mr-3">mdi-account-edit</v-icon>
+          <span class="text-h6 font-weight-bold">Update Profile</span>
+          <v-spacer></v-spacer>
+          <v-btn icon color="white" variant="text" @click="editDialog = false" size="small"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-card-text class="pa-6">
           <v-form ref="editForm" v-model="formValid">
+            <div class="text-caption text-uppercase font-weight-bold text-grey-darken-2 mb-3"><v-icon size="14" class="mr-1">mdi-account</v-icon> Personal Information</div>
+            <v-row dense>
+              <v-col cols="12" sm="6"><v-text-field v-model="editData.firstName" label="First Name" variant="outlined" density="comfortable" prepend-inner-icon="mdi-account" :rules="[v => !!v || 'Required']"></v-text-field></v-col>
+              <v-col cols="12" sm="6"><v-text-field v-model="editData.lastName" label="Last Name" variant="outlined" density="comfortable" prepend-inner-icon="mdi-account-outline" :rules="[v => !!v || 'Required']"></v-text-field></v-col>
+              <v-col cols="12" sm="6"><v-text-field v-model="editData.phone" label="Contact Number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-phone"></v-text-field></v-col>
+              <v-col cols="12" sm="6"><v-select v-model="editData.gender" :items="['Male', 'Female', 'Other']" label="Gender" variant="outlined" density="comfortable" prepend-inner-icon="mdi-gender-male-female"></v-select></v-col>
+            </v-row>
+            <div class="text-caption text-uppercase font-weight-bold text-grey-darken-2 mb-3 mt-2"><v-icon size="14" class="mr-1">mdi-map-marker</v-icon> Additional Details</div>
             <v-row dense>
               <v-col cols="12" sm="6">
-                <v-text-field v-model="editData.firstName" label="First Name" variant="outlined" density="compact" :rules="[v => !!v || 'Required']"></v-text-field>
+                <v-menu v-model="dobMenu" :close-on-content-click="false" location="bottom">
+                  <template v-slot:activator="{ props }">
+                    <v-text-field v-bind="props" :model-value="editData.dob ? formatDateDisplay(editData.dob) : ''" label="Date of Birth" variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar" readonly clearable @click:clear="editData.dob = ''"></v-text-field>
+                  </template>
+                  <v-date-picker v-model="dobPickerDate" @update:model-value="handleDobChange" color="primary" :max="new Date().toISOString().split('T')[0]" header="Select Date of Birth" show-adjacent-months></v-date-picker>
+                </v-menu>
               </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field v-model="editData.lastName" label="Last Name" variant="outlined" density="compact" :rules="[v => !!v || 'Required']"></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field v-model="editData.phone" label="Contact Number" variant="outlined" density="compact"></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-select v-model="editData.gender" :items="['Male', 'Female', 'Other']" label="Gender" variant="outlined" density="compact"></v-select>
-              </v-col>
-              <v-col cols="12">
-                <v-text-field v-model="editData.dob" label="Date of Birth" type="date" variant="outlined" density="compact"></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-text-field v-model="editData.address" label="Primary Residence" variant="outlined" density="compact"></v-text-field>
-              </v-col>
+              <v-col cols="12" sm="6"><v-text-field v-model="editData.address" label="Primary Residence" variant="outlined" density="comfortable" prepend-inner-icon="mdi-map-marker" placeholder="City, Province"></v-text-field></v-col>
             </v-row>
           </v-form>
         </v-card-text>
+        <v-divider></v-divider>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="editDialog = false">Discard</v-btn>
-          <v-btn color="primary" variant="flat" :loading="saving" :disabled="!formValid" @click="saveProfile">Apply Changes</v-btn>
+          <v-btn variant="text" color="grey-darken-1" @click="editDialog = false" class="px-6">Discard</v-btn>
+          <v-btn color="primary" variant="flat" :loading="saving" :disabled="!formValid" @click="saveProfile" class="px-8 font-weight-bold" rounded="lg">Save Changes</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
-      {{ snackbar.text }}
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="4000" location="bottom left" elevation="24">
+      <div class="d-flex align-center"><v-icon class="mr-3">{{ snackbar.color === 'error' ? 'mdi-alert-circle' : 'mdi-check-circle' }}</v-icon>{{ snackbar.text }}</div>
+      <template v-slot:actions><v-btn variant="text" @click="snackbar.show = false">Close</v-btn></template>
     </v-snackbar>
   </div>
 </template>
@@ -206,6 +194,7 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue';
 import axios from 'axios';
+import LoadingScreen from '@common/LoadingScreen/LoadingScreen.vue';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -216,65 +205,37 @@ const avatarUrl = ref(null);
 const editDialog = ref(false);
 const formValid = ref(false);
 const editForm = ref(null);
+const dobMenu = ref(false);
+const dobPickerDate = ref(null);
 
-const editData = reactive({
-  firstName: '',
-  lastName: '',
-  phone: '',
-  address: '',
-  dob: '',
-  gender: ''
-});
+const editData = reactive({ firstName: '', lastName: '', phone: '', address: '', dob: '', gender: '' });
+const snackbar = reactive({ show: false, text: '', color: 'success' });
+const stats = reactive({ managedStalls: 0, totalRevenue: 0, activePersonnel: 0, activeStallholders: 0, pendingApplications: 0 });
 
-const snackbar = reactive({
-  show: false,
-  text: '',
-  color: 'success'
-});
+const userType = computed(() => userData.value?.userType || '');
 
 const displayFullName = computed(() => {
   if (!userData.value) return '...';
   const u = userData.value;
-  const first = u.first_name || u.firstName || '';
-  const last = u.last_name || u.lastName || '';
-  return `${first} ${last}`.trim() || 'Authorized User';
+  return `${u.first_name || u.firstName || ''} ${u.last_name || u.lastName || ''}`.trim() || 'Authorized User';
 });
 
 const displayRole = computed(() => {
-  if (!userData.value) return '';
-  const type = userData.value.userType;
-  const roles = {
-    'system_administrator': 'System Administrator',
-    'stall_business_owner': 'Platform Proprietor',
-    'business_manager': 'Branch Manager',
-    'business_employee': userData.value.designation || 'Operational Staff'
-  };
-  return roles[type] || 'Authorized Personnel';
+  const roles = { 'system_administrator': 'System Administrator', 'stall_business_owner': 'Business Owner', 'business_manager': 'Branch Manager', 'business_employee': userData.value?.designation || 'Operational Staff' };
+  return roles[userType.value] || 'Authorized Personnel';
 });
-
-// Business Aggregate Stats
-const stats = computed(() => userData.value?.stats || {
-  managedStalls: 0,
-  totalRevenue: 0,
-  activePersonnel: 0,
-  activeStallholders: 0,
-  pendingApplications: 0
-});
-
-const formatCurrency = (val) => {
-  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0);
-};
 
 const userRoleIcon = computed(() => {
-  const type = userData.value?.userType;
-  if (type === 'system_administrator') return 'mdi-shield-account';
-  if (type === 'stall_business_owner') return 'mdi-briefcase-variant';
-  return 'mdi-account-circle';
+  const icons = { 'system_administrator': 'mdi-shield-account', 'stall_business_owner': 'mdi-briefcase-variant', 'business_manager': 'mdi-account-tie', 'business_employee': 'mdi-account-hard-hat' };
+  return icons[userType.value] || 'mdi-account-circle';
 });
+
+const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0);
+const getAuthToken = () => localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
 
 const displayEmail = computed(() => userData.value?.email || 'N/A');
 const displayPhone = computed(() => userData.value?.contact_number || userData.value?.phone_number || 'N/A');
-const displayLocation = computed(() => userData.value?.branch_name || 'Main Office');
+const displayLocation = computed(() => userData.value?.branch_name || userData.value?.branchName || (userType.value === 'stall_business_owner' ? 'Multi-Branch' : 'Main Office'));
 const displayGender = computed(() => userData.value?.gender || 'Not specified');
 const displayDOB = computed(() => {
   if (!userData.value?.date_of_birth) return 'Not specified';
@@ -282,81 +243,80 @@ const displayDOB = computed(() => {
 });
 const displayAddress = computed(() => userData.value?.address || 'N/A');
 const displayJoinDate = computed(() => {
-  const date = userData.value?.created_at || userData.value?.hired_date || userData.value?.hiredDate || userData.value?.joinDate;
+  const date = userData.value?.date_created || userData.value?.created_at || userData.value?.hired_date || userData.value?.hiredDate;
   if (!date) return 'N/A';
-  return new Date(date).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+  return new Date(date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 });
 
-const permissions = computed(() => {
+const permissionsList = computed(() => {
   const p = userData.value?.permissions;
   if (!p) return [];
-  return Array.isArray(p) ? p : JSON.parse(p || '[]');
+  if (Array.isArray(p)) return p;
+  if (typeof p === 'object') return Object.keys(p).filter(k => p[k] === true);
+  try { return JSON.parse(p); } catch { return []; }
 });
 
-const formatPermission = (perm) => perm.replace(/_/g, ' ').toUpperCase();
+const hasPermission = (perm) => {
+  const p = userData.value?.permissions;
+  if (!p) return false;
+  if (Array.isArray(p)) return p.includes(perm);
+  if (typeof p === 'object') return p[perm] === true;
+  return false;
+};
+
+const formatPermission = (perm) => perm.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+const formatDateDisplay = (dateStr) => { if (!dateStr) return ''; try { return new Date(dateStr).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }); } catch { return dateStr; } };
+const handleDobChange = (val) => { if (val) { editData.dob = new Date(val).toISOString().split('T')[0]; } dobMenu.value = false; };
+
+const fetchBusinessStats = async () => {
+  const token = getAuthToken();
+  if (!token) return;
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  try {
+    const [stallsRes, paymentsRes, employeesRes, applicantsRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/stalls`, { headers }).catch(() => ({ ok: false })),
+      fetch(`${API_BASE_URL}/payments/onsite`, { headers }).catch(() => ({ ok: false })),
+      fetch(`${API_BASE_URL}/employees`, { headers }).catch(() => ({ ok: false })),
+      fetch(`${API_BASE_URL}/applicants/my-stall-applicants`, { headers }).catch(() => ({ ok: false }))
+    ]);
+    if (stallsRes.ok) { const r = await stallsRes.json(); if (r.success && r.data) { stats.managedStalls = r.data.length; const u = new Set(); r.data.forEach(s => { if (s.stallholder_id) u.add(s.stallholder_id); }); stats.activeStallholders = u.size; } }
+    if (paymentsRes.ok) { const r = await paymentsRes.json(); if (r.success && r.data) { stats.totalRevenue = r.data.reduce((sum, p) => sum + (parseFloat(p.amountPaid) || parseFloat(p.amount) || 0), 0); } }
+    if (employeesRes.ok) { const r = await employeesRes.json(); if (r.success && r.data) stats.activePersonnel = r.data.length; }
+    if (applicantsRes.ok) { const r = await applicantsRes.json(); if (r.success && r.data && r.data.applicants) { stats.pendingApplications = r.data.applicants.filter(a => { const s = a.application_status || (a.applications?.[0]?.application_status || ''); return s.toLowerCase() === 'pending'; }).length; } }
+  } catch (error) { console.error('⚠️ Error fetching business stats:', error); }
+};
 
 const fetchUserData = async () => {
-  // 1. Try to get logic from session storage first (Instant UI)
   const storedUser = sessionStorage.getItem('currentUser');
-  if (storedUser) {
-    try {
-      const parsed = JSON.parse(storedUser);
-      userData.value = parsed;
-      loading.value = false;
-      console.log('✅ UI populated from session storage');
-    } catch (e) {
-      console.error('Session data parse error:', e);
-    }
-  }
-
-  // 2. Fetch fresh data from API (Updates stats and profile)
+  if (storedUser) { try { userData.value = JSON.parse(storedUser); loading.value = false; } catch (e) { console.error(e); } }
   try {
-    const token = sessionStorage.getItem('authToken');
-    const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (response.data.success) {
-      userData.value = response.data.data;
-      // Sync back to session storage
-      sessionStorage.setItem('currentUser', JSON.stringify(userData.value));
-      console.log('✅ Fresh profile data fetched from API');
-    }
-  } catch (error) {
-    console.error('API Fetch error:', error);
-  } finally {
-    loading.value = false;
-  }
+    const token = getAuthToken();
+    const response = await axios.get(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.data.success) { userData.value = response.data.data; sessionStorage.setItem('currentUser', JSON.stringify(userData.value)); }
+  } catch (error) { console.error('API Fetch error:', error); }
+  finally { loading.value = false; }
+  if (userType.value === 'business_manager' || userType.value === 'stall_business_owner') { await fetchBusinessStats(); }
 };
 
 const openEditDialog = () => {
   const u = userData.value;
-  editData.firstName = u.first_name || '';
-  editData.lastName = u.last_name || '';
-  editData.phone = u.contact_number || u.phone_number || '';
-  editData.address = u.address || '';
+  editData.firstName = u.first_name || ''; editData.lastName = u.last_name || '';
+  editData.phone = u.contact_number || u.phone_number || ''; editData.address = u.address || '';
   editData.dob = u.date_of_birth ? new Date(u.date_of_birth).toISOString().split('T')[0] : '';
   editData.gender = u.gender || '';
+  dobPickerDate.value = editData.dob ? new Date(editData.dob) : null;
   editDialog.value = true;
 };
 
 const saveProfile = async () => {
   saving.value = true;
   try {
-    const token = sessionStorage.getItem('authToken');
-    await axios.put(`${API_BASE_URL}/auth/profile/update`, editData, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    snackbar.text = 'Information updated successfully';
-    snackbar.show = true;
-    editDialog.value = false;
-    await fetchUserData();
-  } catch (error) {
-    snackbar.text = 'Update failed. Check requirements.';
-    snackbar.color = 'error';
-    snackbar.show = true;
-  } finally {
-    saving.value = false;
-  }
+    const token = getAuthToken();
+    await axios.put(`${API_BASE_URL}/auth/profile/update`, editData, { headers: { Authorization: `Bearer ${token}` } });
+    snackbar.text = 'Profile updated successfully'; snackbar.color = 'success'; snackbar.show = true;
+    editDialog.value = false; await fetchUserData();
+  } catch (error) { snackbar.text = 'Update failed. Please try again.'; snackbar.color = 'error'; snackbar.show = true; }
+  finally { saving.value = false; }
 };
 
 onMounted(fetchUserData);

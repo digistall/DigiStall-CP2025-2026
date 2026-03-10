@@ -534,6 +534,12 @@ const router = createRouter({
           component: Reports,
           meta: { title: 'Subscription Reports', requiresRole: ['system_administrator'] },
         },
+        {
+          path: 'profile',
+          name: 'SystemAdminProfile',
+          component: Profile,
+          meta: { title: 'My Profile', requiresRole: ['system_administrator'] },
+        },
       ],
     },
   ],
