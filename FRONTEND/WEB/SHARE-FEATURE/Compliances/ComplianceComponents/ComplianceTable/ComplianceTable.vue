@@ -8,8 +8,8 @@
             <th>Compliance ID</th>
             <th>Report Date</th>
             <th>Type</th>
-            <th>Inspector</th>
-            <th>Stallholder</th>
+            <th class="name-header">Inspector</th>
+            <th class="name-header">Stallholder</th>
             <th>Payment Date</th>
             <th>Status</th>
           </tr>
@@ -26,7 +26,14 @@
             <td>{{ compliance.id || 'N/A' }}</td>
             <td>{{ compliance.date || 'N/A' }}</td>
             <td>{{ compliance.type || 'N/A' }}</td>
-            <td>{{ compliance.inspector || 'N/A' }}</td>
+            <td class="compliance-name-cell">
+              <div class="compliance-name-wrapper">
+                <div class="compliance-avatar">
+                  {{ getInitials(compliance.inspector || 'N/A') }}
+                </div>
+                <span>{{ compliance.inspector || 'N/A' }}</span>
+              </div>
+            </td>
             <td class="compliance-name-cell">
               <div class="compliance-name-wrapper">
                 <div class="compliance-avatar">
@@ -56,14 +63,26 @@
 
       <!-- Empty State -->
       <div v-if="filteredCompliance.length === 0" class="compliance-empty-state">
-        <svg class="compliance-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg
+          class="compliance-empty-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
           <line x1="8" y1="2" x2="8" y2="6"></line>
           <line x1="3" y1="10" x2="21" y2="10"></line>
         </svg>
         <h3>No compliance records found</h3>
-        <p>{{ searchQuery ? 'Try adjusting your search criteria' : 'No compliance records available yet' }}</p>
+        <p>
+          {{
+            searchQuery
+              ? 'Try adjusting your search criteria'
+              : 'No compliance records available yet'
+          }}
+        </p>
       </div>
     </div>
 
@@ -77,9 +96,7 @@
         ← Previous
       </button>
 
-      <span class="compliance-page-info">
-        Page {{ currentPage }} of {{ totalPages }}
-      </span>
+      <span class="compliance-page-info"> Page {{ currentPage }} of {{ totalPages }} </span>
 
       <button
         class="compliance-page-btn"

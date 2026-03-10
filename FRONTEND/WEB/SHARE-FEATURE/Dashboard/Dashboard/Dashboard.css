@@ -199,17 +199,10 @@
   overflow: hidden;
 }
 
-/* Fixed height table scroll container - sticky header, scrollable body */
+/* Container for table */
 .table-scroll-container {
-  height: 350px;
-  min-height: 350px;
-  max-height: 350px;
-  overflow-y: auto;
-  overflow-x: hidden;
   position: relative;
-  /* Thin scrollbar for Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 #f1f1f1;
+  width: 100%;
 }
 
 /* Styled scrollbar for Chrome, Safari, Opera */
@@ -230,27 +223,9 @@
   background: #a1a1a1;
 }
 
-/* Remove v-table's default overflow to prevent double scrollbar */
-.table-scroll-container .v-table {
-  overflow: visible !important;
-}
-
-.table-scroll-container .v-table__wrapper {
-  overflow: visible !important;
-  height: auto !important;
-}
-
-/* Sticky header for the table */
-.table-scroll-container .custom-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background-color: #f5f5f5;
-}
-
 /* Empty state inside scroll container */
 .table-scroll-container .empty-state {
-  height: 100%;
+  height: 350px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -258,11 +233,15 @@
 }
 
 .table-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 16px 24px !important;
+  background: rgb(0, 33, 129) !important;
+  color: white !important;
+  border-bottom: none !important;
+  padding: 16px 20px !important;
   font-size: 1.1rem !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
 }
 
 /* Custom Table Styles */
@@ -272,21 +251,25 @@
   width: 100%;
 }
 
-.custom-table thead th {
-  background-color: #f5f5f5;
-  color: #555;
+.custom-table :deep(thead th:first-child) {
+  padding-left: 16px !important;
+}
+
+.custom-table :deep(thead th) {
+  background-color: rgb(0, 33, 129) !important;
+  color: #ffffff !important;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 16px 12px;
-  border-bottom: 2px solid #e0e0e0;
+  padding: 12px 16px;
+  border-bottom: 2px solid #1565c0;
   white-space: nowrap;
-  text-align: center !important;
+  text-align: left !important;
   /* For sticky header support */
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -299,11 +282,37 @@
 }
 
 .custom-table tbody td {
-  padding: 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   vertical-align: middle;
-  font-size: 0.9rem;
-  text-align: center !important;
+  font-size: 14px;
+  font-weight: 400;
+  color: #2c3e50;
+  text-align: left !important;
+}
+
+.custom-table tbody td:first-child {
+  text-align: left !important;
+  padding-left: 16px !important;
+}
+
+.initials-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #002181;
+  color: white;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.name-text {
+  font-weight: 400 !important;
+  color: #2c3e50;
 }
 
 .custom-table tbody tr:last-child td {
@@ -407,25 +416,7 @@
   }
 }
 
-/* Custom scrollbar for tables - hidden, scroll container handles scrolling */
-.v-table {
-  max-height: none;
-  overflow: visible !important;
-}
-
-/* Ensure v-table wrapper doesn't add its own scrollbar */
-.v-table .v-table__wrapper {
-  overflow: visible !important;
-  max-height: none;
-}
-
-/* Hide all scrollbars on v-table (backup) */
-.v-table::-webkit-scrollbar,
-.v-table .v-table__wrapper::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
+/* Scrollbar hover style */
 
 .main-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;

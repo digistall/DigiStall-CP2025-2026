@@ -11,6 +11,7 @@ import piniaPersistedState from 'pinia-plugin-persistedstate'
 import vuetify from './plugins/vuetify'
 import router from './router'
 import App from './App.vue'
+import './services/fetchInterceptor'
 
 // Create Pinia store
 const pinia = createPinia()

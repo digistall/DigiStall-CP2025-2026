@@ -89,7 +89,7 @@
   padding: 12px 6px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 0;
   word-wrap: break-word;
 }
@@ -101,7 +101,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
-  text-align: center;
+  text-align: left;
+  justify-content: flex-start !important;
 }
 
 .table-cell {
@@ -109,53 +110,89 @@
   color: #2c3e50;
   word-wrap: break-word;
   overflow: hidden;
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
 }
 
-/* Column specific styles - all centered */
+/* Column specific styles - all left-aligned */
 .name-col {
-  justify-content: center;
-  text-align: center;
-  font-weight: 500;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  font-weight: 400 !important;
+}
+
+.header-cell.name-col {
+  justify-content: flex-start !important;
+  text-align: left !important;
 }
 
 .business-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .email-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
 }
 
 .phone-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
   font-family: 'Monaco', 'Menlo', monospace;
 }
 
 .stall-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .status-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .compliance-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .actions-col {
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
+}
+
+.vendor-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #002181;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.vendor-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-weight: 400 !important;
+  color: #2c3e50;
 }
 
 .actions-col .v-btn {

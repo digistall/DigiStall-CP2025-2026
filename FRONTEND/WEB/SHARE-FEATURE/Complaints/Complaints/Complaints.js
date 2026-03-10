@@ -27,6 +27,31 @@ export default {
       error: null,
     }
   },
+  computed: {
+    filteredComplaintsList() {
+      let filtered = [...this.complaintsList];
+
+      if (this.activeFilter && this.activeFilter !== 'all') {
+        filtered = filtered.filter(item => item.status === this.activeFilter);
+      }
+
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(item => 
+          (item.subject && item.subject.toLowerCase().includes(query)) ||
+          (item.description && item.description.toLowerCase().includes(query)) ||
+          (item.id && item.id.toLowerCase().includes(query)) ||
+          (item.sender && item.sender.toLowerCase().includes(query)) ||
+          (item.stallholder && item.stallholder.toLowerCase().includes(query)) ||
+          (item.type && item.type.toLowerCase().includes(query)) ||
+          (item.stall_no && String(item.stall_no).toLowerCase().includes(query)) ||
+          (item.branch && item.branch.toLowerCase().includes(query))
+        );
+      }
+
+      return filtered;
+    }
+  },
   mounted() {
     this.initializeComplaints()
   },
@@ -36,7 +61,6 @@ export default {
       this.searchQuery = searchData.query
       this.activeFilter = searchData.filter
       console.log('Search data:', searchData)
-      this.loadComplaintsData()
     },
 
     // Table actions
@@ -129,21 +153,10 @@ export default {
           return
         }
 
-        // Build query parameters
-        const params = {}
-        if (this.activeFilter && this.activeFilter !== 'all') {
-          params.status = this.activeFilter
-        }
-        if (this.searchQuery) {
-          params.search = this.searchQuery
-        }
+        // We now fetch all records and filter locally
+        console.log('🔄 Fetching all complaints data')
 
-        console.log('🔄 Fetching complaints data')
-        console.log('📋 Query params:', params)
-
-        const response = await apiClient.get('/complaints', {
-          params,
-        })
+        const response = await apiClient.get('/complaints')
 
         console.log('📥 Response received:', response.status, response.data)
 

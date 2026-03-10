@@ -32,7 +32,7 @@
 
 .complaints-table th {
   padding: 16px 12px;
-  text-align: center;
+  text-align: left;
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -59,12 +59,33 @@
 .complaints-table td {
   padding: 16px 12px;
   vertical-align: middle;
-  text-align: center;
+  text-align: left;
   
 }
 
 .complaints-name-cell {
   min-width: 200px;
+  text-align: left !important;
+}
+
+.sender-header {
+  text-align: left !important;
+}
+
+.complaints-name-wrapper span {
+  font-weight: 400;
+}
+
+.sender-header, .complaints-name-cell {
+  text-align: left !important;
+}
+
+.sender-header {
+  padding-left: 64px !important;
+}
+
+.complaints-name-wrapper span {
+  font-weight: 400;
 }
 
 .complaints-name-wrapper {

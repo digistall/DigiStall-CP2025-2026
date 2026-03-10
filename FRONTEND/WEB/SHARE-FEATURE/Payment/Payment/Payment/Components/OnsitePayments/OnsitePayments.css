@@ -321,7 +321,7 @@
 
 .payments-table th {
   padding: 16px 12px;
-  text-align: center;
+  text-align: left;
   font-size: 14px;
   font-weight: 600;
   color: white;
@@ -346,7 +346,7 @@
   padding: 16px 12px;
   font-size: 14px;
   color: #374151;
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
 }
 

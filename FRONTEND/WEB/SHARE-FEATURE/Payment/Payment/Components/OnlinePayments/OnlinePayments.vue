@@ -1,17 +1,20 @@
 <template>
   <div class="online-payments">
-    <!-- Search Bar -->
-    <div class="search-container">
-      <v-text-field
-        v-model="searchQuery"
-        placeholder="Search by ID, name, reference number..."
-        variant="outlined"
-        density="comfortable"
-        prepend-inner-icon="mdi-magnify"
-        clearable
-        hide-details
-        class="search-field"
-      ></v-text-field>
+    <div class="search-filter-section mb-6">
+      <div class="search-wrapper">
+        <div class="search-input-wrapper">
+          <v-text-field
+            v-model="searchQuery"
+            placeholder="Search by ID, name, reference number..."
+            variant="outlined"
+            density="comfortable"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            class="search-field"
+          ></v-text-field>
+        </div>
+      </div>
     </div>
 
     <!-- Payment Method Tabs -->
@@ -58,7 +61,7 @@
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Stallholder Name</th>
+                <th class="name-header">Stallholder Name</th>
                 <th>Payment Method</th>
                 <th>Amount</th>
                 <th>Reference No.</th>
@@ -73,11 +76,7 @@
                   <p>No payments found</p>
                 </td>
               </tr>
-              <tr 
-                v-for="payment in filteredPayments" 
-                :key="payment.id"
-                class="clickable-row"
-              >
+              <tr v-for="payment in filteredPayments" :key="payment.id" class="clickable-row">
                 <td class="id-cell" @click="viewPaymentDetails(payment)">{{ payment.id }}</td>
                 <td class="name-cell" @click="viewPaymentDetails(payment)">
                   <div class="stallholder-info">
@@ -89,23 +88,31 @@
                   </div>
                 </td>
                 <td @click="viewPaymentDetails(payment)">
-                  <v-chip
-                    :color="getMethodColor(payment.method)"
-                    variant="flat"
-                    size="small"
-                  >
+                  <v-chip :color="getMethodColor(payment.method)" variant="flat" size="small">
                     {{ payment.method }}
                   </v-chip>
                 </td>
-                <td class="amount-cell" @click="viewPaymentDetails(payment)">{{ formatCurrency(payment.amount) }}</td>
-                <td class="reference-cell" @click="viewPaymentDetails(payment)">{{ payment.referenceNo }}</td>
-                <td class="date-cell" @click="viewPaymentDetails(payment)">{{ formatDate(payment.paymentDate || payment.date || payment.payment_date) }}</td>
+                <td class="amount-cell" @click="viewPaymentDetails(payment)">
+                  {{ formatCurrency(payment.amount) }}
+                </td>
+                <td class="reference-cell" @click="viewPaymentDetails(payment)">
+                  {{ payment.referenceNo }}
+                </td>
+                <td class="date-cell" @click="viewPaymentDetails(payment)">
+                  {{ formatDate(payment.paymentDate || payment.date || payment.payment_date) }}
+                </td>
                 <td class="actions-cell">
                   <div class="action-buttons">
-                    <button class="table-action-btn accept-btn" @click.stop="acceptPayment(payment)">
+                    <button
+                      class="table-action-btn accept-btn"
+                      @click.stop="acceptPayment(payment)"
+                    >
                       ACCEPT
                     </button>
-                    <button class="table-action-btn decline-btn" @click.stop="declinePayment(payment)">
+                    <button
+                      class="table-action-btn decline-btn"
+                      @click.stop="declinePayment(payment)"
+                    >
                       DECLINE
                     </button>
                   </div>
@@ -158,7 +165,9 @@
                     </div>
                     <div class="info-item">
                       <span class="info-label">Amount:</span>
-                      <span class="info-value amount-highlight">{{ formatCurrency(selectedPayment.amount) }}</span>
+                      <span class="info-value amount-highlight">{{
+                        formatCurrency(selectedPayment.amount)
+                      }}</span>
                     </div>
                     <div class="info-item">
                       <span class="info-label">Reference Number:</span>
@@ -200,9 +209,7 @@
           <div v-if="pendingPayment" class="text-center py-4">
             <v-icon size="64" color="success" class="mb-3">mdi-cash-check</v-icon>
             <h3 class="mb-2">Confirm Payment Acceptance</h3>
-            <p class="text-medium-emphasis mb-4">
-              Are you sure you want to accept this payment?
-            </p>
+            <p class="text-medium-emphasis mb-4">Are you sure you want to accept this payment?</p>
             <v-card variant="outlined" class="mb-4">
               <v-card-text>
                 <div class="d-flex justify-space-between mb-2">
@@ -215,11 +222,15 @@
                 </div>
                 <div class="d-flex justify-space-between mb-2">
                   <span class="font-weight-medium">Amount:</span>
-                  <span class="text-success font-weight-bold">{{ formatCurrency(pendingPayment.amount) }}</span>
+                  <span class="text-success font-weight-bold">{{
+                    formatCurrency(pendingPayment.amount)
+                  }}</span>
                 </div>
                 <div class="d-flex justify-space-between">
                   <span class="font-weight-medium">Method:</span>
-                  <v-chip :color="getMethodColor(pendingPayment.method)" size="small">{{ pendingPayment.method }}</v-chip>
+                  <v-chip :color="getMethodColor(pendingPayment.method)" size="small">{{
+                    pendingPayment.method
+                  }}</v-chip>
                 </div>
               </v-card-text>
             </v-card>
@@ -227,17 +238,8 @@
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="cancelAcceptDialog"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="success"
-            variant="flat"
-            @click="confirmAcceptPayment"
-          >
+          <v-btn variant="text" @click="cancelAcceptDialog"> Cancel </v-btn>
+          <v-btn color="success" variant="flat" @click="confirmAcceptPayment">
             <v-icon class="mr-2">mdi-check</v-icon>
             Accept Payment
           </v-btn>
@@ -259,9 +261,7 @@
             <div class="text-center mb-4">
               <v-icon size="64" color="error" class="mb-3">mdi-alert-circle</v-icon>
               <h3 class="mb-2">Confirm Payment Decline</h3>
-              <p class="text-medium-emphasis">
-                Are you sure you want to decline this payment?
-              </p>
+              <p class="text-medium-emphasis">Are you sure you want to decline this payment?</p>
             </div>
             <v-card variant="outlined" class="mb-4">
               <v-card-text>
@@ -292,17 +292,8 @@
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="cancelDeclineDialog"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="error"
-            variant="flat"
-            @click="confirmDeclinePayment"
-          >
+          <v-btn variant="text" @click="cancelDeclineDialog"> Cancel </v-btn>
+          <v-btn color="error" variant="flat" @click="confirmDeclinePayment">
             <v-icon class="mr-2">mdi-close</v-icon>
             Decline Payment
           </v-btn>
