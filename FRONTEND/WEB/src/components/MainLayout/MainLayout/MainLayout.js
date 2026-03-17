@@ -93,16 +93,12 @@ export default {
     }
   },
   mounted() {
-    document.body.classList.add('main-layout-active')
-    document.documentElement.classList.add('main-layout-active')
     this.setMenuItemsBasedOnUserType()
     this.loadCurrentUserName()
     // Listen for sidebar logout event (trigger-logout from eventBus)
     eventBus.on('trigger-logout', this.handleLogoutClick)
   },
   beforeUnmount() {
-    document.body.classList.remove('main-layout-active')
-    document.documentElement.classList.remove('main-layout-active')
     eventBus.off('trigger-logout', this.handleLogoutClick)
   },
   watch: {

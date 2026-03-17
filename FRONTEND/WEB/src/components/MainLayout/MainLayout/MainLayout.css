@@ -11,8 +11,8 @@
 }
 
 /* Global reset for MainLayout to prevent double scrollbars */
-:global(html.main-layout-active),
-:global(body.main-layout-active) {
+:global(html),
+:global(body) {
   overflow: hidden !important;
   height: 100% !important;
 }
