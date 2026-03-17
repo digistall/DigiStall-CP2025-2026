@@ -15,7 +15,6 @@ const HEARTBEAT_TIMEOUT_MINUTES = 2;  // Mark offline after 2 minutes of no hear
 const CLEANUP_INTERVAL_MS = 30000;    // Run cleanup every 30 seconds
 
 let cleanupInterval = null;
-let consecutiveFailures = 0;
 
 /**
  * Mark inactive users as offline
@@ -26,7 +25,6 @@ async function cleanupInactiveSessions() {
   let connection;
   try {
     connection = await createConnection();
-    consecutiveFailures = 0; // Reset on successful connection
     
     // Set session timezone to Philippine time for consistent comparison
     await connection.execute(`SET time_zone = '+08:00'`);
@@ -141,11 +139,7 @@ async function cleanupInactiveSessions() {
     
     await connection.end();
   } catch (error) {
-    // Silently handle connection errors — only warn once
-    consecutiveFailures++;
-    if (consecutiveFailures === 1) {
-      console.log('⚠️ Session cleanup: DB connection unavailable, will retry silently.');
-    }
+    // Silently handle connection errors
     if (connection) await connection.end().catch(() => {});
   }
 }
