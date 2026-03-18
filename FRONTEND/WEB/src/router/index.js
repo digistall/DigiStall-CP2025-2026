@@ -12,16 +12,16 @@ import ForgotPassword from '@auth/ForgotPassword/ForgotPassword.vue'
 import LandingPage from '@landing/LandingPage/LandingPage.vue'
 
 // Layout (src/components)
-import MainLayout from '@/components/MainLayout/MainLayout/MainLayout.vue'
+import MainLayout from '@/components/MainLayout/MainLayout.vue'
 
 // SHARE-FEATURE module - shared features (Owner, Manager, Employee)
-import Dashboard from '@shared-features/Dashboard/Dashboard/Dashboard.vue'
-import Payment from '@shared-features/Payment/Payment/Payment.vue'
-import Applicants from '@shared-features/Applicants/Applicants/Applicants.vue'
-import Complaints from '@shared-features/Complaints/Complaints/Complaints.vue'
+import Dashboard from '@shared-features/Dashboard/Dashboard.vue'
+import Payment from '@shared-features/Payment/Payment.vue'
+import Applicants from '@shared-features/Applicants/Applicants.vue'
+import Complaints from '@shared-features/Complaints/Complaints.vue'
 import Compliances from '@shared-features/Compliances/Compliance.vue'
 import Vendors from '@shared-features/Vendors/Vendors.vue'
-import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholders.vue'
+import Stallholders from '@shared-features/Stallholders/Stallholders.vue'
 import Stalls from '@shared-features/Stalls/Stalls.vue'
 import StallTracker from '@shared-features/StallTracker/StallTracker.vue'
 import Profile from '@shared-features/Profile/Profile.vue'
