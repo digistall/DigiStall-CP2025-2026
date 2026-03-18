@@ -467,6 +467,9 @@ export default {
 /* Landing page smooth scroll */
 .landing-page {
   scroll-behavior: smooth;
+  min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Hide scroll progress on mobile */
