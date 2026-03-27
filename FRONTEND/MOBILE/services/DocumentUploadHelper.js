@@ -47,12 +47,12 @@ class DocumentUploadHelper {
   }
 
   /**
-   * Validate file size (max 10MB for documents)
+   * Validate file size (max 5MB for documents)
    * @param {number} fileSizeInBytes - File size in bytes
    * @returns {boolean} - True if valid
    */
   static validateFileSize(fileSizeInBytes) {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     return fileSizeInBytes <= maxSize;
   }
 
@@ -72,11 +72,11 @@ class DocumentUploadHelper {
   }
 
   /**
-   * Prepare document for upload (convert to base64 and create payload)
+   * Prepare document for upload (URI-based, no base64 — uses FormData multipart upload)
    * @param {object} file - File object from ImagePicker or DocumentPicker
    * @param {number} stallholderId - Stallholder ID
    * @param {number} documentTypeId - Document type ID
-   * @returns {Promise<object>} - Upload payload
+   * @returns {Promise<object>} - Upload payload with file URI (no base64)
    */
   static async prepareDocumentForUpload(file, stallholderId, documentTypeId) {
     try {
@@ -96,7 +96,6 @@ class DocumentUploadHelper {
       
       // Fix incomplete MIME types from ImagePicker
       if (!mimeType || mimeType === 'image' || !mimeType.includes('/')) {
-        // Derive MIME type from filename extension
         mimeType = this.getMimeType(fileName);
         console.log(`📋 Fixed MIME type from filename: ${mimeType}`);
       }
@@ -104,37 +103,33 @@ class DocumentUploadHelper {
       // Validate MIME type is complete
       const validMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf'];
       if (!validMimeTypes.includes(mimeType)) {
-        // Try to derive from filename if not in valid list
         const derivedMimeType = this.getMimeType(fileName);
         if (validMimeTypes.includes(derivedMimeType)) {
           mimeType = derivedMimeType;
           console.log(`📋 Using derived MIME type from filename: ${mimeType}`);
         } else {
-          // Default to image/jpeg for camera/gallery images
           mimeType = 'image/jpeg';
           console.log(`📋 Defaulting to MIME type: ${mimeType}`);
         }
       }
 
-      // Get file size
-      const fileSize = file.size || await this.getFileSize(uri);
+      // Get file size for validation
+      const fileSize = file.fileSize || file.size || await this.getFileSize(uri);
       console.log(`📁 File size: ${(fileSize / 1024 / 1024).toFixed(2)}MB`);
       console.log(`📋 Final MIME type: ${mimeType}`);
       console.log(`📋 File name: ${fileName}`);
 
-      // Validate size
+      // Validate size (5MB limit)
       if (!this.validateFileSize(fileSize)) {
-        throw new Error("File size exceeds 10MB limit");
+        throw new Error(`File size exceeds 5 MB limit (${(fileSize / 1024 / 1024).toFixed(1)} MB). Please choose a smaller file.`);
       }
 
-      // Convert to base64
-      const base64Data = await this.convertToBase64(uri);
-
-      // Create upload payload
+      // Return URI-based payload — no base64 conversion.
+      // ApiService will attach the URI directly to FormData for multipart upload.
       return {
         stallholder_id: stallholderId,
         document_type_id: documentTypeId,
-        document_data: `data:${mimeType};base64,${base64Data}`,
+        uri,
         mime_type: mimeType,
         file_name: fileName,
         file_size: fileSize,
@@ -172,7 +167,7 @@ class DocumentUploadHelper {
 
       // Validate size
       if (!this.validateFileSize(fileSize)) {
-        throw new Error("File size exceeds 10MB limit");
+        throw new Error(`File size exceeds 5 MB limit (${(fileSize / 1024 / 1024).toFixed(1)} MB). Please choose a smaller file.`);
       }
 
       // Convert to base64

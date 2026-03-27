@@ -222,15 +222,12 @@ export const NetworkUtils = {
 
   // Get current active server or find one
   async getActiveServer() {
+    // If BASE_URL is already set, trust it — don't fire a test connection on every call.
+    // testConnection() creates its own AbortController (3s timeout) which can interfere
+    // with concurrent uploads or other in-flight requests.
+    // If the server is actually down, the individual API call will fail naturally.
     if (API_CONFIG.BASE_URL) {
-      // Test if current server is still working
-      if (await this.testConnection(API_CONFIG.BASE_URL)) {
-        return API_CONFIG.BASE_URL;
-      } else {
-        console.log('🔄 Current server not responding, finding new one...');
-        API_CONFIG.BASE_URL = null;
-        API_CONFIG.STATIC_FILE_SERVER = null;
-      }
+      return API_CONFIG.BASE_URL;
     }
     
     return await this.findWorkingServer();

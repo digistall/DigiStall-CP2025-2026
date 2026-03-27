@@ -89,7 +89,7 @@
   padding: 12px 6px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 0;
   word-wrap: break-word;
 }
@@ -101,8 +101,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
-  text-align: center;
-  justify-content: center !important;
+  text-align: left;
+  justify-content: flex-start !important;
 }
 
 .table-cell {
@@ -110,11 +110,11 @@
   color: #2c3e50;
   word-wrap: break-word;
   overflow: hidden;
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
 }
 
-/* Column specific styles - all centered */
+/* Column specific styles - all left-aligned */
 .name-col {
   justify-content: flex-start !important;
   text-align: left !important;
@@ -122,45 +122,45 @@
 }
 
 .header-cell.name-col {
-  justify-content: center !important;
-  text-align: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
 }
 
 .business-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .email-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
 }
 
 .phone-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
   font-family: 'Monaco', 'Menlo', monospace;
 }
 
 .stall-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .status-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .compliance-col {
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .actions-col {
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 
