@@ -84,6 +84,11 @@ export default {
       console.log('Closing general application form')
       this.showApplyForm = false
     },
+    openBrowseStalls() {
+      console.log('📱 Opening browse stalls from hero section')
+      // Dispatch a custom event that MobileBranchSelector listens to
+      window.dispatchEvent(new CustomEvent('open-mobile-stall-browser'))
+    },
     scrollToFreeTrial() {
       const freeTrialSection = document.getElementById('free-trial')
       if (freeTrialSection) {

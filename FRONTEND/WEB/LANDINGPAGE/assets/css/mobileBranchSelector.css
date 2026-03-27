@@ -1,0 +1,492 @@
+/**
+ * Mobile Branch Selector Styles
+ * Implements FAB, Bottom Sheet, and Stall Drawer for mobile navigation
+ * Color Palette: #002181, #1976d2, #4FC3F7
+ */
+
+/* ========================================
+   FLOATING ACTION BUTTON (FAB)
+   ======================================== */
+.mobile-fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  z-index: 9999;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 33, 129, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-fab:hover,
+.mobile-fab:active {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(0, 33, 129, 0.5);
+}
+
+.mobile-fab.hidden {
+  transform: translateY(100px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mobile-fab-icon {
+  font-size: 24px;
+  color: white;
+}
+
+.mobile-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #4FC3F7;
+  color: #002181;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pulse animation when idle */
+.mobile-fab.pulse {
+  animation: fabPulse 2s ease-in-out infinite;
+}
+
+@keyframes fabPulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 33, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 30px rgba(0, 33, 129, 0.6),
+                0 0 0 8px rgba(0, 33, 129, 0.1);
+  }
+}
+
+/* ========================================
+   BOTTOM SHEET OVERLAY
+   ======================================== */
+.mobile-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-sheet-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========================================
+   BOTTOM SHEET CONTAINER
+   ======================================== */
+.mobile-sheet-container {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 70vh;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  z-index: 10001;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-sheet-container.open {
+  transform: translateY(0);
+}
+
+/* Sheet Handle (drag indicator) */
+.mobile-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 12px auto 8px;
+  flex-shrink: 0;
+}
+
+/* Sheet Header */
+.mobile-sheet-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.mobile-sheet-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-sheet-title i {
+  color: #1976d2;
+}
+
+.mobile-sheet-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* Sheet Content (scrollable) */
+.mobile-sheet-content {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 16px 16px;
+}
+
+/* ========================================
+   BRANCH CARDS
+   ======================================== */
+.mobile-branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-branch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-branch-card:hover,
+.mobile-branch-card:active {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.mobile-branch-card.active {
+  background: linear-gradient(135deg, rgba(0, 33, 129, 0.05) 0%, rgba(25, 118, 210, 0.08) 100%);
+  border-color: #1976d2;
+}
+
+.mobile-branch-card.active .mobile-branch-name {
+  color: #002181;
+}
+
+.mobile-branch-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-branch-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mobile-branch-stall-count {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.mobile-branch-arrow {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  color: #1976d2;
+  font-size: 20px;
+  transition: all 0.2s ease;
+}
+
+.mobile-branch-card.active .mobile-branch-arrow {
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+}
+
+/* ========================================
+   STALL DRAWER (Full-Screen)
+   ======================================== */
+.mobile-stall-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 10002;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-stall-drawer.open {
+  transform: translateX(0);
+}
+
+/* Drawer Header */
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+  flex-shrink: 0;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+}
+
+.mobile-drawer-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mobile-drawer-back:hover,
+.mobile-drawer-back:active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.mobile-drawer-title-container {
+  flex: 1;
+}
+
+.mobile-drawer-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mobile-drawer-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Quick Filter Bar */
+.mobile-quick-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.mobile-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.mobile-filter-chip:hover,
+.mobile-filter-chip:active {
+  border-color: #1976d2;
+  color: #1976d2;
+}
+
+.mobile-filter-chip.active {
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.mobile-filter-chip i {
+  font-size: 16px;
+}
+
+/* Drawer Content (Stall Grid) */
+.mobile-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Mobile Stall Grid (2 columns) */
+.mobile-stall-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* Loading & Error States */
+.mobile-loading,
+.mobile-error,
+.mobile-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.mobile-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.mobile-loading-text,
+.mobile-error-text,
+.mobile-empty-text {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.mobile-error-icon,
+.mobile-empty-icon {
+  font-size: 48px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.mobile-retry-btn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+@media (max-width: 360px) {
+  .mobile-fab {
+    width: 52px;
+    height: 52px;
+    right: 16px;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-fab-icon {
+    font-size: 22px;
+  }
+
+  .mobile-sheet-container {
+    max-height: 80vh;
+  }
+
+  .mobile-branch-card {
+    padding: 14px 16px;
+    min-height: 56px;
+  }
+
+  .mobile-branch-name {
+    font-size: 15px;
+  }
+
+  .mobile-stall-grid {
+    gap: 10px;
+  }
+}
+
+/* Landscape mode */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-sheet-container {
+    max-height: 85vh;
+  }
+
+  .mobile-sheet-content {
+    padding: 4px 16px 16px;
+  }
+
+  .mobile-branch-card {
+    min-height: 52px;
+    padding: 12px 16px;
+  }
+}

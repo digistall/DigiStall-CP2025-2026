@@ -1,5 +1,6 @@
 <template>
-  <div class="sub-navigation" :class="{ 'expanded': showStallsContainer && selectedBranch }">
+  <!-- Desktop Navigation -->
+  <div v-if="!isMobile" class="sub-navigation" :class="{ 'expanded': showStallsContainer && selectedBranch }">
     <!-- Loading State -->
     <div v-if="loading" class="loading-branches">
       <p>Loading branches...</p>
@@ -28,21 +29,21 @@
           {{ branch.branch }}
         </button>
       </div>
-      
+
       <!-- Bottom Navigation Arrows -->
       <div v-if="hasOverflow" class="bottom-nav-arrows">
-        <button 
-          v-if="canScrollLeft" 
-          @click="scrollLeft" 
+        <button
+          v-if="canScrollLeft"
+          @click="scrollLeft"
           class="bottom-arrow left-arrow"
           aria-label="Scroll left"
         >
           <i class="mdi mdi-chevron-left"></i>
         </button>
-        
-        <button 
-          v-if="canScrollRight" 
-          @click="scrollRight" 
+
+        <button
+          v-if="canScrollRight"
+          @click="scrollRight"
           class="bottom-arrow right-arrow"
           aria-label="Scroll right"
         >
@@ -63,7 +64,7 @@
             <i class="mdi mdi-close"></i>
           </button>
         </div>
-        
+
         <!-- Filter Container -->
         <StallFilter
           :selectedBranch="selectedBranch"
@@ -88,6 +89,20 @@
         </div>
       </div>
     </transition>
+  </div>
+
+  <!-- Mobile Navigation - Single "Find Your Stall" button that navigates to stall browse page -->
+  <div v-else class="mobile-sub-nav">
+    <div class="mobile-browse-button-container">
+      <button
+        class="mobile-browse-btn"
+        @click="navigateToStallBrowse()"
+      >
+        <i class="mdi mdi-store-search"></i>
+        <span>Find Your Stall</span>
+        <i class="mdi mdi-chevron-right mobile-browse-go"></i>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -137,24 +152,37 @@ export default {
       scrollThreshold: 100, // Pixels to scroll before auto-closing
       modalOpen: false, // Track if stall details modal is open
       applicationFormOpen: false, // Track if application form is open
+
+      // Mobile detection
+      isMobile: false,
+      mobileBreakpoint: 768,
     };
   },
 
   async mounted() {
+    this.checkMobile();
+    window.addEventListener('resize', this.checkMobile);
+
     await this.fetchBranches();
     this.$nextTick(() => {
-      this.checkOverflow();
-      this.updateArrowStates();
-      this.setupScrollListener();
-      this.setupWindowScrollListener();
-      this.resizeCleanup = UIHelperService.setupResizeListener(() => {
+      if (!this.isMobile) {
         this.checkOverflow();
         this.updateArrowStates();
+        this.setupScrollListener();
+        this.setupWindowScrollListener();
+      }
+      this.resizeCleanup = UIHelperService.setupResizeListener(() => {
+        this.checkMobile();
+        if (!this.isMobile) {
+          this.checkOverflow();
+          this.updateArrowStates();
+        }
       });
     });
   },
 
   beforeUnmount() {
+    window.removeEventListener('resize', this.checkMobile);
     if (this.resizeCleanup) {
       this.resizeCleanup();
     }
@@ -170,6 +198,20 @@ export default {
   },
 
   methods: {
+    checkMobile() {
+      this.isMobile = window.innerWidth < this.mobileBreakpoint;
+    },
+
+    // Mobile navigation to stall browse page
+    navigateToStallBrowse(branchName = null) {
+      const route = { path: '/stall-browse' };
+      // Only add query if branchName is provided
+      if (branchName) {
+        route.query = { branch: branchName };
+      }
+      this.$router.push(route);
+    },
+
     checkOverflow() {
       this.$nextTick(() => {
         const container = this.$refs.scrollableContainer;

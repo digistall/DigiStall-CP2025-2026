@@ -1,18 +1,18 @@
 <template>
-  <footer class="footer">
-    <!-- Top Wave -->
-    <div class="footer-wave">
-      <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
-        <path d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,60 1440,60 L1440,120 L0,120 Z" fill="#0a1628"></path>
-      </svg>
-    </div>
+  <footer id="contact" class="footer">
+    <!-- Decorative top border gradient -->
+    <div class="footer-accent-border"></div>
 
+
+    <!-- Main Footer Content -->
     <div class="footer-main">
       <div class="footer-container">
-        <!-- Brand Section -->
-        <div class="footer-brand animate-on-scroll">
+        <!-- Brand Column -->
+        <div class="footer-brand">
           <div class="brand-logo">
-            <img src="../../../assets/DigiStall-Logo.png" alt="DigiStall Logo" class="logo-img" />
+            <div class="brand-logo-circle">
+              <img src="../../../assets/DigiStall-Logo.png" alt="DigiStall Logo" class="logo-img" />
+            </div>
             <div class="brand-text">
               <span class="brand-name">DigiStall</span>
               <span class="brand-tagline">Stall Management System</span>
@@ -23,34 +23,34 @@
             Simplify your business operations and grow with confidence.
           </p>
           <div class="social-links">
-            <a href="#" class="social-link" aria-label="Facebook">
+            <a href="#" class="social-link facebook" aria-label="Facebook">
               <i class="mdi mdi-facebook"></i>
             </a>
-            <a href="#" class="social-link" aria-label="Twitter">
+            <a href="#" class="social-link twitter" aria-label="Twitter">
               <i class="mdi mdi-twitter"></i>
             </a>
-            <a href="#" class="social-link" aria-label="Instagram">
+            <a href="#" class="social-link instagram" aria-label="Instagram">
               <i class="mdi mdi-instagram"></i>
             </a>
-            <a href="#" class="social-link" aria-label="LinkedIn">
+            <a href="#" class="social-link linkedin" aria-label="LinkedIn">
               <i class="mdi mdi-linkedin"></i>
             </a>
           </div>
         </div>
 
         <!-- Quick Links -->
-        <div class="footer-links animate-on-scroll animate-delay-1">
+        <div class="footer-links">
           <h4 class="footer-title">Quick Links</h4>
           <ul class="link-list">
-            <li><a href="#stalls"><i class="mdi mdi-chevron-right"></i> Home</a></li>
+            <li><a href="#home"><i class="mdi mdi-chevron-right"></i> Home</a></li>
             <li><a href="#about"><i class="mdi mdi-chevron-right"></i> About Us</a></li>
-            <!--<li><a href="#free-trial"><i class="mdi mdi-chevron-right"></i> Free Trial</a></li>-->
+            <li><a href="/stall-browse"><i class="mdi mdi-chevron-right"></i> Browse Stalls</a></li>
             <li><a href="#"><i class="mdi mdi-chevron-right"></i> FAQs</a></li>
           </ul>
         </div>
 
         <!-- Services -->
-        <div class="footer-links animate-on-scroll animate-delay-2">
+        <div class="footer-links">
           <h4 class="footer-title">Our Services</h4>
           <ul class="link-list">
             <li><a href="#"><i class="mdi mdi-chevron-right"></i> Stall Management</a></li>
@@ -61,7 +61,7 @@
         </div>
 
         <!-- Contact Info -->
-        <div class="footer-contact animate-on-scroll animate-delay-3">
+        <div class="footer-contact">
           <h4 class="footer-title">Contact Us</h4>
           <div class="contact-list">
             <div class="contact-item">
@@ -75,7 +75,7 @@
             </div>
             <div class="contact-item">
               <div class="contact-icon">
-                <i class="mdi mdi-email"></i>
+                <i class="mdi mdi-email-outline"></i>
               </div>
               <div class="contact-details">
                 <a href="mailto:mepo.office@gmail.com">mepo.office@gmail.com</a>
@@ -83,7 +83,7 @@
             </div>
             <div class="contact-item">
               <div class="contact-icon">
-                <i class="mdi mdi-phone"></i>
+                <i class="mdi mdi-phone-outline"></i>
               </div>
               <div class="contact-details">
                 <a href="tel:0548817906">054-881-7906</a>
@@ -94,20 +94,27 @@
       </div>
     </div>
 
-    <!-- Footer Bottom -->
+    <!-- Footer Bottom Bar -->
     <div class="footer-bottom">
       <div class="footer-bottom-container">
         <p class="copyright">
-          © {{ currentYear }} DigiStall. All rights reserved. Developed by <strong>Naga Stall Team</strong>
+          © {{ currentYear }} <strong>DigiStall</strong>. All Rights Reserved. Developed by <strong class="team-name">Naga Stall Team</strong>
         </p>
         <div class="footer-legal">
           <a href="#">Privacy Policy</a>
-          <span class="separator">|</span>
+          <span class="dot-separator"></span>
           <a href="#">Terms of Service</a>
-          <span class="separator">|</span>
+          <span class="dot-separator"></span>
           <a href="#">Cookie Policy</a>
         </div>
       </div>
+    </div>
+
+    <!-- Background decorative elements -->
+    <div class="footer-bg-shapes">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-grid"></div>
     </div>
   </footer>
 </template>
@@ -124,55 +131,109 @@ export default {
 </script>
 
 <style scoped>
+/* ===================== BASE ===================== */
 .footer {
-  background: linear-gradient(135deg, #0a1628 0%, #0f172a 100%);
+  background: #060d1e;
   color: white;
   position: relative;
   overflow: hidden;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-.footer-wave {
+/* Gradient accent border at top */
+.footer-accent-border {
+  height: 4px;
+  background: linear-gradient(90deg, #002181, #1976d2, #4FC3F7, #1976d2, #002181);
+  background-size: 200% 100%;
+  animation: shimmerBorder 4s ease-in-out infinite;
+}
+
+@keyframes shimmerBorder {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ===================== BACKGROUND SHAPES ===================== */
+.footer-bg-shapes {
   position: absolute;
-  top: -1px;
-  left: 0;
-  width: 100%;
-  height: 120px;
+  inset: 0;
+  pointer-events: none;
   overflow: hidden;
-  line-height: 0;
 }
 
-.footer-wave svg {
-  width: 100%;
-  height: 100%;
+.bg-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.03;
 }
 
+.bg-circle-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, #1976d2, transparent 70%);
+  top: -200px;
+  right: -100px;
+}
+
+.bg-circle-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #4FC3F7, transparent 70%);
+  bottom: -100px;
+  left: -80px;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ===================== MAIN FOOTER ===================== */
 .footer-main {
-  padding: 140px 30px 60px;
+  padding: 80px 30px 60px;
+  position: relative;
+  z-index: 2;
 }
 
 .footer-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
-  gap: 60px;
+  grid-template-columns: 1.6fr 1fr 1fr 1.3fr;
+  gap: 50px;
 }
 
 /* Brand Section */
 .footer-brand {
-  padding-right: 40px;
+  padding-right: 30px;
 }
 
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.brand-logo-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.15), rgba(79, 195, 247, 0.1));
+  border: 1px solid rgba(79, 195, 247, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .logo-img {
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
 
@@ -182,41 +243,45 @@ export default {
 }
 
 .brand-name {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: white;
   letter-spacing: -0.02em;
 }
 
 .brand-tagline {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  font-weight: 500;
 }
 
 .brand-description {
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 24px;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 28px;
 }
 
+/* Social Links */
 .social-links {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .social-link {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
 }
 
 .social-link i {
@@ -224,22 +289,44 @@ export default {
 }
 
 .social-link:hover {
-  background: linear-gradient(135deg, #002181, #1976d2);
   transform: translateY(-4px);
+  color: white;
+}
+
+.social-link.facebook:hover {
+  background: #1877F2;
+  border-color: #1877F2;
+  box-shadow: 0 6px 20px rgba(24, 119, 242, 0.35);
+}
+
+.social-link.twitter:hover {
+  background: #1DA1F2;
+  border-color: #1DA1F2;
+  box-shadow: 0 6px 20px rgba(29, 161, 242, 0.35);
+}
+
+.social-link.instagram:hover {
+  background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737);
+  border-color: transparent;
+  box-shadow: 0 6px 20px rgba(131, 58, 180, 0.35);
+}
+
+.social-link.linkedin:hover {
+  background: #0A66C2;
+  border-color: #0A66C2;
+  box-shadow: 0 6px 20px rgba(10, 102, 194, 0.35);
 }
 
 /* Footer Links */
-.footer-links {
-  /* empty for layout */
-}
-
 .footer-title {
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  margin-bottom: 24px;
-  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 28px;
+  color: rgba(255, 255, 255, 0.95);
   position: relative;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
 }
 
 .footer-title::after {
@@ -247,7 +334,7 @@ export default {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 40px;
+  width: 32px;
   height: 3px;
   background: linear-gradient(90deg, #4FC3F7, #1976d2);
   border-radius: 2px;
@@ -259,29 +346,32 @@ export default {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .link-list li a {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 400;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .link-list li a i {
-  font-size: 16px;
+  font-size: 14px;
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateX(-8px);
   transition: all 0.3s ease;
+  color: #4FC3F7;
 }
 
 .link-list li a:hover {
-  color: #4FC3F7;
-  transform: translateX(5px);
+  color: white;
+  transform: translateX(6px);
 }
 
 .link-list li a:hover i {
@@ -293,7 +383,7 @@ export default {
 .contact-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 .contact-item {
@@ -303,34 +393,42 @@ export default {
 }
 
 .contact-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.12), rgba(79, 195, 247, 0.08));
+  border: 1px solid rgba(79, 195, 247, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.contact-item:hover .contact-icon {
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.25), rgba(79, 195, 247, 0.15));
+  border-color: rgba(79, 195, 247, 0.25);
+  transform: scale(1.05);
 }
 
 .contact-icon i {
-  font-size: 20px;
+  font-size: 18px;
   color: #4FC3F7;
 }
 
 .contact-details {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   padding-top: 4px;
 }
 
 .contact-details span,
 .contact-details a {
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  line-height: 1.4;
+  line-height: 1.5;
   transition: color 0.3s ease;
 }
 
@@ -338,15 +436,16 @@ export default {
   color: #4FC3F7;
 }
 
-/* Footer Bottom */
+/* ===================== FOOTER BOTTOM ===================== */
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding: 24px 30px;
-  background: rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
 }
 
 .footer-bottom-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -356,12 +455,17 @@ export default {
 }
 
 .copyright {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
   margin: 0;
 }
 
 .copyright strong {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+
+.copyright .team-name {
   color: #4FC3F7;
 }
 
@@ -372,8 +476,8 @@ export default {
 }
 
 .footer-legal a {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
   text-decoration: none;
   transition: color 0.3s ease;
 }
@@ -382,247 +486,125 @@ export default {
   color: #4FC3F7;
 }
 
-.footer-legal .separator {
-  color: rgba(255, 255, 255, 0.3);
+.dot-separator {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
-/* Responsive Design */
+/* ===================== RESPONSIVE ===================== */
 @media (max-width: 1200px) {
   .footer-container {
     grid-template-columns: 1fr 1fr;
-    gap: 50px;
+    gap: 50px 40px;
   }
 
   .footer-brand {
     grid-column: span 2;
     padding-right: 0;
-    text-align: center;
-  }
-
-  .brand-logo {
-    justify-content: center;
-  }
-
-  .social-links {
-    justify-content: center;
+    max-width: 480px;
   }
 }
 
 @media (max-width: 768px) {
   .footer-main {
-    padding: 100px 16px 40px;
+    padding: 50px 20px 40px;
   }
 
   .footer-container {
     grid-template-columns: 1fr;
-    gap: 30px;
-    text-align: center;
+    gap: 36px;
+    text-align: left;
   }
 
   .footer-brand {
     grid-column: span 1;
+    max-width: 340px;
   }
 
-  .brand-logo {
-    justify-content: center;
+  .brand-logo-circle {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
   }
 
-  .logo-img {
+  .logo-img { width: 30px; height: 30px; }
+  .brand-name { font-size: 1.2rem; }
+  .brand-tagline { font-size: 0.6rem; }
+  .brand-description { font-size: 0.82rem; margin-bottom: 20px; }
+
+  .social-link {
     width: 40px;
     height: 40px;
   }
 
-  .brand-name {
-    font-size: 1.3rem;
-  }
-
-  .brand-tagline {
-    font-size: 0.65rem;
-  }
-
-  .brand-description {
-    max-width: 350px;
-    margin: 0 auto 20px;
-    font-size: 0.85rem;
-  }
-
-  .social-links {
-    justify-content: center;
-  }
-
-  .social-link {
-    width: 38px;
-    height: 38px;
-    font-size: 16px;
-  }
+  .social-link i { font-size: 18px; }
 
   .footer-title {
-    font-size: 1rem;
-    margin-bottom: 16px;
-  }
-
-  .footer-title::after {
-    left: 50%;
-    transform: translateX(-50%);
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
   }
 
   .link-list {
-    align-items: center;
-    gap: 10px;
-  }
-
-  .link-list a {
-    font-size: 0.85rem;
-  }
-
-  .contact-list {
-    align-items: center;
-    gap: 14px;
-  }
-
-  .contact-item {
-    justify-content: center;
-    text-align: left;
-  }
-
-  .contact-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .contact-icon i {
-    font-size: 16px;
-  }
-
-  .contact-details {
-    font-size: 0.85rem;
-  }
-
-  .footer-bottom-container {
-    flex-direction: column;
-    text-align: center;
+    align-items: flex-start;
     gap: 12px;
   }
 
-  .copyright {
-    font-size: 0.8rem;
+  .link-list li a { font-size: 0.85rem; }
+
+  .contact-list { align-items: flex-start; gap: 16px; }
+  .contact-item { justify-content: flex-start; text-align: left; }
+
+  .contact-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
   }
+
+  .contact-icon i { font-size: 16px; }
+  .contact-details span,
+  .contact-details a { font-size: 0.82rem; }
+
+  .footer-bottom { padding: 20px 16px; }
+
+  .footer-bottom-container {
+    flex-direction: column;
+    text-align: left;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .copyright { font-size: 0.78rem; }
+
+  .footer-legal { flex-wrap: wrap; gap: 12px; }
+  .footer-legal a { font-size: 0.78rem; }
 }
 
 @media (max-width: 480px) {
-  .footer-main {
-    padding: 80px 14px 30px;
-  }
+  .footer-main { padding: 40px 16px 32px; }
+  .footer-container { gap: 28px; }
 
-  .footer-container {
-    gap: 24px;
-  }
+  .brand-logo-circle { width: 42px; height: 42px; }
+  .logo-img { width: 28px; height: 28px; }
+  .brand-name { font-size: 1.1rem; }
+  .brand-description { font-size: 0.78rem; max-width: 300px; }
 
-  .logo-img {
-    width: 36px;
-    height: 36px;
-  }
+  .social-link { width: 36px; height: 36px; }
+  .social-link i { font-size: 16px; }
 
-  .brand-name {
-    font-size: 1.1rem;
-  }
+  .footer-title { font-size: 0.75rem; margin-bottom: 16px; }
+  .link-list li a { font-size: 0.8rem; }
 
-  .brand-description {
-    font-size: 0.8rem;
-    max-width: 280px;
-  }
+  .contact-icon { width: 34px; height: 34px; }
+  .contact-icon i { font-size: 15px; }
+  .contact-details span,
+  .contact-details a { font-size: 0.78rem; }
 
-  .social-link {
-    width: 34px;
-    height: 34px;
-    font-size: 14px;
-  }
-
-  .footer-title {
-    font-size: 0.9rem;
-    margin-bottom: 12px;
-  }
-
-  .link-list a {
-    font-size: 0.8rem;
-  }
-
-  .contact-icon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .contact-details {
-    font-size: 0.8rem;
-  }
-
-  .footer-legal {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .footer-legal a {
-    font-size: 0.75rem;
-  }
-
-  .copyright {
-    font-size: 0.75rem;
-  }
-}
-
-/* Extra small devices */
-@media (max-width: 360px) {
-  .footer-main {
-    padding: 70px 12px 24px;
-  }
-
-  .footer-container {
-    gap: 20px;
-  }
-
-  .logo-img {
-    width: 32px;
-    height: 32px;
-  }
-
-  .brand-name {
-    font-size: 1rem;
-  }
-
-  .brand-tagline {
-    font-size: 0.6rem;
-  }
-
-  .brand-description {
-    font-size: 0.75rem;
-    max-width: 240px;
-  }
-
-  .social-link {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
-  }
-
-  .footer-title {
-    font-size: 0.85rem;
-  }
-
-  .link-list a {
-    font-size: 0.75rem;
-  }
-
-  .contact-details {
-    font-size: 0.75rem;
-  }
-
-  .footer-legal a {
-    font-size: 0.7rem;
-  }
-
-  .copyright {
-    font-size: 0.7rem;
-  }
+  .footer-legal { align-items: flex-start; gap: 8px; }
+  .footer-legal a { font-size: 0.72rem; }
+  .copyright { font-size: 0.72rem; }
 }
 </style>

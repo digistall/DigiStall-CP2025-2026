@@ -10,6 +10,7 @@ import ForgotPassword from '@auth/ForgotPassword/ForgotPassword.vue'
 
 // PUBLIC LANDING PAGE module
 import LandingPage from '@landing/LandingPage/LandingPage.vue'
+import StallBrowsePage from '@landing/LandingPage/StallBrowsePage.vue'
 
 // Layout (src/components)
 import MainLayout from '@/components/MainLayout/MainLayout.vue'
@@ -384,6 +385,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'landingPage', component: LandingPage },
+    { path: '/stall-browse', name: 'stallBrowse', component: StallBrowsePage },
     { path: '/login', name: 'login', component: LoginPage },
     { path: '/forgot-password', name: 'forgotPassword', component: ForgotPassword },
 
@@ -551,7 +553,7 @@ router.beforeEach(async (to, from, next) => {
   console.log(`🛡️ Router guard: ${from.path} → ${to.path}`)
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/forgot-password', 'landingPage', 'login', 'forgotPassword']
+  const publicRoutes = ['/', '/login', '/forgot-password', '/stall-browse', 'landingPage', 'login', 'forgotPassword', 'stallBrowse']
   const isPublicRoute = publicRoutes.includes(to.path) || publicRoutes.includes(to.name)
 
   // Initialize auth store on first navigation
