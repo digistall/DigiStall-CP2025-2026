@@ -31,10 +31,10 @@
       <ComplianceSection />
       <!-- FreeTrialSection hidden for now -->
       <!-- <FreeTrialSection /> -->
-      <TeamSection />
     </div>
     
-    <FooterSection />
+    <FooterSection @open-team="isTeamModalVisible = true" />
+    <TeamSection :isVisible="isTeamModalVisible" @close="isTeamModalVisible = false" />
     <!-- Beta Version Disclaimer Modal -->
     <BetaDisclaimerModal />
   </div>
@@ -67,6 +67,7 @@ export default {
       isInTrialSection: false,
       isHeaderVisible: true,
       lastScrollY: 0,
+      isTeamModalVisible: false,
       sections: [
         { id: 'home', label: 'STALLS', position: 5 },
         { id: 'vendor', label: 'VENDOR', position: 45 },
