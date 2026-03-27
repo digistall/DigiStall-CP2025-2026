@@ -21,7 +21,20 @@
 
         <!-- Right side: Navigation -->
         <div class="header-right">
-          <nav class="nav-menu">
+          <!-- Hamburger Button (Mobile Only) -->
+          <button
+            v-if="isMobile"
+            class="hamburger-btn"
+            @click="openMobileMenu"
+            aria-label="Open menu"
+          >
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+          </button>
+
+          <!-- Desktop Navigation -->
+          <nav v-else class="nav-menu">
             <a href="#home" class="nav-link">
               <i class="mdi mdi-home-outline"></i>
               <span>Home</span>
@@ -45,18 +58,30 @@
 
     <!-- Sub Navigation Component -->
     <SubNavigation />
+  </div>
 
-    <!-- Ordinance Modal Component -->
+  <!-- Mobile Menu Component - Teleported to body to avoid clipping -->
+  <Teleport to="body">
+    <MobileMenu
+      :isOpen="isMobileMenuOpen"
+      @close="closeMobileMenu"
+      @open-ordinance="showOrdinanceModal"
+    />
+  </Teleport>
+
+  <!-- Ordinance Modal Component - Also teleported to body -->
+  <Teleport to="body">
     <OrdinanceSection
       :isVisible="isOrdinanceModalVisible"
       @close-modal="closeOrdinanceModal"
     />
-  </div>
+  </Teleport>
 </template>
 
 <script>
 import SubNavigation from "./SubNavigation.vue";
 import OrdinanceSection from "./Ordinance/OrinanceSection.vue";
+import MobileMenu from "./mobile/MobileMenu.vue";
 import digiStallLogo from '@/assets/DigiStall-Logo.png'
 
 export default {
@@ -64,6 +89,7 @@ export default {
   components: {
     SubNavigation,
     OrdinanceSection,
+    MobileMenu,
   },
   props: {
     isVisible: {
@@ -77,19 +103,27 @@ export default {
       digiStallLogo,
       isLoggedIn: false,
       currentUsername: '',
-      currentUser: null
+      currentUser: null,
+      isMobile: false,
+      isMobileMenuOpen: false,
+      mobileBreakpoint: 768,
     };
   },
   async mounted() {
     // Check for existing authentication when component loads
     await this.checkAuthentication();
-    
+
     // Listen for storage changes (login/logout in other tabs)
     window.addEventListener('storage', this.handleStorageChange);
+
+    // Check mobile status and listen for window resize
+    this.checkMobile();
+    window.addEventListener('resize', this.checkMobile);
   },
   beforeUnmount() {
     // Clean up event listeners
     window.removeEventListener('storage', this.handleStorageChange);
+    window.removeEventListener('resize', this.checkMobile);
   },
   methods: {
     showOrdinanceModal() {
@@ -97,6 +131,15 @@ export default {
     },
     closeOrdinanceModal() {
       this.isOrdinanceModalVisible = false;
+    },
+    openMobileMenu() {
+      this.isMobileMenuOpen = true;
+    },
+    closeMobileMenu() {
+      this.isMobileMenuOpen = false;
+    },
+    checkMobile() {
+      this.isMobile = window.innerWidth < this.mobileBreakpoint;
     },
     goToLogin() {
       this.$router.push('/login');

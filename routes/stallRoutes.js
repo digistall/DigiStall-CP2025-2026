@@ -51,6 +51,9 @@ import {
   getParticipantDetail
 } from '../BACKEND/MANAGER/stalls/stallController.js'
 
+// Import landing page getAllStalls separately (for public access)
+import { getAllStalls as getLandingPageAllStalls } from '../BACKEND/MANAGER/stalls/stallComponents/landingPageComponents/getAllStalls/getAllStalls.js'
+
 // Import stall image controller
 import {
   uploadStallImages,
@@ -101,6 +104,7 @@ const router = express.Router()
 
 // ===== PUBLIC ROUTES (No Authentication) =====
 // Landing page stall browsing
+router.get('/all', getLandingPageAllStalls)             // GET /api/stalls/all - Get all available stalls (public)
 router.get('/stats', getLandingPageStats)               // GET /api/stalls/stats - Get landing page statistics (public)
 router.get('/public/stallholders', getLandingPageStallholders)  // GET /api/stalls/public/stallholders - Get stallholders list (public)
 router.get('/public/list', getLandingPageStallsList)    // GET /api/stalls/public/list - Get stalls list (public)

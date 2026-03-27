@@ -250,6 +250,46 @@
   box-shadow: 0 15px 40px rgba(0, 33, 129, 0.4);
 }
 
+/* Secondary Button (Browse Stalls) */
+.browse-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 32px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.browse-btn i {
+  font-size: 20px;
+}
+
+.secondary-btn {
+  background: white;
+  color: #002181;
+  border: 2px solid #002181;
+  box-shadow: 0 4px 20px rgba(0, 33, 129, 0.15);
+}
+
+.secondary-btn:hover {
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 33, 129, 0.3);
+}
+
+/* Mobile-only visibility */
+.mobile-only {
+  display: none;
+}
+
 /* Pulse Button Animation */
 .pulse-btn {
   position: relative;
@@ -458,6 +498,7 @@
   .hero-badge {
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: 20px;
     font-size: 12px;
     padding: 10px 16px;
   }
@@ -465,10 +506,12 @@
   .hero-title {
     font-size: 2.2rem;
     line-height: 1.15;
+    margin-bottom: 12px;
   }
 
   .hero-subtitle {
     font-size: 1.8rem;
+    margin-bottom: 16px;
   }
 
   .hero-description {
@@ -476,23 +519,32 @@
     text-align: center;
     max-width: 100%;
     padding: 0 10px;
+    margin-bottom: 32px;
+    line-height: 1.6;
   }
 
   .stats-container {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
+    gap: 16px;
     width: 100%;
-    padding: 0 16px;
+    padding: 32px 16px;
     box-sizing: border-box;
+    background: linear-gradient(135deg, rgba(0, 33, 129, 0.03) 0%, rgba(25, 118, 210, 0.03) 100%);
+    border-radius: 16px;
+    margin-bottom: 32px;
   }
 
   .stat-card {
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
     justify-content: flex-start;
     box-sizing: border-box;
     text-align: left;
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   .stat-content {
@@ -511,21 +563,45 @@
   .hero-actions {
     flex-direction: column;
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
     padding: 0 16px;
     box-sizing: border-box;
-    align-items: flex-start;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
   }
 
   .apply-btn {
     justify-content: center;
     width: 100%;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
   }
 
   .trust-badges {
+    display: flex;
     justify-content: center;
     flex-wrap: wrap;
+    gap: 16px;
     padding: 0 10px;
+  }
+
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+    padding: 10px 14px;
+    background: #f1f5f9;
+    border-radius: 8px;
+  }
+
+  .trust-item i {
+    font-size: 16px;
+    color: #002181;
   }
 
   .scroll-indicator {
@@ -542,6 +618,7 @@
     font-size: 11px;
     padding: 8px 14px;
     gap: 6px;
+    margin-bottom: 16px;
   }
 
   .hero-badge i {
@@ -551,32 +628,33 @@
   .hero-title {
     font-size: 1.8rem;
     line-height: 1.15;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
 
   .hero-subtitle {
     font-size: 1.5rem;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .hero-description {
     font-size: 0.85rem;
     line-height: 1.6;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
   }
 
   .stats-container {
-    gap: 8px;
-    margin-bottom: 20px;
-    padding: 0 20px;
-    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 24px 12px;
+    align-items: center;
+    border-radius: 12px;
   }
 
   .stat-card {
-    padding: 10px 14px;
-    gap: 10px;
+    padding: 14px 16px;
+    gap: 12px;
     border-radius: 10px;
-    max-width: 240px;
+    max-width: 100%;
     width: 100%;
     box-sizing: border-box;
     text-align: left;

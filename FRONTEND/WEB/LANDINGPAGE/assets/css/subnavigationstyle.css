@@ -437,3 +437,122 @@
     padding: 8px 12px 12px 12px;
   }
 }
+
+/* ===================== MOBILE BROWSE NAVIGATION ===================== */
+.mobile-sub-nav {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.mobile-browse-button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mobile-browse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 33, 129, 0.3);
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-browse-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.mobile-browse-btn:hover::before,
+.mobile-browse-btn:active::before {
+  left: 100%;
+}
+
+.mobile-browse-btn:hover,
+.mobile-browse-btn:active {
+  background: linear-gradient(135deg, #001a66 0%, #1565c0 100%);
+  box-shadow: 0 6px 24px rgba(0, 33, 129, 0.4);
+  transform: translateY(-2px);
+}
+
+.mobile-browse-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(0, 33, 129, 0.35);
+}
+
+.mobile-browse-btn i:first-child {
+  font-size: 24px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.mobile-browse-btn span {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.mobile-browse-go {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.mobile-browse-btn:hover .mobile-browse-go,
+.mobile-browse-btn:active .mobile-browse-go {
+  color: white;
+  transform: translateX(4px);
+}
+
+/* Responsive adjustments for smaller mobile screens */
+@media (max-width: 420px) {
+  .mobile-sub-nav {
+    padding: 10px 12px;
+  }
+
+  .mobile-browse-btn {
+    padding: 14px 20px;
+    font-size: 15px;
+    border-radius: 14px;
+  }
+
+  .mobile-browse-btn i:first-child {
+    font-size: 22px;
+  }
+
+  .mobile-browse-btn span {
+    font-size: 15px;
+  }
+
+  .mobile-browse-go {
+    font-size: 20px;
+  }
+}

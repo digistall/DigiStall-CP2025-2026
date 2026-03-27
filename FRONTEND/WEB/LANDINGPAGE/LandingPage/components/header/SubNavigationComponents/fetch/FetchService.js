@@ -77,6 +77,40 @@ class FetchService {
   }
 
   /**
+   * Fetch all stalls from all branches
+   * @returns {Promise<Array>} Array of all stalls
+   */
+  async fetchAllStalls() {
+    try {
+      const response = await fetch(
+        `${this.apiBaseUrl}/stalls/all`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        console.log(`Loaded ${result.data.length} total stalls from all branches`)
+        return result.data
+      } else {
+        throw new Error(result.message || 'Failed to fetch all stalls')
+      }
+    } catch (error) {
+      console.error('Error fetching all stalls:', error)
+      throw error
+    }
+  }
+
+  /**
    * Fetch stalls by branch (initial load)
    * @param {string} branch - The branch to fetch stalls for
    * @returns {Promise<Array>} Array of stalls in the branch

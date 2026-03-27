@@ -7,7 +7,8 @@
 // Max: 10 images per stall, NO SIZE LIMIT (uses LONGBLOB)
 // =============================================
 
-import { createConnection } from '../../../config/database.js'
+import { createConnection, getPool } from '../../../config/database.js'
+import { withRetry, isTimeoutError } from '../../../utils/dbRetry.js'
 import { compressBuffer } from '../../../config/imageCompression.js'
 
 // =============================================
@@ -264,70 +265,74 @@ export async function getStallImageBlob(req, res) {
 // GET STALL IMAGE BY ID (Serve as binary)
 // =============================================
 export async function getStallImageBlobById(req, res) {
-  let connection
-  
   try {
-    const { image_id } = req.params
-    
-    console.log(`📷 Fetching BLOB image by ID: ${image_id}`)
-    
-    connection = await createConnection()
-    
-    // First check if image exists using direct SQL (column is image_id, not id)
-    const [checkResult] = await connection.execute(
-      `SELECT image_id, stall_id, image_mime_type as mime_type, image_name as file_name, LENGTH(image_data) as data_size 
-       FROM stall_images 
-       WHERE image_id = ?`,
-      [image_id]
-    )
-    
-    console.log(`📷 Image check result:`, checkResult)
-    
-    if (checkResult.length === 0) {
-      console.log(`📷 Image ID ${image_id} not found in database`)
+    const { image_id } = req.params;
+
+    console.log(`📷 Fetching BLOB image by ID: ${image_id}`);
+
+    const pool = getPool();
+
+    const image = await withRetry(async () => {
+      const connection = await pool.getConnection();
+      try {
+        // First check if image exists
+        const [checkResult] = await connection.execute(
+          `SELECT image_id, stall_id, image_mime_type as mime_type, image_name as file_name, LENGTH(image_data) as data_size
+           FROM stall_images
+           WHERE image_id = ?`,
+          [image_id]
+        );
+
+        if (checkResult.length === 0) {
+          return null;
+        }
+
+        console.log(`📷 Image found: ${checkResult[0].file_name}, size: ${checkResult[0].data_size} bytes`);
+
+        // Fetch actual binary data
+        const [images] = await connection.execute(
+          `SELECT image_id, stall_id, image_data, image_mime_type as mime_type, image_name as file_name
+           FROM stall_images
+           WHERE image_id = ?`,
+          [image_id]
+        );
+
+        return images[0];
+      } finally {
+        connection.release();
+      }
+    });
+
+    if (!image || !image.image_data) {
+      console.log(`📷 Image data is NULL for ID ${image_id}`);
       return res.status(404).json({
         success: false,
         message: 'Image not found'
-      })
+      });
     }
-    
-    console.log(`📷 Image found: ${checkResult[0].file_name}, size: ${checkResult[0].data_size} bytes`)
-    
-    // Now fetch the actual binary data using direct SQL
-    const [images] = await connection.execute(
-      `SELECT image_id, stall_id, image_data, image_mime_type as mime_type, image_name as file_name
-       FROM stall_images 
-       WHERE image_id = ?`,
-      [image_id]
-    )
-    
-    if (images.length === 0 || !images[0].image_data) {
-      console.log(`📷 Image data is NULL for ID ${image_id}`)
-      return res.status(404).json({
-        success: false,
-        message: 'Image not found'
-      })
-    }
-    
-    const image = images[0]
-    
-    console.log(`📷 Serving image: ${image.file_name}, type: ${image.mime_type}, size: ${image.image_data?.length || 0} bytes`)
-    
-    res.set('Content-Type', image.mime_type || 'image/jpeg')
-    res.set('Content-Disposition', `inline; filename="${image.file_name || 'image.jpg'}"`)
-    res.set('Cache-Control', 'public, max-age=86400')
-    
-    res.send(image.image_data)
-    
+
+    console.log(`📷 Serving image: ${image.file_name}, type: ${image.mime_type}, size: ${image.image_data?.length || 0} bytes`);
+
+    res.set('Content-Type', image.mime_type || 'image/jpeg');
+    res.set('Content-Disposition', `inline; filename="${image.file_name || 'image.jpg'}"`);
+    res.set('Cache-Control', 'public, max-age=86400');
+
+    res.send(image.image_data);
+
   } catch (error) {
-    console.error('❌ Error getting stall image by id:', error)
-    res.status(500).json({
+    console.error('❌ Error getting stall image by id:', error);
+
+    const statusCode = isTimeoutError(error) ? 504 : 500;
+    const message = isTimeoutError(error)
+      ? 'Database connection timed out. Please try again.'
+      : 'Error retrieving image';
+
+    res.status(statusCode).json({
       success: false,
-      message: 'Error retrieving image',
-      error: error.message
-    })
-  } finally {
-    if (connection) await connection.end()
+      message: message,
+      error: error.message,
+      code: error.code
+    });
   }
 }
 
