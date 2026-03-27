@@ -33,7 +33,8 @@
       <!-- <FreeTrialSection /> -->
     </div>
     
-    <FooterSection />
+    <!-- Beta Version Disclaimer Modal -->
+    <BetaDisclaimerModal />
   </div>
 </template>
 
@@ -43,6 +44,7 @@ import StallSection from "./components/stalls/StallSection.vue";
 import VendorSection from "./components/vendor/VendorSection.vue";
 import ComplianceSection from "./components/compliance/ComplianceSection.vue";
 import FooterSection from "./components/footer/FooterSection.vue";
+import BetaDisclaimerModal from "./components/common/BetaDisclaimerModal.vue";
 
 export default {
   name: "LandingPage",
@@ -52,6 +54,7 @@ export default {
     VendorSection,
     ComplianceSection,
     FooterSection,
+    BetaDisclaimerModal,
   },
   data() {
     return {
