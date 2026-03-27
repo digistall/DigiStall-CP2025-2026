@@ -31,8 +31,10 @@
       <ComplianceSection />
       <!-- FreeTrialSection hidden for now -->
       <!-- <FreeTrialSection /> -->
+      <TeamSection />
     </div>
     
+    <FooterSection />
     <!-- Beta Version Disclaimer Modal -->
     <BetaDisclaimerModal />
   </div>
@@ -43,6 +45,7 @@ import HeaderSection from "./components/header/HeaderSection.vue";
 import StallSection from "./components/stalls/StallSection.vue";
 import VendorSection from "./components/vendor/VendorSection.vue";
 import ComplianceSection from "./components/compliance/ComplianceSection.vue";
+import TeamSection from "./components/team/TeamSection.vue";
 import FooterSection from "./components/footer/FooterSection.vue";
 import BetaDisclaimerModal from "./components/common/BetaDisclaimerModal.vue";
 
@@ -53,6 +56,7 @@ export default {
     StallSection,
     VendorSection,
     ComplianceSection,
+    TeamSection,
     FooterSection,
     BetaDisclaimerModal,
   },
