@@ -10,10 +10,7 @@
         <!-- Team Member 1 -->
         <div class="team-card animate-on-scroll fade-up animate-delay-1">
           <div class="member-image-wrapper">
-            <!-- Replace src with actual image path when available -->
-            <div class="image-placeholder">
-              <i class="mdi mdi-account"></i>
-            </div>
+            <img src="../../../assets/Archivido.png" alt="Giuseppe Marie B. Archivido" loading="lazy" />
             <div class="member-overlay"></div>
           </div>
           <div class="member-info">
@@ -25,9 +22,7 @@
         <!-- Team Member 2 -->
         <div class="team-card animate-on-scroll fade-up animate-delay-2">
           <div class="member-image-wrapper">
-            <div class="image-placeholder">
-              <i class="mdi mdi-account"></i>
-            </div>
+            <img src="../../../assets/Laurente.png" alt="Jeno Aldrei A. Laurente" loading="lazy" />
             <div class="member-overlay"></div>
           </div>
           <div class="member-info">
@@ -39,9 +34,7 @@
         <!-- Team Member 3 -->
         <div class="team-card animate-on-scroll fade-up animate-delay-3">
           <div class="member-image-wrapper">
-            <div class="image-placeholder">
-              <i class="mdi mdi-account"></i>
-            </div>
+            <img src="../../../assets/Luansing.png" alt="Shimri Gabriel C. Luansing" loading="lazy" />
             <div class="member-overlay"></div>
           </div>
           <div class="member-info">
@@ -53,9 +46,7 @@
         <!-- Team Member 4 -->
         <div class="team-card animate-on-scroll fade-up animate-delay-4">
           <div class="member-image-wrapper">
-            <div class="image-placeholder">
-              <i class="mdi mdi-account"></i>
-            </div>
+            <img src="../../../assets/Dejumo.png" alt="Voun Irish Florence C. Dejumo" loading="lazy" />
             <div class="member-overlay"></div>
           </div>
           <div class="member-info">
