@@ -35,9 +35,6 @@ export default defineConfig({
       // Business Manager exclusive (Employees)
       '@business-manager': fileURLToPath(new URL('./BUSINESS-MANAGER', import.meta.url)),
 
-      // Web Employee (permission-gated, uses shared features)
-      '@web-employee': fileURLToPath(new URL('./WEB-EMPLOYEE', import.meta.url)),
-
       // Auth (Login, ForgotPassword)
       '@auth': fileURLToPath(new URL('./AUTH', import.meta.url)),
 

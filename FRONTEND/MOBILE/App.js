@@ -22,6 +22,7 @@ import CollectorHome from './COLLECTOR/CollectorHome';
 
 // Services
 import UserStorageService from './services/UserStorageService';
+import PickerActiveFlag from './services/PickerActiveFlag';
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +69,14 @@ export default function App() {
         nextAppState.match(/inactive|background/)
       ) {
         console.log('App has gone to the background - initiating auto-logout');
+
+        // Skip auto-logout if a file picker is currently open (camera/gallery/document picker).
+        // Opening any native picker temporarily backgrounds the app; we must not log out in that case.
+        if (PickerActiveFlag.isActive()) {
+          console.log('⏭️ Skipping auto-logout — file picker is active');
+          appState.current = nextAppState;
+          return;
+        }
         
         try {
           const user = await UserStorageService.getUserData();

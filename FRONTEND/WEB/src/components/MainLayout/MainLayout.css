@@ -1,0 +1,76 @@
+/* Main Layout - Clean and Simple */
+.v-application {
+  background-color: #fafafa !important;
+}
+
+.main-content-wrapper {
+  background-color: #fafafa;
+  height: 100vh;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Layout container controls scrolling - no global overflow hidden */
+.layout-container {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Hide body/html scrollbar when MainLayout is active - prevents double scrollbar */
+:global(html.main-layout-active),
+:global(body.main-layout-active) {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+.main-content {
+  padding: 24px;
+  background-color: transparent;
+  position: relative;
+  min-height: 100%;
+}
+
+/* Custom scrollbar for content - Plain White with Subtle Border */
+.main-content-wrapper::-webkit-scrollbar {
+  width: 10px;
+}
+
+.main-content-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.main-content-wrapper::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.main-content-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #f8f9fa;
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .main-content {
+    padding: 24px 16px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 16px 12px;
+  }
+}
+
+/* Let Vuetify manage offsets for fixed components */
+/* .v-main should NOT have manual padding-left anymore */
+
+/* Ensure proper layering */
+.v-app-bar {
+  z-index: 1300 !important;
+}

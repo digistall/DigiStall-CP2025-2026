@@ -10,20 +10,22 @@ import ForgotPassword from '@auth/ForgotPassword/ForgotPassword.vue'
 
 // PUBLIC LANDING PAGE module
 import LandingPage from '@landing/LandingPage/LandingPage.vue'
+import StallBrowsePage from '@landing/LandingPage/StallBrowsePage.vue'
 
 // Layout (src/components)
-import MainLayout from '@/components/MainLayout/MainLayout/MainLayout.vue'
+import MainLayout from '@/components/MainLayout/MainLayout.vue'
 
 // SHARE-FEATURE module - shared features (Owner, Manager, Employee)
-import Dashboard from '@shared-features/Dashboard/Dashboard/Dashboard.vue'
-import Payment from '@shared-features/Payment/Payment/Payment.vue'
-import Applicants from '@shared-features/Applicants/Applicants/Applicants.vue'
-import Complaints from '@shared-features/Complaints/Complaints/Complaints.vue'
+import Dashboard from '@shared-features/Dashboard/Dashboard.vue'
+import Payment from '@shared-features/Payment/Payment.vue'
+import Applicants from '@shared-features/Applicants/Applicants.vue'
+import Complaints from '@shared-features/Complaints/Complaints.vue'
 import Compliances from '@shared-features/Compliances/Compliance.vue'
 import Vendors from '@shared-features/Vendors/Vendors.vue'
-import Stallholders from '@shared-features/Stallholders/Stallholders/Stallholders.vue'
+import Stallholders from '@shared-features/Stallholders/Stallholders.vue'
 import Stalls from '@shared-features/Stalls/Stalls.vue'
 import StallTracker from '@shared-features/StallTracker/StallTracker.vue'
+import Profile from '@shared-features/Profile/Profile.vue'
 
 // BUSINESS-MANAGER module - Manager-exclusive features
 import Employees from '@business-manager/Employees/Employees.vue'
@@ -383,6 +385,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'landingPage', component: LandingPage },
+    { path: '/stall-browse', name: 'stallBrowse', component: StallBrowsePage },
     { path: '/login', name: 'login', component: LoginPage },
     { path: '/forgot-password', name: 'forgotPassword', component: ForgotPassword },
 
@@ -490,6 +493,12 @@ const router = createRouter({
           meta: { title: 'Stall Tracker' },
           beforeEnter: requiresPermission('stalls'), // reuse stalls permission
         },
+        {
+          path: 'profile',
+          name: 'Profile',
+          component: Profile,
+          meta: { title: 'My Profile' },
+        },
       ],
     },
 
@@ -527,6 +536,12 @@ const router = createRouter({
           component: Reports,
           meta: { title: 'Subscription Reports', requiresRole: ['system_administrator'] },
         },
+        {
+          path: 'profile',
+          name: 'SystemAdminProfile',
+          component: Profile,
+          meta: { title: 'My Profile', requiresRole: ['system_administrator'] },
+        },
       ],
     },
   ],
@@ -538,7 +553,7 @@ router.beforeEach(async (to, from, next) => {
   console.log(`🛡️ Router guard: ${from.path} → ${to.path}`)
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/forgot-password', 'landingPage', 'login', 'forgotPassword']
+  const publicRoutes = ['/', '/login', '/forgot-password', '/stall-browse', 'landingPage', 'login', 'forgotPassword', 'stallBrowse']
   const isPublicRoute = publicRoutes.includes(to.path) || publicRoutes.includes(to.name)
 
   // Initialize auth store on first navigation

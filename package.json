@@ -10,7 +10,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "echo \"No build process required for Node.js backend\"",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "db:test": "node scripts/test-db-connection.js",
+    "db:switch": "node scripts/switch-env.js",
+    "db:local": "node scripts/switch-env.js local",
+    "db:cloud": "node scripts/switch-env.js cloud"
   },
   "keywords": [
     "stall-management",

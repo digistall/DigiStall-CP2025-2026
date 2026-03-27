@@ -1,8 +1,8 @@
-import { createConnection } from "../../../../../../config/database.js";
+import { getPool } from "../../../../../../config/database.js";
+import { withRetry, isTimeoutError } from "../../../../../../utils/dbRetry.js";
 
 // Get stalls by area or branch (supports both for backward compatibility)
 export const getStallsByArea = async (req, res) => {
-  let connection;
   try {
     const { area, branch } = req.query;
 
@@ -18,34 +18,43 @@ export const getStallsByArea = async (req, res) => {
       });
     }
 
-    connection = await createConnection();
+    const pool = getPool();
 
-    const [stalls] = await connection.execute(
-      `
-      SELECT 
-        s.stall_id as id,
-        s.stall_number as stallNumber,
-        s.stall_location as location,
-        s.size as dimensions,
-        s.rental_price,
-        s.price_type,
-        s.status,
-        s.description,
-        si.image_id as imageId,
-        s.is_available as isAvailable,
-        sec.section_name as section,
-        f.floor_name as floor,
-        b.branch_name as branch
-      FROM stall s
-      LEFT JOIN section sec ON s.section_id = sec.section_id
-      LEFT JOIN floor f ON s.floor_id = f.floor_id
-      LEFT JOIN branch b ON f.branch_id = b.branch_id
-      LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
-      WHERE b.${filterColumn} = ? AND s.status = 'Available' AND s.is_available = 1
-      ORDER BY s.created_at DESC
-    `,
-      [filterParam]
-    );
+    // Execute with retry logic
+    const stalls = await withRetry(async () => {
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.execute(
+          `
+          SELECT
+            s.stall_id as id,
+            s.stall_number as stallNumber,
+            s.stall_location as location,
+            s.size as dimensions,
+            s.rental_price,
+            s.price_type,
+            s.status,
+            s.description,
+            si.image_id as imageId,
+            s.is_available as isAvailable,
+            sec.section_name as section,
+            f.floor_name as floor,
+            b.branch_name as branch
+          FROM stall s
+          LEFT JOIN section sec ON s.section_id = sec.section_id
+          LEFT JOIN floor f ON s.floor_id = f.floor_id
+          LEFT JOIN branch b ON f.branch_id = b.branch_id
+          LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
+          WHERE b.${filterColumn} = ? AND s.status = 'Available' AND s.is_available = 1
+          ORDER BY s.created_at DESC
+        `,
+          [filterParam]
+        );
+        return rows;
+      } finally {
+        connection.release();
+      }
+    });
 
     // Format stalls to match the expected frontend response structure
     const formattedStalls = stalls.map((stall) => {
@@ -111,13 +120,18 @@ export const getStallsByArea = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Get stalls by area/branch error:", error);
-    res.status(500).json({
+
+    const statusCode = isTimeoutError(error) ? 504 : 500;
+    const message = isTimeoutError(error)
+      ? "Database connection timed out. Please try again."
+      : "Failed to retrieve stalls";
+
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to retrieve stalls",
+      message: message,
       error: error.message,
+      code: error.code
     });
-  } finally {
-    if (connection) await connection.end();
   }
 };
 
