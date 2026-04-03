@@ -33,7 +33,10 @@
       <!-- <FreeTrialSection /> -->
     </div>
     
-    <FooterSection />
+    <FooterSection @open-team="isTeamModalVisible = true" />
+    <TeamSection :isVisible="isTeamModalVisible" @close="isTeamModalVisible = false" />
+    <!-- Beta Version Disclaimer Modal -->
+    <BetaDisclaimerModal />
   </div>
 </template>
 
@@ -42,7 +45,9 @@ import HeaderSection from "./components/header/HeaderSection.vue";
 import StallSection from "./components/stalls/StallSection.vue";
 import VendorSection from "./components/vendor/VendorSection.vue";
 import ComplianceSection from "./components/compliance/ComplianceSection.vue";
+import TeamSection from "./components/team/TeamSection.vue";
 import FooterSection from "./components/footer/FooterSection.vue";
+import BetaDisclaimerModal from "./components/common/BetaDisclaimerModal.vue";
 
 export default {
   name: "LandingPage",
@@ -51,7 +56,9 @@ export default {
     StallSection,
     VendorSection,
     ComplianceSection,
+    TeamSection,
     FooterSection,
+    BetaDisclaimerModal,
   },
   data() {
     return {
@@ -60,6 +67,7 @@ export default {
       isInTrialSection: false,
       isHeaderVisible: true,
       lastScrollY: 0,
+      isTeamModalVisible: false,
       sections: [
         { id: 'home', label: 'STALLS', position: 5 },
         { id: 'vendor', label: 'VENDOR', position: 45 },
