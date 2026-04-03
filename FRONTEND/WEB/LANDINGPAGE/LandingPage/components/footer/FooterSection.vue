@@ -45,6 +45,7 @@
             <li><a href="#home"><i class="mdi mdi-chevron-right"></i> Home</a></li>
             <li><a href="#about"><i class="mdi mdi-chevron-right"></i> About Us</a></li>
             <li><a href="/stall-browse"><i class="mdi mdi-chevron-right"></i> Browse Stalls</a></li>
+            <li><a href="#" @click.prevent="$emit('open-team')"><i class="mdi mdi-account-group-outline"></i> View Team</a></li>
             <li><a href="#"><i class="mdi mdi-chevron-right"></i> FAQs</a></li>
           </ul>
         </div>
