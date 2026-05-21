@@ -1,15 +1,18 @@
 import stallBackgroundImage from '@/assets/stallbackground.png'
 import StallApplicationContainer from './StallApplicationContainer.vue'
+import VendorApplicationContainer from './VendorApplicationContainer.vue'
 
 export default {
   name: 'StallSection',
   components: {
     StallApplicationContainer,
+    VendorApplicationContainer,
   },
   data() {
     return {
       stallBackgroundImage,
       showApplyForm: false,
+      showVendorApplyForm: false,
       // Landing page statistics from database
       totalStallholders: 0,
       totalStalls: 0,
@@ -83,6 +86,14 @@ export default {
     closeApplyForm() {
       console.log('Closing general application form')
       this.showApplyForm = false
+    },
+    openVendorApplicationForm() {
+      console.log('Opening vendor application form from hero section')
+      this.showVendorApplyForm = true
+    },
+    closeVendorApplyForm() {
+      console.log('Closing vendor application form')
+      this.showVendorApplyForm = false
     },
     openBrowseStalls() {
       console.log('📱 Opening browse stalls from hero section')

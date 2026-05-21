@@ -19,6 +19,7 @@ import ForgotPasswordScreen from './AUTH/ForgotPasswordScreen/ForgotPasswordScre
 import StallHome from './STALLHOLDER/StallHolder/StallScreen/StallHome';
 import InspectorHome from './INSPECTOR/InspectorHome';
 import CollectorHome from './COLLECTOR/CollectorHome';
+import VendorHome from './VENDOR/VendorHome';
 
 // Services
 import UserStorageService from './services/UserStorageService';
@@ -83,6 +84,7 @@ export default function App() {
           if (user && user.token) {
             // Need to handle both staff roles and standard users
             const isStaff = user.staffType === 'inspector' || user.staffType === 'collector';
+            const isVendor = user.userType === 'vendor' || !!user.vendor;
             const apiUrl = 'https://digistall.up.railway.app/api'; // Using default or env
             
             // Perform synchronous-like beacon logout with fetch using keepalive
@@ -100,7 +102,7 @@ export default function App() {
                   }),
                   keepalive: true
                 }).catch(() => {});
-              } else {
+              } else if (!isVendor) {
                 fetch(`${apiUrl}/auth/mobile/logout`, {
                   method: 'POST',
                   headers: {
@@ -151,6 +153,10 @@ export default function App() {
           console.log('User is authenticated as Collector, navigating to CollectorHome');
           setUserData(storedUserData);
           setInitialRoute('CollectorHome');
+        } else if (storedUserData.userType === 'vendor' || storedUserData.vendor) {
+          console.log('User is authenticated as Vendor, navigating to VendorHome');
+          setUserData(storedUserData);
+          setInitialRoute('VendorHome');
         } else {
           console.log('User is authenticated as Stallholder, navigating to StallHome');
           setUserData(storedUserData);
@@ -203,6 +209,12 @@ export default function App() {
               <Stack.Screen 
                 name="StallHome" 
                 component={StallHome}
+                options={{ gestureEnabled: false }}
+                initialParams={userData ? { userData } : undefined}
+              />
+              <Stack.Screen 
+                name="VendorHome" 
+                component={VendorHome}
                 options={{ gestureEnabled: false }}
                 initialParams={userData ? { userData } : undefined}
               />

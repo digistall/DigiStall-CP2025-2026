@@ -78,6 +78,7 @@ export const API_CONFIG = {
     // Authentication endpoints - Match Backend-Mobile routes (using /api/mobile/ prefix)
     LOGIN: '/api/mobile/auth/login',
     STAFF_LOGIN: '/api/mobile/auth/staff-login',
+    VENDOR_LOGIN: '/api/mobile/auth/vendor-login',
     REGISTER: '/api/mobile/auth/register',
     VERIFY_TOKEN: '/api/mobile/auth/verify-token',
     LOGOUT: '/api/mobile/auth/logout',

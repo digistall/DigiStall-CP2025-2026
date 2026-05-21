@@ -44,10 +44,10 @@
             </svg>
           </div>
         </div>
-        <h3 class="loading-title success-title">Congratulations!</h3>
-        <p class="loading-subtitle">Your stall application has been submitted successfully!</p>
+        <h3 class="loading-title success-title">{{ successTitle }}</h3>
+        <p class="loading-subtitle">{{ successMessage }}</p>
         <div class="success-details">
-          <p>We'll review your application and contact you soon.</p>
+          <p>{{ successDetail }}</p>
         </div>
       </div>
 
@@ -79,6 +79,18 @@ export default {
     errorMessage: {
       type: String,
       default: ''
+    },
+    successTitle: {
+      type: String,
+      default: 'Congratulations!'
+    },
+    successMessage: {
+      type: String,
+      default: 'Your stall application has been submitted successfully!'
+    },
+    successDetail: {
+      type: String,
+      default: "We'll review your application and contact you soon."
     }
   },
   emits: ['retry']

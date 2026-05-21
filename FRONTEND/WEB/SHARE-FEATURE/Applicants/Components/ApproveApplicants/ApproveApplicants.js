@@ -10,6 +10,10 @@ export default {
       type: Object,
       default: null,
     },
+    applicantType: {
+      type: String,
+      default: 'Stall Applicants',
+    },
     show: {
       type: Boolean,
       default: false,
@@ -57,6 +61,8 @@ export default {
         this.processing = true
         this.processingMessage = 'Processing approval...'
 
+        const isVendorApplicant = this.applicantType === 'Vendor Applicants'
+
         console.log('🎯 Approving applicant:', this.applicant)
         console.log('🔍 DEBUG - applicant_id:', this.applicant.applicant_id)
         console.log('🔍 DEBUG - application_id:', this.applicant.application_id)
@@ -76,7 +82,7 @@ export default {
         }
 
         // Check if applicant already has credentials (existing account)
-        const hasExistingCredentials = this.applicant.has_credentials || false
+        const hasExistingCredentials = !isVendorApplicant && (this.applicant.has_credentials || false)
 
         let username = null
         let password = null
@@ -86,12 +92,15 @@ export default {
           console.log('⏭️ Applicant already has credentials — skipping password generation')
           this.processingMessage = 'Assigning stall to existing account...'
           this.credentialsAlreadyExisted = true
-        } else {
+        } else if (!isVendorApplicant) {
           // Generate new credentials
           this.processingMessage = 'Generating credentials...'
           username = this.applicant.email  // Email from other_information
           password = generatePassword()
           this.credentials = { username, password }
+        } else {
+          username = this.applicant.email
+          this.processingMessage = 'Creating vendor account...'
         }
 
         console.log(`📝 Approving applicant ${this.applicant.id}:`, {
@@ -109,6 +118,7 @@ export default {
           'Approved', // Use proper capitalization for database enum
           username,
           password,
+          isVendorApplicant,
         )
 
         if (!updateResult.success) {
@@ -120,11 +130,43 @@ export default {
           this.credentialsAlreadyExisted = true
         }
 
+        if (isVendorApplicant && updateResult.data?.password) {
+          const vendorUsername = updateResult.data.email || username
+          const vendorPassword = updateResult.data.password
+          this.credentials = { username: vendorUsername, password: vendorPassword }
+          username = vendorUsername
+          password = vendorPassword
+        }
+
         console.log('✅ Applicant approved and credentials stored in database')
 
         // Only send email if new credentials were created
         if (!this.credentialsAlreadyExisted && username && password) {
           this.processingMessage = 'Sending credentials email...'
+
+          const approvalOptions = isVendorApplicant
+            ? {
+                subject: 'Vendor Application Approved - Your Login Credentials',
+                message: `Dear ${this.applicant.fullName},
+
+Your vendor application has been APPROVED.
+
+Here are your login credentials for the DigiStall mobile app:
+
+Email: ${username}
+Temporary Password: ${password}
+
+MOBILE LOGIN INSTRUCTIONS:
+1. Open the DigiStall mobile app
+2. Log in using your email and temporary password
+3. Change your password after first login for security
+
+If you need assistance, please contact the market office.
+
+Best regards,
+DigiStall Admin Team`,
+              }
+            : {}
 
           // Send approval email with credentials
           const emailResult = await sendApprovalEmailWithRetry(
@@ -132,6 +174,7 @@ export default {
             this.applicant.fullName,
             username,
             password,
+            approvalOptions,
           )
 
           this.emailSent = emailResult.success
@@ -194,7 +237,13 @@ export default {
       }
     },
 
-    async updateApplicantStatus(applicantId, status, username = null, password = null) {
+    async updateApplicantStatus(
+      applicantId,
+      status,
+      username = null,
+      password = null,
+      isVendorApplicant = false,
+    ) {
       try {
         console.log('📤 Approving applicant via backend:', { applicantId, status, username })
 
@@ -209,16 +258,22 @@ export default {
 
         // Use the approve endpoint which creates credentials
         const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-        const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/approve`, {
+        const endpoint = isVendorApplicant
+          ? `${apiBaseUrl}/vendor-applicants/${applicantId}/approve`
+          : `${apiBaseUrl}/applicants/${applicantId}/approve`
+
+        const response = await fetch(endpoint, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            username: username,
-            password: password,
-          }),
+          body: isVendorApplicant
+            ? JSON.stringify({})
+            : JSON.stringify({
+                username: username,
+                password: password,
+              }),
         })
 
         console.log('📡 Approval response:', response.status)

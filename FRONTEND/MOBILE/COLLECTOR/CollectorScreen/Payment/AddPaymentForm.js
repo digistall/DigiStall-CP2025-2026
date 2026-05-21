@@ -10,8 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import QRScannerModal from "./QRScannerModal";
 
 const { width } = Dimensions.get("window");
 
@@ -53,6 +55,7 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [referenceNo, setReferenceNo] = useState(generateReferenceNo());
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const amountInputRef = useRef(null);
 
@@ -69,6 +72,42 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
     setSelectedVendor(vendor);
     setVendorSearch(vendor.name);
     setDropdownOpen(false);
+  };
+
+  const handleQRScanned = ({ vendorId, stallId, error }) => {
+    setShowQRScanner(false);
+
+    if (error) {
+      Alert.alert("Invalid QR Code", error);
+      return;
+    }
+
+    if (!vendorId) {
+      Alert.alert("Invalid QR Code", "No vendor ID found in the QR code.");
+      return;
+    }
+
+    // Try to find the vendor in the local list
+    const matchedVendor = sampleVendors.find(
+      (v) => v.id.toLowerCase() === vendorId.toLowerCase()
+    );
+
+    if (matchedVendor) {
+      setSelectedVendor(matchedVendor);
+      setVendorSearch(matchedVendor.name);
+      setDropdownOpen(false);
+    } else {
+      // Vendor not in local list — still set it with the scanned ID
+      // In production, this would call the backend to fetch vendor details
+      const scannedVendor = { id: vendorId, name: `Vendor ${vendorId}` };
+      setSelectedVendor(scannedVendor);
+      setVendorSearch(scannedVendor.name);
+      setDropdownOpen(false);
+      Alert.alert(
+        "Vendor Found",
+        `Scanned vendor ID: ${vendorId}${stallId ? `\nStall: ${stallId}` : ""}`,
+      );
+    }
   };
 
   const handleQuickAmount = (val) => {
@@ -144,8 +183,21 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
               </Text>
             </View>
 
-            {/* ── Vendor Name / ID (dropdown) ──────────────────────────── */}
+            {/* ── Vendor Name / ID (dropdown + QR scan) ─────────────── */}
             <Text style={styles.label}>Vendor Name / ID</Text>
+
+            {/* QR Scan Button */}
+            <TouchableOpacity
+              style={styles.qrScanButton}
+              onPress={() => setShowQRScanner(true)}
+            >
+              <Ionicons name="qr-code-outline" size={22} color="#2563eb" />
+              <Text style={styles.qrScanButtonText}>Scan QR Code</Text>
+              <Ionicons name="camera-outline" size={18} color="#6b7280" />
+            </TouchableOpacity>
+
+            <Text style={styles.orDividerText}>or search manually</Text>
+
             <View style={styles.dropdownWrapper}>
               <View style={styles.inputRow}>
                 <Ionicons name="storefront-outline" size={18} color="#9ca3af" />
@@ -330,6 +382,13 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        visible={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onScanned={handleQRScanned}
+      />
     </Modal>
   );
 };
@@ -384,6 +443,34 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#6b7280",
     marginTop: 10,
+    marginBottom: 8,
+  },
+
+  /* QR Scan Button */
+  qrScanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#eff6ff",
+    borderWidth: 2,
+    borderColor: "#bfdbfe",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  qrScanButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2563eb",
+    flex: 1,
+  },
+  orDividerText: {
+    fontSize: 12,
+    color: "#9ca3af",
+    textAlign: "center",
     marginBottom: 8,
   },
 

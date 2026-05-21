@@ -41,165 +41,7 @@ export default {
       crudLoading: { visible: false, operation: 'generic', entity: 'applicant', message: '', subMessage: '' },
       showErrorSnackbar: false,
       snackbarMessage: '',
-      // Sample data for vendor applicants with detailed information
-      vendorApplicants: [
-        {
-          id: '#0023',
-          applicant_id: 1,
-          fullName: 'Juan Perez Dela Cruz Jr.',
-          email: 'juan.delacruz@email.com',
-          phoneNumber: '09123456789',
-          address: 'Block 6 Lot 15 Maharlika Village Barangay Rosario Naga City',
-          type: 'vendor',
-          status: 'Approved', // Add status for testing (using DB enum values)
-          application_status: 'Approved', // Database field
-          approved_at: '2025-10-03T10:30:00Z', // Add approval date
-          // Additional detailed information
-          applicant_birthdate: '1985-03-15',
-          applicant_civil_status: 'Married',
-          applicant_educational_attainment: 'College Graduate',
-          business_information: {
-            nature_of_business: 'Electronics Retail',
-            capitalization: 150000.0,
-            source_of_capital: 'Personal Savings',
-            previous_business_experience: 'Worked in electronics store for 5 years',
-            relative_stall_owner: 'No',
-          },
-          spouse_information: {
-            spouse_full_name: 'Maria Dela Cruz',
-            spouse_birthdate: '1987-07-22',
-            spouse_educational_attainment: 'High School Graduate',
-            spouse_contact_number: '09123456788',
-            spouse_occupation: 'Housewife',
-          },
-          other_information: {
-            email_address: 'juan.delacruz@email.com',
-            signature_of_applicant: 'juan_signature.jpg',
-            house_sketch_location: 'house_sketch_juan.jpg',
-            valid_id: 'juan_valid_id.jpg',
-          },
-        },
-        {
-          id: '#0024',
-          applicant_id: 2,
-          fullName: 'Maria Santos Rodriguez',
-          email: 'maria.santos@email.com',
-          phoneNumber: '09123456790',
-          address: 'Block 2 Lot 8 San Francisco Village Barangay Centro Naga City',
-          type: 'vendor',
-          status: 'Rejected', // Add declined status for testing (using DB enum values)
-          application_status: 'Rejected', // Database field
-          declined_at: '2025-10-04T14:15:00Z', // Add decline date
-          applicant_birthdate: '1990-11-08',
-          applicant_civil_status: 'Single',
-          applicant_educational_attainment: 'College Graduate',
-          business_information: {
-            nature_of_business: 'Clothing Retail',
-            capitalization: 200000.0,
-            source_of_capital: 'Bank Loan',
-            previous_business_experience: 'Online clothing business for 3 years',
-            relative_stall_owner: 'Yes',
-          },
-          spouse_information: null,
-          other_information: {
-            email_address: 'maria.santos@email.com',
-            signature_of_applicant: 'maria_signature.jpg',
-            house_sketch_location: 'house_sketch_maria.jpg',
-            valid_id: 'maria_valid_id.jpg',
-          },
-        },
-        {
-          id: '#0025',
-          applicant_id: 3,
-          fullName: 'Pedro Garcia Mendoza',
-          email: 'pedro.garcia@email.com',
-          phoneNumber: '09123456791',
-          address: 'Block 3 Lot 12 Rizal Street Barangay Sabang Naga City',
-          type: 'vendor',
-          application_status: 'Pending', // Database field for pending status
-          applicant_birthdate: '1982-05-20',
-          applicant_civil_status: 'Married',
-          applicant_educational_attainment: 'High School Graduate',
-          business_information: {
-            nature_of_business: 'Food Service',
-            capitalization: 80000.0,
-            source_of_capital: 'Family Support',
-            previous_business_experience: 'Street food vendor for 2 years',
-            relative_stall_owner: 'No',
-          },
-          spouse_information: {
-            spouse_full_name: 'Ana Garcia',
-            spouse_birthdate: '1984-12-10',
-            spouse_educational_attainment: 'High School Graduate',
-            spouse_contact_number: '09123456792',
-            spouse_occupation: 'Seamstress',
-          },
-          other_information: {
-            email_address: 'pedro.garcia@email.com',
-            signature_of_applicant: 'pedro_signature.jpg',
-            house_sketch_location: 'house_sketch_pedro.jpg',
-            valid_id: 'pedro_valid_id.jpg',
-          },
-        },
-        {
-          id: '#0026',
-          applicant_id: 4,
-          fullName: 'Ana Reyes Villanueva',
-          email: 'ana.reyes@email.com',
-          phoneNumber: '09123456792',
-          address: 'Block 1 Lot 5 Magsaysay Avenue Barangay Triangulo Naga City',
-          type: 'vendor',
-          applicant_birthdate: '1988-09-14',
-          applicant_civil_status: 'Divorced',
-          applicant_educational_attainment: 'College Graduate',
-          business_information: {
-            nature_of_business: 'Beauty Products',
-            capitalization: 120000.0,
-            source_of_capital: 'Investment from Partner',
-            previous_business_experience: 'Cosmetics sales representative for 4 years',
-            relative_stall_owner: 'No',
-          },
-          spouse_information: null,
-          other_information: {
-            email_address: 'ana.reyes@email.com',
-            signature_of_applicant: 'ana_signature.jpg',
-            house_sketch_location: 'house_sketch_ana.jpg',
-            valid_id: 'ana_valid_id.jpg',
-          },
-        },
-        {
-          id: '#0027',
-          applicant_id: 5,
-          fullName: 'Carlos Fernandez Castro',
-          email: 'carlos.fernandez@email.com',
-          phoneNumber: '09123456793',
-          address: 'Block 4 Lot 20 Peñafrancia Street Barangay Balatas Naga City',
-          type: 'vendor',
-          applicant_birthdate: '1979-01-30',
-          applicant_civil_status: 'Married',
-          applicant_educational_attainment: 'Vocational Graduate',
-          business_information: {
-            nature_of_business: 'Hardware Supplies',
-            capitalization: 300000.0,
-            source_of_capital: 'Business Partnership',
-            previous_business_experience: 'Construction materials supplier for 8 years',
-            relative_stall_owner: 'Yes',
-          },
-          spouse_information: {
-            spouse_full_name: 'Carmen Castro',
-            spouse_birthdate: '1981-06-18',
-            spouse_educational_attainment: 'College Graduate',
-            spouse_contact_number: '09123456794',
-            spouse_occupation: 'Teacher',
-          },
-          other_information: {
-            email_address: 'carlos.fernandez@email.com',
-            signature_of_applicant: 'carlos_signature.jpg',
-            house_sketch_location: 'house_sketch_carlos.jpg',
-            valid_id: 'carlos_valid_id.jpg',
-          },
-        },
-      ],
+      vendorApplicants: [],
       // Dynamic data for stall applicants - fetched from database
       stallApplicants: [],
       // Loading and error states
@@ -217,6 +59,11 @@ export default {
       return this.currentApplicantType === 'Vendor Applicants'
         ? this.vendorApplicants
         : this.stallApplicants
+    },
+    loadingText() {
+      return this.currentApplicantType === 'Vendor Applicants'
+        ? 'Loading vendor applicants...'
+        : 'Loading stall applicants...'
     },
 
     filteredApplicants() {
@@ -310,10 +157,13 @@ export default {
     onTabChange(newType) {
       // Clear search when switching types
       this.searchQuery = ''
+      this.error = null
 
       // Fetch data based on type
       if (newType === 'Stall Applicants') {
         this.fetchStallApplicants()
+      } else if (newType === 'Vendor Applicants') {
+        this.fetchVendorApplicants()
       }
 
       console.log('Switched to:', newType)
@@ -405,19 +255,22 @@ export default {
           throw new Error('Authentication token not found. Please log in again.')
         }
 
-        const response = await fetch(
-          `${API_BASE_URL}/applicants/${applicantId}/status`,
-          {
-            method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              status: 'Under Review',
-            }),
+        const isVendor = this.currentApplicantType === 'Vendor Applicants'
+        const statusPayload = isVendor ? 'pending' : 'Under Review'
+        const endpoint = isVendor
+          ? `${API_BASE_URL}/vendor-applicants/${applicantId}/status`
+          : `${API_BASE_URL}/applicants/${applicantId}/status`
+
+        const response = await fetch(endpoint, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
-        )
+          body: JSON.stringify({
+            status: statusPayload,
+          }),
+        })
 
         console.log('📡 Recheck API response status:', response.status)
 
@@ -438,12 +291,12 @@ export default {
 
         if (result.success) {
           // Update local data only after successful backend update
-          this.updateApplicantStatus(applicantId, 'Under Review')
+          this.updateApplicantStatus(applicantId, statusPayload === 'pending' ? 'Pending' : 'Under Review')
 
           // Show success message
           if (this.$toast) {
             this.$toast.success(
-              `✅ ${applicant.fullName} application successfully moved to Under Review for re-checking`,
+              `✅ ${applicant.fullName} application successfully moved for re-checking`,
             )
           }
         } else {
@@ -490,9 +343,7 @@ export default {
       )
 
       // Refresh the applicant list
-      if (this.currentApplicantType === 'Stall Applicants') {
-        this.refreshStallApplicants()
-      }
+      this.refreshApplicants()
 
       // Close the modal
       this.closeApproveModal()
@@ -520,9 +371,7 @@ export default {
       )
 
       // Refresh the applicant list to show updated status
-      if (this.currentApplicantType === 'Stall Applicants') {
-        this.refreshStallApplicants()
-      }
+      this.refreshApplicants()
 
       // Close the modal
       this.closeDeclineModal()
@@ -576,6 +425,65 @@ export default {
       this.stallApplicants = this.stallApplicants.filter(
         (applicant) => applicant.applicant_id !== applicantId,
       )
+    },
+
+    // Fetch vendor applicants from database
+    async fetchVendorApplicants() {
+      if (this.currentApplicantType !== 'Vendor Applicants') return
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const token =
+          sessionStorage.getItem('authToken') ||
+          localStorage.getItem('token') ||
+          localStorage.getItem('authToken')
+
+        if (!token) {
+          throw new Error('Authentication token not found. Please log in again.')
+        }
+
+        const response = await fetch(`${API_BASE_URL}/vendor-applicants`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Your session has expired. Please log in again.')
+          } else if (response.status === 403) {
+            throw new Error('You do not have permission to view these applicants.')
+          } else {
+            throw new Error(`Server error: ${response.status}`)
+          }
+        }
+
+        const result = await response.json()
+
+        if (result.success) {
+          this.vendorApplicants = (result.data || []).map((applicant) =>
+            this.transformVendorApplicantData(applicant),
+          )
+        } else {
+          throw new Error(result.message || 'Failed to fetch vendor applicants')
+        }
+      } catch (error) {
+        console.error('❌ Error fetching vendor applicants:', error)
+        this.error = error.message
+        this.vendorApplicants = []
+        if (this.$toast) {
+          this.$toast.error(`Failed to load vendor applicants: ${error.message}`)
+        } else {
+          this.snackbarMessage = error.message
+          this.showErrorSnackbar = true
+        }
+      } finally {
+        this.loading = false
+      }
     },
 
     // Fetch stall applicants from database
@@ -824,6 +732,45 @@ export default {
       }
     },
 
+    // Transform vendor applicant data to component format
+    transformVendorApplicantData(apiData) {
+      const nameParts = [apiData.first_name, apiData.middle_name, apiData.last_name, apiData.suffix]
+      const fullName = nameParts.filter(Boolean).join(' ').trim()
+      const status = apiData.application_status || 'pending'
+      const displayStatus = status.charAt(0).toUpperCase() + status.slice(1)
+
+      return {
+        id: `#${String(apiData.vendor_applicant_id).padStart(4, '0')}`,
+        applicant_id: apiData.vendor_applicant_id,
+        fullName,
+        email: apiData.email || '',
+        phoneNumber: apiData.contact_number || '',
+        address: apiData.address || '',
+        type: 'vendor',
+
+        applicant_birthdate: apiData.birthdate || null,
+        applicant_civil_status: apiData.civil_status || null,
+        application_status: displayStatus,
+        status: displayStatus,
+        approved_at: apiData.approved_at || null,
+        declined_at: apiData.rejected_at || null,
+        created_at: apiData.created_at || null,
+        updated_at: apiData.updated_at || null,
+
+        business_information: {
+          business_name: apiData.business_name || 'Not specified',
+          business_type: apiData.business_type || 'Not specified',
+          business_description: apiData.business_description || 'Not specified',
+          products: apiData.products || 'Not specified',
+        },
+
+        spouse_information: null,
+        other_information: {
+          email_address: apiData.email || '',
+        },
+      }
+    },
+
     // Transform API response data to component format
     transformApplicantData(apiData) {
       // Debug: Log the API data structure
@@ -972,6 +919,14 @@ export default {
     // Refresh stall applicants data
     async refreshStallApplicants() {
       await this.fetchStallApplicants()
+    },
+
+    async refreshApplicants() {
+      if (this.currentApplicantType === 'Vendor Applicants') {
+        await this.fetchVendorApplicants()
+      } else {
+        await this.fetchStallApplicants()
+      }
     },
 
     // Auto-cleanup now handled by backend scheduler
