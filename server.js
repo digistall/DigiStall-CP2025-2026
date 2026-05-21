@@ -38,12 +38,14 @@ import documentRoutes from './routes/documentRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
+import vendorApplicantRoutes from './routes/vendorApplicantRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import dashboardSubscriptionRoutes from './routes/dashboardSubscriptionRoutes.js';
 
 // APPLICANTS routes
 import applicationRoutes from './routes/applicationRoutes.js';
+import vendorApplicationRoutes from './routes/vendorApplicationRoutes.js';
 import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import applicantRoutes from './routes/applicantRoutes.js';
 
@@ -88,6 +90,7 @@ console.log('========================================\n');
 // ===== API ROUTES =====
 
 // PUBLIC ROUTES (No authentication)
+app.use('/api/public/vendor-applications', vendorApplicationRoutes);  // Web vendor application (preferred path)
 app.use('/api/mobile/applications', applicationRoutes);  // Mobile application routes (join raffle, join auction, etc)
 app.use('/api/applications', applicationRoutes);  // Also mount at /api/applications for backward compatibility
 app.use('/api/landing-applicants', landingApplicantRoutes);
@@ -108,6 +111,7 @@ app.use('/api/surrender', enhancedAuthMiddleware.authenticateToken, webSurrender
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
+app.use('/api/vendor-applicants', vendorApplicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard-subscription', dashboardSubscriptionRoutes);  // SSE for real-time dashboard updates
@@ -123,6 +127,7 @@ console.log('✅ EMPLOYEE routes loaded');
 app.use('/api/mobile/stallholder', stallholderMobileRoutes);
 app.use('/api/mobile/user', userRoutes);
 app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
+app.use('/api/mobile/vendor-applications', vendorApplicationRoutes);  // Backward compat (prefer /api/public/vendor-applications)
 app.use('/api/mobile/surrender', enhancedAuthMiddleware.authenticateToken, mobileSurrenderRoutes);
 console.log('✅ STALL-HOLDER routes loaded');
 

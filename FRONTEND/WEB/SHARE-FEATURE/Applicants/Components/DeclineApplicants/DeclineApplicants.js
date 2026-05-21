@@ -7,6 +7,10 @@ export default {
       type: Object,
       default: null,
     },
+    applicantType: {
+      type: String,
+      default: 'Stall Applicants',
+    },
     show: {
       type: Boolean,
       default: false,
@@ -163,6 +167,8 @@ export default {
       try {
         console.log('📤 Updating applicant status:', { applicantId, status, reason })
 
+        const isVendorApplicant = this.applicantType === 'Vendor Applicants'
+
         const token =
           sessionStorage.getItem('authToken') ||
           localStorage.getItem('token') ||
@@ -173,7 +179,7 @@ export default {
         }
 
         const updateData = {
-          status: status,
+          status: isVendorApplicant ? status.toLowerCase() : status,
         }
 
         // Add decline reason and timestamp if declining/rejecting
@@ -183,7 +189,11 @@ export default {
         }
 
         const apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
-        const response = await fetch(`${apiBaseUrl}/applicants/${applicantId}/status`, {
+        const endpoint = isVendorApplicant
+          ? `${apiBaseUrl}/vendor-applicants/${applicantId}/status`
+          : `${apiBaseUrl}/applicants/${applicantId}/status`
+
+        const response = await fetch(endpoint, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,

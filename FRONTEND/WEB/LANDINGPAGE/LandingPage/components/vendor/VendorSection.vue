@@ -65,11 +65,6 @@
               </div>
             </div>
           </div>
-          
-          <button class="apply-btn animate-on-scroll animate-delay-4" @click="scrollToTrial">
-            <i class="mdi mdi-rocket-launch"></i>
-            <span>Try It Free</span>
-          </button>
         </div>
         
         <div class="illustration-wrapper animate-on-scroll fade-right animate-delay-2">

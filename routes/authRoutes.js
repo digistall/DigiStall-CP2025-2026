@@ -3,6 +3,7 @@ import { verifyToken } from '../middleware/auth.js';
 
 // Import mobile login controller with full data fetching (including spouse, business, stallholder data)
 import { mobileLogin } from '../BACKEND/AUTH/login/loginController.js'
+import { vendorLogin } from '../BACKEND/AUTH/vendorAuthController.js'
 
 // Import other mobile-specific auth controllers
 import { 
@@ -27,6 +28,7 @@ const router = express.Router()
 // ===== MOBILE AUTHENTICATION ROUTES =====
 router.post('/login', mobileLogin)                       // POST /mobile/auth/login - Mobile user login with full data
 router.post('/staff-login', mobileStaffLogin)            // POST /mobile/auth/staff-login - Inspector/Collector login
+router.post('/vendor-login', vendorLogin)                // POST /mobile/auth/vendor-login - Vendor login
 router.post('/register', mobileRegister)                 // POST /mobile/auth/register - Mobile user registration
 router.get('/verify-token', mobileVerifyToken)           // GET /mobile/auth/verify-token - Verify mobile token
 

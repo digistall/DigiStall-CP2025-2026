@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,33 +11,39 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-} from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+} from "react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import styles from './LogInCSS/LoginCSS';
-import {
-  handleLogin,
-} from './LoginFunction/LoginFunctions';
+import styles from "./LogInCSS/LoginCSS";
+import { handleLogin } from "./LoginFunction/LoginFunctions";
 
 const LoginScreen = ({ navigation }) => {
   // State management
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Authenticating...');
-  const [loadingSubtext, setLoadingSubtext] = useState('Please wait while we verify your credentials');
-  const [loadingState, setLoadingState] = useState({ step: 'idle', message: '', progress: 0 });  const [loadingSteps, setLoadingSteps] = useState([
-    { label: 'Server Connection', completed: false, active: false },
-    { label: 'Authentication', completed: false, active: false },
-    { label: 'Profile Data', completed: false, active: false },
-    { label: 'Dashboard Setup', completed: false, active: false },
-    { label: 'Finalizing', completed: false, active: false },
-  ]);  const [errorModal, setErrorModal] = useState({
+  const [loadingMessage, setLoadingMessage] = useState("Authenticating...");
+  const [loadingSubtext, setLoadingSubtext] = useState(
+    "Please wait while we verify your credentials",
+  );
+  const [loadingState, setLoadingState] = useState({
+    step: "idle",
+    message: "",
+    progress: 0,
+  });
+  const [loadingSteps, setLoadingSteps] = useState([
+    { label: "Server Connection", completed: false, active: false },
+    { label: "Authentication", completed: false, active: false },
+    { label: "Profile Data", completed: false, active: false },
+    { label: "Dashboard Setup", completed: false, active: false },
+    { label: "Finalizing", completed: false, active: false },
+  ]);
+  const [errorModal, setErrorModal] = useState({
     visible: false,
-    title: '',
-    message: '',
-    type: 'error' // 'error', 'info', 'success'
+    title: "",
+    message: "",
+    type: "error", // 'error', 'info', 'success'
   });
 
   // Animation values
@@ -72,7 +78,7 @@ const LoginScreen = ({ navigation }) => {
             easing: Easing.ease,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulse.start();
 
@@ -115,7 +121,7 @@ const LoginScreen = ({ navigation }) => {
               useNativeDriver: true,
             }),
           ]),
-        ])
+        ]),
       );
       dotAnimation.start();
 
@@ -131,13 +137,13 @@ const LoginScreen = ({ navigation }) => {
   // Update loading steps based on loadingState
   useEffect(() => {
     if (loadingState.step >= 0) {
-      setLoadingMessage(loadingState.message || 'Processing...');
-      
+      setLoadingMessage(loadingState.message || "Processing...");
+
       // Update steps array
       const updatedSteps = loadingSteps.map((step, index) => ({
         ...step,
         completed: index < loadingState.step,
-        active: index === loadingState.step
+        active: index === loadingState.step,
       }));
       setLoadingSteps(updatedSteps);
     }
@@ -146,17 +152,28 @@ const LoginScreen = ({ navigation }) => {
   // Enhanced login handler with loading states
   const handleLoginPress = () => {
     // Reset loading state
-    setLoadingState({ step: 0, message: 'Connecting to server...', progress: 0 });
-    setLoadingMessage('Connecting to server...');
-    setLoadingSubtext('Establishing secure connection');
+    setLoadingState({
+      step: 0,
+      message: "Connecting to server...",
+      progress: 0,
+    });
+    setLoadingMessage("Connecting to server...");
+    setLoadingSubtext("Establishing secure connection");
 
     // Unified login - automatically detects staff or user
     // Progress updates will come from LoginFunctions via setLoadingState callback
-    handleLogin(username, password, setIsLoading, navigation, setErrorModal, setLoadingState);
+    handleLogin(
+      username,
+      password,
+      setIsLoading,
+      navigation,
+      setErrorModal,
+      setLoadingState,
+    );
   };
 
   const handleForgotPasswordPress = () => {
-    navigation.navigate('ForgotPasswordScreen');
+    navigation.navigate("ForgotPasswordScreen");
   };
 
   const closeErrorModal = () => {
@@ -165,45 +182,52 @@ const LoginScreen = ({ navigation }) => {
 
   const getModalIcon = () => {
     switch (errorModal.type) {
-      case 'error':
-        return 'alert-circle';
-      case 'info':
-        return 'information-circle';
-      case 'success':
-        return 'checkmark-circle';
+      case "error":
+        return "alert-circle";
+      case "info":
+        return "information-circle";
+      case "success":
+        return "checkmark-circle";
       default:
-        return 'alert-circle';
+        return "alert-circle";
     }
   };
 
   const getModalColor = () => {
     switch (errorModal.type) {
-      case 'error':
-        return '#e74c3c';
-      case 'info':
-        return '#3498db';
-      case 'success':
-        return '#27ae60';
+      case "error":
+        return "#e74c3c";
+      case "info":
+        return "#3498db";
+      case "success":
+        return "#27ae60";
       default:
-        return '#e74c3c';
+        return "#e74c3c";
     }
   };
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.3)" translucent />
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="rgba(0,0,0,0.3)"
+          translucent
+        />
         <ImageBackground
-          source={require('../../assets/Login-Image/background-mobile.png')}
+          source={require("../../assets/Login-Image/background-mobile.png")}
           style={styles.backgroundImage}
           resizeMode="cover"
         >
           <View style={styles.overlay} />
-          
-          <SafeAreaView style={styles.content} edges={['bottom', 'left', 'right']}>
+
+          <SafeAreaView
+            style={styles.content}
+            edges={["bottom", "left", "right"]}
+          >
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/Login-Image/DigiStall-Logo.png')}
+                source={require("../../assets/Login-Image/DigiStall-Logo.png")}
                 style={styles.logo}
                 resizeMode="contain"
               />
@@ -220,7 +244,12 @@ const LoginScreen = ({ navigation }) => {
 
               <View style={styles.inputContainer}>
                 <View style={styles.inputIconWrapper}>
-                  <Ionicons name="person" size={20} color="#4472C4" style={styles.inputIcon} />
+                  <Ionicons
+                    name="person"
+                    size={20}
+                    color="#4472C4"
+                    style={styles.inputIcon}
+                  />
                 </View>
                 <TextInput
                   style={[styles.textInput, styles.textInputWithIcon]}
@@ -234,7 +263,12 @@ const LoginScreen = ({ navigation }) => {
 
               <View style={styles.inputContainer}>
                 <View style={styles.inputIconWrapper}>
-                  <Ionicons name="lock-closed" size={20} color="#4472C4" style={styles.inputIcon} />
+                  <Ionicons
+                    name="lock-closed"
+                    size={20}
+                    color="#4472C4"
+                    style={styles.inputIcon}
+                  />
                 </View>
                 <TextInput
                   style={[styles.textInput, styles.textInputWithIcon]}
@@ -257,19 +291,35 @@ const LoginScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity 
-                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+              <TouchableOpacity
+                style={[
+                  styles.loginButton,
+                  isLoading && styles.loginButtonDisabled,
+                ]}
                 onPress={handleLoginPress}
                 disabled={isLoading}
               >
                 <View style={styles.buttonContent}>
-                  <Ionicons name="log-in" size={20} color="white" style={{ marginRight: 8 }} />
+                  <Ionicons
+                    name="log-in"
+                    size={20}
+                    color="white"
+                    style={{ marginRight: 8 }}
+                  />
                   <Text style={styles.loginButtonText}>Login</Text>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleForgotPasswordPress} style={styles.forgotPasswordContainer}>
-                <Ionicons name="help-circle-outline" size={16} color="#3498db" style={{ marginRight: 4 }} />
+              <TouchableOpacity
+                onPress={handleForgotPasswordPress}
+                style={styles.forgotPasswordContainer}
+              >
+                <Ionicons
+                  name="help-circle-outline"
+                  size={16}
+                  color="#3498db"
+                  style={{ marginRight: 4 }}
+                />
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
@@ -277,17 +327,18 @@ const LoginScreen = ({ navigation }) => {
         </ImageBackground>
 
         {/* Professional Loading Overlay */}
-        <Modal
-          visible={isLoading}
-          transparent={true}
-          animationType="none"
-        >
+        <Modal visible={isLoading} transparent={true} animationType="none">
           <Animated.View style={[styles.loadingOverlay, { opacity: fadeAnim }]}>
             <View style={styles.loadingCard}>
               {/* Animated Logo */}
-              <Animated.View style={[styles.loadingLogoContainer, { transform: [{ scale: pulseAnim }] }]}>
+              <Animated.View
+                style={[
+                  styles.loadingLogoContainer,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
                 <Image
-                  source={require('../../assets/Login-Image/DigiStall-Logo.png')}
+                  source={require("../../assets/Login-Image/DigiStall-Logo.png")}
                   style={styles.loadingLogo}
                   resizeMode="contain"
                 />
@@ -296,17 +347,19 @@ const LoginScreen = ({ navigation }) => {
               {/* Loading Text */}
               <Text style={styles.loadingTitle}>{loadingMessage}</Text>
               <Text style={styles.loadingSubtext}>
-                {loadingState.progress > 0 ? `${Math.round(loadingState.progress)}%` : 'Starting...'}
+                {loadingState.progress > 0
+                  ? `${Math.round(loadingState.progress)}%`
+                  : "Starting..."}
               </Text>
 
               {/* Progress Bar */}
               <View style={styles.progressBarContainer}>
                 <View style={styles.progressBarBackground}>
-                  <View 
+                  <View
                     style={[
-                      styles.progressBarFill, 
-                      { width: `${loadingState.progress}%` }
-                    ]} 
+                      styles.progressBarFill,
+                      { width: `${loadingState.progress}%` },
+                    ]}
                   />
                 </View>
               </View>
@@ -315,11 +368,13 @@ const LoginScreen = ({ navigation }) => {
               <View style={styles.loadingStepsContainer}>
                 {loadingSteps.map((step, index) => (
                   <View key={index} style={styles.loadingStepItem}>
-                    <View style={[
-                      styles.stepIndicator,
-                      step.completed && styles.stepCompleted,
-                      step.active && styles.stepActive
-                    ]}>
+                    <View
+                      style={[
+                        styles.stepIndicator,
+                        step.completed && styles.stepCompleted,
+                        step.active && styles.stepActive,
+                      ]}
+                    >
                       {step.completed ? (
                         <Ionicons name="checkmark" size={12} color="white" />
                       ) : step.active ? (
@@ -328,11 +383,13 @@ const LoginScreen = ({ navigation }) => {
                         <View style={styles.stepDot} />
                       )}
                     </View>
-                    <Text style={[
-                      styles.stepLabel,
-                      step.completed && styles.stepLabelCompleted,
-                      step.active && styles.stepLabelActive
-                    ]}>
+                    <Text
+                      style={[
+                        styles.stepLabel,
+                        step.completed && styles.stepLabelCompleted,
+                        step.active && styles.stepLabelActive,
+                      ]}
+                    >
                       {step.label}
                     </Text>
                   </View>
@@ -341,42 +398,54 @@ const LoginScreen = ({ navigation }) => {
 
               {/* Animated Dots */}
               <View style={styles.loadingDotsContainer}>
-                <Animated.View style={[
-                  styles.loadingDot,
-                  { 
-                    opacity: dotAnim1,
-                    transform: [{ 
-                      translateY: dotAnim1.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, -10]
-                      })
-                    }]
-                  }
-                ]} />
-                <Animated.View style={[
-                  styles.loadingDot,
-                  { 
-                    opacity: dotAnim2,
-                    transform: [{ 
-                      translateY: dotAnim2.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, -10]
-                      })
-                    }]
-                  }
-                ]} />
-                <Animated.View style={[
-                  styles.loadingDot,
-                  { 
-                    opacity: dotAnim3,
-                    transform: [{ 
-                      translateY: dotAnim3.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, -10]
-                      })
-                    }]
-                  }
-                ]} />
+                <Animated.View
+                  style={[
+                    styles.loadingDot,
+                    {
+                      opacity: dotAnim1,
+                      transform: [
+                        {
+                          translateY: dotAnim1.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, -10],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    styles.loadingDot,
+                    {
+                      opacity: dotAnim2,
+                      transform: [
+                        {
+                          translateY: dotAnim2.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, -10],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    styles.loadingDot,
+                    {
+                      opacity: dotAnim3,
+                      transform: [
+                        {
+                          translateY: dotAnim3.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, -10],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
               </View>
 
               {/* Security Note */}
@@ -398,31 +467,49 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.errorModalOverlay}>
             <View style={styles.errorModalContainer}>
               {/* Header with gradient effect */}
-              <View style={[styles.errorModalHeader, { backgroundColor: getModalColor() }]}>
+              <View
+                style={[
+                  styles.errorModalHeader,
+                  { backgroundColor: getModalColor() },
+                ]}
+              >
                 <View style={styles.modalIconCircle}>
-                  <Ionicons name={getModalIcon()} size={32} color={getModalColor()} />
+                  <Ionicons
+                    name={getModalIcon()}
+                    size={32}
+                    color={getModalColor()}
+                  />
                 </View>
               </View>
-              
+
               {/* Title Section */}
               <View style={styles.errorModalTitleSection}>
-                <Text style={[styles.errorModalTitle, { color: getModalColor() }]}>{errorModal.title}</Text>
+                <Text
+                  style={[styles.errorModalTitle, { color: getModalColor() }]}
+                >
+                  {errorModal.title}
+                </Text>
               </View>
-              
+
               {/* Message Body */}
               <View style={styles.errorModalBody}>
-                <Text style={styles.errorModalMessage}>{errorModal.message}</Text>
+                <Text style={styles.errorModalMessage}>
+                  {errorModal.message}
+                </Text>
               </View>
-              
+
               {/* Action Footer */}
               <View style={styles.errorModalFooter}>
                 <TouchableOpacity
-                  style={[styles.errorModalButton, { backgroundColor: getModalColor() }]}
+                  style={[
+                    styles.errorModalButton,
+                    { backgroundColor: getModalColor() },
+                  ]}
                   onPress={closeErrorModal}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.errorModalButtonText}>
-                    {errorModal.type === 'success' ? 'Continue' : 'Understood'}
+                    {errorModal.type === "success" ? "Continue" : "Understood"}
                   </Text>
                 </TouchableOpacity>
               </View>

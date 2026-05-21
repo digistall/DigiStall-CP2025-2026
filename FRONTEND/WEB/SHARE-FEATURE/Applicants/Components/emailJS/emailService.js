@@ -1,12 +1,45 @@
 import emailjs from '@emailjs/browser'
 
-// EmailJS Configuration
-const EMAILJS_SERVICE_ID = 'service_am6pozg'
-const EMAILJS_APPROVE_TEMPLATE_ID = 'template_3wccajf' // Template for approve emails
-const EMAILJS_DECLINE_TEMPLATE_ID = 'template_501cap3' // Template for decline emails
-const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FjatviG'
-const SENDER_EMAIL = 'digistall@unc.edu.ph'
-const SENDER_NAME = 'Stall Management System'
+// ─── EmailJS Configuration (from environment variables) ───
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || ''
+const EMAILJS_APPROVE_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_APPROVE_TEMPLATE_ID || ''
+const EMAILJS_DECLINE_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_DECLINE_TEMPLATE_ID || ''
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || ''
+const SENDER_EMAIL = import.meta.env.VITE_EMAILJS_SENDER_EMAIL || 'digistall@unc.edu.ph'
+const SENDER_NAME = import.meta.env.VITE_EMAILJS_SENDER_NAME || 'Stall Management System'
+const DEFAULT_APPROVAL_SUBJECT = 'Stall Application Approved - Your Login Credentials'
+
+const buildApprovalContent = (applicantName, username, password, options = {}) => {
+  const subject = options.subject || DEFAULT_APPROVAL_SUBJECT
+  const message =
+    options.message ||
+    `Dear ${applicantName},
+
+Congratulations! Your application has been APPROVED.
+
+Here are your login credentials to access the stall management system:
+
+Username: ${username}
+Password: ${password}
+
+IMPORTANT INSTRUCTIONS:
+1. Please save these credentials securely
+2. Use these credentials to log into the system
+3. Monitor the system regularly for raffle updates
+4. Change your password after first login for security
+
+What's Next:
+• Log into the system using your credentials
+• Check for raffle announcements and countdowns
+• Stay updated on your stall assignment
+
+Welcome to our stall management community!
+
+Best regards,
+Stall Management Admin Team`
+
+  return { subject, message }
+}
 
 let isInitialized = false
 
@@ -30,7 +63,6 @@ const initializeEmailJS = () => {
       console.log('✅ EmailJS initialized successfully')
     } catch (error) {
       console.error('❌ EmailJS initialization failed:', error)
-      // Fallback initialization
       emailjs.init(EMAILJS_PUBLIC_KEY)
       isInitialized = true
     }
@@ -40,11 +72,8 @@ const initializeEmailJS = () => {
 // Generate username with format: 25-XXXXX (year-5digits)
 export const generateUsername = () => {
   const now = new Date()
-  const year = now.getFullYear().toString().slice(-2) // Last 2 digits of year
-
-  // Generate 5 random digits
-  const randomDigits = Math.floor(10000 + Math.random() * 90000).toString() // Ensures 5 digits
-
+  const year = now.getFullYear().toString().slice(-2)
+  const randomDigits = Math.floor(10000 + Math.random() * 90000).toString()
   const username = `${year}-${randomDigits}`
   console.log('🔑 Generated username:', username)
   return username
@@ -56,13 +85,9 @@ export const generatePassword = () => {
   const numbers = '0123456789'
 
   let password = ''
-
-  // Add 3 random letters
   for (let i = 0; i < 3; i++) {
     password += letters.charAt(Math.floor(Math.random() * letters.length))
   }
-
-  // Add 3 random numbers
   for (let i = 0; i < 3; i++) {
     password += numbers.charAt(Math.floor(Math.random() * numbers.length))
   }
@@ -77,9 +102,17 @@ export const sendCredentialsEmailFetch = async (
   applicantName,
   username,
   password,
+  options = {},
 ) => {
   try {
     console.log('📧 Sending approval email via fetch method to:', recipientEmail)
+
+    const { subject, message } = buildApprovalContent(
+      applicantName,
+      username,
+      password,
+      options,
+    )
 
     const templateParams = {
       service_id: EMAILJS_SERVICE_ID,
@@ -90,31 +123,8 @@ export const sendCredentialsEmailFetch = async (
         from_email: SENDER_EMAIL,
         to_email: recipientEmail,
         to_name: applicantName,
-        subject: 'Stall Application Approved - Your Login Credentials',
-        message: `Dear ${applicantName},
-
-Congratulations! Your stall application has been APPROVED.
-
-Here are your login credentials to access the stall management system:
-
-Username: ${username}
-Password: ${password}
-
-IMPORTANT INSTRUCTIONS:
-1. Please save these credentials securely
-2. Use these credentials to log into the system
-3. Monitor the system regularly for raffle updates
-4. Change your password after first login for security
-
-What's Next:
-• Log into the system using your credentials
-• Check for raffle announcements and countdowns
-• Stay updated on your stall assignment
-
-Welcome to our stall management community!
-
-Best regards,
-Stall Management Admin Team`,
+        subject,
+        message,
         username: username,
         password: password,
         reply_to: SENDER_EMAIL,
@@ -154,10 +164,18 @@ export const sendCredentialsEmailXHR = async (
   applicantName,
   username,
   password,
+  options = {},
 ) => {
   return new Promise((resolve) => {
     try {
       console.log('📧 Sending approval email via XHR method to:', recipientEmail)
+
+      const { subject, message } = buildApprovalContent(
+        applicantName,
+        username,
+        password,
+        options,
+      )
 
       const xhr = new XMLHttpRequest()
       xhr.open('POST', 'https://api.emailjs.com/api/v1.0/email/send', true)
@@ -172,31 +190,8 @@ export const sendCredentialsEmailXHR = async (
           from_email: SENDER_EMAIL,
           to_email: recipientEmail,
           to_name: applicantName,
-          subject: 'Stall Application Approved - Your Login Credentials',
-          message: `Dear ${applicantName},
-
-Congratulations! Your stall application has been APPROVED.
-
-Here are your login credentials to access the stall management system:
-
-Username: ${username}
-Password: ${password}
-
-IMPORTANT INSTRUCTIONS:
-1. Please save these credentials securely
-2. Use these credentials to log into the system
-3. Monitor the system regularly for raffle updates
-4. Change your password after first login for security
-
-What's Next:
-• Log into the system using your credentials
-• Check for raffle announcements and countdowns
-• Stay updated on your stall assignment
-
-Welcome to our stall management community!
-
-Best regards,
-Stall Management Admin Team`,
+          subject,
+          message,
           username: username,
           password: password,
           reply_to: SENDER_EMAIL,
@@ -246,45 +241,29 @@ export const sendCredentialsEmailImproved = async (
   applicantName,
   username,
   password,
+  options = {},
 ) => {
   initializeEmailJS()
 
   try {
     console.log('📧 Sending approval email via improved EmailJS method to:', recipientEmail)
 
-    // Add small delay to ensure initialization
     await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    const { subject, message } = buildApprovalContent(
+      applicantName,
+      username,
+      password,
+      options,
+    )
 
     const templateParams = {
       from_name: SENDER_NAME,
       from_email: SENDER_EMAIL,
       to_email: recipientEmail,
       to_name: applicantName,
-      subject: 'Stall Application Approved - Your Login Credentials',
-      message: `Dear ${applicantName},
-
-Congratulations! Your stall application has been APPROVED.
-
-Here are your login credentials to access the stall management system:
-
-Username: ${username}
-Password: ${password}
-
-IMPORTANT INSTRUCTIONS:
-1. Please save these credentials securely
-2. Use these credentials to log into the system
-3. Monitor the system regularly for raffle updates
-4. Change your password after first login for security
-
-What's Next:
-• Log into the system using your credentials
-• Check for raffle announcements and countdowns
-• Stay updated on your stall assignment
-
-Welcome to our stall management community!
-
-Best regards,
-Stall Management Admin Team`,
+      subject,
+      message,
       username: username,
       password: password,
       reply_to: SENDER_EMAIL,
@@ -323,29 +302,42 @@ export const sendApprovalEmailWithRetry = async (
   applicantName,
   username,
   password,
+  options = {},
 ) => {
   console.log('📧 Starting enhanced email retry mechanism for approval')
 
   // Attempt 1: Fetch method
   console.log('📧 Attempt 1: Fetch method')
-  let result = await sendCredentialsEmailFetch(recipientEmail, applicantName, username, password)
-  if (result.success) {
-    return result
-  }
+  let result = await sendCredentialsEmailFetch(
+    recipientEmail,
+    applicantName,
+    username,
+    password,
+    options,
+  )
+  if (result.success) return result
 
   // Attempt 2: XHR method
   console.log('📧 Attempt 2: XHR method')
-  result = await sendCredentialsEmailXHR(recipientEmail, applicantName, username, password)
-  if (result.success) {
-    return result
-  }
+  result = await sendCredentialsEmailXHR(
+    recipientEmail,
+    applicantName,
+    username,
+    password,
+    options,
+  )
+  if (result.success) return result
 
   // Attempt 3: Improved EmailJS method
   console.log('📧 Attempt 3: Improved EmailJS method')
-  result = await sendCredentialsEmailImproved(recipientEmail, applicantName, username, password)
-  if (result.success) {
-    return result
-  }
+  result = await sendCredentialsEmailImproved(
+    recipientEmail,
+    applicantName,
+    username,
+    password,
+    options,
+  )
+  if (result.success) return result
 
   // All methods failed
   console.error('❌ All email methods failed')
@@ -374,12 +366,12 @@ export const sendDeclineNotificationEmail = async (
         from_email: SENDER_EMAIL,
         to_email: recipientEmail,
         to_name: applicantName,
-        subject: 'Stall Application Status Update',
+        subject: 'Application Status Update',
         message: `Dear ${applicantName},
 
 Thank you for your interest in our stall management system.
 
-We regret to inform you that your stall application has been declined at this time.
+We regret to inform you that your application has been declined at this time.
 
 Reason: ${declineReason}
 
@@ -433,7 +425,6 @@ export const sendDeclineEmailWithRetry = async (
     console.log(`📤 Decline email attempt ${attempt}/${maxRetries}`)
 
     try {
-      // Try primary method first
       const primaryResult = await sendDeclineNotificationEmail(
         recipientEmail,
         recipientName,
@@ -454,8 +445,7 @@ export const sendDeclineEmailWithRetry = async (
           }
         }
 
-        // Wait before retry (exponential backoff)
-        const delay = Math.pow(2, attempt - 1) * 1000 // 1s, 2s, 4s...
+        const delay = Math.pow(2, attempt - 1) * 1000
         console.log(`⏳ Waiting ${delay}ms before next attempt...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
       }
@@ -469,7 +459,6 @@ export const sendDeclineEmailWithRetry = async (
         }
       }
 
-      // Wait before retry
       const delay = Math.pow(2, attempt - 1) * 1000
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
