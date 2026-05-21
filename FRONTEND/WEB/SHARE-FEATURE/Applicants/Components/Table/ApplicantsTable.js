@@ -35,6 +35,11 @@ export default {
       useBlobStorage: true
     }
   },
+  computed: {
+    isVendorApplicant() {
+      return this.applicantType === 'Vendor Applicants'
+    },
+  },
   watch: {
     // When selectedApplicant changes, fetch documents
     selectedApplicant: {
@@ -53,6 +58,11 @@ export default {
     async fetchApplicantDocuments(applicant) {
       this.loadingDocuments = true
       this.resetApplicantDocuments()
+
+      if (this.isVendorApplicant) {
+        this.loadingDocuments = false
+        return
+      }
       
       if (!applicant) {
         this.loadingDocuments = false
@@ -282,6 +292,16 @@ export default {
         maximumFractionDigits: 2,
       }).format(amount)
     },
+    normalizeStatus(status) {
+      const value = String(status || '').trim().toLowerCase()
+      if (!value) return 'Pending'
+      if (value === 'under review' || value === 'under_review') return 'Under Review'
+      if (value === 'approved') return 'Approved'
+      if (value === 'rejected') return 'Rejected'
+      if (value === 'cancelled' || value === 'canceled') return 'Cancelled'
+      if (value === 'pending') return 'Pending'
+      return status
+    },
     getStallTypeColor(priceType) {
       switch (priceType) {
         case 'Fixed Price':
@@ -295,7 +315,8 @@ export default {
       }
     },
     getApplicationStatusColor(status) {
-      switch (status) {
+      const normalized = this.normalizeStatus(status)
+      switch (normalized) {
         case 'Approved':
           return 'success'
         case 'Pending':
@@ -340,7 +361,8 @@ export default {
     },
 
     getStatusIcon(status) {
-      switch (status) {
+      const normalized = this.normalizeStatus(status)
+      switch (normalized) {
         case 'Approved':
           return 'mdi-check-circle'
         case 'Rejected':
@@ -356,7 +378,8 @@ export default {
     },
 
     getStatusColor(status) {
-      switch (status) {
+      const normalized = this.normalizeStatus(status)
+      switch (normalized) {
         case 'Approved':
           return 'success'
         case 'Rejected':
@@ -372,7 +395,8 @@ export default {
     },
 
     getStatusText(status) {
-      switch (status) {
+      const normalized = this.normalizeStatus(status)
+      switch (normalized) {
         case 'Approved':
           return 'APPROVED'
         case 'Rejected':
@@ -391,16 +415,19 @@ export default {
     // Also checks applicant.status field and credential/stallholder existence
     isProcessedStatus(status, applicant = null) {
       const processedStatuses = ['Approved', 'Rejected', 'Under Review', 'Cancelled']
+
+      const normalized = this.normalizeStatus(status)
       
       // Check application_status first
-      if (processedStatuses.includes(status)) {
+      if (processedStatuses.includes(normalized)) {
         return true
       }
       
       // Also check if applicant object has indicators of being processed
       if (applicant) {
         // Check applicant.status field (from applicant table)
-        if (applicant.status && ['approved', 'Approved', 'rejected', 'Rejected'].includes(applicant.status)) {
+        const normalizedApplicantStatus = this.normalizeStatus(applicant.status)
+        if (processedStatuses.includes(normalizedApplicantStatus)) {
           return true
         }
         
@@ -426,15 +453,12 @@ export default {
     // Get the effective status for display (considering multiple status sources)
     getEffectiveStatus(applicant) {
       // Priority: application_status > applicant.status > derived status
-      if (applicant.application_status && applicant.application_status !== 'Pending') {
-        return applicant.application_status
+      if (applicant.application_status && this.normalizeStatus(applicant.application_status) !== 'Pending') {
+        return this.normalizeStatus(applicant.application_status)
       }
       
       if (applicant.status) {
-        // Normalize status to proper case
-        const statusLower = applicant.status.toLowerCase()
-        if (statusLower === 'approved') return 'Approved'
-        if (statusLower === 'rejected') return 'Rejected'
+        return this.normalizeStatus(applicant.status)
       }
       
       // Check for approved indicators
@@ -447,7 +471,7 @@ export default {
         return 'Rejected'
       }
       
-      return applicant.application_status || 'Pending'
+      return this.normalizeStatus(applicant.application_status || 'Pending')
     },
 
     // Handle status badge click for re-check or approve

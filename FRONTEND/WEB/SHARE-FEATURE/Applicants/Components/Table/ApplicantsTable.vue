@@ -250,7 +250,41 @@
             <v-tabs-window-item value="business">
               <div class="info-section" v-if="selectedApplicant?.business_information">
                 <h3 class="section-title">Business Details</h3>
-                <v-row>
+                <v-row v-if="isVendorApplicant">
+                  <v-col cols="12" md="6">
+                    <div class="info-item">
+                      <span class="info-label">Business Name:</span>
+                      <span class="info-value">{{
+                        selectedApplicant.business_information.business_name
+                      }}</span>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="info-item">
+                      <span class="info-label">Business Type:</span>
+                      <span class="info-value">{{
+                        selectedApplicant.business_information.business_type
+                      }}</span>
+                    </div>
+                  </v-col>
+                  <v-col cols="12">
+                    <div class="info-item">
+                      <span class="info-label">Business Description:</span>
+                      <span class="info-value">{{
+                        selectedApplicant.business_information.business_description
+                      }}</span>
+                    </div>
+                  </v-col>
+                  <v-col cols="12">
+                    <div class="info-item">
+                      <span class="info-label">Products:</span>
+                      <span class="info-value">{{
+                        selectedApplicant.business_information.products
+                      }}</span>
+                    </div>
+                  </v-col>
+                </v-row>
+                <v-row v-else>
                   <v-col cols="12" md="6">
                     <div class="info-item">
                       <span class="info-label">Nature of Business:</span>
@@ -455,9 +489,14 @@
                   </v-col>
                 </v-row>
 
+                <div v-if="isVendorApplicant" class="text-body-2 text-grey mt-4">
+                  No documents are required for vendor applications.
+                </div>
+
                 <!-- Document Images -->
-                <h4 class="subsection-title mt-4 mb-2">Uploaded Documents</h4>
-                <v-row>
+                <div v-else>
+                  <h4 class="subsection-title mt-4 mb-2">Uploaded Documents</h4>
+                  <v-row>
                   <!-- Signature -->
                   <v-col cols="12" md="4">
                     <div class="document-card">
@@ -559,6 +598,7 @@
                     </div>
                   </v-col>
                 </v-row>
+                </div>
               </div>
             </v-tabs-window-item>
           </v-tabs-window>

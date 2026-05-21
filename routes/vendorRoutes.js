@@ -1,5 +1,6 @@
 import express from "express";
 import enhancedAuthMiddleware from "../middleware/enhancedAuth.js";
+import { requireRole } from "../middleware/rolePermissions.js";
 import {
   createVendor,
   getAllVendors,
@@ -10,6 +11,9 @@ import {
 } from "../BACKEND/MANAGER/vendors/vendorController.js";
 
 const router = express.Router();
+
+router.use(enhancedAuthMiddleware.authenticateToken);
+router.use(requireRole(["system_administrator", "stall_business_owner", "business_manager", "business_employee"]));
 
 /**
  * Vendor Management Routes
@@ -25,14 +29,14 @@ const router = express.Router();
  * @desc    Create a new vendor
  * @access  Protected
  */
-router.post("/", enhancedAuthMiddleware.authenticateToken, createVendor);
+router.post("/", createVendor);
 
 /**
  * @route   GET /api/vendors
  * @desc    Get all vendors
  * @access  Protected
  */
-router.get("/", enhancedAuthMiddleware.authenticateToken, getAllVendors);
+router.get("/", getAllVendors);
 
 /**
  * @route   GET /api/vendors/locations
@@ -41,7 +45,6 @@ router.get("/", enhancedAuthMiddleware.authenticateToken, getAllVendors);
  */
 router.get(
   "/locations",
-  enhancedAuthMiddleware.authenticateToken,
   getAssignedLocations,
 );
 
@@ -50,20 +53,20 @@ router.get(
  * @desc    Get vendor by ID
  * @access  Protected
  */
-router.get("/:id", enhancedAuthMiddleware.authenticateToken, getVendorById);
+router.get("/:id", getVendorById);
 
 /**
  * @route   PUT /api/vendors/:id
  * @desc    Update vendor by ID
  * @access  Protected
  */
-router.put("/:id", enhancedAuthMiddleware.authenticateToken, updateVendor);
+router.put("/:id", updateVendor);
 
 /**
  * @route   DELETE /api/vendors/:id
  * @desc    Delete vendor by ID
  * @access  Protected
  */
-router.delete("/:id", enhancedAuthMiddleware.authenticateToken, deleteVendor);
+router.delete("/:id", deleteVendor);
 
 export default router;

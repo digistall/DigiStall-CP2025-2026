@@ -52,6 +52,10 @@
           <i class="mdi mdi-file-document-edit"></i>
           <span>Apply for a Stall</span>
         </button>
+        <button class="apply-btn secondary-btn" @click="openVendorApplicationForm">
+          <i class="mdi mdi-storefront-outline"></i>
+          <span>Apply as Vendor</span>
+        </button>
       </div>
       
       <div class="trust-badges animate-on-scroll animate-delay-5">
@@ -81,6 +85,11 @@
     <!-- StallApplicationContainer for General Application -->
     <StallApplicationContainer v-if="showApplyForm" :stall="generalStallInfo" :showForm="showApplyForm"
       @close="closeApplyForm" />
+    <VendorApplicationContainer
+      v-if="showVendorApplyForm"
+      :showForm="showVendorApplyForm"
+      @close="closeVendorApplyForm"
+    />
   </section>
 </template>
 

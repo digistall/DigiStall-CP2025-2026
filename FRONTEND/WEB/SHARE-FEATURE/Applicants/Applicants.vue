@@ -7,8 +7,8 @@
         <div class="feature-content-inner">
           <!-- Standardized Loading Overlay -->
           <LoadingOverlay
-            :loading="loading && currentApplicantType === 'Stall Applicants'"
-            text="Loading stall applicants..."
+            :loading="loading"
+            :text="loadingText"
             :full-page="false"
           />
 
@@ -45,13 +45,10 @@
               />
 
               <!-- Error State -->
-              <div
-                v-if="error && currentApplicantType === 'Stall Applicants'"
-                class="text-center py-8"
-              >
+              <div v-if="error" class="text-center py-8">
                 <v-icon color="error" size="64">mdi-alert-circle</v-icon>
                 <p class="mt-4 text-h6 error--text">{{ error }}</p>
-                <v-btn @click="refreshStallApplicants" color="primary" class="mt-4">
+                <v-btn @click="refreshApplicants" color="primary" class="mt-4">
                   <v-icon left>mdi-refresh</v-icon>
                   Retry
                 </v-btn>
@@ -65,7 +62,7 @@
                 @accept="handleAccept"
                 @decline="handleDecline"
                 @recheck="handleRecheck"
-                @refresh="refreshStallApplicants"
+                @refresh="refreshApplicants"
               />
             </v-col>
           </v-row>
@@ -75,6 +72,7 @@
       <!-- Approve Applicant Modal -->
       <ApproveApplicants
         :applicant="selectedApplicant"
+        :applicant-type="currentApplicantType"
         :show="showApproveModal"
         @close="closeApproveModal"
         @approved="onApplicantApproved"
@@ -83,6 +81,7 @@
       <!-- Decline Applicant Modal -->
       <DeclineApplicants
         :applicant="selectedApplicant"
+        :applicant-type="currentApplicantType"
         :show="showDeclineModal"
         @close="closeDeclineModal"
         @declined="onApplicantDeclined"

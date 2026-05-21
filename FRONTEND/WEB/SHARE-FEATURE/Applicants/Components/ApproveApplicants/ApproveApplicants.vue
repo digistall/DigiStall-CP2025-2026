@@ -23,12 +23,19 @@
           <p class="text-body-1 mb-4">
             Are you sure you want to approve this applicant?
           </p>
-          <p v-if="applicant?.has_credentials" class="text-body-2 text-success font-weight-medium">
+          <p
+            v-if="applicantType !== 'Vendor Applicants' && applicant?.has_credentials"
+            class="text-body-2 text-success font-weight-medium"
+          >
             <v-icon size="small" color="success" class="mr-1">mdi-account-check</v-icon>
             This applicant already has a mobile account. Approving will assign the stall directly.
           </p>
           <p v-else class="text-body-2 text-grey">
-            Login credentials will be generated and sent to the applicant's email address.
+            {{
+              applicantType === 'Vendor Applicants'
+                ? "A vendor account will be created and credentials will be sent by email."
+                : "Login credentials will be generated and sent to the applicant's email address."
+            }}
           </p>
         </div>
 
@@ -47,7 +54,10 @@
         <div v-if="approved && !processing" class="text-center">
           <v-icon size="48" color="primary" class="mb-3">mdi-check-circle</v-icon>
           <p class="text-h6 text-primary mb-2">Applicant Approved!</p>
-          <div v-if="credentialsAlreadyExisted" class="bg-grey-lighten-4 pa-3 rounded mb-3">
+          <div
+            v-if="applicantType !== 'Vendor Applicants' && credentialsAlreadyExisted"
+            class="bg-grey-lighten-4 pa-3 rounded mb-3"
+          >
             <p class="text-body-2 text-success">
               <v-icon size="small" color="success" class="mr-1">mdi-account-check</v-icon>
               Stall assigned using existing mobile account.
