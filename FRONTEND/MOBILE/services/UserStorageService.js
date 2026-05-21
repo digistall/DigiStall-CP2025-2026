@@ -148,7 +148,11 @@ class UserStorageService {
   static async isLoggedIn() {
     try {
       const userData = await this.getUserData();
-      return userData && userData.user && userData.user.applicant_id;
+      return (
+        (userData && userData.user && userData.user.applicant_id) ||
+        userData?.userType === 'vendor' ||
+        !!userData?.vendor
+      );
     } catch (error) {
       console.error('Error checking login status:', error);
       return false;

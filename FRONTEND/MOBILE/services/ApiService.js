@@ -76,6 +76,40 @@ class ApiService {
     }
   }
 
+  // Vendor login function
+  static async vendorLogin(email, password) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      console.log('🔄 Attempting vendor login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.VENDOR_LOGIN}`);
+
+      const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.VENDOR_LOGIN}`, {
+        method: 'POST',
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Vendor login failed');
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        token: data.token,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error('❌ Vendor login API error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+      };
+    }
+  }
+
   // Mobile staff login function (for Inspector/Collector)
   static async mobileStaffLogin(username, password) {
     try {

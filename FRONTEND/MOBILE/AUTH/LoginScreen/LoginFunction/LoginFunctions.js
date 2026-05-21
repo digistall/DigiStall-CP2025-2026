@@ -122,8 +122,50 @@ export const handleLogin = async (
       return; // Exit after successful staff login
     }
 
-    // Staff login failed, try regular user login (this is expected for stallholders)
-    console.log('ℹ️ Not a staff user, trying stallholder login...');
+    // Staff login failed, try vendor login next
+    console.log('ℹ️ Not a staff user, trying vendor login...');
+    const vendorResponse = await ApiService.vendorLogin(username, password);
+
+    if (vendorResponse.success) {
+      if (setLoadingState) {
+        setLoadingState({ step: 2, message: 'Loading your profile...', progress: 60 });
+      }
+
+      const vendorData = {
+        vendor: vendorResponse.data?.vendor,
+        business: vendorResponse.data?.business || null,
+        token: vendorResponse.token,
+        userType: 'vendor'
+      };
+
+      await UserStorageService.saveUserData(vendorData);
+
+      if (vendorResponse.token) {
+        await UserStorageService.saveAuthToken(vendorResponse.token);
+      }
+
+      if (setLoadingState) {
+        setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
+      }
+
+      setIsLoading(false);
+
+      const vendorName = vendorResponse.data?.vendor?.full_name || 'Vendor';
+
+      if (navigation) {
+        navigation.navigate('LoadingScreen', {
+          userName: vendorName,
+          isStallholder: false,
+          stallNo: null,
+          nextScreen: 'VendorHome',
+          loadingDuration: 2500
+        });
+      }
+      return;
+    }
+
+    // Vendor login failed, try stallholder login
+    console.log('ℹ️ Not a vendor user, trying stallholder login...');
     const response = await ApiService.mobileLogin(username, password);
 
     if (response.success) {
