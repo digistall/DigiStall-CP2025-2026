@@ -92,7 +92,7 @@
         <form @submit.prevent>
           <div class="field-grid-2col">
             <label>
-              First Name<span class="required-mark">*</span>
+              <span>First Name<span class="required-mark">*</span></span>
               <input
                 type="text"
                 v-model="form.first_name"
@@ -111,7 +111,7 @@
             </label>
 
             <label>
-              Last Name<span class="required-mark">*</span>
+              <span>Last Name<span class="required-mark">*</span></span>
               <input
                 type="text"
                 v-model="form.last_name"
@@ -130,7 +130,7 @@
             </label>
 
             <label>
-              Contact Number<span class="required-mark">*</span>
+              <span>Contact Number<span class="required-mark">*</span></span>
               <input
                 type="tel"
                 v-model="form.contact_number"
@@ -141,7 +141,7 @@
             </label>
 
             <label>
-              Email Address<span class="required-mark">*</span>
+              <span>Email Address<span class="required-mark">*</span></span>
               <input
                 type="email"
                 v-model="form.email"
@@ -152,7 +152,7 @@
             </label>
 
             <label>
-              Date of Birth<span class="required-mark">*</span>
+              <span>Date of Birth<span class="required-mark">*</span></span>
               <input
                 type="date"
                 v-model="form.birthdate"
@@ -164,7 +164,7 @@
             </label>
 
             <label>
-              Gender<span class="required-mark">*</span>
+              <span>Gender<span class="required-mark">*</span></span>
               <select v-model="form.gender" :class="{ 'input-error': errors.gender }">
                 <option disabled value="">Select gender</option>
                 <option v-for="option in genderOptions" :key="option" :value="option">{{ option }}</option>
@@ -172,7 +172,7 @@
             </label>
 
             <label>
-              Civil Status<span class="required-mark">*</span>
+              <span>Civil Status<span class="required-mark">*</span></span>
               <select v-model="form.civil_status" :class="{ 'input-error': errors.civil_status }">
                 <option disabled value="">Select civil status</option>
                 <option v-for="option in civilStatusOptions" :key="option" :value="option">{{ option }}</option>
@@ -180,7 +180,7 @@
             </label>
 
             <label>
-              Address<span class="required-mark">*</span>
+              <span>Address<span class="required-mark">*</span></span>
               <input
                 type="text"
                 v-model="form.address"
@@ -218,7 +218,7 @@
         <form @submit.prevent>
           <div class="field-grid-2col">
             <label>
-              Business Name<span class="required-mark">*</span>
+              <span>Business Name<span class="required-mark">*</span></span>
               <input
                 type="text"
                 v-model="form.business_name"
@@ -228,7 +228,7 @@
             </label>
 
             <label>
-              Business Type<span class="required-mark">*</span>
+              <span>Business Type<span class="required-mark">*</span></span>
               <input
                 type="text"
                 v-model="form.business_type"
@@ -239,7 +239,7 @@
           </div>
 
           <label>
-            Business Description<span class="required-mark">*</span>
+            <span>Business Description<span class="required-mark">*</span></span>
             <textarea
               v-model="form.business_description"
               :class="{ 'input-error': errors.business_description }"
@@ -248,7 +248,7 @@
           </label>
 
           <label>
-            Products / Services<span class="required-mark">*</span>
+            <span>Products / Services<span class="required-mark">*</span></span>
             <textarea
               v-model="form.products"
               :class="{ 'input-error': errors.products }"
@@ -764,3 +764,5 @@ export default {
   opacity: 0;
 }
 </style>
+
+

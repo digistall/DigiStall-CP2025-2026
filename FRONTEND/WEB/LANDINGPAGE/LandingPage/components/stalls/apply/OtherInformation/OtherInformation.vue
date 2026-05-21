@@ -20,7 +20,7 @@
             <form @submit.prevent>
                 <!-- Signature Upload -->
                 <label>
-                    Signature of Applicant: <span class="required-mark">*</span>
+                    <span>Signature of Applicant: <span class="required-mark">\*</span></span>
                     <input type="file" accept="image/*" @change="onFileChange('applicantSignature', $event)"
                         :class="{ 'input-error': errors.applicantSignature }" />
                     <small class="input-hint">Upload a clear image of your handwritten signature</small>
@@ -32,7 +32,7 @@
 
                 <!-- House Location Upload -->
                 <label>
-                    House Sketch / Location Map: <span class="required-mark">*</span>
+                    <span>House Sketch / Location Map: <span class="required-mark">\*</span></span>
                     <input type="file" accept="image/*" @change="onFileChange('applicantLocation', $event)"
                         :class="{ 'input-error': errors.applicantLocation }" />
                     <small class="input-hint">Upload a sketch or photo map of your house location</small>
@@ -44,7 +44,7 @@
 
                 <!-- Valid ID Upload -->
                 <label>
-                    Valid Government-Issued ID: <span class="required-mark">*</span>
+                    <span>Valid Government-Issued ID: <span class="required-mark">\*</span></span>
                     <input type="file" accept="image/*" @change="onFileChange('applicantValidID', $event)"
                         :class="{ 'input-error': errors.applicantValidID }" />
                     <small class="input-hint">Upload a clear photo of your government-issued ID</small>
@@ -56,7 +56,7 @@
 
                 <!-- Email Address -->
                 <label>
-                    Email Address: <span class="required-mark">*</span>
+                    <span>Email Address: <span class="required-mark">\*</span></span>
                     <input type="email" v-model="emailAddress" placeholder="example@email.com"
                         :class="{ 'input-error': errors.emailAddress }" />
                     <small class="input-hint">We'll send your login credentials to this email upon approval</small>

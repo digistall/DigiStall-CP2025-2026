@@ -14,7 +14,9 @@
     "db:test": "node scripts/test-db-connection.js",
     "db:switch": "node scripts/switch-env.js",
     "db:local": "node scripts/switch-env.js local",
-    "db:cloud": "node scripts/switch-env.js cloud"
+    "db:cloud": "node scripts/switch-env.js cloud",
+    "db:restore:local": "node DATABASE/restore_backup_to_localhost.cjs",
+    "db:backup:cloud-to-local": "node DATABASE/backup_cloud_to_localhost.cjs"
   },
   "keywords": [
     "stall-management",

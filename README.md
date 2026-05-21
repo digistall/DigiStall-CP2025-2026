@@ -194,6 +194,8 @@ npm run dev
 - `npm run db:switch` - Display current database configuration
 - `npm run db:local` - Switch to local MySQL database (localhost:3301)
 - `npm run db:cloud` - Switch to DigitalOcean cloud database
+- `npm run db:restore:local` - Restore latest/full backup SQL into localhost MySQL (.env.local)
+- `npm run db:backup:cloud-to-local` - Create cloud backup then restore it directly to localhost MySQL
 
 ## Project Structure
 
