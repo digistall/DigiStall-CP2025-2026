@@ -1,8 +1,13 @@
 import '@/assets/css/scrollable-tables.css'
 import ToastNotification from '@common/ToastNotification/ToastNotification.vue'
+import { useAvatar } from '../../../../../utils/avatarHelper.js'
 
 export default {
   name: 'OnlinePayments',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   components: {
     ToastNotification
   },

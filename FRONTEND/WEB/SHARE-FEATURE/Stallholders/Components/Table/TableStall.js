@@ -4,6 +4,7 @@ import ExcelImport from '../ExcelImport/ExcelImport.vue'
 import DocumentCustomization from '../DocumentCustomization/DocumentCustomization.vue'
 import AddStallholderChoiceModal from '../ChoicesModal/AddStallholderChoiceModal.vue'
 import '@/assets/css/scrollable-tables.css'
+import { useAvatar } from '../../../../utils/avatarHelper.js'
 
 export default {
   name: 'TableStall',
@@ -26,6 +27,10 @@ export default {
       type: [Number, String],
       default: null
     }
+  },
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
   },
   data() {
     return {

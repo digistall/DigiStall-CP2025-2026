@@ -18,6 +18,8 @@ import PrivacyModal from "./components/PrivacyComponents/PrivacyModal";
 import ChangePassword from "./components/ChangePasswordComponents/ChangePassword";
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import ApiService from "../../../../services/ApiService";
+import { Image } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -28,6 +30,8 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [imageError, setImageError] = useState(false);
   const { theme, themeMode, changeTheme } = useTheme();
 
   // Load user data from storage
@@ -38,6 +42,12 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
         if (storedUserData) {
           setUserData(storedUserData);
           console.log("Settings - Loaded user data:", storedUserData);
+          
+          if (storedUserData.user?.stallholder_id) {
+            const uri = await ApiService.getFaceImageUri(storedUserData.user.stallholder_id);
+            // Append timestamp to bust cache if they somehow changed it, though it's one-time
+            setAvatarUri(`${uri}?t=${new Date().getTime()}`);
+          }
         }
       } catch (error) {
         console.error('Settings - Error loading user data:', error);
@@ -156,11 +166,19 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
             onPress={handleViewProfile}
             style={themedStyles.profileRow}
           >
-            <View style={themedStyles.avatarContainer}>
-              <Text style={themedStyles.avatarText}>
-                {getDisplayInitials(getUserDisplayName())}
-              </Text>
-            </View>
+            {avatarUri && !imageError ? (
+              <Image 
+                source={{ uri: avatarUri }} 
+                style={themedStyles.avatarContainer}
+                onError={() => setImageError(true)} 
+              />
+            ) : (
+              <View style={themedStyles.avatarContainer}>
+                <Text style={themedStyles.avatarText}>
+                  {getDisplayInitials(getUserDisplayName())}
+                </Text>
+              </View>
+            )}
             <View style={themedStyles.profileInfo}>
               <Text style={themedStyles.profileName}>
                 {getUserDisplayName()}

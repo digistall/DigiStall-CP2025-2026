@@ -1,5 +1,11 @@
+import { useAvatar } from '../../../../../utils/avatarHelper.js'
+
 export default {
   name: 'PenaltyPayments',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   emits: ['loading'],
   data() {
     return {

@@ -51,8 +51,15 @@
             </div>
             <div class="table-cell vendor-col">
               <div class="vendor-info">
-                <div class="avatar vendor-avatar">
-                  {{ (payment.vendor_name || 'N/A').charAt(0) }}
+                <img 
+                  v-if="payment.vendor_id"
+                  :src="getAvatarUrl(payment.vendor_id)"
+                  @error="handleAvatarError"
+                  class="avatar-img"
+                  alt="Avatar"
+                />
+                <div class="avatar vendor-avatar avatar-initials" :style="{ display: payment.vendor_id ? 'none' : 'flex' }">
+                  {{ getInitials(payment.vendor_name || 'N/A') }}
                 </div>
                 <span class="name-text">{{ payment.vendor_name || 'N/A' }}</span>
               </div>
@@ -208,7 +215,20 @@
             <v-col cols="12" md="6">
               <div class="detail-item">
                 <span class="detail-label">Vendor's Name:</span>
-                <span class="detail-value">{{ selectedPayment.vendor_name }}</span>
+                <div class="d-flex align-center">
+                  <img 
+                    v-if="selectedPayment.vendor_id"
+                    :src="getAvatarUrl(selectedPayment.vendor_id)"
+                    @error="handleAvatarError"
+                    class="avatar-img mr-2"
+                    alt="Avatar"
+                    style="width: 32px; height: 32px;"
+                  />
+                  <div class="avatar vendor-avatar avatar-initials mr-2" :style="{ display: selectedPayment.vendor_id ? 'none' : 'flex', width: '32px', height: '32px' }">
+                    {{ getInitials(selectedPayment.vendor_name || 'N/A') }}
+                  </div>
+                  <span class="detail-value">{{ selectedPayment.vendor_name }}</span>
+                </div>
               </div>
             </v-col>
             <v-col cols="12" md="6">

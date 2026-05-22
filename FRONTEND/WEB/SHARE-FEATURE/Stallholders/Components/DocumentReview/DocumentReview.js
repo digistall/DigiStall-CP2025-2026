@@ -1,7 +1,12 @@
 import { apiClient } from '@services/apiClient.js'
+import { useAvatar } from '../../../../../utils/avatarHelper.js'
 
 export default {
   name: 'DocumentReview',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   props: {
     isVisible: {
       type: Boolean,

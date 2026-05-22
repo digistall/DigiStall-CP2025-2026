@@ -36,7 +36,14 @@
             </td>
             <td class="compliance-name-cell">
               <div class="compliance-name-wrapper">
-                <div class="compliance-avatar">
+                <img 
+                  v-if="compliance.stallholder_id"
+                  :src="getAvatarUrl(compliance.stallholder_id)"
+                  @error="handleAvatarError"
+                  class="avatar-img"
+                  alt="Avatar"
+                />
+                <div class="compliance-avatar avatar-initials" :style="{ display: compliance.stallholder_id ? 'none' : 'flex' }">
                   {{ getInitials(compliance.stallholder || 'N/A') }}
                 </div>
                 <span>{{ compliance.stallholder || 'N/A' }}</span>

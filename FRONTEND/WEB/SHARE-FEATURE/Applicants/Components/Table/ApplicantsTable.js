@@ -1,3 +1,5 @@
+import { useAvatar } from '../../../../utils/avatarHelper.js';
+
 export default {
   name: 'VendorApplicantsTable',
   props: {
@@ -34,6 +36,10 @@ export default {
       // Flag to toggle between BLOB API and legacy file system
       useBlobStorage: true
     }
+  },
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
   },
   computed: {
     isVendorApplicant() {

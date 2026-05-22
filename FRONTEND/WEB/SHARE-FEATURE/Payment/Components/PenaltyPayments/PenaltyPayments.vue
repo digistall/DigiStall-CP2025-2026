@@ -64,8 +64,15 @@
               >
                 <td class="name-cell">
                   <div class="stallholder-info">
-                    <div class="avatar">
-                      {{ (payment.stallholderName || 'N/A').charAt(0) }}
+                    <img 
+                      v-if="payment.stallholderId"
+                      :src="getAvatarUrl(payment.stallholderId)"
+                      @error="handleAvatarError"
+                      class="avatar-img"
+                      alt="Avatar"
+                    />
+                    <div class="avatar avatar-initials" :style="{ display: payment.stallholderId ? 'none' : 'flex' }">
+                      {{ getInitials(payment.stallholderName || 'N/A') }}
                     </div>
                     <div class="name-details">
                       <span class="name">{{ payment.stallholderName || 'N/A' }}</span>
@@ -124,9 +131,22 @@
                 <span class="detail-label">Payment ID:</span>
                 <span class="detail-value">{{ selectedPayment.penaltyPaymentId }}</span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">Stallholder Name:</span>
-                <span class="detail-value">{{ selectedPayment.stallholderName }}</span>
+              <div class="detail-item" style="align-items: center; display: flex; gap: 12px; flex-direction: row;">
+                <span class="detail-label" style="width: 140px; margin-bottom: 0;">Stallholder Name:</span>
+                <div class="d-flex align-center">
+                  <img 
+                    v-if="selectedPayment.stallholderId"
+                    :src="getAvatarUrl(selectedPayment.stallholderId)"
+                    @error="handleAvatarError"
+                    class="avatar-img mr-2"
+                    alt="Avatar"
+                    style="width: 32px; height: 32px;"
+                  />
+                  <div class="avatar avatar-initials mr-2" :style="{ display: selectedPayment.stallholderId ? 'none' : 'flex', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }">
+                    {{ getInitials(selectedPayment.stallholderName) }}
+                  </div>
+                  <span class="detail-value" style="margin-left: 0;">{{ selectedPayment.stallholderName }}</span>
+                </div>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Violation Type:</span>

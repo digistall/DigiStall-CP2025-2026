@@ -1,5 +1,6 @@
 import participantsService from '@services/participantsService.js'
 import UniversalPopup from '@common/UniversalPopup/UniversalPopup.vue'
+import { useAvatar } from '../../../../../utils/avatarHelper.js'
 
 export default {
   name: 'StallParticipants',
@@ -13,6 +14,10 @@ export default {
     },
   },
   emits: ['close'],
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   data() {
     return {
       loading: false,
