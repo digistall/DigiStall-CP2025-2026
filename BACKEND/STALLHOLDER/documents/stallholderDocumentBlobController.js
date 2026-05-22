@@ -145,7 +145,7 @@ export async function uploadStallholderDocumentBlob(req, res) {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: parseInt(stallholder_id),
-        staffName: req.user?.username || req.user?.fullName || 'Stallholder',
+        staffName: req.user?.fullName || req.user?.username || 'Stallholder',
         branchId: null,
         actionType: isUpdate ? 'UPDATE' : 'CREATE',
         actionDescription: isUpdate
@@ -530,7 +530,7 @@ export async function getStallholderDocuments(req, res) {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: parseInt(stallholder_id),
-        staffName: req.user?.username || req.user?.fullName || 'Stallholder',
+        staffName: req.user?.fullName || req.user?.username || 'Stallholder',
         branchId: null,
         actionType: 'VIEW',
         actionDescription: `Viewed documents list (${transformedDocs.length} document(s))`,

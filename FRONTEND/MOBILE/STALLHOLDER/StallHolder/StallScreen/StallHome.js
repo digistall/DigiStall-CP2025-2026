@@ -35,7 +35,7 @@ const { width, height } = Dimensions.get("window");
 const StallHome = ({ navigation }) => {
   // Get theme from context
   const { theme, isDarkMode } = useTheme();
-  
+
   // Single source of truth for current screen
   const [currentScreen, setCurrentScreen] = useState("stall");
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -48,28 +48,28 @@ const StallHome = ({ navigation }) => {
       console.log('⏳ Logout already in progress, ignoring...');
       return;
     }
-    
+
     // Close sidebar first
     setSidebarVisible(false);
-    
+
     // Show logout loading screen
     setIsLoggingOut(true);
-    
+
     try {
       // Get user data before clearing
       const userData = await UserStorageService.getUserData();
-      const token = userData?.token;
+      const token = await UserStorageService.getAuthToken();
       const userId = userData?.user?.applicant_id || userData?.user?.id;
-      
+
       // Call logout API to update last_logout in database
       if (token) {
         await ApiService.mobileLogout(token, userId);
         console.log('✅ Logout API called - last_logout updated');
       }
-      
+
       // Add small delay to show the animation (1.5 seconds)
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Clear local storage
       await UserStorageService.clearUserData();
     } catch (error) {
@@ -78,7 +78,7 @@ const StallHome = ({ navigation }) => {
     } finally {
       setIsLoggingOut(false);
     }
-    
+
     navigation.navigate("LoginScreen");
   };
 
@@ -241,7 +241,7 @@ const StallHome = ({ navigation }) => {
         />
 
         {/* Logout Loading Screen */}
-        <LogoutLoadingScreen 
+        <LogoutLoadingScreen
           visible={isLoggingOut}
           message="Logging out..."
           subMessage="Please wait while we securely log you out"

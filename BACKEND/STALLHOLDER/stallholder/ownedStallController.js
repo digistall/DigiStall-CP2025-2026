@@ -212,7 +212,7 @@ export const getOwnedStalls = async (req, res) => {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: applicantId,
-        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
         branchId: null,
         actionType: 'VIEW',
         actionDescription: `Viewed dashboard (${enrichedStalls.length} stall(s) across ${branchList.length} branch(es))`,

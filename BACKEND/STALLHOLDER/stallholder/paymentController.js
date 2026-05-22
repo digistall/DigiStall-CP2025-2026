@@ -255,7 +255,7 @@ export const getAllPaymentRecords = async (req, res) => {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: lookupId,
-        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
         branchId: null,
         actionType: 'VIEW',
         actionDescription: `Viewed payment receipt / history (${formattedPayments.length} record(s))`,
@@ -358,7 +358,7 @@ export const getPaymentSummary = async (req, res) => {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: lookupId,
-        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
         branchId: null,
         actionType: 'VIEW',
         actionDescription: 'Viewed payment summary',
@@ -639,7 +639,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: applicantId,
-        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
         branchId: null,
         actionType: 'VIEW',
         actionDescription: `Viewed monthly payment status / initiated payment screen (${currentMonthName})`,

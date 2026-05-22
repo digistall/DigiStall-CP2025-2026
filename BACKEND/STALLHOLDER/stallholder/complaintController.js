@@ -119,7 +119,7 @@ export const submitComplaint = async (req, res) => {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: stallholderId,
-        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
         branchId: finalBranchId || null,
         actionType: 'CREATE',
         actionDescription: `Submitted complaint: "${subject}" (Type: ${complaint_type}, ID: ${result.complaint_id})`,
@@ -216,7 +216,7 @@ export const getMyComplaints = async (req, res) => {
       await logStaffActivity({
         staffType: 'stallholder',
         staffId: stallholderId,
-        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
         branchId: null,
         actionType: 'VIEW',
         actionDescription: `Viewed complaint status (${complaints.length} complaint(s))`,

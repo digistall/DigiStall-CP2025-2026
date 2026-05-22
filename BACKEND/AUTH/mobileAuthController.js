@@ -250,6 +250,7 @@ export const mobileLogin = async (req, res) => {
         userId: decryptedUser.applicant_id,
         username: decryptedUser.user_name,
         email: decryptedUser.applicant_email,
+        fullName: decryptedUser.applicant_full_name,
         userType: 'mobile_user',
         registrationId: decryptedUser.registrationid,
         stallholderId: stallholderData.length > 0 ? stallholderData[0].stallholder_id : null
@@ -548,9 +549,10 @@ export const mobileLogout = async (req, res) => {
       // Log stallholder logout activity (mobile app)
       try {
         const [stallholderRows] = await connection.execute(
-          `SELECT stallholder_id, full_name, stallholder_name, branch_id
+          `SELECT stallholder_id, full_name, branch_id
            FROM stallholder
-           WHERE applicant_id = ? OR mobile_user_id = ?`,
+           WHERE applicant_id = ? OR mobile_user_id = ?
+           LIMIT 1`,
           [applicantId, applicantId]
         );
         const stallholderData = stallholderRows || [];
@@ -581,7 +583,7 @@ export const mobileLogout = async (req, res) => {
           await logStaffActivity({
             staffType: 'stallholder',
             staffId: applicantId,
-            staffName: req.user?.username || 'Unknown',
+            staffName: req.user?.fullName || req.user?.username || 'Unknown',
             branchId: null,
             actionType: 'LOGOUT',
             actionDescription: 'Mobile user logged out from mobile app',
