@@ -42,6 +42,7 @@ export default {
       showInfoDialog: false,
       selectedStallholder: null,
       activeTab: 'personal',
+      avatarBuster: Date.now(),
 
       // Violation history state
       violationHistory: [],
@@ -216,6 +217,7 @@ export default {
         this.$emit('data-ready') // Notify parent
       } finally {
         this.loading = false
+        this.avatarBuster = Date.now() // Refresh avatars after data load
         this.$emit('loading-change', false) // Notify parent
       }
     },
@@ -226,6 +228,7 @@ export default {
       this.activeTab = 'personal'
       this.violationHistory = [] // Reset violations
       this.stallholderDocuments = [] // Reset documents
+      this.avatarBuster = Date.now() // Refresh avatar
       this.fetchViolationHistory(stallholder.stallholder_id)
     },
 

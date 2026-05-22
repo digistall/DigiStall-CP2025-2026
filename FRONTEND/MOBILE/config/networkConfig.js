@@ -10,11 +10,11 @@ export const API_CONFIG = {
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
     // LOCAL DEVELOPMENT - at top for local testing with Expo Go
-    // Your current local IP: 192.168.100.241 (verified: Feb 26, 2026)
+    // Your current local IP: 178.16.100.6 (verified: May 22, 2026)
     
-    'http://192.168.100.241:5001',  // Local Backend-Mobile API (primary)
-    'http://192.168.100.241:3002',  // Local Backend-Web API (fallback)
-    'http://192.168.100.241:3001',  // Alternative local port
+    'http://178.16.100.6:5001',  // Local Backend-Mobile API (primary)
+    'http://178.16.100.6:3002',  // Local Backend-Web API (fallback)
+    'http://178.16.100.6:3001',  // Alternative local port
     'http://localhost:5001',        // Only works on emulator
     'http://localhost:3002',        // Only works on emulator
     'http://localhost:3001',        // Only works on emulator

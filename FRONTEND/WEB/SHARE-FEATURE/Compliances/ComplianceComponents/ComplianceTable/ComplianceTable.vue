@@ -38,7 +38,7 @@
               <div class="compliance-name-wrapper">
                 <img 
                   v-if="compliance.stallholder_id"
-                  :src="getAvatarUrl(compliance.stallholder_id)"
+                  :src="getAvatarUrl(compliance.stallholder_id) + '?t=' + avatarBuster"
                   @error="handleAvatarError"
                   class="avatar-img"
                   alt="Avatar"

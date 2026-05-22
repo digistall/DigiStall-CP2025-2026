@@ -6,6 +6,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import NetInfo from '@react-native-community/netinfo';
+import { useFonts } from 'expo-font';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Theme Provider
 import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
@@ -39,6 +41,11 @@ const AppLoadingScreen = () => (
 );
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+    ...MaterialIcons.font,
+    ...MaterialCommunityIcons.font,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('LoginScreen');
   const [userData, setUserData] = useState(null);
@@ -194,7 +201,7 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !fontsLoaded) {
     return <AppLoadingScreen />;
   }
 

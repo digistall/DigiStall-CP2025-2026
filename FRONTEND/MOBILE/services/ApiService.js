@@ -2540,6 +2540,55 @@ class ApiService {
     }
   }
 
+  // Validate face verification photo only (Step 1 pre-validation)
+  static async validateFaceImage(stallholderId, imageUri) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}/api/mobile/face/upload`;
+      
+      console.log('🧪 Pre-validating face image (validate_only) to:', url);
+
+      const formData = new FormData();
+      formData.append('stallholder_id', stallholderId);
+      formData.append('validate_only', 'true');
+      
+      const filename = imageUri.split('/').pop() || 'face.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      
+      formData.append('file', {
+        uri: imageUri,
+        name: filename,
+        type
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Face validation failed');
+      }
+
+      return {
+        success: true,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Validate Face Image Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
   // Upload face verification photo
   static async uploadFaceVerification(stallholderId, imageUri) {
     try {
