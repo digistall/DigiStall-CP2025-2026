@@ -43,9 +43,9 @@ export const logAppAccessScreen = async (req, res) => {
       staffType: 'stallholder',
       staffId: stallholderId,
       staffName:
-        userData.username ||
         userData.fullName ||
         userData.full_name ||
+        userData.username ||
         'Stallholder',
       branchId: null,
       actionType: 'VIEW',

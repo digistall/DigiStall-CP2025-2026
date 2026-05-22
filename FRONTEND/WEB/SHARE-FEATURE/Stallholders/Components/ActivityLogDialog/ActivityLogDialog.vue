@@ -115,6 +115,48 @@
                             class="mb-4"
                             @update:model-value="filterLogs"
                           ></v-select>
+
+                          <v-select
+                            v-model="filters.stallholderUserType"
+                            :items="stallholderUserTypeOptions"
+                            item-title="title"
+                            item-value="value"
+                            label="User Type"
+                            variant="outlined"
+                            density="compact"
+                            clearable
+                            hide-details
+                            class="mb-4"
+                            @update:model-value="filterLogs"
+                          ></v-select>
+
+                          <v-select
+                            v-model="filters.stallholderType"
+                            :items="stallholderTypeOptions"
+                            item-title="title"
+                            item-value="value"
+                            label="Action Category"
+                            variant="outlined"
+                            density="compact"
+                            clearable
+                            hide-details
+                            class="mb-4"
+                            @update:model-value="filterLogs"
+                          ></v-select>
+
+                          <v-select
+                            v-model="filters.status"
+                            :items="statusOptions"
+                            item-title="title"
+                            item-value="value"
+                            label="Status"
+                            variant="outlined"
+                            density="compact"
+                            clearable
+                            hide-details
+                            class="mb-4"
+                            @update:model-value="filterLogs"
+                          ></v-select>
                           
                           <!-- Start Date with Date Picker -->
                           <div class="mb-4">
@@ -219,7 +261,6 @@
               <tr>
                 <th>Staff Type</th>
                 <th>Staff Name</th>
-                <th>Stallholder User Type</th>
                 <th>Stallholder Type</th>
                 <th>Action</th>
                 <th>Description</th>
@@ -231,13 +272,13 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="10" class="loading-cell">
+                <td colspan="9" class="loading-cell">
                   <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
                   <span class="ml-3">Loading activities...</span>
                 </td>
               </tr>
               <tr v-else-if="filteredLogs.length === 0">
-                <td colspan="10" class="empty-cell">
+                <td colspan="9" class="empty-cell">
                   <v-icon size="48" color="grey-lighten-1">mdi-history</v-icon>
                   <p class="empty-title">No Activity Logs Found</p>
                   <p class="empty-subtitle">Activity logs will appear here when stallholders perform actions</p>
@@ -256,17 +297,7 @@
                   </v-chip>
                 </td>
                 <td class="staff-name">{{ item.staff_name || 'Unknown' }}</td>
-                <!-- Stallholder User Type: from DB or derived -->
-                <td>
-                  <v-chip
-                    color="deep-orange"
-                    size="small"
-                    variant="tonal"
-                  >
-                    <v-icon size="14" class="mr-1">mdi-cellphone</v-icon>
-                    {{ item.stallholder_user_type || getStallholderUserType(item) }}
-                  </v-chip>
-                </td>
+
                 <!-- Stallholder Type: from DB or derived from module -->
                 <td>
                   <v-chip

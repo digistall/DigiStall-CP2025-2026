@@ -38,7 +38,10 @@ export default {
         staffType: 'stallholder',
         actionType: null,
         startDate: null,
-        endDate: null
+        endDate: null,
+        stallholderUserType: null,
+        stallholderType: null,
+        status: null
       },
       staffTypeOptions: [
         { title: 'Stallholder', value: 'stallholder' }
@@ -54,6 +57,24 @@ export default {
         { title: 'Payment', value: 'PAYMENT' },
         { title: 'Approve', value: 'APPROVE' },
         { title: 'Reject', value: 'REJECT' }
+      ],
+      stallholderUserTypeOptions: [
+        { title: 'All User Types', value: null },
+        { title: 'Mobile User', value: 'Mobile User' },
+        { title: 'Applicant', value: 'Applicant' }
+      ],
+      stallholderTypeOptions: [
+        { title: 'All Categories', value: null },
+        { title: 'App Access', value: 'App Access' },
+        { title: 'Payment Action', value: 'Payment Action' },
+        { title: 'Document Action', value: 'Document Action' },
+        { title: 'Authentication', value: 'Authentication' },
+        { title: 'Complaint Action', value: 'Complaint Action' }
+      ],
+      statusOptions: [
+        { title: 'All Statuses', value: null },
+        { title: 'Success', value: 'success' },
+        { title: 'Error', value: 'error' }
       ],
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
       activeTimePeriod: null,
@@ -123,7 +144,10 @@ export default {
         staffType: 'stallholder',
         actionType: null,
         startDate: null,
-        endDate: null
+        endDate: null,
+        stallholderUserType: null,
+        stallholderType: null,
+        status: null
       };
       this.startDatePicker = null;
       this.endDatePicker = null;
@@ -231,6 +255,29 @@ export default {
       if (this.filters.actionType) {
         logs = logs.filter(log => 
           log.action_type?.toUpperCase() === this.filters.actionType
+        );
+      }
+
+      // Filter by stallholder user type
+      if (this.filters.stallholderUserType) {
+        logs = logs.filter(log => {
+          const userTypeVal = log.stallholder_user_type || this.getStallholderUserType(log);
+          return userTypeVal?.toLowerCase() === this.filters.stallholderUserType.toLowerCase();
+        });
+      }
+
+      // Filter by stallholder type (action category)
+      if (this.filters.stallholderType) {
+        logs = logs.filter(log => {
+          const typeVal = log.stallholder_type || this.getStallholderType(log);
+          return typeVal?.toLowerCase() === this.filters.stallholderType.toLowerCase();
+        });
+      }
+
+      // Filter by status
+      if (this.filters.status) {
+        logs = logs.filter(log => 
+          log.status?.toLowerCase() === this.filters.status.toLowerCase()
         );
       }
       
