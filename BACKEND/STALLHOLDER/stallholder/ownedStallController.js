@@ -1,4 +1,5 @@
 import { createConnection } from '../../../config/database.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get all owned/rented stalls for a stallholder, grouped by branch
@@ -203,7 +204,28 @@ export const getOwnedStalls = async (req, res) => {
       totalMonthlyRent += stall.monthly_rent;
     });
 
-    console.log(`? Found ${enrichedStalls.length} owned stalls across ${branchList.length} branches`);
+    console.log(`✅ Found ${enrichedStalls.length} owned stalls across ${branchList.length} branches`);
+
+    // Log view dashboard activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: applicantId,
+        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed dashboard (${enrichedStalls.length} stall(s) across ${branchList.length} branch(es))`,
+        module: 'Dashboard',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view dashboard activity:', logErr);
+    }
 
     return res.status(200).json({
       success: true,
