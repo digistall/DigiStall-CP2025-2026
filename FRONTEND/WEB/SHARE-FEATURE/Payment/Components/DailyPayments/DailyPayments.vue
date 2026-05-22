@@ -51,17 +51,10 @@
             </div>
             <div class="table-cell vendor-col">
               <div class="vendor-info">
-                <img 
-                  v-if="payment.vendor_id"
-                  :src="getAvatarUrl(payment.vendor_id)"
-                  @error="handleAvatarError"
-                  class="avatar-img"
-                  alt="Avatar"
-                />
-                <div class="avatar vendor-avatar avatar-initials" :style="{ display: payment.vendor_id ? 'none' : 'flex' }">
+                <div class="avatar vendor-avatar avatar-initials d-flex">
                   {{ getInitials(payment.vendor_name || 'N/A') }}
                 </div>
-                <span class="clickable-name name-text" @click.stop="showStallholderDetails(payment.vendor_id)">{{ payment.vendor_name || 'N/A' }}</span>
+                <span class="name-text">{{ payment.vendor_name || 'N/A' }}</span>
               </div>
             </div>
             <div class="table-cell amount-col">{{ formatCurrency(payment.amount) }}</div>
@@ -216,18 +209,10 @@
               <div class="detail-item">
                 <span class="detail-label">Vendor's Name:</span>
                 <div class="d-flex align-center">
-                  <img 
-                    v-if="selectedPayment.vendor_id"
-                    :src="getAvatarUrl(selectedPayment.vendor_id)"
-                    @error="handleAvatarError"
-                    class="avatar-img mr-2"
-                    alt="Avatar"
-                    style="width: 32px; height: 32px;"
-                  />
-                  <div class="avatar vendor-avatar avatar-initials mr-2" :style="{ display: selectedPayment.vendor_id ? 'none' : 'flex', width: '32px', height: '32px' }">
+                  <div class="avatar vendor-avatar avatar-initials mr-2 d-flex" style="width: 32px; height: 32px;">
                     {{ getInitials(selectedPayment.vendor_name || 'N/A') }}
                   </div>
-                  <span class="clickable-name detail-value" @click="showStallholderDetails(selectedPayment.vendor_id)">{{ selectedPayment.vendor_name }}</span>
+                  <span class="detail-value">{{ selectedPayment.vendor_name }}</span>
                 </div>
               </div>
             </v-col>
@@ -302,7 +287,7 @@
           <div v-else class="stallholder-profile-container text-center">
             <!-- Header Section with Large Profile Pic -->
             <div class="profile-header-wrap mb-6">
-              <div class="avatar-container-lg mx-auto mb-4">
+              <div class="avatar-container-lg mx-auto mb-4" @click="openZoomModal" title="Click to zoom">
                 <img 
                   v-if="stallholderDetails.stallholder_id || stallholderDetails.id"
                   :src="getAvatarUrl(stallholderDetails.stallholder_id || stallholderDetails.id) + '?t=' + avatarBuster"
@@ -348,7 +333,7 @@
               
               <div class="profile-info-item">
                 <span class="info-label"><v-icon size="16" class="mr-2">mdi-calendar-range</v-icon>Move-In Date</span>
-                <span class="info-value text-right">{{ formatDate(stallholderDetails.move_in_date) }}</span>
+                <span class="info-value text-right">{{ formatDate(stallholderDetails.move_in_date || stallholderDetails.contract_start_date) }}</span>
               </div>
               
               <div class="profile-info-item" v-if="stallholderDetails.monthly_rent || stallholderDetails.rental_price">
@@ -382,6 +367,54 @@
             </div>
           </div>
         </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- Premium Glassmorphic Zoom Lightbox Dialog -->
+    <v-dialog v-model="showZoomModal" max-width="800px" content-class="zoom-lightbox-dialog">
+      <v-card class="zoom-lightbox-card">
+        <v-card-title class="zoom-lightbox-header d-flex justify-space-between align-center">
+          <span class="zoom-lightbox-title">Profile Photo Viewer</span>
+          <div class="zoom-hud-percentage mr-4">
+            <span class="hud-pill">{{ Math.round(zoomScale * 100) }}%</span>
+          </div>
+          <v-btn icon variant="text" @click="closeZoomModal" color="white">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        
+        <v-card-text class="zoom-lightbox-body d-flex align-center justify-center overflow-hidden position-relative">
+          <div 
+            class="zoom-image-wrapper"
+            @mousedown="startDrag"
+            @mousemove="onDrag"
+            @mouseup="endDrag"
+            @mouseleave="endDrag"
+            @wheel.prevent="onWheel"
+          >
+            <img 
+              v-if="stallholderDetails"
+              :src="getAvatarUrl(stallholderDetails.stallholder_id || stallholderDetails.id) + '?t=' + avatarBuster"
+              :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomScale})`, cursor: isDragging ? 'grabbing' : 'grab' }"
+              @error="handleAvatarError"
+              class="zoomable-profile-img"
+              alt="Enlarged Profile Avatar"
+              draggable="false"
+            />
+          </div>
+        </v-card-text>
+        
+        <v-card-actions class="zoom-lightbox-actions justify-center py-4">
+          <v-btn icon color="white" class="control-btn" @click="zoomIn" title="Zoom In">
+            <v-icon>mdi-magnify-plus</v-icon>
+          </v-btn>
+          <v-btn icon color="white" class="control-btn mx-3" @click="zoomOut" title="Zoom Out">
+            <v-icon>mdi-magnify-minus</v-icon>
+          </v-btn>
+          <v-btn icon color="white" class="control-btn" @click="resetZoom" title="Reset Zoom">
+            <v-icon>mdi-refresh</v-icon>
+          </v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 

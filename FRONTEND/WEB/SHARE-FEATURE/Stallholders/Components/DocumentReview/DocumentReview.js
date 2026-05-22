@@ -28,6 +28,7 @@ export default {
       loading: false,
       activeFilter: 'pending',
       searchQuery: '',
+      avatarBuster: Date.now(),
       
       // Document Preview
       showPreviewDialog: false,
@@ -114,6 +115,7 @@ export default {
     },
     
     async refreshData() {
+      this.avatarBuster = Date.now() // Refresh avatars
       await Promise.all([
         this.fetchSubmissions(),
         this.fetchCounts()

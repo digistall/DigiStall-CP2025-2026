@@ -124,6 +124,117 @@ export async function validateFaceImage(imageBuffer) {
       return { isValid: false, message: 'Face is too far away. Please move closer to the camera.' };
     }
     
+    // AI Sunglasses & Eye Occlusion Scanner Heuristic
+    try {
+      const landmarks = face.landmarks;
+      const leftEye = landmarks.getLeftEye();
+      const rightEye = landmarks.getRightEye();
+      
+      // Create canvas for the final (possibly rotated) image to compute eye region stats
+      const finalCanvas = new Canvas(finalImg.width, finalImg.height);
+      const finalCtx = finalCanvas.getContext('2d');
+      finalCtx.drawImage(finalImg, 0, 0);
+      
+      // Function to calculate average brightness and standard deviation of a region
+      function getRegionStats(points, expandRatio = 0.2, isCheek = false) {
+        const xs = points.map(p => p.x);
+        const ys = points.map(p => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const w = maxX - minX;
+        const h = maxY - minY;
+        
+        let sampleMinX, sampleMaxX, sampleMinY, sampleMaxY;
+        
+        if (isCheek) {
+          // Cheek region is located directly below the eye
+          sampleMinX = Math.max(0, Math.floor(minX));
+          sampleMaxX = Math.min(finalImg.width - 1, Math.ceil(maxX));
+          sampleMinY = Math.max(0, Math.floor(maxY + h * 0.5));
+          sampleMaxY = Math.min(finalImg.height - 1, Math.ceil(maxY + h * 1.8));
+        } else {
+          // Eye region expanded slightly to catch sunglasses frames/lenses
+          sampleMinX = Math.max(0, Math.floor(minX - w * expandRatio));
+          sampleMaxX = Math.min(finalImg.width - 1, Math.ceil(maxX + w * expandRatio));
+          sampleMinY = Math.max(0, Math.floor(minY - h * expandRatio));
+          sampleMaxY = Math.min(finalImg.height - 1, Math.ceil(maxY + h * expandRatio));
+        }
+        
+        const width = sampleMaxX - sampleMinX;
+        const height = sampleMaxY - sampleMinY;
+        
+        if (width <= 0 || height <= 0) return { mean: 0, stdDev: 0 };
+        
+        const imgData = finalCtx.getImageData(sampleMinX, sampleMinY, width, height);
+        const data = imgData.data;
+        
+        let sum = 0;
+        let sumSq = 0;
+        const count = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+          const v = (0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+          sum += v;
+          sumSq += v * v;
+        }
+        const mean = sum / count;
+        const variance = (sumSq / count) - (mean * mean);
+        const stdDev = Math.sqrt(Math.max(0, variance));
+        
+        return { mean, stdDev };
+      }
+      
+      const bbox = face.detection.box;
+      const faceImgData = finalCtx.getImageData(
+        Math.max(0, Math.floor(bbox.x)),
+        Math.max(0, Math.floor(bbox.y)),
+        Math.min(finalImg.width - Math.max(0, Math.floor(bbox.x)), Math.ceil(bbox.width)),
+        Math.min(finalImg.height - Math.max(0, Math.floor(bbox.y)), Math.ceil(bbox.height))
+      );
+      const faceData = faceImgData.data;
+      let faceBrightnessSum = 0;
+      for (let i = 0; i < faceData.length; i += 4) {
+        faceBrightnessSum += (0.299 * faceData[i] + 0.587 * faceData[i+1] + 0.114 * faceData[i+2]);
+      }
+      const faceBright = faceData.length > 0 ? (faceBrightnessSum / (faceData.length / 4)) : avgBrightness;
+
+      const leftEyeStats = getRegionStats(leftEye, 0.2, false);
+      const leftCheekStats = getRegionStats(leftEye, 0.2, true);
+      
+      const rightEyeStats = getRegionStats(rightEye, 0.2, false);
+      const rightCheekStats = getRegionStats(rightEye, 0.2, true);
+      
+      const leftRatio = leftCheekStats.mean > 0 ? (leftEyeStats.mean / leftCheekStats.mean) : 1.0;
+      const rightRatio = rightCheekStats.mean > 0 ? (rightEyeStats.mean / rightCheekStats.mean) : 1.0;
+
+      const leftEyeFaceRatio = faceBright > 0 ? (leftEyeStats.mean / faceBright) : 1.0;
+      const rightEyeFaceRatio = faceBright > 0 ? (rightEyeStats.mean / faceBright) : 1.0;
+      
+      console.log(`👁️ Eye analysis stats:
+        Face Brightness: ${faceBright.toFixed(2)}
+        Left Eye: mean=${leftEyeStats.mean.toFixed(2)}, stdDev=${leftEyeStats.stdDev.toFixed(2)}, cheek=${leftCheekStats.mean.toFixed(2)}, cheek_ratio=${leftRatio.toFixed(3)}, face_ratio=${leftEyeFaceRatio.toFixed(3)}
+        Right Eye: mean=${rightEyeStats.mean.toFixed(2)}, stdDev=${rightEyeStats.stdDev.toFixed(2)}, cheek=${rightCheekStats.mean.toFixed(2)}, cheek_ratio=${rightRatio.toFixed(3)}, face_ratio=${rightEyeFaceRatio.toFixed(3)}
+      `);
+      
+      // Heuristics checks (OR logic: if either eye is occluded, dark, or uniform, reject)
+      const darkEyesRatio = leftRatio < 0.40 || rightRatio < 0.40;
+      const darkEyesFaceRatio = leftEyeFaceRatio < 0.40 || rightEyeFaceRatio < 0.40;
+      const absoluteDarkEyes = leftEyeStats.mean < 25.0 || rightEyeStats.mean < 25.0;
+      const uniformStdDev = (leftEyeStats.stdDev < 5.0 && leftEyeStats.mean < 40.0) || (rightEyeStats.stdDev < 5.0 && rightEyeStats.mean < 40.0);
+      
+      if (darkEyesRatio || darkEyesFaceRatio || absoluteDarkEyes || uniformStdDev) {
+        console.log(`❌ Face rejected due to eye occlusion: darkEyesRatio=${darkEyesRatio}, darkEyesFaceRatio=${darkEyesFaceRatio}, absoluteDarkEyes=${absoluteDarkEyes}, uniformStdDev=${uniformStdDev}`);
+        return {
+          isValid: false,
+          message: 'Eyes are not clearly visible. Please remove sunglasses/glasses or ensure eyes are not in deep shadow.'
+        };
+      }
+    } catch (eyeErr) {
+      console.error('Error during eye/sunglasses validation heuristic:', eyeErr);
+      // Bypassed if calculation fails, so we do not block legitimate users
+    }
+    
     // Return success along with the rotated buffer (if any correction was applied)
     return { 
       isValid: true, 

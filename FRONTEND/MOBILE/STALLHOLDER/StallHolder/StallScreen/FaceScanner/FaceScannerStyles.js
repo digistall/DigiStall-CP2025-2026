@@ -6,55 +6,104 @@ const circleSize = width * 0.7;
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0C',
+    backgroundColor: '#000',
   },
   camera: {
     flex: 1,
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+
+  // ──────────────────────────────────────────────
+  // WHITE LIGHTING MASK  –  sits directly on top of the camera.
+  // A huge white border around a transparent oval hole creates a
+  // solid-white surround that acts as a front-fill light source.
+  // ──────────────────────────────────────────────
+  maskContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 2,
+  },
+  maskCircle: {
+    width: circleSize + 2000,
+    height: (circleSize * 1.3) + 2000,
+    borderRadius: (circleSize + 2000) / 2,
+    borderWidth: 1000,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+  maskCircleZoomOut: {
+    width: (circleSize * 0.8) + 2000,
+    height: (circleSize * 1.05) + 2000,
+    borderRadius: ((circleSize * 0.8) + 2000) / 2,
+    borderWidth: 1000,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+
+  // ──────────────────────────────────────────────
+  // UI OVERLAY  –  fully transparent so the white mask shows through.
+  // Contains text labels, guide border, scan line, buttons.
+  // ──────────────────────────────────────────────
+  overlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 3,
   },
   headerText: {
-    color: '#FFF',
-    fontSize: 24,
+    color: '#1B5E20',
+    fontSize: 22,
     fontWeight: 'bold',
     position: 'absolute',
-    top: 60,
+    top: 55,
     textAlign: 'center',
+    textShadowColor: 'rgba(255,255,255,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   subHeaderText: {
-    color: '#DDD',
-    fontSize: 15,
+    color: '#4A5568',
+    fontSize: 14,
     position: 'absolute',
-    top: 96,
+    top: 86,
     textAlign: 'center',
     paddingHorizontal: 24,
-    lineHeight: 22,
+    lineHeight: 20,
+    textShadowColor: 'rgba(255,255,255,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
+
+  // ──────────────────────────────────────────────
+  // GUIDE CIRCLES – a visible oval border the user aligns with.
+  // Matches the reference image: thick dark-green stroke.
+  // ──────────────────────────────────────────────
   guideCircle: {
     width: circleSize,
     height: circleSize * 1.3,
     borderRadius: circleSize,
-    borderWidth: 3,
-    borderColor: '#2ECC71',
+    borderWidth: 4,
+    borderColor: '#2E7D32',
     backgroundColor: 'transparent',
     overflow: 'hidden',
-    position: 'relative',
+    position: 'absolute',
   },
   guideCircleZoomOut: {
-    width: circleSize * 0.7,
-    height: circleSize * 0.9,
-    borderRadius: circleSize * 0.7,
-    borderWidth: 3,
-    borderColor: '#3498DB',
+    width: circleSize * 0.8,
+    height: circleSize * 1.05,
+    borderRadius: circleSize * 0.8,
+    borderWidth: 4,
+    borderColor: '#1565C0',
     backgroundColor: 'transparent',
     overflow: 'hidden',
-    position: 'relative',
+    position: 'absolute',
   },
-  
+
   // Controls & Shutter Buttons
   btnContainer: {
     flexDirection: 'row',
@@ -66,17 +115,17 @@ export default StyleSheet.create({
     paddingHorizontal: 20,
   },
   startScanButton: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: '#2E7D32',
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#2ECC71',
+    shadowColor: '#2E7D32',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 6,
     marginRight: 15,
   },
   startScanButtonText: {
@@ -89,54 +138,62 @@ export default StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderWidth: 2,
+    backgroundColor: '#1B3A4B',
+    borderWidth: 3,
     borderColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  statusContainer: {
+    position: 'absolute',
+    bottom: 130,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
   scanningStatusText: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: 24,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    marginTop: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)',
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   holdStillText: {
-    color: '#FF3B30',
-    fontSize: 18,
+    color: '#D32F2F',
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 12,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 6,
+    marginTop: 8,
+    textShadowColor: 'rgba(255,255,255,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   scanLine: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#2ECC71',
-    shadowColor: '#2ECC71',
+    backgroundColor: '#2E7D32',
+    shadowColor: '#2E7D32',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
     elevation: 4,
   },
-  
+
   // Preview Screen
   previewContainer: {
     flex: 1,
@@ -169,14 +226,14 @@ export default StyleSheet.create({
     backgroundColor: '#3A3A3C',
   },
   confirmButton: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: '#2E7D32',
   },
   buttonText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
+
   // Loading overlay
   loadingContainer: {
     position: 'absolute',
@@ -192,8 +249,8 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  
-  // Premium Enhanced Custom Alert
+
+  // Premium Custom Alert
   alertOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.75)',
@@ -258,7 +315,7 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
+
   // Countdown overlay centered
   countdownContainer: {
     position: 'absolute',
@@ -270,17 +327,17 @@ export default StyleSheet.create({
     fontSize: 88,
     fontWeight: '900',
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 12,
+    textShadowRadius: 14,
   },
   capturingText: {
-    fontSize: 32,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#2ECC71',
+    color: '#2E7D32',
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
     marginTop: 20,
-  }
+  },
 });

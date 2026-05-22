@@ -24,6 +24,7 @@ const ComplianceTable = {
     return {
       currentPage: 1,
       itemsPerPage: 10,
+      avatarBuster: Date.now(),
     }
   },
   computed: {
@@ -111,6 +112,9 @@ const ComplianceTable = {
     },
     activeFilter() {
       this.currentPage = 1 // Reset to first page when filter changes
+    },
+    complianceList() {
+      this.avatarBuster = Date.now() // Refresh avatars when data changes
     }
   }
 }

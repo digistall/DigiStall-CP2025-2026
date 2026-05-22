@@ -155,7 +155,7 @@
           <v-avatar size="32" color="primary" class="mr-2 overflow-visible">
             <img 
               v-if="submission.stallholder_id"
-              :src="getAvatarUrl(submission.stallholder_id)"
+              :src="getAvatarUrl(submission.stallholder_id) + '?t=' + avatarBuster"
               @error="handleAvatarError"
               class="avatar-img"
               style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"

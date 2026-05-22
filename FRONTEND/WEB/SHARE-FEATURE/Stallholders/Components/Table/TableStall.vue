@@ -26,7 +26,7 @@
             <div class="stallholder-name-wrapper">
               <img 
                 v-if="stallholder.stallholder_id"
-                :src="getAvatarUrl(stallholder.stallholder_id)"
+                :src="getAvatarUrl(stallholder.stallholder_id) + '?t=' + avatarBuster"
                 @error="handleAvatarError"
                 class="avatar-img"
                 alt="Avatar"

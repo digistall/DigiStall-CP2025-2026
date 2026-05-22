@@ -27,13 +27,13 @@ const FaceScannerScreen = ({ route, navigation }) => {
   const flashAnim = useRef(new Animated.Value(0)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
-  // Start animated lighting helper when scanning is active (GCash style lighting feedback)
+  // Pulse the white mask brightness subtly when scanning is active
   useEffect(() => {
     if (hasPermission && !capturedImage && scanStarted) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(flashAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
-          Animated.timing(flashAnim, { toValue: 0, duration: 1200, useNativeDriver: false })
+          Animated.timing(flashAnim, { toValue: 1, duration: 1500, useNativeDriver: false }),
+          Animated.timing(flashAnim, { toValue: 0, duration: 1500, useNativeDriver: false })
         ])
       ).start();
     } else {
@@ -96,16 +96,37 @@ const FaceScannerScreen = ({ route, navigation }) => {
         });
         
         if (step === 1) {
-          // Reset scanning state for Step 2 so the user can adjust posture and zoom out
-          setStep(2);
-          setScanStarted(false);
-          setIsPersonDetected(false);
-          setCountdown(3);
+          setIsUploading(true);
+          setScanningStatus("AI Scan: Analyzing face...");
+          const validation = await ApiService.validateFaceImage(stallholderId, photo.uri);
+          setIsUploading(false);
+          
+          if (validation.success) {
+            // Reset scanning state for Step 2 so the user can adjust posture and zoom out
+            setStep(2);
+            setScanStarted(false);
+            setIsPersonDetected(false);
+            setCountdown(3);
+          } else {
+            setScanStarted(false);
+            setIsPersonDetected(false);
+            setAlertConfig({
+              visible: true,
+              type: 'error',
+              title: 'Face Validation Failed',
+              message: validation.message || 'Face is obscured or eyes not clearly visible (e.g., wearing sunglasses/poor lighting). Please remove any accessories and try again.',
+              onConfirm: () => {
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+                retakePhoto();
+              }
+            });
+          }
         } else if (step === 2) {
           setCapturedImage(photo.uri);
           autoUploadPhoto(photo.uri);
         }
       } catch (err) {
+        setIsUploading(false);
         setAlertConfig({
           visible: true,
           type: 'error',
@@ -184,9 +205,10 @@ const FaceScannerScreen = ({ route, navigation }) => {
     setCountdown(3);
   };
   
-  const backgroundColor = flashAnim.interpolate({
+  // Subtle glow intensity for the mask border pulse
+  const maskBorderOpacity = flashAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.25)'] // Adaptive background flashing color
+    outputRange: [1, 1]
   });
   
   const CustomAlert = () => (
@@ -259,7 +281,17 @@ const FaceScannerScreen = ({ route, navigation }) => {
       ) : (
         <View style={styles.container}>
           <CameraView style={styles.camera} facing="front" ref={cameraRef} />
-          <Animated.View style={[StyleSheet.absoluteFillObject, styles.overlay, { backgroundColor }]} pointerEvents="box-none">
+          
+          {/* SOLID WHITE SHIELD / PREMIUM LIGHTING RING HELPER */}
+          <View style={styles.maskContainer} pointerEvents="none">
+            <Animated.View style={[
+              step === 1 ? styles.maskCircle : styles.maskCircleZoomOut,
+              { opacity: maskBorderOpacity }
+            ]} />
+          </View>
+
+          {/* UI OVERLAY – transparent, sits on top of everything */}
+          <View style={[StyleSheet.absoluteFillObject, styles.overlay]} pointerEvents="box-none">
             
             <Text style={styles.headerText}>
               {step === 1 ? 'Step 1: Face Capture' : 'Step 2: Zoom Out'}
@@ -285,11 +317,13 @@ const FaceScannerScreen = ({ route, navigation }) => {
               )}
             </View>
 
-            <Text style={styles.scanningStatusText}>{scanningStatus}</Text>
+            <View style={styles.statusContainer} pointerEvents="none">
+              <Text style={styles.scanningStatusText}>{scanningStatus}</Text>
 
-            {scanStarted && isPersonDetected && countdown > 0 && (
-              <Text style={styles.holdStillText}>HOLD STILL! Capturing shortly...</Text>
-            )}
+              {scanStarted && isPersonDetected && countdown > 0 && (
+                <Text style={styles.holdStillText}>HOLD STILL! Capturing shortly...</Text>
+              )}
+            </View>
 
             {isPersonDetected && scanStarted && (
               <View style={styles.countdownContainer}>
@@ -306,14 +340,10 @@ const FaceScannerScreen = ({ route, navigation }) => {
                     <Ionicons name="scan" size={24} color="#FFF" />
                     <Text style={styles.startScanButtonText}>Start Verification</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity style={styles.manualCaptureButton} onPress={takePicture}>
-                    <Ionicons name="camera" size={26} color="#FFF" />
-                  </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity 
-                  style={[styles.button, styles.retakeButton, { backgroundColor: '#E74C3C' }]} 
+                  style={[styles.button, styles.retakeButton, { backgroundColor: '#D32F2F' }]} 
                   onPress={() => setScanStarted(false)}
                 >
                   <Text style={styles.buttonText}>Cancel</Text>
@@ -321,7 +351,14 @@ const FaceScannerScreen = ({ route, navigation }) => {
               )}
             </View>
 
-          </Animated.View>
+          </View>
+
+          {isUploading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#2ECC71" />
+              <Text style={styles.loadingText}>AI analyzing face visibility...</Text>
+            </View>
+          )}
         </View>
       )}
       <CustomAlert />

@@ -28,6 +28,15 @@ export async function uploadFaceVerification(req, res) {
       return res.status(400).json({ success: false, message: validation.message });
     }
 
+    // Early return if only validating
+    if (req.body.validate_only === 'true' || req.body.validate_only === true) {
+      console.log('🧪 validate_only mode active. Returning early with validation success!');
+      return res.status(200).json({
+        success: true,
+        message: 'Face validation successful (validate_only mode)'
+      });
+    }
+
     // 2. Use rotated buffer if face detection corrected orientation
     if (validation.rotatedBuffer) {
       console.log('🔄 Saving rotated upright face verification image');
