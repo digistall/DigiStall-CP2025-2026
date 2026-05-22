@@ -152,8 +152,16 @@
         <v-divider></v-divider>
 
         <div class="stallholder-info">
-          <v-avatar size="32" color="primary" class="mr-2">
-            <span class="text-white text-body-2">{{ getInitials(submission.stallholder_name) }}</span>
+          <v-avatar size="32" color="primary" class="mr-2 overflow-visible">
+            <img 
+              v-if="submission.stallholder_id"
+              :src="getAvatarUrl(submission.stallholder_id)"
+              @error="handleAvatarError"
+              class="avatar-img"
+              style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"
+              alt="Avatar"
+            />
+            <span class="text-white text-body-2 avatar-initials" :style="{ display: submission.stallholder_id ? 'none' : 'flex' }">{{ getInitials(submission.stallholder_name) }}</span>
           </v-avatar>
           <div class="stallholder-details">
             <span class="stallholder-name">{{ submission.stallholder_name }}</span>

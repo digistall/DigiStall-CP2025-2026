@@ -1,6 +1,11 @@
-// ComplianceTable.js
+import { useAvatar } from '../../../../../utils/avatarHelper.js'
+
 const ComplianceTable = {
   name: 'ComplianceTable',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   props: {
     searchQuery: {
       type: String,

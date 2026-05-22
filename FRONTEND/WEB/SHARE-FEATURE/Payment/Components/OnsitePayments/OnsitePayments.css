@@ -439,6 +439,13 @@
   font-size: 16px;
 }
 
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .name {
   font-weight: 400 !important;
   color: #1a1a1a;
@@ -537,6 +544,35 @@
 .detail-card-value.stallholder-name-value {
   display: flex;
   align-items: center;
+}
+
+.stallholder-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.avatar-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #002181;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.avatar-img-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 /* Section + Floor side by side */

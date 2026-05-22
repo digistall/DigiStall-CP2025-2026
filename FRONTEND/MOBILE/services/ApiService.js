@@ -2503,6 +2503,101 @@ class ApiService {
       };
     }
   }
+  // ===== FACE VERIFICATION METHODS =====
+
+  // Check if stallholder has a verified face
+  static async checkFaceVerification(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}/api/mobile/face/check/${stallholderId}`;
+      
+      console.log('🔄 Checking face verification from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: API_CONFIG.HEADERS,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check face verification');
+      }
+
+      return {
+        success: true,
+        hasVerifiedFace: data.hasVerifiedFace,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Check Face Verification Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        hasVerifiedFace: false
+      };
+    }
+  }
+
+  // Upload face verification photo
+  static async uploadFaceVerification(stallholderId, imageUri) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const url = `${server}/api/mobile/face/upload`;
+      
+      console.log('🔄 Uploading face verification to:', url);
+
+      const formData = new FormData();
+      formData.append('stallholder_id', stallholderId);
+      
+      const filename = imageUri.split('/').pop() || 'face.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      
+      formData.append('file', {
+        uri: imageUri,
+        name: filename,
+        type
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+          // Note: fetch will automatically set Content-Type to multipart/form-data with boundary
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload face image');
+      }
+
+      return {
+        success: true,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Upload Face Verification Error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
+
+  // Get URI for the face image
+  static async getFaceImageUri(stallholderId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      return `${server}/api/mobile/face/${stallholderId}`;
+    } catch (error) {
+      console.error('Error getting server URL:', error);
+      return null;
+    }
+  }
 }
 
 export default ApiService;

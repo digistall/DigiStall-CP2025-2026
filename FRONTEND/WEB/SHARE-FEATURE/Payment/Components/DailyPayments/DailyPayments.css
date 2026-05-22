@@ -194,6 +194,14 @@
   background-color: #1976d2;
 }
 
+.avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .name-text {
   font-weight: 400;
 }

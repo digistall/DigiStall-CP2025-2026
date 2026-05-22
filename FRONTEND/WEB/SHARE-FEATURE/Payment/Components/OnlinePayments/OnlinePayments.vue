@@ -80,7 +80,14 @@
                 <td class="id-cell" @click="viewPaymentDetails(payment)">{{ payment.id }}</td>
                 <td class="name-cell" @click="viewPaymentDetails(payment)">
                   <div class="stallholder-info">
-                    <div class="avatar">{{ (payment.stallholderName || 'N/A').charAt(0) }}</div>
+                    <img 
+                      v-if="payment.stallholderId"
+                      :src="getAvatarUrl(payment.stallholderId)"
+                      @error="handleAvatarError"
+                      class="avatar-img"
+                      alt="Avatar"
+                    />
+                    <div class="avatar avatar-initials" :style="{ display: payment.stallholderId ? 'none' : 'flex' }">{{ getInitials(payment.stallholderName || 'N/A') }}</div>
                     <div class="name-details">
                       <span class="name">{{ payment.stallholderName || 'Unknown' }}</span>
                       <span class="stall-no">Stall #{{ payment.stallNo || 'N/A' }}</span>
@@ -145,9 +152,22 @@
                       <span class="info-label">Payment ID:</span>
                       <span class="info-value">{{ selectedPayment.id }}</span>
                     </div>
-                    <div class="info-item">
-                      <span class="info-label">Stallholder Name:</span>
-                      <span class="info-value">{{ selectedPayment.stallholderName }}</span>
+                    <div class="info-item" style="align-items: center; display: flex; gap: 12px;">
+                      <span class="info-label" style="width: auto;">Stallholder Name:</span>
+                      <div class="d-flex align-center">
+                        <img 
+                          v-if="selectedPayment.stallholderId"
+                          :src="getAvatarUrl(selectedPayment.stallholderId)"
+                          @error="handleAvatarError"
+                          class="avatar-img mr-2"
+                          alt="Avatar"
+                          style="width: 32px; height: 32px;"
+                        />
+                        <div class="avatar avatar-initials mr-2" :style="{ display: selectedPayment.stallholderId ? 'none' : 'flex', width: '32px', height: '32px' }">
+                          {{ getInitials(selectedPayment.stallholderName) }}
+                        </div>
+                        <span class="info-value">{{ selectedPayment.stallholderName }}</span>
+                      </div>
                     </div>
                     <div class="info-item">
                       <span class="info-label">Stall Number:</span>

@@ -172,8 +172,15 @@
                 </td>
                 <td class="name-cell">
                   <div class="stallholder-info">
-                    <div class="avatar">
-                      {{ (stall.name || 'N/A').charAt(0).toUpperCase() }}
+                    <img 
+                      v-if="stall.id"
+                      :src="getAvatarUrl(stall.id)"
+                      @error="handleAvatarError"
+                      class="avatar-img"
+                      alt="Avatar"
+                    />
+                    <div class="avatar avatar-initials" :style="{ display: stall.id ? 'none' : 'flex' }">
+                      {{ getInitials(stall.name, '') }}
                     </div>
                     <span class="name">{{ stall.name || 'N/A' }}</span>
                   </div>
@@ -447,14 +454,26 @@
                   </span>
                   <span class="detail-card-value">{{ latestPaymentDate || '—' }}</span>
                 </div>
-                <div class="detail-card">
+                <div class="detail-card stallholder-card">
                   <span class="detail-card-label">STALLHOLDER NAME</span>
-                  <span class="detail-card-value stallholder-name-value">
-                    {{ selectedStall.name }}
-                    <v-chip color="#002181" variant="flat" size="x-small" class="ml-2">{{
-                      selectedStall.stallNo
-                    }}</v-chip>
-                  </span>
+                  <div class="stallholder-card-content">
+                    <img 
+                      v-if="selectedStall.id"
+                      :src="getAvatarUrl(selectedStall.id)"
+                      @error="handleAvatarError"
+                      class="avatar-img-lg"
+                      alt="Avatar"
+                    />
+                    <div class="avatar-lg avatar-initials" :style="{ display: selectedStall.id ? 'none' : 'flex' }">
+                      {{ getInitials(selectedStall.name, '') }}
+                    </div>
+                    <span class="detail-card-value stallholder-name-value">
+                      {{ selectedStall.name }}
+                      <v-chip color="#002181" variant="flat" size="x-small" class="ml-2">{{
+                        selectedStall.stallNo
+                      }}</v-chip>
+                    </span>
+                  </div>
                 </div>
                 <div class="detail-card detail-card-row">
                   <div class="detail-card-half">

@@ -1,7 +1,12 @@
 import ToastNotification from '@SHARED_COMPONENTS/ToastNotification/ToastNotification.vue'
+import { useAvatar } from '../../../../../utils/avatarHelper.js'
 
 export default {
   name: 'DailyPayments',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   emits: ['loading', 'count-updated'],
   components: {
     ToastNotification,
