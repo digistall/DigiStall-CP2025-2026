@@ -11,7 +11,7 @@
           <v-row>
             <v-col cols="12">
               <!-- Search Component -->
-              <SearchStall @search="handleSearch" />
+              <SearchStall @search="handleSearch" @open-activity-log="openActivityLogDialog" />
 
               <!-- Table Component -->
               <TableStall
@@ -19,6 +19,12 @@
                 :activeFilter="activeFilter"
                 @loading-change="handleLoadingChange"
                 @data-ready="handleDataReady"
+              />
+
+              <!-- Stallholder Activity Log Dialog -->
+              <ActivityLogDialog
+                v-model="showActivityLogDialog"
+                @close="closeActivityLogDialog"
               />
 
               <!-- Documents View Modal -->

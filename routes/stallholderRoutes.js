@@ -52,6 +52,11 @@ import {
   getJoinedStalls
 } from '../BACKEND/STALLHOLDER/stallholder/joinedStallController.js';
 
+// Import app access log controller
+import {
+  logAppAccessScreen
+} from '../BACKEND/STALLHOLDER/stallholder/appAccessController.js';
+
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
 
@@ -274,5 +279,17 @@ router.get('/payments/summary', verifyToken, getPaymentSummary);
  * @access Protected (Stallholder only)
  */
 router.get('/payments/monthly-status', verifyToken, getMonthlyPaymentStatus);
+
+// =============================================
+// APP ACCESS LOGGING ROUTE
+// =============================================
+
+/**
+ * @route POST /api/mobile/stallholder/app-access-log
+ * @desc Log a screen view from the mobile app (e.g., Notifications, Reports)
+ * @body  { screen: 'notifications' | 'reports' | 'dashboard' | string }
+ * @access Protected (Stallholder only)
+ */
+router.post('/app-access-log', verifyToken, logAppAccessScreen);
 
 export default router;

@@ -2,6 +2,7 @@ import { createConnection } from '../../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { decryptApplicantData, decryptStallholderData, decryptSpouseData } from '../../services/mysqlDecryptionService.js'
+import { logStaffActivity } from '../OWNER/activityLog/staffActivityLogController.js'
 
 // ===== MOBILE LOGIN =====
 export const mobileLogin = async (req, res) => {
@@ -258,6 +259,28 @@ export const mobileLogin = async (req, res) => {
     );
     
     console.log('✅ Login successful for:', username);
+
+    // Log stallholder login activity (mobile app)
+    if (stallholderData.length > 0) {
+      const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      const userAgent = req.get('User-Agent');
+      for (const stallholder of stallholderData) {
+        await logStaffActivity({
+          staffType: 'stallholder',
+          staffId: stallholder.stallholder_id,
+          staffName: stallholder.full_name || stallholder.stallholder_name || decryptedUser.applicant_full_name || 'Unknown',
+          branchId: stallholder.branch_id || null,
+          actionType: 'LOGIN',
+          actionDescription: 'Stallholder logged in via mobile app',
+          module: 'mobile_app',
+          ipAddress,
+          userAgent,
+          requestMethod: req.method,
+          requestPath: req.originalUrl,
+          status: 'success'
+        });
+      }
+    }
     
     // Helper to map stallholder row to response object
     const mapStallholderRow = (row) => ({
@@ -521,6 +544,58 @@ export const mobileLogout = async (req, res) => {
       if (affectedRows === 0) {
         console.warn(`⚠️ No rows updated - applicant_id ${applicantId} may not exist in credential table`);
       }
+
+      // Log stallholder logout activity (mobile app)
+      try {
+        const [stallholderRows] = await connection.execute(
+          `SELECT stallholder_id, full_name, stallholder_name, branch_id
+           FROM stallholder
+           WHERE applicant_id = ? OR mobile_user_id = ?`,
+          [applicantId, applicantId]
+        );
+        const stallholderData = stallholderRows || [];
+        const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+        const userAgent = req.get('User-Agent');
+
+        if (stallholderData.length > 0) {
+          for (const stallholder of stallholderData) {
+            const decryptedStallholder = await decryptStallholderData(stallholder);
+            await logStaffActivity({
+              staffType: 'stallholder',
+              staffId: decryptedStallholder.stallholder_id,
+              staffName: decryptedStallholder.full_name || decryptedStallholder.stallholder_name || 'Unknown',
+              branchId: decryptedStallholder.branch_id || null,
+              actionType: 'LOGOUT',
+              actionDescription: 'Stallholder logged out from mobile app',
+              module: 'mobile_app',
+              ipAddress,
+              userAgent,
+              requestMethod: req.method,
+              requestPath: req.originalUrl,
+              status: 'success'
+            });
+          }
+        } else {
+          // Fallback: log using JWT user data (e.g., applicant not yet a stallholder)
+          console.log('⚠️ No stallholder record found for logout log — logging with applicant ID as fallback');
+          await logStaffActivity({
+            staffType: 'stallholder',
+            staffId: applicantId,
+            staffName: req.user?.username || 'Unknown',
+            branchId: null,
+            actionType: 'LOGOUT',
+            actionDescription: 'Mobile user logged out from mobile app',
+            module: 'mobile_app',
+            ipAddress,
+            userAgent,
+            requestMethod: req.method,
+            requestPath: req.originalUrl,
+            status: 'success'
+          });
+        }
+      } catch (logError) {
+        console.error('❌ Error logging stallholder logout activity:', logError);
+      }
     } else {
       console.warn('⚠️ No applicant ID found in request - cannot update last_logout');
     }
@@ -544,4 +619,3 @@ export const mobileLogout = async (req, res) => {
     }
   }
 };
-

@@ -1,4 +1,5 @@
 import { createConnection } from '../../../config/database.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get payment records for a stallholder
@@ -247,6 +248,27 @@ export const getAllPaymentRecords = async (req, res) => {
     formattedPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     console.log(`✅ Found ${allPayments.length} total payment records for ${stallholderIds.length} stall(s)`);
+
+    // Log view receipt / payment history activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: lookupId,
+        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed payment receipt / history (${formattedPayments.length} record(s))`,
+        module: 'Payments',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view receipt activity:', logErr);
+    }
     
     return res.status(200).json({
       success: true,
@@ -329,6 +351,27 @@ export const getPaymentSummary = async (req, res) => {
     
     const summaryData = summary[0];
     const stallholder = stallholderInfo[0] || {};
+    
+    // Log view payment summary activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: lookupId,
+        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: 'Viewed payment summary',
+        module: 'Payments',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view payment summary activity:', logErr);
+    }
     
     return res.status(200).json({
       success: true,
@@ -589,6 +632,27 @@ export const getMonthlyPaymentStatus = async (req, res) => {
 
     // Use the first stall for backward-compatible single-stall fields
     const primary = stallStatuses[0];
+
+    // Log initiate payment / view payment status activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: applicantId,
+        staffName: userData.username || userData.fullName || userData.full_name || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed monthly payment status / initiated payment screen (${currentMonthName})`,
+        module: 'Payments',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging initiate payment activity:', logErr);
+    }
 
     return res.status(200).json({
       success: true,
