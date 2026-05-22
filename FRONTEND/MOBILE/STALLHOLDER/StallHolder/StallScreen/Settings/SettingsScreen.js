@@ -19,6 +19,7 @@ import PrivacyModal from "./components/PrivacyComponents/PrivacyModal";
 import ChangePassword from "./components/ChangePasswordComponents/ChangePassword";
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from "../../../../services/ApiService";
 
 const { width } = Dimensions.get("window");
@@ -47,8 +48,9 @@ const SettingsScreen = ({ user, initialShowProfile = false, navigation }) => {
           const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
           if (stallholderId) {
             const uri = await ApiService.getFaceImageUri(stallholderId);
-            // Bust cache with timestamp so re-taken photos appear fresh
-            setAvatarUri(`${uri}?t=${new Date().getTime()}`);
+            const lastUpdate = await AsyncStorage.getItem('face_image_last_update');
+            setAvatarUri(`${uri}?t=${lastUpdate || '0'}`);
+            setImageError(false); // Reset image error in case retake resolved it
           }
         }
       } catch (error) {
@@ -57,7 +59,16 @@ const SettingsScreen = ({ user, initialShowProfile = false, navigation }) => {
     };
 
     loadUserData();
-  }, []);
+
+    // Listen to focus changes to reload image if user returned from FaceScannerScreen
+    if (navigation) {
+      const unsubscribe = navigation.addListener('focus', () => {
+        console.log("SettingsScreen - Screen focused, reloading user data");
+        loadUserData();
+      });
+      return unsubscribe;
+    }
+  }, [navigation]);
 
   // fallback if no user is passed - use real data if available, otherwise mock
   const testUser = userData || user || mockUser;
@@ -141,7 +152,7 @@ const SettingsScreen = ({ user, initialShowProfile = false, navigation }) => {
 
   // Conditional rendering
   if (showProfile) {
-    return <ProfileDisplay user={testUser} onGoBack={handleGoBack} />;
+    return <ProfileDisplay user={testUser} onGoBack={handleGoBack} navigation={navigation} />;
   }
   if (showAbout) {
     return <AboutApp onGoBack={handleAboutGoBack} />;

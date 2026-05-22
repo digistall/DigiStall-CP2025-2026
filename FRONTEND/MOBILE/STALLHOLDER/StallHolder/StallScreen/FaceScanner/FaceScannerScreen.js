@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../../../../services/ApiService';
 import styles from './FaceScannerStyles';
 
@@ -124,6 +125,13 @@ const FaceScannerScreen = ({ route, navigation }) => {
       const response = await ApiService.uploadFaceVerification(stallholderId, uri);
       
       if (response.success) {
+        try {
+          await AsyncStorage.setItem('face_image_last_update', Date.now().toString());
+          console.log('📸 Saved face image update timestamp to AsyncStorage');
+        } catch (storageErr) {
+          console.error('Error saving face timestamp:', storageErr);
+        }
+
         setAlertConfig({
           visible: true,
           type: 'success',

@@ -26,6 +26,11 @@ export default {
       formValid: false,
       submitting: false,
       deleting: false,
+      // Stallholder details modal
+      showStallholderModal: false,
+      loadingStallholderDetails: false,
+      stallholderDetails: null,
+      avatarBuster: Date.now(),
       form: {
         collectorId: null,
         vendorId: null,
@@ -326,6 +331,12 @@ export default {
       })}`
     },
 
+    formatDate(dateString) {
+      if (!dateString) return 'N/A'
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    },
+
     formatDateTime(dateString) {
       if (!dateString) return 'N/A'
 
@@ -343,6 +354,32 @@ export default {
         type,
       }
     },
+
+    async showStallholderDetails(stallholderId) {
+      if (!stallholderId) return;
+      this.showStallholderModal = true;
+      this.loadingStallholderDetails = true;
+      this.stallholderDetails = null;
+      this.avatarBuster = Date.now();
+      
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            this.stallholderDetails = result.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stallholder details:', error);
+      } finally {
+        this.loadingStallholderDetails = false;
+      }
+    }
   },
 }
 

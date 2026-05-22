@@ -63,6 +63,13 @@ export const uploadFaceVerification = async (req, res) => {
     // Set wait_timeout just in case
     await connection.query('SET SESSION wait_timeout = 28800');
     
+    // Delete existing face verification records for this stallholder first
+    console.log(`🧹 Deleting existing face verification records for stallholder ID: ${stallholder_id}`);
+    await connection.execute(
+      'DELETE FROM face_verification WHERE stallholder_id = ?',
+      [stallholder_id]
+    );
+    
     const [result] = await connection.query(
       'CALL sp_insertFaceVerification(?, ?, ?, ?)',
       [stallholder_id, imageBuffer, file.mimetype, ENCRYPTION_KEY]

@@ -21,7 +21,12 @@ export default {
       sortBy: 'createdAt',
       sortOrder: 'desc',
       showViewModal: false,
-      selectedPayment: null
+      selectedPayment: null,
+      // Stallholder details modal
+      showStallholderModal: false,
+      loadingStallholderDetails: false,
+      stallholderDetails: null,
+      avatarBuster: Date.now()
     }
   },
   computed: {
@@ -162,6 +167,32 @@ export default {
     viewPayment(payment) {
       this.selectedPayment = payment;
       this.showViewModal = true;
+    },
+
+    async showStallholderDetails(stallholderId) {
+      if (!stallholderId) return;
+      this.showStallholderModal = true;
+      this.loadingStallholderDetails = true;
+      this.stallholderDetails = null;
+      this.avatarBuster = Date.now();
+      
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            this.stallholderDetails = result.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stallholder details:', error);
+      } finally {
+        this.loadingStallholderDetails = false;
+      }
     }
   }
 }
