@@ -1,4 +1,4 @@
-import { useAvatar } from '../../../../utils/avatarHelper.js';
+import { useAvatar } from '@utils/avatarHelper.js'
 
 export default {
   name: 'VendorApplicantsTable',
@@ -493,3 +493,4 @@ export default {
     },
   },
 }
+

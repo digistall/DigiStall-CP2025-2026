@@ -1,6 +1,6 @@
 import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
 import ToastNotification from '@common/ToastNotification/ToastNotification.vue'
-import { useAvatar } from '../../../../utils/avatarHelper.js'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 // Discount and fee constants
 const ADVANCE_DISCOUNT = 0.25     // 25% off when paid 5+ days early
@@ -831,4 +831,5 @@ export default {
     }
   }
 }
+
 

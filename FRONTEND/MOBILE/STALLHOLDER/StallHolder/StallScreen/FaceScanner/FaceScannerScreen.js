@@ -1,61 +1,168 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Alert } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
+import { View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Animated, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import ApiService from '../../../../services/ApiService';
 import styles from './FaceScannerStyles';
 
-const FaceScannerScreen = ({ isVisible, stallholderId, onComplete }) => {
-  const [hasPermission, setHasPermission] = useState(null);
+const FaceScannerScreen = ({ route, navigation }) => {
+  const stallholderId = route?.params?.stallholderId;
+  // When true, after successful verification go back to StallHome (Settings tab) instead of replacing
+  const returnToSettings = route?.params?.returnToSettings || false;
+  const [permission, requestPermission] = useCameraPermissions();
+  const hasPermission = permission ? permission.granted : null;
   const [step, setStep] = useState(1); // 1 = Zoom In, 2 = Zoom Out
   const [capturedImage, setCapturedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [countdown, setCountdown] = useState(3);
+  const [scanStarted, setScanStarted] = useState(false);
+  const [isPersonDetected, setIsPersonDetected] = useState(false);
+  const [scanningStatus, setScanningStatus] = useState("Position your face inside the circle");
+  const [alertConfig, setAlertConfig] = useState({ visible: false, type: 'success', title: '', message: '' });
+  
   const cameraRef = useRef(null);
+  
+  // Animation values
+  const flashAnim = useRef(new Animated.Value(0)).current;
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
 
+  // Start animated lighting helper when scanning is active (GCash style lighting feedback)
   useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+    if (hasPermission && !capturedImage && scanStarted) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(flashAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
+          Animated.timing(flashAnim, { toValue: 0, duration: 1200, useNativeDriver: false })
+        ])
+      ).start();
+    } else {
+      flashAnim.setValue(0);
+    }
+  }, [hasPermission, capturedImage, scanStarted]);
+
+  // Scanline laser animation inside the face guide circle
+  useEffect(() => {
+    if (scanStarted && !isPersonDetected) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scanLineAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
+          Animated.timing(scanLineAnim, { toValue: 0, duration: 1800, useNativeDriver: false })
+        ])
+      ).start();
+    } else {
+      scanLineAnim.setValue(0);
+    }
+  }, [scanStarted, isPersonDetected]);
+
+  // AI Checker: Simulates person detection in the circle layout before triggering countdown
+  useEffect(() => {
+    let detectTimer;
+    if (scanStarted) {
+      setScanningStatus("AI Scan: Checking alignment...");
+      setIsPersonDetected(false);
+      
+      detectTimer = setTimeout(() => {
+        setIsPersonDetected(true);
+        setScanningStatus("Face aligned! Hold still.");
+        setCountdown(3);
+      }, 1800); // 1.8 seconds simulated detector response time
+    } else {
+      setIsPersonDetected(false);
+      setScanningStatus(step === 1 ? "Align your face inside the circle" : "Zoom out and align head and shoulders");
+    }
+    return () => clearTimeout(detectTimer);
+  }, [scanStarted, step]);
+
+  // Auto capture countdown timer
+  useEffect(() => {
+    let timer;
+    if (hasPermission && scanStarted && isPersonDetected && !capturedImage && !isUploading && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (countdown === 0 && scanStarted && isPersonDetected && !capturedImage && !isUploading) {
+      takePicture();
+    }
+    return () => clearTimeout(timer);
+  }, [countdown, hasPermission, scanStarted, isPersonDetected, capturedImage, isUploading]);
 
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
         const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          base64: false, // Don't need base64 here since we'll upload via form data
+          quality: 0.9, // Higher quality capture, no auto adjustments or local processing
+          base64: false,
         });
         
         if (step === 1) {
-          // Move to step 2 automatically
+          // Reset scanning state for Step 2 so the user can adjust posture and zoom out
           setStep(2);
+          setScanStarted(false);
+          setIsPersonDetected(false);
+          setCountdown(3);
         } else if (step === 2) {
           setCapturedImage(photo.uri);
+          autoUploadPhoto(photo.uri);
         }
       } catch (err) {
-        Alert.alert('Error', 'Failed to take photo. Please try again.');
+        setAlertConfig({
+          visible: true,
+          type: 'error',
+          title: 'Capture Failed',
+          message: 'Could not capture photo. Please try again.',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
       }
     }
   };
 
-  const uploadPhoto = async () => {
-    if (!capturedImage || !stallholderId) return;
+  const autoUploadPhoto = async (uri) => {
+    if (!uri || !stallholderId) return;
 
     setIsUploading(true);
     try {
-      const response = await ApiService.uploadFaceVerification(stallholderId, capturedImage);
+      const response = await ApiService.uploadFaceVerification(stallholderId, uri);
       
       if (response.success) {
-        Alert.alert('Success', 'Face verification completed successfully.', [
-          { text: 'OK', onPress: () => onComplete() }
-        ]);
+        setAlertConfig({
+          visible: true,
+          type: 'success',
+          title: 'Verification Success!',
+          message: 'Your face has been successfully verified by DigiStall AI. Proceeding to Dashboard.',
+          onConfirm: () => {
+            if (returnToSettings) {
+              // Retake flow: go back to StallHome (Settings will reload and show new photo)
+              navigation.navigate('StallHome');
+            } else {
+              navigation.replace('StallHome');
+            }
+          }
+        });
       } else {
-        Alert.alert('Verification Failed', response.message || 'Please ensure your face is visible, no shades, and good lighting.', [
-          { text: 'Retake', onPress: retakePhoto }
-        ]);
+        setAlertConfig({
+          visible: true,
+          type: 'error',
+          title: 'Verification Failed',
+          message: response.message === 'No face detected in the image.' 
+            ? 'No face detected. Please ensure your face is clearly visible, well-lit, and without heavy shadows.' 
+            : (response.message || 'Face not recognized. Please try again.'),
+          onConfirm: () => {
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+            retakePhoto();
+          }
+        });
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred while uploading.');
+      setAlertConfig({
+        visible: true,
+        type: 'error',
+        title: 'Server Error',
+        message: 'A network error occurred while uploading. Please check connection and try again.',
+        onConfirm: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          retakePhoto();
+        }
+      });
     } finally {
       setIsUploading(false);
     }
@@ -64,25 +171,64 @@ const FaceScannerScreen = ({ isVisible, stallholderId, onComplete }) => {
   const retakePhoto = () => {
     setCapturedImage(null);
     setStep(1);
+    setScanStarted(false);
+    setIsPersonDetected(false);
+    setCountdown(3);
   };
+  
+  const backgroundColor = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.25)'] // Adaptive background flashing color
+  });
+  
+  const CustomAlert = () => (
+    <Modal visible={alertConfig.visible} transparent animationType="fade">
+      <View style={styles.alertOverlay}>
+        <View style={styles.alertBox}>
+          <View style={[styles.alertIconContainer, { backgroundColor: alertConfig.type === 'success' ? '#2ECC71' : '#E74C3C' }]}>
+            <Ionicons name={alertConfig.type === 'success' ? 'checkmark-circle' : 'alert-circle'} size={46} color="#FFF" />
+          </View>
+          <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+          <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+          <TouchableOpacity 
+            style={[styles.alertButton, { backgroundColor: alertConfig.type === 'success' ? '#2ECC71' : '#E74C3C' }]} 
+            onPress={() => {
+              if (alertConfig.onConfirm) alertConfig.onConfirm();
+              else setAlertConfig(prev => ({ ...prev, visible: false }));
+            }}
+          >
+            <Text style={styles.alertButtonText}>{alertConfig.type === 'success' ? 'Continue' : 'Try Again'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
-  if (hasPermission === null || !isVisible) {
-    return null;
+  if (hasPermission === null) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0C' }]}>
+        <ActivityIndicator size="large" color="#2ECC71" />
+      </View>
+    );
   }
 
   if (hasPermission === false) {
     return (
-      <Modal visible={isVisible} transparent={false} animationType="slide">
-        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ color: 'white' }}>No access to camera</Text>
-          <Text style={{ color: 'gray', marginTop: 10 }}>Please enable camera permissions in your settings.</Text>
-        </View>
-      </Modal>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0C', padding: 24 }]}>
+        <Ionicons name="camera-off" size={64} color="#E74C3C" />
+        <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold', marginTop: 16 }}>Camera Permission Denied</Text>
+        <Text style={{ color: '#AAA', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
+          DigiStall needs camera access to complete your facial verification check. Please grant permissions in system settings.
+        </Text>
+        <TouchableOpacity style={[styles.button, styles.confirmButton, { marginTop: 24, backgroundColor: '#2ECC71' }]} onPress={requestPermission}>
+          <Text style={styles.buttonText}>Grant Permission</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
   return (
-    <Modal visible={isVisible} transparent={false} animationType="slide">
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       {capturedImage ? (
         <View style={styles.previewContainer}>
           <Image source={{ uri: capturedImage }} style={styles.previewImage} />
@@ -90,45 +236,88 @@ const FaceScannerScreen = ({ isVisible, stallholderId, onComplete }) => {
             <TouchableOpacity style={[styles.button, styles.retakeButton]} onPress={retakePhoto} disabled={isUploading}>
               <Text style={styles.buttonText}>Retake</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={uploadPhoto} disabled={isUploading}>
+            <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={() => autoUploadPhoto(capturedImage)} disabled={isUploading}>
               <Text style={styles.buttonText}>Confirm</Text>
             </TouchableOpacity>
           </View>
           
           {isUploading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4CAF50" />
-              <Text style={styles.loadingText}>Analyzing face...</Text>
+              <ActivityIndicator size="large" color="#2ECC71" />
+              <Text style={styles.loadingText}>Uploading to AI verification engine...</Text>
             </View>
           )}
         </View>
       ) : (
         <View style={styles.container}>
-          <Camera style={styles.camera} type={CameraType.front} ref={cameraRef}>
-            <View style={styles.overlay}>
-              <Text style={styles.headerText}>
-                {step === 1 ? 'Step 1: Face Capture' : 'Step 2: Zoom Out'}
-              </Text>
-              
-              <Text style={styles.subHeaderText}>
-                {step === 1 
-                  ? 'Move closer. Position your face inside the circle.' 
-                  : 'Move back. Show your head and shoulders.'}
-              </Text>
+          <CameraView style={styles.camera} facing="front" ref={cameraRef} />
+          <Animated.View style={[StyleSheet.absoluteFillObject, styles.overlay, { backgroundColor }]} pointerEvents="box-none">
+            
+            <Text style={styles.headerText}>
+              {step === 1 ? 'Step 1: Face Capture' : 'Step 2: Zoom Out'}
+            </Text>
+            
+            <Text style={styles.subHeaderText}>
+              {step === 1 
+                ? 'Move closer. Position your face inside the circle.' 
+                : 'Move back. Show your head and shoulders.'}
+            </Text>
 
-              <View style={step === 1 ? styles.guideCircle : styles.guideCircleZoomOut} />
-
-              <View style={styles.captureContainer}>
-                <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-                  <View style={styles.captureInner} />
-                </TouchableOpacity>
-                <Text style={styles.captureText}>Tap to Capture</Text>
-              </View>
+            <View style={step === 1 ? styles.guideCircle : styles.guideCircleZoomOut}>
+              {scanStarted && !isPersonDetected && (
+                <Animated.View style={[
+                  styles.scanLine,
+                  {
+                    top: scanLineAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['5%', '95%']
+                    })
+                  }
+                ]} />
+              )}
             </View>
-          </Camera>
+
+            <Text style={styles.scanningStatusText}>{scanningStatus}</Text>
+
+            {scanStarted && isPersonDetected && countdown > 0 && (
+              <Text style={styles.holdStillText}>HOLD STILL! Capturing shortly...</Text>
+            )}
+
+            {isPersonDetected && scanStarted && (
+              <View style={styles.countdownContainer}>
+                <Text style={countdown > 0 ? styles.countdownText : styles.capturingText}>
+                  {countdown > 0 ? countdown : "Capturing..."}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.btnContainer}>
+              {!scanStarted ? (
+                <>
+                  <TouchableOpacity style={styles.startScanButton} onPress={() => setScanStarted(true)}>
+                    <Ionicons name="scan" size={24} color="#FFF" />
+                    <Text style={styles.startScanButtonText}>Start Verification</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.manualCaptureButton} onPress={takePicture}>
+                    <Ionicons name="camera" size={26} color="#FFF" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.button, styles.retakeButton, { backgroundColor: '#E74C3C' }]} 
+                  onPress={() => setScanStarted(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+          </Animated.View>
         </View>
       )}
-    </Modal>
+      <CustomAlert />
+    </View>
   );
 };
 

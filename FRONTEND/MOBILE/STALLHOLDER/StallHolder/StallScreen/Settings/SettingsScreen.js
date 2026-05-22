@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Image,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ProfileDisplay from "./components/ProfileComponents/ProfileComponents/ProfileDisplay";
@@ -19,11 +20,10 @@ import ChangePassword from "./components/ChangePasswordComponents/ChangePassword
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
 import ApiService from "../../../../services/ApiService";
-import { Image } from "react-native";
 
 const { width } = Dimensions.get("window");
 
-const SettingsScreen = ({ user, initialShowProfile = false }) => {
+const SettingsScreen = ({ user, initialShowProfile = false, navigation }) => {
   const [showProfile, setShowProfile] = useState(initialShowProfile);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -34,7 +34,7 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
   const [imageError, setImageError] = useState(false);
   const { theme, themeMode, changeTheme } = useTheme();
 
-  // Load user data from storage
+  // Load user data and face image from storage
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -42,10 +42,12 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
         if (storedUserData) {
           setUserData(storedUserData);
           console.log("Settings - Loaded user data:", storedUserData);
-          
-          if (storedUserData.user?.stallholder_id) {
-            const uri = await ApiService.getFaceImageUri(storedUserData.user.stallholder_id);
-            // Append timestamp to bust cache if they somehow changed it, though it's one-time
+
+          // Prefer stallholder_id for face image
+          const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
+          if (stallholderId) {
+            const uri = await ApiService.getFaceImageUri(stallholderId);
+            // Bust cache with timestamp so re-taken photos appear fresh
             setAvatarUri(`${uri}?t=${new Date().getTime()}`);
           }
         }
@@ -153,6 +155,16 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
     );
   }
 
+  // Navigate to FaceScannerScreen to retake profile photo
+  const handleRetakePhoto = () => {
+    const stallholderId = userData?.stallholder?.stallholder_id || userData?.user?.stallholder_id;
+    if (navigation && stallholderId) {
+      navigation.navigate('FaceScannerScreen', { stallholderId, returnToSettings: true });
+    } else if (navigation) {
+      navigation.navigate('FaceScannerScreen', { returnToSettings: true });
+    }
+  };
+
   return (
     <>
       <StatusBar
@@ -169,7 +181,7 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
             {avatarUri && !imageError ? (
               <Image 
                 source={{ uri: avatarUri }} 
-                style={themedStyles.avatarContainer}
+                style={themedStyles.avatarImage}
                 onError={() => setImageError(true)} 
               />
             ) : (
@@ -192,6 +204,16 @@ const SettingsScreen = ({ user, initialShowProfile = false }) => {
               size={24}
               color={theme.colors.textTertiary}
             />
+          </TouchableOpacity>
+
+          {/* Retake Profile Photo Button */}
+          <TouchableOpacity
+            onPress={handleRetakePhoto}
+            style={themedStyles.retakePhotoRow}
+          >
+            <Ionicons name="camera-outline" size={18} color={theme.colors.primary} />
+            <Text style={themedStyles.retakePhotoText}>Retake Profile Photo</Text>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.textTertiary} />
           </TouchableOpacity>
         </View>
 
@@ -356,6 +378,11 @@ const createThemedStyles = (theme) =>
       color: theme.colors.textSecondary,
       marginTop: 2,
     },
+    avatarImage: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+    },
     avatarContainer: {
       width: 64,
       height: 64,
@@ -410,6 +437,22 @@ const createThemedStyles = (theme) =>
       fontSize: width * 0.035,
       color: theme.colors.textSecondary,
       marginTop: 2,
+    },
+    retakePhotoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderLight || '#f0f0f0',
+    },
+    retakePhotoText: {
+      flex: 1,
+      fontSize: width * 0.038,
+      color: theme.colors.primary,
+      marginLeft: 8,
+      fontWeight: '500',
     },
   });
 

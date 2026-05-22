@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Image } from "react-native";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { mockUser } from "../mockUser";
@@ -7,10 +7,11 @@ import EditProfileModal from "../EditComponents/editProfile";
 import UserStorageService from "../../../../../../../services/UserStorageService";
 import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../../../../../services/DataDisplayUtils";
+import ApiService from "../../../../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
 
-const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
+const ProfileDisplay = ({ user, onGoBack, onUpdateUser, navigation }) => {
   const { theme, isDark } = useTheme();
   console.log("ProfileDisplay component rendered with user:", user);
 
@@ -18,8 +19,10 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState(user);
   const [userData, setUserData] = useState(null);
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
 
-  // Load user data from storage
+  // Load user data and face image from storage
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -27,6 +30,13 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
         if (storedUserData) {
           setUserData(storedUserData);
           console.log("ProfileDisplay - Loaded user data:", JSON.stringify(storedUserData, null, 2));
+
+          // Load face image for avatar
+          const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
+          if (stallholderId) {
+            const uri = await ApiService.getFaceImageUri(stallholderId);
+            setAvatarUri(`${uri}?t=${new Date().getTime()}`);
+          }
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -270,19 +280,42 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
           {/* Profile Avatar & Info */}
           <View style={styles.profileSection}>
             <View style={styles.avatarWrapper}>
-              <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>
-                  {profileData.fullName
-                    .split(" ")
-                    .map((name) => name[0])
-                    .join("")
-                    .substring(0, 2)}
-                </Text>
-              </View>
+              {avatarUri && !avatarError ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={styles.avatarImage}
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <View style={styles.avatarContainer}>
+                  <Text style={styles.avatarText}>
+                    {profileData.fullName
+                      .split(" ")
+                      .map((name) => name[0])
+                      .join("")
+                      .substring(0, 2)}
+                  </Text>
+                </View>
+              )}
               <View style={styles.onlineIndicator} />
             </View>
             <Text style={styles.profileName}>{profileData.fullName}</Text>
             <Text style={styles.profileEmail}>{profileData.emailAddress}</Text>
+
+            {/* Retake Profile Photo */}
+            <TouchableOpacity
+              style={styles.retakePhotoButton}
+              onPress={() => {
+                const stallholderId = userData?.stallholder?.stallholder_id || userData?.user?.stallholder_id;
+                if (navigation) {
+                  navigation.navigate('FaceScannerScreen', { stallholderId });
+                } else if (onGoBack) {
+                  onGoBack(); // go back to settings which has the retake button
+                }
+              }}
+            >
+              <Text style={styles.retakePhotoButtonText}>📷 Retake Profile Photo</Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -391,7 +424,7 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser }) => {
       <EditProfileModal
         visible={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
-        user={currentUser || mockUser}
+        user={profileData}
         onSave={handleSaveProfile}
       />
     </>
@@ -461,6 +494,13 @@ const createThemedStyles = (theme) => StyleSheet.create({
     position: "relative",
     marginBottom: height * 0.015,
   },
+  avatarImage: {
+    width: width * 0.24,
+    height: width * 0.24,
+    borderRadius: width * 0.12,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
   avatarContainer: {
     width: width * 0.24,
     height: width * 0.24,
@@ -504,6 +544,20 @@ const createThemedStyles = (theme) => StyleSheet.create({
     fontSize: width * 0.038,
     color: "rgba(255, 255, 255, 0.85)",
     textAlign: "center",
+  },
+  retakePhotoButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  retakePhotoButtonText: {
+    color: '#fff',
+    fontSize: width * 0.035,
+    fontWeight: '600',
   },
   contentArea: {
     paddingHorizontal: width * 0.04,

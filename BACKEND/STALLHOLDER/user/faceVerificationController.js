@@ -28,9 +28,11 @@ export async function uploadFaceVerification(req, res) {
       return res.status(400).json({ success: false, message: validation.message });
     }
 
-    // 2. Compress image using existing standard
-    const compressed = await compressBuffer(imageBuffer, mimeType, { type: 'thumbnail' });
-    imageBuffer = compressed.buffer;
+    // 2. Use rotated buffer if face detection corrected orientation
+    if (validation.rotatedBuffer) {
+      console.log('🔄 Saving rotated upright face verification image');
+      imageBuffer = validation.rotatedBuffer;
+    }
 
     // 3. Encrypt and save to DB
     const encryptionKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';

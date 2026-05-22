@@ -1,5 +1,5 @@
 import { apiClient } from '@services/apiClient.js'
-import { useAvatar } from '../../../../../utils/avatarHelper.js'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 export default {
   name: 'DocumentReview',
@@ -343,3 +343,4 @@ export default {
     }
   }
 }
+

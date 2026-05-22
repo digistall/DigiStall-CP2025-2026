@@ -1,5 +1,5 @@
 import ToastNotification from '@SHARED_COMPONENTS/ToastNotification/ToastNotification.vue'
-import { useAvatar } from '../../../../../utils/avatarHelper.js'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 export default {
   name: 'DailyPayments',
@@ -345,3 +345,4 @@ export default {
     },
   },
 }
+

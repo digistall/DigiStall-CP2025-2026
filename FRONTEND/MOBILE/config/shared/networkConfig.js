@@ -140,6 +140,10 @@ export const API_CONFIG = {
     GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
     GET_MONTHLY_PAYMENT_STATUS: '/api/mobile/stallholder/payments/monthly-status',
     
+    // Face Scanner endpoints
+    CHECK_FACE_VERIFICATION: '/api/mobile/stallholder/face-verify/status',
+    UPLOAD_FACE_VERIFICATION: '/api/mobile/stallholder/face-verify/upload',
+    
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint
   },
