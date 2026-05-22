@@ -10,6 +10,7 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
@@ -45,7 +46,7 @@ const Sidebar = ({
   const [avatarUri, setAvatarUri] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
 
-  // Load user data when component mounts
+  // Load user data and avatar when component becomes visible
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -60,7 +61,9 @@ const Sidebar = ({
           if (stallholderId) {
             try {
               const uri = await ApiService.getFaceImageUri(stallholderId);
-              setAvatarUri(`${uri}?t=${new Date().getTime()}`);
+              const lastUpdate = await AsyncStorage.getItem('face_image_last_update');
+              setAvatarUri(`${uri}?t=${lastUpdate || '0'}`);
+              setAvatarError(false); // Reset error state on fresh load
             } catch (e) {
               console.log('Sidebar - Could not load face image:', e.message);
             }
@@ -73,8 +76,10 @@ const Sidebar = ({
       }
     };
 
-    loadUserData();
-  }, []);
+    if (isVisible) {
+      loadUserData();
+    }
+  }, [isVisible]);
 
   useEffect(() => {
     if (isVisible) {

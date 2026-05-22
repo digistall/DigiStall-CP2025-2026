@@ -38,6 +38,13 @@ export async function uploadFaceVerification(req, res) {
     const encryptionKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
     connection = await createConnection();
 
+    // Delete existing face verification records for this stallholder first
+    console.log(`🧹 Deleting existing face verification records for stallholder ID: ${stallholder_id}`);
+    await connection.execute(
+      'DELETE FROM face_verification WHERE stallholder_id = ?',
+      [stallholder_id]
+    );
+
     const [result] = await connection.execute(
       'CALL sp_insertFaceVerification(?, ?, ?, ?)',
       [stallholder_id, imageBuffer, mimeType, encryptionKey]

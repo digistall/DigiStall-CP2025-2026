@@ -8,6 +8,7 @@ import UserStorageService from "../../../../../../../services/UserStorageService
 import { useTheme } from '../../../../../../../components/ThemeComponents/ThemeContext';
 import { getSafeDisplayValue, getSafeUserName, getSafeContactInfo } from "../../../../../../../services/DataDisplayUtils";
 import ApiService from "../../../../../../../services/ApiService";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get("window");
 
@@ -35,7 +36,9 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser, navigation }) => {
           const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
           if (stallholderId) {
             const uri = await ApiService.getFaceImageUri(stallholderId);
-            setAvatarUri(`${uri}?t=${new Date().getTime()}`);
+            const lastUpdate = await AsyncStorage.getItem('face_image_last_update');
+            setAvatarUri(`${uri}?t=${lastUpdate || '0'}`);
+            setAvatarError(false); // Reset error state on fresh load
           }
         }
       } catch (error) {
@@ -44,7 +47,16 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser, navigation }) => {
     };
 
     loadUserData();
-  }, []);
+
+    // Listen to focus changes to reload image if user returned from FaceScannerScreen
+    if (navigation) {
+      const unsubscribe = navigation.addListener('focus', () => {
+        console.log("ProfileDisplay - Screen focused, reloading user data");
+        loadUserData();
+      });
+      return unsubscribe;
+    }
+  }, [navigation]);
 
   // log when component mounts
   React.useEffect(() => {

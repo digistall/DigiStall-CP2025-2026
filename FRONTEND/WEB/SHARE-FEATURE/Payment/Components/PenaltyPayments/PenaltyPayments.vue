@@ -75,7 +75,7 @@
                       {{ getInitials(payment.stallholderName || 'N/A') }}
                     </div>
                     <div class="name-details">
-                      <span class="name">{{ payment.stallholderName || 'N/A' }}</span>
+                      <span class="clickable-name name" @click.stop="showStallholderDetails(payment.stallholderId)">{{ payment.stallholderName || 'N/A' }}</span>
                       <span v-if="payment.branchName" class="branch-name">{{
                         payment.branchName
                       }}</span>
@@ -145,7 +145,7 @@
                   <div class="avatar avatar-initials mr-2" :style="{ display: selectedPayment.stallholderId ? 'none' : 'flex', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }">
                     {{ getInitials(selectedPayment.stallholderName) }}
                   </div>
-                  <span class="detail-value" style="margin-left: 0;">{{ selectedPayment.stallholderName }}</span>
+                  <span class="clickable-name detail-value" style="margin-left: 0;" @click="showStallholderDetails(selectedPayment.stallholderId)">{{ selectedPayment.stallholderName }}</span>
                 </div>
               </div>
               <div class="detail-item">
@@ -184,6 +184,113 @@
                   size="small"
                 >
                   {{ selectedPayment.paymentStatus || 'completed' }}
+                </v-chip>
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- Stallholder Details Popup Modal (Premium Glassmorphic Design) -->
+    <v-dialog v-model="showStallholderModal" max-width="550px">
+      <v-card class="stallholder-detail-modal">
+        <v-card-title class="modal-header d-flex justify-space-between align-center">
+          <span class="modal-title">Stallholder Information</span>
+          <v-btn icon variant="text" @click="showStallholderModal = false">
+            <v-icon color="white">mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        
+        <v-card-text class="pa-6 modal-body-glass">
+          <div v-if="loadingStallholderDetails" class="text-center py-8">
+            <v-progress-circular indeterminate color="#002181" size="50"></v-progress-circular>
+            <p class="mt-4 text-muted font-weight-medium">Fetching details securely...</p>
+          </div>
+          
+          <div v-else-if="!stallholderDetails" class="text-center py-8">
+            <v-icon size="60" color="error">mdi-alert-circle-outline</v-icon>
+            <p class="mt-4 text-error font-weight-bold">Failed to load stallholder profile.</p>
+          </div>
+          
+          <div v-else class="stallholder-profile-container text-center">
+            <!-- Header Section with Large Profile Pic -->
+            <div class="profile-header-wrap mb-6">
+              <div class="avatar-container-lg mx-auto mb-4">
+                <img 
+                  v-if="stallholderDetails.stallholder_id || stallholderDetails.id"
+                  :src="getAvatarUrl(stallholderDetails.stallholder_id || stallholderDetails.id) + '?t=' + avatarBuster"
+                  @error="handleAvatarError"
+                  class="profile-avatar-lg"
+                  alt="Profile Avatar"
+                />
+                <div class="profile-avatar-lg avatar-initials d-flex align-center justify-center text-h3 font-weight-bold text-white bg-primary">
+                  {{ getInitials(stallholderDetails.full_name || stallholderDetails.stallholder_name || 'N/A') }}
+                </div>
+              </div>
+              <h2 class="profile-fullname">{{ stallholderDetails.full_name || stallholderDetails.stallholder_name || 'N/A' }}</h2>
+              <p class="profile-business-name mb-0" v-if="stallholderDetails.business_name">
+                <v-icon size="16" class="mr-1">mdi-storefront</v-icon>
+                {{ stallholderDetails.business_name }}
+              </p>
+            </div>
+            
+            <!-- Details Grid -->
+            <div class="profile-info-grid">
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-store</v-icon>Stall Info</span>
+                <span class="info-value text-right">
+                  Stall #{{ stallholderDetails.stall_number || stallholderDetails.stall_no || 'N/A' }}
+                  <span class="text-caption text-muted" v-if="stallholderDetails.branch_name">({{ stallholderDetails.branch_name }})</span>
+                </span>
+              </div>
+              
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-email</v-icon>Email</span>
+                <span class="info-value text-right">{{ stallholderDetails.email || 'N/A' }}</span>
+              </div>
+              
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-phone</v-icon>Contact Number</span>
+                <span class="info-value text-right">{{ stallholderDetails.contact_number || stallholderDetails.stallholder_contact || 'N/A' }}</span>
+              </div>
+              
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-map-marker</v-icon>Address</span>
+                <span class="info-value text-right text-truncate-custom" :title="stallholderDetails.address || stallholderDetails.stallholder_address">{{ stallholderDetails.address || stallholderDetails.stallholder_address || 'N/A' }}</span>
+              </div>
+              
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-calendar-range</v-icon>Move-In Date</span>
+                <span class="info-value text-right">{{ formatDate(stallholderDetails.move_in_date) }}</span>
+              </div>
+              
+              <div class="profile-info-item" v-if="stallholderDetails.monthly_rent || stallholderDetails.rental_price">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-cash-multiple</v-icon>Monthly Rental</span>
+                <span class="info-value text-right text-success font-weight-bold">{{ formatAmount(stallholderDetails.monthly_rent || stallholderDetails.rental_price) }}</span>
+              </div>
+              
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-shield-check</v-icon>Compliance Status</span>
+                <v-chip 
+                  :color="stallholderDetails.compliance_status === 'Compliant' ? 'success' : 'error'" 
+                  variant="flat" 
+                  size="small" 
+                  class="ml-auto"
+                >
+                  {{ stallholderDetails.compliance_status || 'Compliant' }}
+                </v-chip>
+              </div>
+              
+              <div class="profile-info-item">
+                <span class="info-label"><v-icon size="16" class="mr-2">mdi-file-document-outline</v-icon>Contract Status</span>
+                <v-chip 
+                  :color="stallholderDetails.status === 'Active' ? 'info' : 'warning'" 
+                  variant="flat" 
+                  size="small" 
+                  class="ml-auto"
+                >
+                  {{ stallholderDetails.status || 'Active' }}
                 </v-chip>
               </div>
             </div>

@@ -46,6 +46,12 @@ export default {
       showEntryDetail: false,
       selectedEntry: null,
 
+      // Stallholder details modal
+      showStallholderModal: false,
+      loadingStallholderDetails: false,
+      stallholderDetails: null,
+      avatarBuster: Date.now(),
+
       // Add payment modal
       showAddModal: false,
       formValid: false,
@@ -828,6 +834,32 @@ export default {
       if (!dateString) return 'â€”'
       const d = new Date(dateString)
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    },
+
+    async showStallholderDetails(stallholderId) {
+      if (!stallholderId) return;
+      this.showStallholderModal = true;
+      this.loadingStallholderDetails = true;
+      this.stallholderDetails = null;
+      this.avatarBuster = Date.now();
+      
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            this.stallholderDetails = result.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stallholder details:', error);
+      } finally {
+        this.loadingStallholderDetails = false;
+      }
     }
   }
 }
