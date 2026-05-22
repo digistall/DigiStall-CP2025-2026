@@ -27,10 +27,10 @@ export const vendorLogin = async (req, res) => {
     const [rows] = await connection.execute(
       `SELECT
         va.vendor_account_id,
-        va.vendor_id,
-        va.email,
-        va.password_hash,
-        va.status,
+        v.vendor_id,
+        va.vendor_email AS email,
+        va.vendor_password AS password_hash,
+        v.status,
         v.first_name,
         v.middle_name,
         v.last_name,
@@ -46,9 +46,9 @@ export const vendorLogin = async (req, res) => {
         vb.business_description,
         vb.products
       FROM vendor_account va
-      JOIN vendor v ON va.vendor_id = v.vendor_id
+      JOIN vendor v ON va.vendor_email = v.email
       LEFT JOIN vendor_business vb ON v.vendor_business_id = vb.vendor_business_id
-      WHERE LOWER(va.email) = ?
+      WHERE LOWER(va.vendor_email) = ?
       LIMIT 1`,
       [loginEmail],
     )
@@ -77,11 +77,9 @@ export const vendorLogin = async (req, res) => {
       })
     }
 
-    await connection.execute(
-      'UPDATE vendor_account SET last_login = NOW(), updated_at = NOW() WHERE vendor_account_id = ?',
-      [account.vendor_account_id],
-    )
-
+    // Skip last_login update as vendor_account table does not have last_login or updated_at columns
+    // in the current database schema.
+    
     const fullName = buildFullName(account)
 
     const token = jwt.sign(

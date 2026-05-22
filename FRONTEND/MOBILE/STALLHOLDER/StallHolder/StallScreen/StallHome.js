@@ -11,7 +11,7 @@ import { useTheme } from '../../../components/ThemeComponents/ThemeContext';
 import ApiService from "../../../services/ApiService";
 import UserStorageService from "../../../services/UserStorageService";
 import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
-import FaceScannerScreen from "./FaceScanner/FaceScannerScreen";
+
 
 // nav bar and sidebar components
 import Header from "./StallComponents/header";
@@ -42,24 +42,10 @@ const StallHome = ({ navigation }) => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showProfileDirectly, setShowProfileDirectly] = useState(false);
-  const [showFaceScanner, setShowFaceScanner] = useState(false);
-  const [stallholderId, setStallholderId] = useState(null);
 
   React.useEffect(() => {
-    checkFaceStatus();
+    // Face verification is now handled during login and App.js initialization
   }, []);
-
-  const checkFaceStatus = async () => {
-    const userData = await UserStorageService.getUserData();
-    const id = userData?.user?.stallholder_id; // Check where the ID is stored
-    if (id) {
-      setStallholderId(id);
-      const result = await ApiService.checkFaceVerification(id);
-      if (!result.hasVerifiedFace) {
-        setShowFaceScanner(true);
-      }
-    }
-  };
 
   const handleLogout = async () => {
     // Prevent multiple clicks
@@ -198,7 +184,7 @@ const StallHome = ({ navigation }) => {
       case "reports":
         return <ComplaintScreen />;
       case "settings":
-        return <SettingsScreen initialShowProfile={showProfileDirectly} />;
+        return <SettingsScreen initialShowProfile={showProfileDirectly} navigation={navigation} />;
       case "notifications":
         return <NotificationsScreen />;
       case "documents":
@@ -266,12 +252,7 @@ const StallHome = ({ navigation }) => {
           subMessage="Please wait while we securely log you out"
         />
 
-        {/* Face Scanner overlay (blocking) */}
-        <FaceScannerScreen
-          isVisible={showFaceScanner}
-          stallholderId={stallholderId}
-          onComplete={() => setShowFaceScanner(false)}
-        />
+
       </SafeAreaView>
     </SafeAreaProvider>
   );

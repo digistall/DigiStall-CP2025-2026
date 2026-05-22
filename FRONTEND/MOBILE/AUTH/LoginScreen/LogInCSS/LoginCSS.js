@@ -87,30 +87,18 @@ const styles = StyleSheet.create({
 
   inputContainer: {
     marginBottom: 15,
-    position: "relative",
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  inputIconWrapper: {
-    position: "absolute",
-    left: 12,
-    zIndex: 1,
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
   },
 
   inputIcon: {
-    marginRight: 5,
-  },
-
-  textInputWithIcon: {
-    paddingLeft: 45,
-  },
-
-  passwordToggle: {
-    position: "absolute",
-    right: 15,
-    top: 13,
-    zIndex: 1,
+    marginRight: 10,
   },
 
   dropdownContainer: {
@@ -154,14 +142,10 @@ const styles = StyleSheet.create({
 
   textInput: {
     flex: 1,
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 15,
+    height: "100%",
     fontSize: 16,
-    backgroundColor: "#fff",
     color: "#333",
+    backgroundColor: "transparent",
   },
 
   loginButton: {
@@ -448,11 +432,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
   },
   errorModalIconNew: {
     marginBottom: 10,

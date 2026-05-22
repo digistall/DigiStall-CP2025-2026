@@ -1819,10 +1819,11 @@ class ApiService {
     console.log('🔄 Network configuration reset - will rediscover servers on next request');
   }
 
-  // Get current server URL
-  static getCurrentServer() {
-    return API_CONFIG.BASE_URL;
+  // Get API base URL for API calls (including BLOB image endpoints)
+  static getApiUrl() {
+    return API_CONFIG.BASE_URL || 'http://localhost:3001';
   }
+
 
   // Handle network errors consistently
   static handleNetworkError(error) {

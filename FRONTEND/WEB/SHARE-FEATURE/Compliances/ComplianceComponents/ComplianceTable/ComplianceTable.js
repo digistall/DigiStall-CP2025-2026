@@ -1,4 +1,4 @@
-import { useAvatar } from '../../../../../utils/avatarHelper.js'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 const ComplianceTable = {
   name: 'ComplianceTable',
@@ -116,3 +116,4 @@ const ComplianceTable = {
 }
 
 export default ComplianceTable
+

@@ -13,6 +13,7 @@ import {
 import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import ApiService from "../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
 
@@ -41,6 +42,8 @@ const Sidebar = ({
   const colors = theme?.colors || defaultTheme.colors;
   const slideAnim = useRef(new Animated.Value(-width * 0.85)).current;
   const [userData, setUserData] = useState(null);
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Load user data when component mounts
   useEffect(() => {
@@ -51,6 +54,17 @@ const Sidebar = ({
         if (storedUserData && storedUserData.user) {
           setUserData(storedUserData.user);
           console.log('👤 Sidebar - Set user data:', storedUserData.user);
+
+          // Fetch face image for profile avatar
+          const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
+          if (stallholderId) {
+            try {
+              const uri = await ApiService.getFaceImageUri(stallholderId);
+              setAvatarUri(`${uri}?t=${new Date().getTime()}`);
+            } catch (e) {
+              console.log('Sidebar - Could not load face image:', e.message);
+            }
+          }
         } else {
           console.log('❌ Sidebar - No user data found');
         }
@@ -201,11 +215,19 @@ const Sidebar = ({
                   onPress={onProfilePress}
                 >
                   <View style={baseStyles.profileImageContainer}>
-                    <View style={[baseStyles.profileImage, { backgroundColor: colors.primary }]}>
-                      <Text style={baseStyles.profileInitials}>
-                        {getDisplayInitials()}
-                      </Text>
-                    </View>
+                    {avatarUri && !avatarError ? (
+                      <Image
+                        source={{ uri: avatarUri }}
+                        style={baseStyles.profileImage}
+                        onError={() => setAvatarError(true)}
+                      />
+                    ) : (
+                      <View style={[baseStyles.profileImage, { backgroundColor: colors.primary }]}>
+                        <Text style={baseStyles.profileInitials}>
+                          {getDisplayInitials()}
+                        </Text>
+                      </View>
+                    )}
                     <View style={baseStyles.statusIndicator} />
                   </View>
                   <View style={baseStyles.profileInfo}>

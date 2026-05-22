@@ -11,7 +11,7 @@ if (!fs.existsSync(modelsDir)) {
   fs.mkdirSync(modelsDir, { recursive: true });
 }
 
-const baseUrl = 'https://raw.githubusercontent.com/vladmandic/face-api/master/model/';
+const baseUrl = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
 
 const filesToDownload = [
   'ssd_mobilenetv1_model-weights_manifest.json',
