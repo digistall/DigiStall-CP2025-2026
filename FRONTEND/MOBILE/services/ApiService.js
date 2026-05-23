@@ -2546,8 +2546,6 @@ class ApiService {
       const server = await NetworkUtils.getActiveServer();
       const url = `${server}/api/mobile/face/upload`;
       
-      console.log('🧪 Pre-validating face image (validate_only) to:', url);
-
       const formData = new FormData();
       formData.append('stallholder_id', stallholderId);
       formData.append('validate_only', 'true');
@@ -2581,10 +2579,24 @@ class ApiService {
         message: data.message
       };
     } catch (error) {
-      console.error('❌ Validate Face Image Error:', error);
+      const msg = error.message || '';
+      const msgLower = msg.toLowerCase();
+      const isExpectedWarning = (
+        msgLower.includes('face') || 
+        msgLower.includes('far') || 
+        msgLower.includes('close') || 
+        msgLower.includes('eye') || 
+        msgLower.includes('shadow') || 
+        msgLower.includes('occlud') ||
+        msgLower.includes('centered')
+      );
+      
+      if (!isExpectedWarning) {
+        console.error('❌ Validate Face Image Error:', error);
+      }
       return {
         success: false,
-        message: error.message || 'Network error occurred'
+        message: msg || 'Network error occurred'
       };
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -6,127 +6,119 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../../../../services/ApiService';
 import styles from './FaceScannerStyles';
 
+// Color sequence for the natural lighting flash effect after countdown
+const LIGHT_COLORS = [
+  { color: '#FFFFFF', duration: 300 },  // White (baseline)
+  { color: '#FFF9C4', duration: 350 },  // Warm yellow
+  { color: '#FFFDE7', duration: 300 },  // Soft cream
+  { color: '#C8E6C9', duration: 350 },  // Soft green
+  { color: '#E1F5FE', duration: 300 },  // Soft blue
+  { color: '#FFCDD2', duration: 350 },  // Soft red/pink
+  { color: '#FFF8E1', duration: 300 },  // Warm amber
+  { color: '#FFFFFF', duration: 400 },  // End on white (capture moment)
+];
+
 const FaceScannerScreen = ({ route, navigation }) => {
   const stallholderId = route?.params?.stallholderId;
   // When true, after successful verification go back to StallHome (Settings tab) instead of replacing
   const returnToSettings = route?.params?.returnToSettings || false;
   const [permission, requestPermission] = useCameraPermissions();
   const hasPermission = permission ? permission.granted : null;
-  const [step, setStep] = useState(1); // 1 = Zoom In, 2 = Zoom Out
   const [capturedImage, setCapturedImage] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [countdown, setCountdown] = useState(3);
-  const [scanStarted, setScanStarted] = useState(false);
-  const [isPersonDetected, setIsPersonDetected] = useState(false);
-  const [scanningStatus, setScanningStatus] = useState("Position your face inside the circle");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ visible: false, type: 'success', title: '', message: '' });
+  const [shutterFlash, setShutterFlash] = useState(false);
+
+  // Countdown & lighting states
+  const [countdown, setCountdown] = useState(null); // null = idle, 3/2/1 = counting, 0 = color phase
+  const [maskColor, setMaskColor] = useState('#FFFFFF');
+  const [maskOpacity, setMaskOpacity] = useState(0.5); // Start at 50% opacity
+  const [statusMessage, setStatusMessage] = useState('Tap the button below to take your photo');
   
   const cameraRef = useRef(null);
-  
-  // Animation values
-  const flashAnim = useRef(new Animated.Value(0)).current;
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const countdownActive = useRef(false);
 
-  // Pulse the white mask brightness subtly when scanning is active
-  useEffect(() => {
-    if (hasPermission && !capturedImage && scanStarted) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(flashAnim, { toValue: 1, duration: 1500, useNativeDriver: false }),
-          Animated.timing(flashAnim, { toValue: 0, duration: 1500, useNativeDriver: false })
-        ])
-      ).start();
-    } else {
-      flashAnim.setValue(0);
-    }
-  }, [hasPermission, capturedImage, scanStarted]);
+  // Start the capture sequence: 3-second countdown → color cycling → capture
+  const startCaptureSequence = useCallback(() => {
+    if (countdownActive.current || isProcessing) return;
+    countdownActive.current = true;
 
-  // Scanline laser animation inside the face guide circle
-  useEffect(() => {
-    if (scanStarted && !isPersonDetected) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scanLineAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
-          Animated.timing(scanLineAnim, { toValue: 0, duration: 1800, useNativeDriver: false })
-        ])
-      ).start();
-    } else {
-      scanLineAnim.setValue(0);
-    }
-  }, [scanStarted, isPersonDetected]);
+    // Phase 1: Go to 100% white opacity and start countdown
+    setMaskOpacity(1.0);
+    setMaskColor('#FFFFFF');
+    setCountdown(3);
+    setStatusMessage('Get ready! Hold still...');
 
-  // AI Checker: Simulates person detection in the circle layout before triggering countdown
-  useEffect(() => {
-    let detectTimer;
-    if (scanStarted) {
-      setScanningStatus("AI Scan: Checking alignment...");
-      setIsPersonDetected(false);
-      
-      detectTimer = setTimeout(() => {
-        setIsPersonDetected(true);
-        setScanningStatus("Face aligned! Hold still.");
-        setCountdown(3);
-      }, 1800); // 1.8 seconds simulated detector response time
-    } else {
-      setIsPersonDetected(false);
-      setScanningStatus(step === 1 ? "Align your face inside the circle" : "Zoom out and align head and shoulders");
-    }
-    return () => clearTimeout(detectTimer);
-  }, [scanStarted, step]);
+    // Countdown: 3 → 2 → 1
+    setTimeout(() => setCountdown(2), 1000);
+    setTimeout(() => setCountdown(1), 2000);
 
-  // Auto capture countdown timer
-  useEffect(() => {
-    let timer;
-    if (hasPermission && scanStarted && isPersonDetected && !capturedImage && !isUploading && countdown > 0) {
-      timer = setTimeout(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-    } else if (countdown === 0 && scanStarted && isPersonDetected && !capturedImage && !isUploading) {
+    // Phase 2: After 3 seconds, run color cycling sequence
+    setTimeout(() => {
+      setCountdown(0);
+      setStatusMessage('Optimizing lighting...');
+      runColorSequence();
+    }, 3000);
+  }, [isProcessing]);
+
+  const runColorSequence = () => {
+    let delay = 0;
+    LIGHT_COLORS.forEach((step, index) => {
+      setTimeout(() => {
+        setMaskColor(step.color);
+      }, delay);
+      delay += step.duration;
+    });
+
+    // After all colors have cycled, take the photo
+    setTimeout(() => {
+      setMaskColor('#FFFFFF');
       takePicture();
-    }
-    return () => clearTimeout(timer);
-  }, [countdown, hasPermission, scanStarted, isPersonDetected, capturedImage, isUploading]);
+    }, delay);
+  };
 
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
+        setIsProcessing(true);
+        setCountdown(null);
+        setStatusMessage('Capturing...');
+
+        // Trigger visual shutter flash effect
+        setShutterFlash(true);
+        setTimeout(() => setShutterFlash(false), 150);
+
         const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.9, // Higher quality capture, no auto adjustments or local processing
+          quality: 0.9,
           base64: false,
         });
         
-        if (step === 1) {
-          setIsUploading(true);
-          setScanningStatus("AI Scan: Analyzing face...");
-          const validation = await ApiService.validateFaceImage(stallholderId, photo.uri);
-          setIsUploading(false);
-          
-          if (validation.success) {
-            // Reset scanning state for Step 2 so the user can adjust posture and zoom out
-            setStep(2);
-            setScanStarted(false);
-            setIsPersonDetected(false);
-            setCountdown(3);
-          } else {
-            setScanStarted(false);
-            setIsPersonDetected(false);
-            setAlertConfig({
-              visible: true,
-              type: 'error',
-              title: 'Face Validation Failed',
-              message: validation.message || 'Face is obscured or eyes not clearly visible (e.g., wearing sunglasses/poor lighting). Please remove any accessories and try again.',
-              onConfirm: () => {
-                setAlertConfig(prev => ({ ...prev, visible: false }));
-                retakePhoto();
-              }
-            });
-          }
-        } else if (step === 2) {
+        setStatusMessage('AI checking photo quality...');
+        
+        // Validate the captured image via backend AI
+        const validation = await ApiService.validateFaceImage(stallholderId, photo.uri);
+        
+        if (validation.success) {
+          // Face passed all checks — show preview and auto-upload
           setCapturedImage(photo.uri);
           autoUploadPhoto(photo.uri);
+        } else {
+          // Face validation failed — show the specific error
+          setIsProcessing(false);
+          resetToIdle();
+          setAlertConfig({
+            visible: true,
+            type: 'error',
+            title: 'Photo Validation Failed',
+            message: validation.message || 'Face is not clearly visible. Please ensure good lighting, remove sunglasses, and try again.',
+            onConfirm: () => {
+              setAlertConfig(prev => ({ ...prev, visible: false }));
+            }
+          });
         }
       } catch (err) {
-        setIsUploading(false);
+        setIsProcessing(false);
+        resetToIdle();
         setAlertConfig({
           visible: true,
           type: 'error',
@@ -138,10 +130,19 @@ const FaceScannerScreen = ({ route, navigation }) => {
     }
   };
 
+  // Reset mask to idle state (50% white)
+  const resetToIdle = () => {
+    setMaskOpacity(0.5);
+    setMaskColor('#FFFFFF');
+    setCountdown(null);
+    setStatusMessage('Tap the button below to take your photo');
+    countdownActive.current = false;
+  };
+
   const autoUploadPhoto = async (uri) => {
     if (!uri || !stallholderId) return;
 
-    setIsUploading(true);
+    setIsProcessing(true);
     try {
       const response = await ApiService.uploadFaceVerification(stallholderId, uri);
       
@@ -156,11 +157,10 @@ const FaceScannerScreen = ({ route, navigation }) => {
         setAlertConfig({
           visible: true,
           type: 'success',
-          title: 'Verification Success!',
-          message: 'Your face has been successfully verified by DigiStall AI. Proceeding to Dashboard.',
+          title: 'Photo Saved!',
+          message: 'Your profile photo has been saved successfully.',
           onConfirm: () => {
             if (returnToSettings) {
-              // Retake flow: go back to StallHome (Settings will reload and show new photo)
               navigation.navigate('StallHome');
             } else {
               navigation.replace('StallHome');
@@ -171,10 +171,10 @@ const FaceScannerScreen = ({ route, navigation }) => {
         setAlertConfig({
           visible: true,
           type: 'error',
-          title: 'Verification Failed',
+          title: 'Upload Failed',
           message: response.message === 'No face detected in the image.' 
-            ? 'No face detected. Please ensure your face is clearly visible, well-lit, and without heavy shadows.' 
-            : (response.message || 'Face not recognized. Please try again.'),
+            ? 'No face detected. Please ensure your face is clearly visible and well-lit.' 
+            : (response.message || 'Could not upload photo. Please try again.'),
           onConfirm: () => {
             setAlertConfig(prev => ({ ...prev, visible: false }));
             retakePhoto();
@@ -193,23 +193,15 @@ const FaceScannerScreen = ({ route, navigation }) => {
         }
       });
     } finally {
-      setIsUploading(false);
+      setIsProcessing(false);
     }
   };
 
   const retakePhoto = () => {
     setCapturedImage(null);
-    setStep(1);
-    setScanStarted(false);
-    setIsPersonDetected(false);
-    setCountdown(3);
+    setIsProcessing(false);
+    resetToIdle();
   };
-  
-  // Subtle glow intensity for the mask border pulse
-  const maskBorderOpacity = flashAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1]
-  });
   
   const CustomAlert = () => (
     <Modal visible={alertConfig.visible} transparent animationType="fade">
@@ -248,7 +240,7 @@ const FaceScannerScreen = ({ route, navigation }) => {
         <Ionicons name="camera-off" size={64} color="#E74C3C" />
         <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold', marginTop: 16 }}>Camera Permission Denied</Text>
         <Text style={{ color: '#AAA', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
-          DigiStall needs camera access to complete your facial verification check. Please grant permissions in system settings.
+          DigiStall needs camera access to take your profile photo. Please grant permissions in system settings.
         </Text>
         <TouchableOpacity style={[styles.button, styles.confirmButton, { marginTop: 24, backgroundColor: '#2ECC71' }]} onPress={requestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
@@ -257,24 +249,30 @@ const FaceScannerScreen = ({ route, navigation }) => {
     );
   }
 
+  const isCountingDown = countdown !== null && countdown > 0;
+  const isColorPhase = countdown === 0;
+
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
+      {shutterFlash && (
+        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: '#FFF', zIndex: 999 }} pointerEvents="none" />
+      )}
       {capturedImage ? (
         <View style={styles.previewContainer}>
           <Image source={{ uri: capturedImage }} style={styles.previewImage} />
           <View style={styles.previewOverlay}>
-            <TouchableOpacity style={[styles.button, styles.retakeButton]} onPress={retakePhoto} disabled={isUploading}>
+            <TouchableOpacity style={[styles.button, styles.retakeButton]} onPress={retakePhoto} disabled={isProcessing}>
               <Text style={styles.buttonText}>Retake</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={() => autoUploadPhoto(capturedImage)} disabled={isUploading}>
+            <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={() => autoUploadPhoto(capturedImage)} disabled={isProcessing}>
               <Text style={styles.buttonText}>Confirm</Text>
             </TouchableOpacity>
           </View>
           
-          {isUploading && (
+          {isProcessing && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#2ECC71" />
-              <Text style={styles.loadingText}>Uploading to AI verification engine...</Text>
+              <Text style={styles.loadingText}>Uploading photo...</Text>
             </View>
           )}
         </View>
@@ -282,81 +280,77 @@ const FaceScannerScreen = ({ route, navigation }) => {
         <View style={styles.container}>
           <CameraView style={styles.camera} facing="front" ref={cameraRef} />
           
-          {/* SOLID WHITE SHIELD / PREMIUM LIGHTING RING HELPER */}
+          {/* LIGHTING MASK – 50% opacity at rest, 100% during countdown, color cycling for natural lighting */}
           <View style={styles.maskContainer} pointerEvents="none">
-            <Animated.View style={[
-              step === 1 ? styles.maskCircle : styles.maskCircleZoomOut,
-              { opacity: maskBorderOpacity }
+            <View style={[
+              styles.maskCircle, 
+              { 
+                borderColor: maskColor,
+                opacity: maskOpacity,
+              }
             ]} />
           </View>
 
-          {/* UI OVERLAY – transparent, sits on top of everything */}
+          {/* UI OVERLAY */}
           <View style={[StyleSheet.absoluteFillObject, styles.overlay]} pointerEvents="box-none">
             
-            <Text style={styles.headerText}>
-              {step === 1 ? 'Step 1: Face Capture' : 'Step 2: Zoom Out'}
-            </Text>
+            <Text style={styles.headerText}>Profile Photo</Text>
             
             <Text style={styles.subHeaderText}>
-              {step === 1 
-                ? 'Move closer. Position your face inside the circle.' 
-                : 'Move back. Show your head and shoulders.'}
+              Position your face inside the circle. Ensure good lighting.
             </Text>
 
-            <View style={step === 1 ? styles.guideCircle : styles.guideCircleZoomOut}>
-              {scanStarted && !isPersonDetected && (
-                <Animated.View style={[
-                  styles.scanLine,
-                  {
-                    top: scanLineAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['5%', '95%']
-                    })
-                  }
-                ]} />
-              )}
-            </View>
+            <View style={[
+              styles.guideCircle,
+              (isCountingDown || isColorPhase) && { borderColor: '#FFFFFF' }
+            ]} />
 
-            <View style={styles.statusContainer} pointerEvents="none">
-              <Text style={styles.scanningStatusText}>{scanningStatus}</Text>
-
-              {scanStarted && isPersonDetected && countdown > 0 && (
-                <Text style={styles.holdStillText}>HOLD STILL! Capturing shortly...</Text>
-              )}
-            </View>
-
-            {isPersonDetected && scanStarted && (
+            {/* Countdown number overlay */}
+            {isCountingDown && (
               <View style={styles.countdownContainer}>
-                <Text style={countdown > 0 ? styles.countdownText : styles.capturingText}>
-                  {countdown > 0 ? countdown : "Capturing..."}
-                </Text>
+                <Text style={styles.countdownText}>{countdown}</Text>
               </View>
             )}
 
+            {/* Color cycling phase indicator */}
+            {isColorPhase && (
+              <View style={styles.countdownContainer}>
+                <Ionicons name="sunny" size={48} color="#FFF" />
+                <Text style={styles.colorPhaseText}>Optimizing light...</Text>
+              </View>
+            )}
+
+            {/* Status tip */}
+            <View style={styles.statusContainer} pointerEvents="none">
+              <View style={[styles.statusPill, { borderColor: isCountingDown || isColorPhase ? '#FFA726' : '#2E7D32' }]}>
+                {isCountingDown || isColorPhase ? (
+                  <Ionicons name="flash" size={18} color="#FFA726" style={{ marginRight: 8 }} />
+                ) : (
+                  <Ionicons name="camera" size={18} color="#2ECC71" style={{ marginRight: 8 }} />
+                )}
+                <Text style={styles.statusText}>{statusMessage}</Text>
+              </View>
+            </View>
+
+            {/* Take Photo Button – hidden during countdown/color phase */}
             <View style={styles.btnContainer}>
-              {!scanStarted ? (
-                <>
-                  <TouchableOpacity style={styles.startScanButton} onPress={() => setScanStarted(true)}>
-                    <Ionicons name="scan" size={24} color="#FFF" />
-                    <Text style={styles.startScanButtonText}>Start Verification</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
+              {countdown === null && !isProcessing && (
                 <TouchableOpacity 
-                  style={[styles.button, styles.retakeButton, { backgroundColor: '#D32F2F' }]} 
-                  onPress={() => setScanStarted(false)}
+                  style={styles.startScanButton} 
+                  onPress={startCaptureSequence}
                 >
-                  <Text style={styles.buttonText}>Cancel</Text>
+                  <Ionicons name="camera" size={24} color="#FFF" />
+                  <Text style={styles.startScanButtonText}>Take Photo</Text>
                 </TouchableOpacity>
               )}
             </View>
 
           </View>
 
-          {isUploading && (
+          {isProcessing && countdown === null && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#2ECC71" />
-              <Text style={styles.loadingText}>AI analyzing face visibility...</Text>
+              <Text style={styles.loadingText}>AI checking photo quality...</Text>
             </View>
           )}
         </View>
