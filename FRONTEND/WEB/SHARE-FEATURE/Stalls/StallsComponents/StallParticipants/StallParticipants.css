@@ -183,6 +183,15 @@
   box-shadow: 0 4px 16px rgba(0, 33, 129, 0.2);
 }
 
+.avatar-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0, 33, 129, 0.2);
+}
+
 .avatar-text {
   color: white;
   font-size: 24px;

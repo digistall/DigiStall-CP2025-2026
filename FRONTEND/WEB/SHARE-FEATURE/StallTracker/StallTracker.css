@@ -124,6 +124,14 @@
   flex-shrink: 0;
 }
 
+.avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .st-name-text {
   font-weight: 400 !important;
   color: #2c3e50;

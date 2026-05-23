@@ -150,6 +150,14 @@
   flex-shrink: 0;
 }
 
+.applicant-avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .applicant-name-text {
   font-weight: 400;
   color: #2c3e50;

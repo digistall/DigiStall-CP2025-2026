@@ -56,6 +56,11 @@ import {
 import {
   logAppAccessScreen
 } from '../BACKEND/STALLHOLDER/stallholder/appAccessController.js';
+// Import face scanner controller
+import {
+  checkFaceVerification,
+  uploadFaceVerification
+} from '../BACKEND/STALLHOLDER/stallholder/faceScannerController.js';
 
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
@@ -291,5 +296,21 @@ router.get('/payments/monthly-status', verifyToken, getMonthlyPaymentStatus);
  * @access Protected (Stallholder only)
  */
 router.post('/app-access-log', verifyToken, logAppAccessScreen);
+// STALLHOLDER FACE SCANNER ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/face-verify/status/:id
+ * @desc Check if stallholder has verified their face
+ * @access Public (or protected)
+ */
+router.get('/face-verify/status/:id', checkFaceVerification);
+
+/**
+ * @route POST /api/mobile/stallholder/face-verify/upload
+ * @desc Upload face verification image
+ * @access Public (or protected)
+ */
+router.post('/face-verify/upload', blobUpload.single('file'), uploadFaceVerification);
 
 export default router;

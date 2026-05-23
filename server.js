@@ -66,6 +66,7 @@ import stallholderMobileRoutes from './routes/stallholderRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import mobileSurrenderRoutes from './routes/mobileSurrenderRoutes.js';
 import webSurrenderRoutes from './routes/webSurrenderRoutes.js';
+import avatarRoutes from './routes/avatarRoutes.js';
 
 // Activity Log routes
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
@@ -129,6 +130,8 @@ app.use('/api/mobile/user', userRoutes);
 app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
 app.use('/api/mobile/vendor-applications', vendorApplicationRoutes);  // Backward compat (prefer /api/public/vendor-applications)
 app.use('/api/mobile/surrender', enhancedAuthMiddleware.authenticateToken, mobileSurrenderRoutes);
+app.use('/api/mobile/face', avatarRoutes);
+app.use('/api/face', avatarRoutes);
 console.log('✅ STALL-HOLDER routes loaded');
 
 // ACTIVITY LOG ROUTES

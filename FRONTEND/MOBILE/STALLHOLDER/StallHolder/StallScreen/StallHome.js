@@ -12,6 +12,7 @@ import ApiService from "../../../services/ApiService";
 import UserStorageService from "../../../services/UserStorageService";
 import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
 
+
 // nav bar and sidebar components
 import Header from "./StallComponents/header";
 import Navbar from "./StallComponents/navbar";
@@ -41,6 +42,10 @@ const StallHome = ({ navigation }) => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showProfileDirectly, setShowProfileDirectly] = useState(false);
+
+  React.useEffect(() => {
+    // Face verification is now handled during login and App.js initialization
+  }, []);
 
   const handleLogout = async () => {
     // Prevent multiple clicks
@@ -179,7 +184,7 @@ const StallHome = ({ navigation }) => {
       case "reports":
         return <ComplaintScreen />;
       case "settings":
-        return <SettingsScreen initialShowProfile={showProfileDirectly} />;
+        return <SettingsScreen initialShowProfile={showProfileDirectly} navigation={navigation} />;
       case "notifications":
         return <NotificationsScreen />;
       case "documents":
@@ -246,6 +251,8 @@ const StallHome = ({ navigation }) => {
           message="Logging out..."
           subMessage="Please wait while we securely log you out"
         />
+
+
       </SafeAreaView>
     </SafeAreaProvider>
   );
