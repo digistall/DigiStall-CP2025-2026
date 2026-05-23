@@ -45,8 +45,14 @@ import {
   extendAuctionTimer,
   cancelAuction,
   selectAuctionWinner,
-  autoSelectWinnerForExpiredAuctions
-} from '../SHARE-CONTROLLER/stalls/stallController.js'
+  autoSelectWinnerForExpiredAuctions,
+  
+  // Participant detail
+  getParticipantDetail
+} from '../BACKEND/MANAGER/stalls/stallController.js'
+
+// Import landing page getAllStalls separately (for public access)
+import { getAllStalls as getLandingPageAllStalls } from '../BACKEND/MANAGER/stalls/stallComponents/landingPageComponents/getAllStalls/getAllStalls.js'
 
 // Import stall image controller
 import {
@@ -56,7 +62,7 @@ import {
   deleteStallImageByFilename,
   setStallPrimaryImage,
   getStallImageCount
-} from '../SHARE-CONTROLLER/stalls/stallImageController.js'
+} from '../BACKEND/MANAGER/stalls/stallImageController.js'
 
 // Import BLOB image controller for cloud storage
 import {
@@ -70,14 +76,17 @@ import {
   setStallPrimaryImageBlob,
   updateStallImageBlob,
   getStallPrimaryImageBlob
-} from '../SHARE-CONTROLLER/stalls/stallImageBlobController.js'
+} from '../BACKEND/MANAGER/stalls/stallImageBlobController.js'
 
 // Import new addStall with images
-import { addStallWithImages } from '../SHARE-CONTROLLER/stalls/stallComponents/addStallWithImages.js'
+import { addStallWithImages } from '../BACKEND/MANAGER/stalls/stallComponents/addStallWithImages.js'
 
 // Import multer configuration
 import upload, { checkImageLimit } from '../config/multerStallImages.js'
 import multer from 'multer'
+
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js'
 
 // Temporary upload for addStall - Configure with large limits for base64 images
 // Base64 encoding increases size by ~33%, so 100MB allows ~75MB of actual images
@@ -95,6 +104,7 @@ const router = express.Router()
 
 // ===== PUBLIC ROUTES (No Authentication) =====
 // Landing page stall browsing
+router.get('/all', getLandingPageAllStalls)             // GET /api/stalls/all - Get all available stalls (public)
 router.get('/stats', getLandingPageStats)               // GET /api/stalls/stats - Get landing page statistics (public)
 router.get('/public/stallholders', getLandingPageStallholders)  // GET /api/stalls/public/stallholders - Get stallholders list (public)
 router.get('/public/list', getLandingPageStallsList)    // GET /api/stalls/public/list - Get stalls list (public)
@@ -132,11 +142,13 @@ router.post('/',
   },
   viewOnlyForOwners, 
   tempUpload.array('images', 10), 
+  compressUploads({ type: 'default' }),
   addStallWithImages
 )  // POST /api/stalls - Add new stall with images
 router.get('/', getAllStalls)                 // GET /api/stalls - Get all stalls for branch manager
 router.get('/available', getAvailableStalls)  // GET /api/stalls/available - Get available stalls
 router.get('/filter', getStallsByFilter)     // GET /api/stalls/filter - Get stalls by filter
+router.get('/participants/:applicantId/detail', getParticipantDetail)  // GET /api/stalls/participants/:applicantId/detail - Get full participant info
 router.get('/:id', getStallById)             // GET /api/stalls/:id - Get stall by ID
 router.put('/:id', viewOnlyForOwners, updateStall)              // PUT /api/stalls/:id - Update stall
 router.delete('/:id', viewOnlyForOwners, deleteStall)           // DELETE /api/stalls/:id - Delete stall
@@ -165,7 +177,7 @@ router.post('/auctions/auto-select-winners', viewOnlyForOwners, autoSelectWinner
 
 // ===== STALL IMAGE MANAGEMENT ROUTES =====
 // Upload stall images (max 10 per stall, 2MB each, PNG/JPG only)
-router.post('/:stall_id/images/upload', viewOnlyForOwners, upload.array('images', 10), uploadStallImages)  // POST /api/stalls/:stall_id/images/upload - Upload multiple images
+router.post('/:stall_id/images/upload', viewOnlyForOwners, upload.array('images', 10), compressUploads({ type: 'default' }), uploadStallImages)  // POST /api/stalls/:stall_id/images/upload - Upload multiple images
 router.get('/:stall_id/images', getStallImages)                     // GET /api/stalls/:stall_id/images - Get all images for stall
 router.get('/:stall_id/images/count', getStallImageCount)           // GET /api/stalls/:stall_id/images/count - Get image count
 router.delete('/images/:image_id', viewOnlyForOwners, deleteStallImage)                // DELETE /api/stalls/images/:image_id - Delete image by database ID

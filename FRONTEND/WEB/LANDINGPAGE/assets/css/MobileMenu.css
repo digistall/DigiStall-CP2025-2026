@@ -1,0 +1,229 @@
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);  /* Darker overlay for better contrast */
+  backdrop-filter: blur(8px);  /* Stronger blur effect */
+  -webkit-backdrop-filter: blur(8px);  /* Safari compatibility */
+  z-index: 999999;  /* Extremely high to ensure it's always on top */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Mobile Menu Panel */
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 320px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  will-change: transform;  /* Optimize transform animations */
+  z-index: 9999999;  /* Even higher than overlay to ensure drawer is visible */
+}
+
+.mobile-menu.open {
+  transform: translateX(0);
+}
+
+/* Mobile Menu Header */
+.mobile-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  background: linear-gradient(135deg, #002181 0%, #1976d2 100%);
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0, 33, 129, 0.2);
+}
+
+.mobile-menu-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-menu-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.3));
+}
+
+.mobile-menu-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-menu-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: white;
+}
+
+.mobile-menu-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+  text-transform: uppercase;
+}
+
+.mobile-menu-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.mobile-menu-close:active {
+  transform: scale(0.95);
+}
+
+/* Mobile Menu Navigation */
+.mobile-menu-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+  flex: 1;
+}
+
+.mobile-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  text-decoration: none;
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+  position: relative;
+}
+
+.mobile-menu-link:hover {
+  background: linear-gradient(90deg, rgba(0, 33, 129, 0.05) 0%, transparent 100%);
+  border-left-color: #002181;
+  color: #002181;
+}
+
+.mobile-menu-link:active {
+  background: linear-gradient(90deg, rgba(0, 33, 129, 0.1) 0%, transparent 100%);
+}
+
+.mobile-menu-link i {
+  font-size: 24px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.mobile-menu-link i.arrow {
+  margin-left: auto;
+  font-size: 20px;
+  opacity: 0.3;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mobile-menu-link:hover i.arrow {
+  opacity: 0.6;
+  transform: translateX(4px);
+}
+
+.mobile-menu-link span {
+  flex: 1;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 360px) {
+  .mobile-menu {
+    width: 90%;
+  }
+
+  .mobile-menu-header {
+    padding: 16px 12px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  }
+
+  .mobile-menu-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mobile-menu-title {
+    font-size: 18px;
+  }
+
+  .mobile-menu-subtitle {
+    font-size: 10px;
+  }
+
+  .mobile-menu-link {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+}
+
+/* Landscape Mode */
+@media (max-height: 500px) and (orientation: landscape) {
+  .mobile-menu-header {
+    padding: 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+
+  .mobile-menu-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mobile-menu-title {
+    font-size: 16px;
+  }
+
+  .mobile-menu-subtitle {
+    font-size: 9px;
+  }
+
+  .mobile-menu-nav {
+    padding: 16px 0;
+  }
+
+  .mobile-menu-link {
+    padding: 12px 20px;
+  }
+}

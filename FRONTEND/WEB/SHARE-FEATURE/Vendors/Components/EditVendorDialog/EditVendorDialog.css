@@ -1,0 +1,160 @@
+/* Modal Container */
+.v-dialog .v-card {
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Details Header with Gradient (matching VendorDetailsDialog) */
+.details-header {
+  background: linear-gradient(135deg, #002181 0%, #0047ab 100%) !important;
+  color: white !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  color: white;
+  gap: 12px;
+}
+
+.header-title {
+  color: white !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  letter-spacing: 0.5px;
+}
+
+.close-btn {
+  background-color: #ef4444 !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  margin: 0 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.close-btn:hover {
+  background-color: #dc2626 !important;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Content Area */
+.v-card-text {
+  padding: 24px !important;
+  background-color: #fafafa !important;
+}
+
+/* Tab Styling */
+.v-tabs {
+  background-color: transparent !important;
+}
+
+.v-tab {
+  text-transform: none;
+  font-weight: 500;
+}
+
+.v-tab--active {
+  background-color: rgba(25, 118, 210, 0.1);
+  color: rgb(0, 33, 129) !important;
+}
+
+/* Form Fields */
+.v-text-field,
+.v-select,
+.v-textarea {
+  margin-bottom: 8px;
+}
+
+.v-text-field .v-field,
+.v-select .v-field,
+.v-textarea .v-field {
+  background-color: #ffffff !important;
+  border-radius: 6px !important;
+}
+
+.v-text-field .v-field--focused,
+.v-select .v-field--focused,
+.v-textarea .v-field--focused {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.v-text-field .v-input__prepend-inner,
+.v-select .v-input__prepend-inner,
+.v-textarea .v-input__prepend-inner {
+  margin-right: 8px;
+  color: rgba(0, 33, 129, 0.7);
+}
+
+/* Form Labels */
+.v-label {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+}
+
+/* Dialog Actions */
+.v-card-actions {
+  background-color: #fafafa !important;
+  padding: 16px 24px !important;
+  gap: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.v-card-actions .v-btn {
+  min-width: 100px;
+}
+
+/* Validation Error Messages */
+.v-messages__message {
+  color: #ef4444 !important;
+  font-size: 12px !important;
+  margin-top: 4px;
+}
+
+/* Success/Error Snackbar */
+.v-snackbar {
+  padding: 16px;
+}
+
+.v-snackbar__content {
+  font-weight: 500;
+}
+
+/* Form Styling */
+.v-form {
+  width: 100%;
+}
+
+.v-tabs-items {
+  background-color: transparent;
+}
+
+.v-tab-item {
+  padding: 0;
+}
+
+/* Section Title */
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 16px;
+}
+
+.v-card-text {
+  padding-top: 0.5rem;
+}
+
+.v-card-actions {
+  padding: 16px 24px;
+}

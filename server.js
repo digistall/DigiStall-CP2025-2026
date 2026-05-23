@@ -34,15 +34,18 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import complianceRoutes from './routes/complianceRoutes.js';
 import stallholderRoutes from './routes/stallholderRoutes.js';
 import stallholdersManagementRoutes from './routes/stallholdersManagementRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
+import vendorApplicantRoutes from './routes/vendorApplicantRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import dashboardSubscriptionRoutes from './routes/dashboardSubscriptionRoutes.js';
 
 // APPLICANTS routes
 import applicationRoutes from './routes/applicationRoutes.js';
+import vendorApplicationRoutes from './routes/vendorApplicationRoutes.js';
 import landingApplicantRoutes from './routes/landingApplicantRoutes.js';
 import applicantRoutes from './routes/applicantRoutes.js';
 
@@ -61,6 +64,9 @@ import loginRouter from './routes/loginRouter.js';
 // STALL-HOLDER Mobile routes
 import stallholderMobileRoutes from './routes/stallholderRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import mobileSurrenderRoutes from './routes/mobileSurrenderRoutes.js';
+import webSurrenderRoutes from './routes/webSurrenderRoutes.js';
+import avatarRoutes from './routes/avatarRoutes.js';
 
 // Activity Log routes
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
@@ -85,7 +91,9 @@ console.log('========================================\n');
 // ===== API ROUTES =====
 
 // PUBLIC ROUTES (No authentication)
-app.use('/api/applications', applicationRoutes);
+app.use('/api/public/vendor-applications', vendorApplicationRoutes);  // Web vendor application (preferred path)
+app.use('/api/mobile/applications', applicationRoutes);  // Mobile application routes (join raffle, join auction, etc)
+app.use('/api/applications', applicationRoutes);  // Also mount at /api/applications for backward compatibility
 app.use('/api/landing-applicants', landingApplicantRoutes);
 app.use('/api/stalls', stallRoutes);  // Some routes are public (landing page)
 app.use('/api/applicants', enhancedAuthMiddleware.authenticateToken, applicantRoutes);  // Applicants management
@@ -99,9 +107,12 @@ app.use('/api/mobile/auth', mobileAuthRoutes);  // Mobile auth
 app.use('/api/complaints', enhancedAuthMiddleware.authenticateToken, complaintRoutes);
 app.use('/api/compliances', enhancedAuthMiddleware.authenticateToken, complianceRoutes);
 app.use('/api/stallholders', stallholdersManagementRoutes);  // Stallholders management (admin/manager)
+app.use('/api/documents', documentRoutes);  // Document submissions (web)
+app.use('/api/surrender', enhancedAuthMiddleware.authenticateToken, webSurrenderRoutes);
 app.use('/api/payments', enhancedAuthMiddleware.authenticateToken, paymentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
+app.use('/api/vendor-applicants', vendorApplicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard-subscription', dashboardSubscriptionRoutes);  // SSE for real-time dashboard updates
@@ -117,6 +128,10 @@ console.log('✅ EMPLOYEE routes loaded');
 app.use('/api/mobile/stallholder', stallholderMobileRoutes);
 app.use('/api/mobile/user', userRoutes);
 app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
+app.use('/api/mobile/vendor-applications', vendorApplicationRoutes);  // Backward compat (prefer /api/public/vendor-applications)
+app.use('/api/mobile/surrender', enhancedAuthMiddleware.authenticateToken, mobileSurrenderRoutes);
+app.use('/api/mobile/face', avatarRoutes);
+app.use('/api/face', avatarRoutes);
 console.log('✅ STALL-HOLDER routes loaded');
 
 // ACTIVITY LOG ROUTES
@@ -131,6 +146,11 @@ console.log('✅ APPLICANTS routes loaded');
 
 // AUTH ROUTES
 console.log('✅ AUTH routes loaded');
+
+// Health check endpoint (used by Docker healthcheck)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Error handler
 app.use(errorHandler);

@@ -2,14 +2,15 @@ import express from 'express'
 import { verifyToken } from '../middleware/auth.js';
 
 // Import mobile login controller with full data fetching (including spouse, business, stallholder data)
-import { mobileLogin } from '../SHARE-CONTROLLER/login/loginController.js'
+import { mobileLogin } from '../BACKEND/AUTH/login/loginController.js'
+import { vendorLogin } from '../BACKEND/AUTH/vendorAuthController.js'
 
 // Import other mobile-specific auth controllers
 import { 
   mobileRegister,
   mobileVerifyToken,
   mobileLogout 
-} from '../SHARE-CONTROLLER/mobileAuthController.js'
+} from '../BACKEND/AUTH/mobileAuthController.js'
 
 // Import mobile staff auth controller (inspector/collector)
 import { 
@@ -17,16 +18,17 @@ import {
   mobileStaffLogout,
   mobileStaffHeartbeat,
   mobileStaffAutoLogout 
-} from '../SHARE-CONTROLLER/mobileStaffAuthController.js'
+} from '../BACKEND/AUTH/mobileStaffAuthController.js'
 
 // Import change password controller
-import { mobileChangePassword } from '../SHARE-CONTROLLER/mobileChangePasswordController.js'
+import { mobileChangePassword } from '../BACKEND/AUTH/mobileChangePasswordController.js'
 
 const router = express.Router()
 
 // ===== MOBILE AUTHENTICATION ROUTES =====
 router.post('/login', mobileLogin)                       // POST /mobile/auth/login - Mobile user login with full data
 router.post('/staff-login', mobileStaffLogin)            // POST /mobile/auth/staff-login - Inspector/Collector login
+router.post('/vendor-login', vendorLogin)                // POST /mobile/auth/vendor-login - Vendor login
 router.post('/register', mobileRegister)                 // POST /mobile/auth/register - Mobile user registration
 router.get('/verify-token', mobileVerifyToken)           // GET /mobile/auth/verify-token - Verify mobile token
 

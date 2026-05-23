@@ -1,11 +1,14 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js';
 import {
   getStallholderStallsWithDocuments,
   getBranchDocumentRequirements,
   uploadStallholderDocument
-} from '../SHARE-CONTROLLER/user/stallholderDocumentController.js';
+} from '../BACKEND/STALLHOLDER/user/stallholderDocumentController.js';
 
 // Import BLOB document controller for cloud storage
 import {
@@ -18,25 +21,42 @@ import {
   getStallholderDocuments,
   deleteStallholderDocumentBlob,
   updateStallholderDocumentVerificationStatus
-} from '../SHARE-CONTROLLER/documents/stallholderDocumentBlobController.js';
+} from '../BACKEND/STALLHOLDER/documents/stallholderDocumentBlobController.js';
 
 // Import complaint controller
 import {
   submitComplaint,
   getMyComplaints
-} from '../SHARE-CONTROLLER/stallholder/complaintController.js';
+} from '../BACKEND/STALLHOLDER/stallholder/complaintController.js';
 
 // Import profile controller
 import {
   getStallholderProfile
-} from '../SHARE-CONTROLLER/stallholder/profileController.js';
+} from '../BACKEND/STALLHOLDER/stallholder/profileController.js';
 
 // Import payment controller
 import {
   getPaymentRecords,
   getAllPaymentRecords,
-  getPaymentSummary
-} from '../SHARE-CONTROLLER/stallholder/paymentController.js';
+  getPaymentSummary,
+  getMonthlyPaymentStatus
+} from '../BACKEND/STALLHOLDER/stallholder/paymentController.js';
+
+// Import owned stall controller
+import {
+  getOwnedStalls
+} from '../BACKEND/STALLHOLDER/stallholder/ownedStallController.js';
+
+// Import joined stall controller
+import {
+  getJoinedStalls
+} from '../BACKEND/STALLHOLDER/stallholder/joinedStallController.js';
+
+// Import face scanner controller
+import {
+  checkFaceVerification,
+  uploadFaceVerification
+} from '../BACKEND/STALLHOLDER/stallholder/faceScannerController.js';
 
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
@@ -75,6 +95,20 @@ const upload = multer({
   }
 });
 
+// In-memory multer for BLOB uploads (React Native FormData — no disk storage)
+const blobUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and PDF are allowed.'));
+    }
+  }
+});
+
 // ===== STALLHOLDER DOCUMENT ROUTES =====
 
 /**
@@ -98,7 +132,7 @@ router.get('/documents/:applicantId', getStallholderStallsWithDocuments);
  * @body stallholder_id, document_type_id, file
  * @access Public (should be protected in production)
  */
-router.post('/documents/upload', upload.single('file'), uploadStallholderDocument);
+router.post('/documents/upload', upload.single('file'), compressUploads({ type: 'document' }), uploadStallholderDocument);
 
 // =============================================
 // STALLHOLDER DOCUMENT BLOB ROUTES (Cloud Storage)
@@ -106,10 +140,12 @@ router.post('/documents/upload', upload.single('file'), uploadStallholderDocumen
 
 /**
  * @route POST /api/mobile/stallholder/documents/blob/upload
- * @desc Upload document as BLOB (base64) to cloud database
- * @body stallholder_id, document_type_id, document_data (base64), mime_type, file_name
+ * @desc Upload document as BLOB (multipart FormData or legacy base64 JSON) to cloud database
+ * @body stallholder_id, document_type_id, mime_type, file_name + file (multipart)
+ * Note: blobUpload multer middleware handles multipart FormData from React Native.
+ *       Legacy base64 JSON bodies are also accepted as a fallback.
  */
-router.post('/documents/blob/upload', uploadStallholderDocumentBlob);
+router.post('/documents/blob/upload', blobUpload.single('file'), uploadStallholderDocumentBlob);
 
 /**
  * @route POST /api/mobile/stallholder/documents/submission/blob/upload
@@ -190,6 +226,28 @@ router.post('/complaint', verifyToken, submitComplaint);
 router.get('/complaints', verifyToken, getMyComplaints);
 
 // =============================================
+// STALLHOLDER OWNED STALLS ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/owned-stalls
+ * @desc Get all stalls owned/rented by the stallholder across all branches
+ * @access Protected (Stallholder only)
+ */
+router.get('/owned-stalls', verifyToken, getOwnedStalls);
+
+// =============================================
+// STALLHOLDER JOINED STALLS ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/joined-stalls
+ * @desc Get all stalls the user has joined via raffle or auction
+ * @access Protected (Stallholder only)
+ */
+router.get('/joined-stalls', verifyToken, getJoinedStalls);
+
+// =============================================
 // STALLHOLDER PAYMENT ROUTES
 // =============================================
 
@@ -215,5 +273,30 @@ router.get('/payments/all', verifyToken, getAllPaymentRecords);
  * @access Protected (Stallholder only)
  */
 router.get('/payments/summary', verifyToken, getPaymentSummary);
+
+/**
+ * @route GET /api/mobile/stallholder/payments/monthly-status
+ * @desc Get current month payment status for stallholder
+ * @access Protected (Stallholder only)
+ */
+router.get('/payments/monthly-status', verifyToken, getMonthlyPaymentStatus);
+
+// =============================================
+// STALLHOLDER FACE SCANNER ROUTES
+// =============================================
+
+/**
+ * @route GET /api/mobile/stallholder/face-verify/status/:id
+ * @desc Check if stallholder has verified their face
+ * @access Public (or protected)
+ */
+router.get('/face-verify/status/:id', checkFaceVerification);
+
+/**
+ * @route POST /api/mobile/stallholder/face-verify/upload
+ * @desc Upload face verification image
+ * @access Public (or protected)
+ */
+router.post('/face-verify/upload', blobUpload.single('file'), uploadFaceVerification);
 
 export default router;
