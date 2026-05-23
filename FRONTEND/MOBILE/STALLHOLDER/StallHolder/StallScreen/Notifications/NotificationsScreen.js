@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import {
   FlatList,
   StyleSheet,
-  SafeAreaView,
   RefreshControl,
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import NotificationHeader from "./Components/NotificationHeader";
 import SearchFilterBar from "./Components/SearchFilter/SearchFilterBar";
 import NotificationCard from "./Components/NotificationCard";
