@@ -24,7 +24,14 @@
         >
           <div class="table-cell name-col">
             <div class="stallholder-name-wrapper">
-              <div class="stallholder-avatar">
+              <img 
+                v-if="stallholder.stallholder_id"
+                :src="getAvatarUrl(stallholder.stallholder_id) + '?t=' + avatarBuster"
+                @error="handleAvatarError"
+                class="avatar-img"
+                alt="Avatar"
+              />
+              <div class="stallholder-avatar avatar-initials" :style="{ display: stallholder.stallholder_id ? 'none' : 'flex' }">
                 {{ getInitials(stallholder.stallholder_name) }}
               </div>
               <span class="stallholder-name-text">{{ stallholder.stallholder_name }}</span>

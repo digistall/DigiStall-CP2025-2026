@@ -86,7 +86,14 @@
           >
             <template v-slot:item.stallholder_name="{ item }">
               <div class="d-flex align-center">
-                <div class="st-initials-avatar mr-3">
+                <img 
+                  v-if="item.stallholder_id"
+                  :src="getAvatarUrl(item.stallholder_id)"
+                  @error="handleAvatarError"
+                  class="avatar-img mr-3"
+                  alt="Avatar"
+                />
+                <div class="st-initials-avatar mr-3 avatar-initials" :style="{ display: item.stallholder_id ? 'none' : 'flex' }">
                   {{ getInitials(item.stallholder_name) }}
                 </div>
                 <span class="st-name-text">{{ item.stallholder_name }}</span>
@@ -189,7 +196,14 @@
           >
             <template v-slot:item.user_fullname="{ item }">
               <div class="d-flex align-center">
-                <div class="st-initials-avatar mr-3">
+                <img 
+                  v-if="item.stallholder_id"
+                  :src="getAvatarUrl(item.stallholder_id)"
+                  @error="handleAvatarError"
+                  class="avatar-img mr-3"
+                  alt="Avatar"
+                />
+                <div class="st-initials-avatar mr-3 avatar-initials" :style="{ display: item.stallholder_id ? 'none' : 'flex' }">
                   {{ getInitials(item.user_fullname) }}
                 </div>
                 <span class="st-name-text">{{ item.user_fullname }}</span>

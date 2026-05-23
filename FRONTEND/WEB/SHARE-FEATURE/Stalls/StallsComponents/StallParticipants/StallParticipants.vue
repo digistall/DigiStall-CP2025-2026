@@ -80,9 +80,16 @@
           class="participant-item"
         >
           <div class="participant-avatar">
-            <div class="avatar-circle">
+            <img 
+              v-if="participant.participantId"
+              :src="getAvatarUrl(participant.participantId)"
+              @error="handleAvatarError"
+              class="avatar-img"
+              alt="Avatar"
+            />
+            <div class="avatar-circle avatar-initials" :style="{ display: participant.participantId ? 'none' : 'flex' }">
               <span class="avatar-text">{{
-                participant.personalInfo.fullName.charAt(0).toUpperCase()
+                getInitials(participant.personalInfo.fullName || 'N/A')
               }}</span>
             </div>
           </div>

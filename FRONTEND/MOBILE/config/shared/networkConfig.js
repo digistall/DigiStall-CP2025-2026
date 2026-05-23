@@ -53,9 +53,9 @@ const DEVELOPMENT_SERVERS = detectedIP
       'http://localhost:3001',       // Only works on emulator
     ]
   : [
-      'http://192.168.1.105:5001',   // Hardcoded fallback if auto-detect fails
-      'http://192.168.1.105:5000',
-      'http://192.168.1.105:3001',
+      'http://178.16.100.6:5001',   // Hardcoded fallback if auto-detect fails
+      'http://178.16.100.6:5000',
+      'http://178.16.100.6:3001',
       'http://localhost:3001',
     ];
 
@@ -139,6 +139,10 @@ export const API_CONFIG = {
     GET_ALL_PAYMENT_RECORDS: '/api/mobile/stallholder/payments/all',
     GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
     GET_MONTHLY_PAYMENT_STATUS: '/api/mobile/stallholder/payments/monthly-status',
+    
+    // Face Scanner endpoints
+    CHECK_FACE_VERIFICATION: '/api/mobile/stallholder/face-verify/status',
+    UPLOAD_FACE_VERIFICATION: '/api/mobile/stallholder/face-verify/upload',
     
     // Health check
     HEALTH: '/api/health'  // Unified server health endpoint

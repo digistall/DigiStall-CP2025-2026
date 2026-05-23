@@ -1,7 +1,12 @@
 import { apiClient } from '@services/apiClient.js'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 export default {
   name: 'DocumentReview',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   props: {
     isVisible: {
       type: Boolean,
@@ -23,6 +28,7 @@ export default {
       loading: false,
       activeFilter: 'pending',
       searchQuery: '',
+      avatarBuster: Date.now(),
       
       // Document Preview
       showPreviewDialog: false,
@@ -109,6 +115,7 @@ export default {
     },
     
     async refreshData() {
+      this.avatarBuster = Date.now() // Refresh avatars
       await Promise.all([
         this.fetchSubmissions(),
         this.fetchCounts()
@@ -338,3 +345,4 @@ export default {
     }
   }
 }
+
