@@ -647,7 +647,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
     let activePartialPayments = [];
     try {
       const [partialRows] = await connection.query(
-        `SELECT payment_id, amount, payment_for_month, promise_to_pay_date 
+        `SELECT payment_id, amount, payment_for_month, promise_to_pay_date, stallholder_id 
          FROM payments 
          WHERE stallholder_id IN (${violationPlaceholders}) 
            AND payment_status = 'partial' 
@@ -656,7 +656,33 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       );
       
       const today = new Date();
-      activePartialPayments = partialRows.map(p => {
+      const validPartials = [];
+      
+      for (const p of partialRows) {
+        // Check total paid for this specific month
+        const [totalPaidResult] = await connection.query(
+          `SELECT SUM(amount) as total_paid
+           FROM payments
+           WHERE stallholder_id = ?
+             AND payment_for_month = ?
+             AND payment_status IN ('completed', 'paid', 'partial')
+             AND payment_type IN ('rental', 'partial_payment')`,
+          [p.stallholder_id, p.payment_for_month]
+        );
+        const totalPaid = parseFloat(totalPaidResult[0]?.total_paid || 0);
+        
+        // Get the rent for this stallholder
+        const stallInfo = allStalls.find(s => s.stallholder_id === p.stallholder_id);
+        const monthlyRent = parseFloat(stallInfo?.monthly_rent) || 0;
+        
+        // Only keep if NOT fully paid (using 99% threshold for floating point safety)
+        if (totalPaid < monthlyRent * 0.99) {
+          validPartials.push(p);
+        }
+      }
+
+      // Format and filter by days remaining
+      const formattedPartials = validPartials.map(p => {
         const promiseDate = new Date(p.promise_to_pay_date);
         const diffTime = promiseDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -669,6 +695,15 @@ export const getMonthlyPaymentStatus = async (req, res) => {
           daysRemaining: diffDays
         };
       }).filter(p => p.daysRemaining <= 2);
+
+      // Remove duplicates for the same month
+      const seenMonths = new Set();
+      for (const p of formattedPartials) {
+        if (!seenMonths.has(p.paymentForMonth)) {
+          seenMonths.add(p.paymentForMonth);
+          activePartialPayments.push(p);
+        }
+      }
     } catch (err) {
       console.error('⚠️ Error checking partial payments:', err.message);
     }
