@@ -585,6 +585,36 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       stallStatus.unpaidViolationsCount = totalUnpaidViolations;
     }
 
+    // Check for active partial payments (show reminder 2 days before promised date)
+    let activePartialPayments = [];
+    try {
+      const [partialRows] = await connection.query(
+        `SELECT payment_id, amount, payment_for_month, promise_to_pay_date 
+         FROM payments 
+         WHERE stallholder_id IN (${violationPlaceholders}) 
+           AND payment_status = 'partial' 
+           AND promise_to_pay_date IS NOT NULL`,
+        allStallholderIds
+      );
+      
+      const today = new Date();
+      activePartialPayments = partialRows.map(p => {
+        const promiseDate = new Date(p.promise_to_pay_date);
+        const diffTime = promiseDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return {
+          paymentId: p.payment_id,
+          amount: parseFloat(p.amount),
+          paymentForMonth: p.payment_for_month,
+          promiseDate: formatDate(p.promise_to_pay_date),
+          daysRemaining: diffDays
+        };
+      }).filter(p => p.daysRemaining <= 2);
+    } catch (err) {
+      console.error('⚠️ Error checking partial payments:', err.message);
+    }
+
     await connection.end();
 
     // Use the first stall for backward-compatible single-stall fields
@@ -596,6 +626,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         stalls: stallStatuses,
         currentMonth,
         currentMonthName,
+        activePartialPayments,
         // Legacy single-stall fields for backward compatibility
         ...primary
       }

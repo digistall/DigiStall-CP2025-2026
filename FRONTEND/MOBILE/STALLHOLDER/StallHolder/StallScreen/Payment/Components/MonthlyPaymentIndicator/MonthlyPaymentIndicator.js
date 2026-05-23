@@ -241,6 +241,9 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
   const hasViolation = stalls.some(s => s.hasViolation);
   const violationCount = stalls[0]?.unpaidViolationsCount || 0;
 
+  // Partial Payments
+  const partialPayments = monthlyStatus.activePartialPayments || [];
+
   return (
     <Animated.View 
       style={[
@@ -294,6 +297,51 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
           </View>
         </View>
       )}
+
+      {/* Partial Payment Warning Banner */}
+      {partialPayments.map((partial) => (
+        <View key={partial.paymentId} style={{
+          backgroundColor: isDark ? '#78350F' : '#FFFBEB',
+          borderWidth: 1.5,
+          borderColor: isDark ? '#B45309' : '#FDE68A',
+          borderRadius: 16,
+          padding: 14,
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}>
+          <View style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 12,
+          }}>
+            <Ionicons name="alert-circle" size={24} color="#F59E0B" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{
+              fontSize: 14,
+              fontWeight: '700',
+              color: isDark ? '#FBBF24' : '#92400E',
+              marginBottom: 2,
+            }}>
+              Partial Payment Due
+            </Text>
+            <Text style={{
+              fontSize: 12,
+              fontWeight: '500',
+              color: isDark ? '#FBBF24' : '#92400E',
+              opacity: 0.85,
+              lineHeight: 16,
+            }}>
+              Reminder: You promised to fully pay your remaining balance for {partial.paymentForMonth} by {partial.promiseDate}. {partial.daysRemaining < 0 ? 'This is now overdue.' : partial.daysRemaining === 0 ? 'This is due today.' : `Due in ${partial.daysRemaining} day(s).`}
+            </Text>
+          </View>
+        </View>
+      ))}
 
       {stalls.map((stall, index) => (
         <StallPaymentCard
