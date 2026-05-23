@@ -1,19 +1,15 @@
 import axios from 'axios';
 import * as XLSX from 'xlsx';
-
+ 
 export default {
-  name: 'ActivityLogDialog',
+  name: 'StallholderActivityLogDialog',
   props: {
     modelValue: {
       type: Boolean,
       default: false
     },
-    staffId: {
+    stallholderId: {
       type: [Number, String],
-      default: null
-    },
-    staffType: {
-      type: String,
       default: null
     }
   },
@@ -39,21 +35,16 @@ export default {
         color: 'success'
       },
       filters: {
-        staffType: null,
+        staffType: 'stallholder',
         actionType: null,
         startDate: null,
-        endDate: null
+        endDate: null,
+        stallholderUserType: null,
+        stallholderType: null,
+        status: null
       },
-      // NOTE: 'stallholder' is intentionally excluded — stallholder logs
-      // are shown on the Stallholders page, not the Employees page.
       staffTypeOptions: [
-        { title: 'All Types', value: null },
-        { title: 'Business Employee', value: 'business_employee' },
-        { title: 'Business Manager', value: 'business_manager' },
-        { title: 'Business Owner', value: 'business_owner' },
-        { title: 'System Administrator', value: 'system_administrator' },
-        { title: 'Inspector', value: 'inspector' },
-        { title: 'Collector', value: 'collector' }
+        { title: 'Stallholder', value: 'stallholder' }
       ],
       actionTypeOptions: [
         { title: 'All Actions', value: null },
@@ -66,6 +57,24 @@ export default {
         { title: 'Payment', value: 'PAYMENT' },
         { title: 'Approve', value: 'APPROVE' },
         { title: 'Reject', value: 'REJECT' }
+      ],
+      stallholderUserTypeOptions: [
+        { title: 'All User Types', value: null },
+        { title: 'Mobile User', value: 'Mobile User' },
+        { title: 'Applicant', value: 'Applicant' }
+      ],
+      stallholderTypeOptions: [
+        { title: 'All Categories', value: null },
+        { title: 'App Access', value: 'App Access' },
+        { title: 'Payment Action', value: 'Payment Action' },
+        { title: 'Document Action', value: 'Document Action' },
+        { title: 'Authentication', value: 'Authentication' },
+        { title: 'Complaint Action', value: 'Complaint Action' }
+      ],
+      statusOptions: [
+        { title: 'All Statuses', value: null },
+        { title: 'Success', value: 'success' },
+        { title: 'Error', value: 'error' }
       ],
       apiBaseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
       activeTimePeriod: null,
@@ -102,9 +111,7 @@ export default {
   watch: {
     modelValue(newVal) {
       if (newVal) {
-        if (this.staffType) {
-          this.filters.staffType = this.staffType;
-        }
+        this.filters.staffType = 'stallholder';
         this.fetchLogs();
         this.fetchSummary();
       }
@@ -124,20 +131,23 @@ export default {
     toggleFilter() {
       this.showFilterPanel = !this.showFilterPanel;
     },
-
+ 
     handleClickOutside(event) {
       const filterContainer = this.$refs.filterContainer;
       if (filterContainer && !filterContainer.contains(event.target)) {
         this.showFilterPanel = false;
       }
     },
-
+ 
     resetFilters() {
       this.filters = {
-        staffType: null,
+        staffType: 'stallholder',
         actionType: null,
         startDate: null,
-        endDate: null
+        endDate: null,
+        stallholderUserType: null,
+        stallholderType: null,
+        status: null
       };
       this.startDatePicker = null;
       this.endDatePicker = null;
@@ -149,7 +159,7 @@ export default {
       }
       this.fetchLogs();
     },
-
+ 
     setTimePeriod(period) {
       // Toggle off if clicking the same period
       if (this.activeTimePeriod === period) {
@@ -161,21 +171,21 @@ export default {
         this.filterLogs();
         return;
       }
-
+ 
       this.activeTimePeriod = period;
-
+ 
       // Clear manual date filters when using quick periods
       this.filters.startDate = null;
       this.filters.endDate = null;
       this.startDatePicker = null;
       this.endDatePicker = null;
-
+ 
       // Stop any previous real-time interval
       if (this.realTimeInterval) {
         clearInterval(this.realTimeInterval);
         this.realTimeInterval = null;
       }
-
+ 
       if (period === 'realtime') {
         // Real-time: auto-refresh every 10 seconds
         this.fetchLogs();
@@ -186,7 +196,7 @@ export default {
         this.filterLogs();
       }
     },
-
+ 
     updateStartDate(date) {
       if (date) {
         this.filters.startDate = new Date(date).toISOString().split('T')[0];
@@ -194,7 +204,7 @@ export default {
         this.fetchLogs();
       }
     },
-
+ 
     updateEndDate(date) {
       if (date) {
         this.filters.endDate = new Date(date).toISOString().split('T')[0];
@@ -202,19 +212,19 @@ export default {
         this.fetchLogs();
       }
     },
-
+ 
     clearStartDate() {
       this.filters.startDate = null;
       this.startDatePicker = null;
       this.fetchLogs();
     },
-
+ 
     clearEndDate() {
       this.filters.endDate = null;
       this.endDatePicker = null;
       this.fetchLogs();
     },
-
+ 
     filterLogs() {
       let logs = [...this.activityLogs];
       
@@ -240,11 +250,34 @@ export default {
           logs = logs.filter(log => new Date(log.created_at) >= cutoff);
         }
       }
-
+ 
       // Filter by action type
       if (this.filters.actionType) {
         logs = logs.filter(log => 
           log.action_type?.toUpperCase() === this.filters.actionType
+        );
+      }
+
+      // Filter by stallholder user type
+      if (this.filters.stallholderUserType) {
+        logs = logs.filter(log => {
+          const userTypeVal = log.stallholder_user_type || this.getStallholderUserType(log);
+          return userTypeVal?.toLowerCase() === this.filters.stallholderUserType.toLowerCase();
+        });
+      }
+
+      // Filter by stallholder type (action category)
+      if (this.filters.stallholderType) {
+        logs = logs.filter(log => {
+          const typeVal = log.stallholder_type || this.getStallholderType(log);
+          return typeVal?.toLowerCase() === this.filters.stallholderType.toLowerCase();
+        });
+      }
+
+      // Filter by status
+      if (this.filters.status) {
+        logs = logs.filter(log => 
+          log.status?.toLowerCase() === this.filters.status.toLowerCase()
         );
       }
       
@@ -260,45 +293,39 @@ export default {
         );
       }
       
-      this.filteredLogs = logs.filter(log => log.staff_type !== 'stallholder');
+      this.filteredLogs = logs;
     },
-
+ 
     async fetchLogs() {
       this.loading = true;
       try {
         const token = sessionStorage.getItem('authToken');
         const params = new URLSearchParams();
         
-        // Always filter to a specific staff type when one is selected
-        if (this.filters.staffType) {
-          params.append('staffType', this.filters.staffType);
-        }
-        // NOTE: When no specific type is selected we do NOT pass staffType=null
-        // so the backend returns all types — but we strip stallholder client-side
-        // in filterLogs(). This ensures the Employee page never shows stallholder logs.
+        if (this.filters.staffType) params.append('staffType', this.filters.staffType);
         if (this.filters.startDate) params.append('startDate', this.filters.startDate);
         if (this.filters.endDate) params.append('endDate', this.filters.endDate);
-        if (this.staffId) params.append('staffId', this.staffId);
+        if (this.stallholderId) params.append('userId', this.stallholderId);
         params.append('limit', '500');
-
+ 
         const response = await axios.get(
           `${this.apiBaseUrl}/activity-logs?${params.toString()}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
+ 
         if (response.data.success) {
           this.activityLogs = response.data.data;
           this.filterLogs();
         }
       } catch (error) {
-        console.error('Error fetching activity logs:', error);
+        console.error('Error fetching stallholder activity logs:', error);
         this.activityLogs = [];
         this.filteredLogs = [];
       } finally {
         this.loading = false;
       }
     },
-
+ 
     async fetchSummary() {
       try {
         const token = sessionStorage.getItem('authToken');
@@ -306,7 +333,7 @@ export default {
           `${this.apiBaseUrl}/activity-logs/summary`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
+ 
         if (response.data.success) {
           this.summary = response.data.data;
         }
@@ -315,14 +342,15 @@ export default {
         this.summary = null;
       }
     },
-
+ 
     closeDialog() {
       this.show = false;
       this.$emit('close');
     },
-
+ 
     formatStaffType(type) {
       const types = {
+        'stallholder': 'Stallholder',
         'business_employee': 'Employee',
         'business_manager': 'Manager',
         'business_owner': 'Owner',
@@ -333,8 +361,59 @@ export default {
       return types[type] || type;
     },
 
+    // Returns the "Stallholder User Type" column value.
+    // If the backend eventually stores this in staff_activity_log.stallholder_user_type,
+    // the template uses that field directly. Otherwise we derive it here.
+    getStallholderUserType(item) {
+      if (item.stallholder_user_type) return item.stallholder_user_type;
+      // All mobile-app logs are by 'Mobile User' / stallholder account
+      if (item.staff_type === 'stallholder') return 'Mobile User';
+      return 'N/A';
+    },
+
+    // Returns the "Stallholder Type" column value (the category of the action).
+    // Maps the module field to a human-readable type label.
+    getStallholderType(item) {
+      if (item.stallholder_type) return item.stallholder_type;
+      const moduleMap = {
+        'Documents': 'Document Action',
+        'Payments': 'Payment Action',
+        'Complaints': 'Complaint Action',
+        'Dashboard': 'App Access',
+        'Notifications': 'App Access',
+        'Reports': 'App Access',
+        'mobile_app': 'Authentication'
+      };
+      return moduleMap[item.module] || item.module || 'General';
+    },
+
+    getStallholderTypeColor(item) {
+      const type = this.getStallholderType(item);
+      const colors = {
+        'Document Action': 'blue',
+        'Payment Action': 'teal',
+        'Complaint Action': 'orange',
+        'App Access': 'purple',
+        'Authentication': 'grey'
+      };
+      return colors[type] || 'grey';
+    },
+
+    getStallholderTypeIcon(item) {
+      const type = this.getStallholderType(item);
+      const icons = {
+        'Document Action': 'mdi-file-document',
+        'Payment Action': 'mdi-cash',
+        'Complaint Action': 'mdi-alert-circle',
+        'App Access': 'mdi-cellphone-play',
+        'Authentication': 'mdi-shield-key'
+      };
+      return icons[type] || 'mdi-tag';
+    },
+ 
     getStaffTypeColor(type) {
       const colors = {
+        'stallholder': 'deep-orange',
         'business_employee': 'primary',
         'business_manager': 'purple',
         'business_owner': 'indigo',
@@ -344,9 +423,10 @@ export default {
       };
       return colors[type] || 'grey';
     },
-
+ 
     getStaffTypeIcon(type) {
       const icons = {
+        'stallholder': 'mdi-storefront',
         'business_employee': 'mdi-account-tie',
         'business_manager': 'mdi-account-supervisor',
         'business_owner': 'mdi-account-star',
@@ -356,7 +436,7 @@ export default {
       };
       return icons[type] || 'mdi-account';
     },
-
+ 
     getActionColor(action) {
       const colors = {
         'LOGIN': 'success',
@@ -372,7 +452,7 @@ export default {
       };
       return colors[action] || colors[action?.toUpperCase()] || 'grey';
     },
-
+ 
     getActionIcon(action) {
       const icons = {
         'LOGIN': 'mdi-login',
@@ -388,7 +468,7 @@ export default {
       };
       return icons[action] || icons[action?.toUpperCase()] || 'mdi-information';
     },
-
+ 
     // Device and IP helper functions
     getDeviceIcon(userAgent) {
       if (!userAgent) return { icon: 'mdi-help-circle', color: 'grey' };
@@ -401,7 +481,7 @@ export default {
       }
       return { icon: 'mdi-monitor', color: 'primary' };
     },
-
+ 
     getDeviceType(userAgent) {
       if (!userAgent) return 'Unknown';
       const ua = userAgent.toLowerCase();
@@ -416,7 +496,7 @@ export default {
       if (ua.includes('linux')) return 'Linux PC';
       return 'Desktop';
     },
-
+ 
     getBrowserName(userAgent) {
       if (!userAgent) return 'Unknown';
       const ua = userAgent.toLowerCase();
@@ -427,7 +507,7 @@ export default {
       if (ua.includes('opera') || ua.includes('opr/')) return 'Opera';
       return 'Unknown Browser';
     },
-
+ 
     getOSName(userAgent) {
       if (!userAgent) return 'Unknown';
       const ua = userAgent.toLowerCase();
@@ -439,7 +519,7 @@ export default {
       if (ua.includes('linux')) return 'Linux';
       return 'Unknown OS';
     },
-
+ 
     formatIP(ip) {
       if (!ip || ip === 'unknown') return '-';
       // Remove ::ffff: prefix from IPv4-mapped IPv6 addresses
@@ -450,7 +530,7 @@ export default {
       if (ip === '::1' || ip === '127.0.0.1') return 'Localhost';
       return ip;
     },
-
+ 
     formatDateTime(dateStr) {
       if (!dateStr) return 'N/A';
       // The Database connection already has `timezone: 'Z'` or `timezone: '+08:00'`.
@@ -466,7 +546,7 @@ export default {
         hour12: true
       }).format(phDate);
     },
-
+ 
     formatRelativeTime(dateStr) {
       if (!dateStr) return '';
       
@@ -488,15 +568,15 @@ export default {
       
       return '';
     },
-
+ 
     openClearConfirmDialog() {
       this.showClearConfirmDialog = true;
     },
-
+ 
     closeClearConfirmDialog() {
       this.showClearConfirmDialog = false;
     },
-
+ 
     async clearAllActivities() {
       this.clearingData = true;
       try {
@@ -508,11 +588,13 @@ export default {
         
         // Then clear the activity logs
         const token = sessionStorage.getItem('authToken');
-        const response = await axios.delete(
-          `${this.apiBaseUrl}/activity-logs/clear-all`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
+        const endpoint = this.stallholderId
+          ? `${this.apiBaseUrl}/activity-logs/stallholder/${this.stallholderId}/clear`
+          : `${this.apiBaseUrl}/activity-logs/stallholder/clear-all`;
+        const response = await axios.delete(endpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+ 
         if (response.data.success) {
           // Refresh the logs
           await this.fetchLogs();
@@ -538,16 +620,21 @@ export default {
         this.clearingData = false;
       }
     },
-
+ 
     async exportAllActivitiesToExcel() {
       try {
         // Fetch ALL activity logs without limit for backup
         const token = sessionStorage.getItem('authToken');
+        const params = new URLSearchParams();
+        params.append('staffType', 'stallholder');
+        if (this.stallholderId) params.append('userId', this.stallholderId);
+        params.append('limit', '10000');
+
         const response = await axios.get(
-          `${this.apiBaseUrl}/activity-logs?limit=10000`,
+          `${this.apiBaseUrl}/activity-logs?${params.toString()}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
+ 
         if (response.data.success && response.data.data.length > 0) {
           const allLogs = response.data.data;
           
@@ -558,7 +645,7 @@ export default {
           const wsData = [];
           
           // Title row
-          wsData.push(['ACTIVITY LOG HISTORY - BACKUP']);
+          wsData.push(['STALLHOLDER ACTIVITY LOG HISTORY - BACKUP']);
           wsData.push([`Exported on: ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`]);
           wsData.push([`Total Records: ${allLogs.length}`]);
           wsData.push([]);
@@ -568,6 +655,8 @@ export default {
             'Log ID',
             'Staff Type',
             'Staff Name',
+            'Stallholder User Type',
+            'Stallholder Type',
             'Staff ID',
             'Action',
             'Description',
@@ -584,6 +673,8 @@ export default {
               log.log_id,
               this.formatStaffType(log.staff_type),
               log.staff_name || 'Unknown',
+              log.stallholder_user_type || this.getStallholderUserType(log),
+              log.stallholder_type || this.getStallholderType(log),
               log.staff_id || '-',
               log.action_type || '-',
               log.action_description || '-',
@@ -603,6 +694,8 @@ export default {
             { wch: 10 },  // Log ID
             { wch: 18 },  // Staff Type
             { wch: 25 },  // Staff Name
+            { wch: 20 },  // Stallholder User Type
+            { wch: 20 },  // Stallholder Type
             { wch: 12 },  // Staff ID
             { wch: 12 },  // Action
             { wch: 40 },  // Description
@@ -613,14 +706,14 @@ export default {
             { wch: 25 }   // Date & Time
           ];
           
-          // Merge title cells
+          // Merge title cells (now 13 columns)
           ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } },
-            { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } }
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
+            { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } }
           ];
           
-          XLSX.utils.book_append_sheet(wb, ws, 'Activity Log Backup');
+          XLSX.utils.book_append_sheet(wb, ws, 'Stallholder Activity Backup');
           
           // Download Excel file
           const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -631,29 +724,29 @@ export default {
           const a = document.createElement('a');
           a.href = url;
           const timestamp = new Date().toISOString().split('T')[0];
-          a.download = `activity-log-backup-${timestamp}.xlsx`;
+          a.download = `stallholder-activity-log-backup-${timestamp}.xlsx`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
           
-          console.log('✅ Activity log backup exported to Excel');
+          console.log('✅ Stallholder activity log backup exported to Excel');
         }
       } catch (error) {
         console.error('Error exporting activities to Excel:', error);
         throw error;
       }
     },
-
+ 
     getTotalActivities() {
       return this.filteredLogs.length;
     },
-
+ 
     getActiveStaff() {
       const uniqueStaff = new Set(this.filteredLogs.map(log => `${log.staff_type}-${log.staff_id}`));
       return uniqueStaff.size;
     },
-
+ 
     getFailedActions() {
       return this.filteredLogs.filter(log => log.status !== 'success').length;
     }
