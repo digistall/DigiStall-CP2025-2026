@@ -237,13 +237,10 @@ export default function App() {
                 component={LoadingScreen}
                 options={{ gestureEnabled: false }}
               />
-              <Stack.Screen
-                name="StallHome"
               <Stack.Screen 
                 name="FaceScannerScreen" 
                 component={FaceScannerScreen}
-                options={{ gestureEnabled: false }}
-                initialParams={userData ? { stallholderId: userData?.stallholder?.stallholder_id } : undefined}
+                initialParams={userData ? { stallholderId: userData.stallholder?.stallholder_id } : undefined}
               />
               <Stack.Screen 
                 name="StallHome" 
