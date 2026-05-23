@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, AppState, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,6 +6,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import NetInfo from '@react-native-community/netinfo';
+import { useFonts } from 'expo-font';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Theme Provider
 import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
@@ -14,6 +16,7 @@ import { ThemeProvider } from './components/ThemeComponents/ThemeContext';
 import LoginScreen from './AUTH/LoginScreen/LoginScreen';
 import LoadingScreen from './AUTH/LoadingScreen/LoadingScreen';
 import ForgotPasswordScreen from './AUTH/ForgotPasswordScreen/ForgotPasswordScreen';
+import FaceScannerScreen from './STALLHOLDER/StallHolder/StallScreen/FaceScanner/FaceScannerScreen';
 
 // Role Screens
 import StallHome from './STALLHOLDER/StallHolder/StallScreen/StallHome';
@@ -38,6 +41,11 @@ const AppLoadingScreen = () => (
 );
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+    ...MaterialIcons.font,
+    ...MaterialCommunityIcons.font,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('LoginScreen');
   const [userData, setUserData] = useState(null);
@@ -158,9 +166,28 @@ export default function App() {
           setUserData(storedUserData);
           setInitialRoute('VendorHome');
         } else {
-          console.log('User is authenticated as Stallholder, navigating to StallHome');
+          console.log('User is authenticated as Stallholder, navigating to StallHome or FaceScanner');
           setUserData(storedUserData);
-          setInitialRoute('StallHome');
+          
+          let nextRoute = 'StallHome';
+          
+          // Check face verification before allowing access to dashboard
+          const actualStallholderId = storedUserData.stallholder?.stallholder_id;
+          if (actualStallholderId) {
+            try {
+              // Wait for network initialization
+              await new Promise(resolve => setTimeout(resolve, 500));
+              const faceResult = await ApiService.checkFaceVerification(actualStallholderId);
+              if (faceResult && !faceResult.hasVerifiedFace) {
+                console.log('🚨 No verified face found on startup. Redirecting to FaceScanner.');
+                nextRoute = 'FaceScannerScreen';
+              }
+            } catch (err) {
+              console.log('⚠️ Could not verify face on startup, proceeding to StallHome', err);
+            }
+          }
+          
+          setInitialRoute(nextRoute);
         }
       } else {
         console.log('User is not authenticated, navigating to LoginScreen');
@@ -174,7 +201,7 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !fontsLoaded) {
     return <AppLoadingScreen />;
   }
 
@@ -205,6 +232,12 @@ export default function App() {
                 name="LoadingScreen" 
                 component={LoadingScreen}
                 options={{ gestureEnabled: false }}
+              />
+              <Stack.Screen 
+                name="FaceScannerScreen" 
+                component={FaceScannerScreen}
+                options={{ gestureEnabled: false }}
+                initialParams={userData ? { stallholderId: userData?.stallholder?.stallholder_id } : undefined}
               />
               <Stack.Screen 
                 name="StallHome" 

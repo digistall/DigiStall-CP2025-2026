@@ -10,9 +10,11 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles as baseStyles } from "./css/styles";
 import UserStorageService from "../../../../services/UserStorageService";
 import { getSafeUserName, getSafeContactInfo, getUserInitials } from "../../../../services/DataDisplayUtils";
+import ApiService from "../../../../services/ApiService";
 
 const { width, height } = Dimensions.get("window");
 
@@ -41,8 +43,10 @@ const Sidebar = ({
   const colors = theme?.colors || defaultTheme.colors;
   const slideAnim = useRef(new Animated.Value(-width * 0.85)).current;
   const [userData, setUserData] = useState(null);
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
 
-  // Load user data when component mounts
+  // Load user data and avatar when component becomes visible
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -51,6 +55,19 @@ const Sidebar = ({
         if (storedUserData && storedUserData.user) {
           setUserData(storedUserData.user);
           console.log('👤 Sidebar - Set user data:', storedUserData.user);
+
+          // Fetch face image for profile avatar
+          const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
+          if (stallholderId) {
+            try {
+              const uri = await ApiService.getFaceImageUri(stallholderId);
+              const lastUpdate = await AsyncStorage.getItem('face_image_last_update');
+              setAvatarUri(`${uri}?t=${lastUpdate || '0'}`);
+              setAvatarError(false); // Reset error state on fresh load
+            } catch (e) {
+              console.log('Sidebar - Could not load face image:', e.message);
+            }
+          }
         } else {
           console.log('❌ Sidebar - No user data found');
         }
@@ -59,8 +76,10 @@ const Sidebar = ({
       }
     };
 
-    loadUserData();
-  }, []);
+    if (isVisible) {
+      loadUserData();
+    }
+  }, [isVisible]);
 
   useEffect(() => {
     if (isVisible) {
@@ -201,11 +220,19 @@ const Sidebar = ({
                   onPress={onProfilePress}
                 >
                   <View style={baseStyles.profileImageContainer}>
-                    <View style={[baseStyles.profileImage, { backgroundColor: colors.primary }]}>
-                      <Text style={baseStyles.profileInitials}>
-                        {getDisplayInitials()}
-                      </Text>
-                    </View>
+                    {avatarUri && !avatarError ? (
+                      <Image
+                        source={{ uri: avatarUri }}
+                        style={baseStyles.profileImage}
+                        onError={() => setAvatarError(true)}
+                      />
+                    ) : (
+                      <View style={[baseStyles.profileImage, { backgroundColor: colors.primary }]}>
+                        <Text style={baseStyles.profileInitials}>
+                          {getDisplayInitials()}
+                        </Text>
+                      </View>
+                    )}
                     <View style={baseStyles.statusIndicator} />
                   </View>
                   <View style={baseStyles.profileInfo}>

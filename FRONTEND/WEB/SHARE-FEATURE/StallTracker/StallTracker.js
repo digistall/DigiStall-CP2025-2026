@@ -1,5 +1,11 @@
+import { useAvatar } from '@utils/avatarHelper.js'
+
 export default {
   name: 'StallTracker',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   data() {
     return {
       activeTab: 'pending',
@@ -239,3 +245,4 @@ export default {
     }
   }
 }
+

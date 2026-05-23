@@ -23,8 +23,15 @@
         >
           <div class="table-cell name-col">
             <div class="applicant-name-wrapper">
-              <div class="applicant-avatar">
-                {{ applicant.fullName ? applicant.fullName.charAt(0).toUpperCase() : '?' }}
+              <img 
+                v-if="applicant.stallholder_id"
+                :src="getAvatarUrl(applicant.stallholder_id)"
+                @error="handleAvatarError"
+                class="applicant-avatar-img"
+                alt="Avatar"
+              />
+              <div class="applicant-avatar avatar-initials" :style="{ display: applicant.stallholder_id ? 'none' : 'flex' }">
+                {{ getInitials(applicant.fullName, '') }}
               </div>
               <span class="applicant-name-text">{{ applicant.fullName }}</span>
             </div>

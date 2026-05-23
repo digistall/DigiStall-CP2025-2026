@@ -90,8 +90,6 @@ export const handleLogin = async (
         setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
       }
 
-      setIsLoading(false);
-
       // Navigate based on staff type
       const staffType = staffResponse.staffType || staffResponse.user?.staffType;
       const staffName = getSafeStaffName({ staff: staffResponse.user }, 'Staff');
@@ -148,8 +146,6 @@ export const handleLogin = async (
         setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
       }
 
-      setIsLoading(false);
-
       const vendorName = vendorResponse.data?.vendor?.full_name || 'Vendor';
 
       if (navigation) {
@@ -200,12 +196,7 @@ export const handleLogin = async (
         console.log('⚠️ WARNING: No token received from backend! Token is:', response.token);
       }
       
-      if (setLoadingState) {
-        setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
-      }
-
-      // Stop the initial loading
-      setIsLoading(false);
+      // Delay setting progress=100 and setIsLoading(false) until after face verification
 
       // Get user info for loading screen using safe utilities
       const userName = getSafeUserName(userData.user, 'User');
@@ -214,13 +205,42 @@ export const handleLogin = async (
 
       // Navigate to loading screen instead of directly to StallHome
       if (navigation) {
+        let finalNextScreen = 'StallHome';
+        
+        // Face Verification Check for Stallholders
+        try {
+          if (setLoadingState) {
+            setLoadingState({ step: 3, message: 'Checking security requirements...', progress: 80 });
+          }
+          
+          const actualStallholderId = userData.stallholder?.stallholder_id;
+          
+          if (actualStallholderId) {
+            console.log('🔍 Checking face verification for ID:', actualStallholderId);
+            const faceResult = await ApiService.checkFaceVerification(actualStallholderId);
+            if (faceResult && !faceResult.hasVerifiedFace) {
+              console.log('🚨 No verified face found. Redirecting to scanner.');
+              finalNextScreen = 'FaceScannerScreen';
+            }
+          }
+        } catch (err) {
+          console.error('❌ Error checking face verification during login:', err);
+        }
+        
+        if (setLoadingState) {
+          setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
+        }
+        
         navigation.navigate('LoadingScreen', {
           userName,
           isStallholder,
           stallNo,
-          nextScreen: 'StallHome',
+          stallholderId: userData.stallholder?.stallholder_id,
+          nextScreen: finalNextScreen,
           loadingDuration: 3000
         });
+      } else {
+        setIsLoading(false);
       }
 
     } else {
@@ -358,8 +378,6 @@ export const handleStaffLogin = async (
         await UserStorageService.saveAuthToken(response.token);
         console.log('🔐 Staff auth token saved');
       }
-
-      setIsLoading(false);
 
       // Navigate based on staff type using safe utilities
       const staffType = response.staffType || response.user?.staffType;

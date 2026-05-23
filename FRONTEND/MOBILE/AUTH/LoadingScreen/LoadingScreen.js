@@ -71,19 +71,28 @@ const LoadingScreen = ({
     // Show welcome screen after loading
     setTimeout(() => {
       setShowWelcome(true);
-      showWelcomeAnimation();
     }, loadingDuration);
 
     // Navigate after welcome display
     setTimeout(() => {
       if (navigation && nextScreen) {
-        navigation.replace(nextScreen);
+        // Forward all params to the next screen (important for stallholderId)
+        navigation.replace(nextScreen, { ...params });
       }
       if (onLoadComplete) {
         onLoadComplete();
       }
     }, loadingDuration + 2500);
   }, []);
+
+  useEffect(() => {
+    if (showWelcome) {
+      const timer = setTimeout(() => {
+        showWelcomeAnimation();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showWelcome]);
 
   const startAnimations = () => {
     // Logo entrance animation
