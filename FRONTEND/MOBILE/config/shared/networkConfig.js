@@ -8,7 +8,9 @@
 // __DEV__ is a React Native global:
 //   true  → Expo Go / development mode  → use LOCAL backend
 //   false → APK / production build       → use DigitalOcean backend
-const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+// Forcing IS_DEV to true to ensure it only connects to the local backend during development.
+// Remember to switch back or use the __DEV__ flag before building the production APK.
+const IS_DEV = true; // typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
 // ===== AUTO-DETECT LOCAL IP FROM EXPO =====
 // Expo Metro bundler knows the correct LAN IP for any WiFi network.
@@ -50,20 +52,24 @@ const DEVELOPMENT_SERVERS = detectedIP
       `http://${detectedIP}:5001`,   // Local Backend-Mobile API (primary)
       `http://${detectedIP}:5000`,   // Local Backend-Web API (fallback)
       `http://${detectedIP}:3001`,   // Local single-server fallback
+      'http://192.168.1.100:5001',   // User hardcoded fallback
+      'http://192.168.1.100:5000',
       'http://localhost:3001',       // Only works on emulator
     ]
   : [
-      'http://178.16.100.6:5001',   // Hardcoded fallback if auto-detect fails
-      'http://178.16.100.6:5000',
-      'http://178.16.100.6:3001',
+      'http://192.168.1.100:5001',   // User hardcoded fallback (Primary)
+      'http://192.168.1.100:5000',
+      'http://192.168.1.100:5001',   // Hardcoded fallback if auto-detect fails
+      'http://192.168.1.100:5000',
+      'http://192.168.1.100:3001',
       'http://localhost:3001',
     ];
 
 export const API_CONFIG = {
   // Server endpoints are ordered automatically based on environment
-  // Expo Go (dev) → local servers first, APK (prod) → DigitalOcean first
+  // Expo Go (dev) → ONLY local servers, APK (prod) → DigitalOcean first
   SERVERS: IS_DEV
-    ? [...DEVELOPMENT_SERVERS, ...PRODUCTION_SERVERS]   // Dev: try local first, fallback to production
+    ? DEVELOPMENT_SERVERS   // Dev: ONLY try local, do NOT fallback to production
     : [...PRODUCTION_SERVERS, ...DEVELOPMENT_SERVERS],  // Prod: try DigitalOcean first, fallback to local
   
   // Static file server for images (Apache on port 80)

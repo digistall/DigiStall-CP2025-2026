@@ -162,6 +162,22 @@ export default {
       return this.form.paymentType === 'penalty'
     },
 
+    isPartialPayment() {
+      if (this.form.paymentType === 'partial_payment') return true
+      if (this.form.paymentType === 'rental' && this.form.amount) {
+        let sumAmount = 0
+        const months = Array.isArray(this.form.paymentForMonth) ? this.form.paymentForMonth : [this.form.paymentForMonth]
+        for (const m of months) {
+          const opt = this.unpaidMonthsOptions.find(o => o.value === m)
+          if (opt) {
+            sumAmount += opt.amount
+          }
+        }
+        return sumAmount > 0 && parseFloat(this.form.amount) < sumAmount * 0.99
+      }
+      return false
+    },
+
     violationItems() {
       return this.unpaidViolations.map(v => ({
         title: `${v.violationType} - \u20B1${v.penaltyAmount.toLocaleString()} (${v.severity}) - ${this.formatDate(v.dateReported)}`,
@@ -285,15 +301,13 @@ export default {
             monthlyRental: parseFloat(s.monthlyRental || s.rental_price || 0),
             moveInDate: s.contract_start_date || s.move_in_date || null,
             paymentStatus: s.payment_status || 'unpaid',
-            unpaidViolations: parseInt(s.unpaid_violations_count) || 0,
-            // Check if current month has been paid (from backend subquery)
-            _currentMonthPaid: parseFloat(s.current_month_paid_amount || 0) > 0
+            unpaidViolations: parseInt(s.unpaid_violations_count) || 0
           }))
         } else {
           this.showToast('Failed to load stall list', 'error')
         }
       } catch (e) {
-        console.error('âŒ fetchStallList error:', e)
+        console.error('❌ fetchStallList error:', e)
         this.showToast('Error loading stall list', 'error')
       } finally {
         this.loading = false
@@ -301,60 +315,29 @@ export default {
       }
     },
 
+
+
     // =========================================================
     // STATUS CONFIG (for main table Status column)
     // =========================================================
-    // Checks actual payment records for current month to determine paid status
-    // 3-tier: Paid | Discount (5+ days early) | Due Soon (within 5 days) | Overdue (past due)
+    // Uses backend-computed real-time payment status based on actual payment records
     getStatusConfig(stall) {
-      const now = new Date()
-      const moveIn = stall.moveInDate ? new Date(stall.moveInDate) : null
-      if (!moveIn) return { label: 'Pending', color: '#9ca3af' }
+      const status = (stall.paymentStatus || '').toLowerCase()
 
-      const dueDay = moveIn.getDate()
-
-      // Current month due date
-      const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay)
-      if (dueDate.getMonth() !== now.getMonth()) {
-        dueDate.setDate(0)
-      }
-
-      // Check if paid or partial: use DB payment_status (since DB is now strictly verified)
-      const paymentStatus = (stall.paymentStatus || stall.payment_status || '').toLowerCase()
-      if (paymentStatus === 'paid') {
-        return { label: 'Paid', color: '#10b981' }
-      }
-      if (paymentStatus === 'partial') {
-        return { label: 'Partial', color: '#3b82f6' } // Blue color for partial
-      }
-
-      // Check if this is the move-in month (first month)
-      const isFirstMonth = moveIn.getFullYear() === now.getFullYear() && moveIn.getMonth() === now.getMonth()
-
-      if (isFirstMonth) {
-        // First month: 5-day window from move-in = Discount, after that = Overdue
-        const graceDate = new Date(moveIn)
-        graceDate.setDate(graceDate.getDate() + ADVANCE_DAYS)
-        graceDate.setHours(23, 59, 59, 999)
-
-        if (now > graceDate) {
+      switch (status) {
+        case 'paid':
+          return { label: 'Paid', color: '#10b981' }
+        case 'partial':
+          return { label: 'Partial', color: '#3b82f6' }
+        case 'overdue':
           return { label: 'Overdue', color: '#ef4444' }
-        }
-        return { label: 'Discount', color: '#1e88e5' }
+        case 'discount':
+          return { label: 'Discount', color: '#1e88e5' }
+        case 'due_soon':
+          return { label: 'Due Soon', color: '#f59e0b' }
+        default:
+          return { label: 'Pending', color: '#9ca3af' }
       }
-
-      // Subsequent months
-      if (now > dueDate) {
-        return { label: 'Overdue', color: '#ef4444' }
-      }
-
-      const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24))
-      if (daysUntilDue >= ADVANCE_DAYS) {
-        return { label: 'Discount', color: '#1e88e5' }
-      }
-
-      // Within 5 days of due date = Normal price period
-      return { label: 'Due Soon', color: '#f59e0b' }
     },
 
     // =========================================================
@@ -432,16 +415,18 @@ export default {
             payments || []
           )
         } else {
-          console.error('âŒ Tracker fetch failed:', response.status)
+          console.error('❌ Tracker fetch failed:', response.status)
           this.showToast('Failed to load payment tracker', 'error')
         }
       } catch (e) {
-        console.error('âŒ fetchPaymentTracker error:', e)
+        console.error('❌ fetchPaymentTracker error:', e)
         this.showToast('Error loading tracker', 'error')
       } finally {
         this.trackerLoading = false
       }
     },
+
+
 
     /**
      * Build the monthly payment timeline from moveInDate to today.
@@ -550,13 +535,20 @@ export default {
 
         const lastPayment = monthPayments.length > 0 ? monthPayments[monthPayments.length - 1] : null
 
+        let dueDateFormatted = `${new Date(year, month).toLocaleString('en-US', {month: 'long'})} 5, ${year}`;
+
+        let promiseDateStr = null;
+        if (lastPayment?.promiseDate) {
+          const d = new Date(lastPayment.promiseDate);
+          promiseDateStr = `${d.toLocaleString('en-US', {month: 'long'})} ${d.getDate()}, ${d.getFullYear()}`;
+        }
+
         tracker.push({
           year,
           month,
+          monthName: new Date(year, month).toLocaleString('default', { month: 'long' }) + ' ' + year,
           dueDate,
-          dueDateFormatted: dueDate.toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric'
-          }),
+          dueDateFormatted,
           amount,
           status,
           receiptNo: lastPayment?.receiptNo || null,
@@ -566,6 +558,7 @@ export default {
           paymentForMonth: lastPayment?.paymentForMonth || null,
           collectedBy: lastPayment?.collectedBy || null,
           paymentStatus: lastPayment?.status || null,
+          promiseDate: promiseDateStr,
           notes: lastPayment?.notes || null,
           monthlyRental: rental,
           hasPaid: isFullyPaid
@@ -660,7 +653,7 @@ export default {
           this.stallholders = result.data || []
         }
       } catch (e) {
-        console.error('âŒ loadStallholders error:', e)
+        console.error('❌ loadStallholders error:', e)
       }
     },
 
@@ -752,7 +745,7 @@ export default {
           await this.loadUnpaidMonths(stallholder.id)
         }
       } catch (e) {
-        console.error('âŒ onStallholderSelected error:', e)
+        console.error('❌ onStallholderSelected error:', e)
         this.form.stallholderId = stallholder.id
         this.form.stallholderName = stallholder.name
         this.form.stallNo = stallholder.stallNo
@@ -773,7 +766,7 @@ export default {
           this.form.receiptNo = result.receiptNumber
         }
       } catch (e) {
-        console.error('âŒ generateReceiptNumber error:', e)
+        console.error('❌ generateReceiptNumber error:', e)
       }
     },
 
@@ -842,7 +835,7 @@ export default {
           this.unpaidViolations = []
         }
       } catch (e) {
-        console.error('âŒ loadUnpaidViolations error:', e)
+        console.error('❌ loadUnpaidViolations error:', e)
         this.unpaidViolations = []
       } finally {
         this.loadingViolations = false
@@ -868,15 +861,17 @@ export default {
         })
         const result = await response.json()
         if (response.ok && result.success) {
-          this.showToast(`Violation payment processed! \u20B1${result.data.paidAmount.toLocaleString()}`, 'success')
+          this.clearCache(this.form.stallholderId)
           this.closeAddModal()
+          this.showTrackerModal = false
+          this.showToast(`Violation payment processed! \u20B1${result.data.paidAmount.toLocaleString()}`, 'success')
           this.$emit('payment-added', result)
           await this.fetchStallList()
         } else {
           this.showToast(result.message || 'Failed to process payment', 'error')
         }
       } catch (e) {
-        console.error('âŒ processViolationPayment error:', e)
+        console.error('❌ processViolationPayment error:', e)
         this.showToast('Error processing payment', 'error')
       } finally {
         this.loading = false
@@ -964,10 +959,12 @@ export default {
           }
         }
 
-        this.showToast('Payment(s) added successfully!', 'success')
-        await this.fetchStallList()
+        this.clearCache(this.form.stallholderId)
         this.closeAddModal()
+        this.showTrackerModal = false
+        this.showToast('Payment(s) added successfully!', 'success')
         this.$emit('payment-added')
+        await this.fetchStallList()
       } catch (e) {
         console.error('❌ addPayment error:', e)
         this.showToast(e.message || 'Error adding payment', 'error')
@@ -1084,6 +1081,9 @@ export default {
         this.panX = 0;
         this.panY = 0;
       }
+    },
+    clearCache() {
+      // No-op: caching removed, data is always fetched fresh from backend
     }
   }
 }

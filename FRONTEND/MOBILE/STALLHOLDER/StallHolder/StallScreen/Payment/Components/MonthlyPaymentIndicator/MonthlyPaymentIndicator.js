@@ -40,6 +40,19 @@ const getStatusConfigForStall = (stall, isDark) => {
       statusLabel: 'PENDING',
       borderColor: isDark ? '#B45309' : '#FDE68A'
     };
+  } else if (stall.isPartial) {
+    return {
+      icon: "pie-chart",
+      iconColor: "#3B82F6", // Blue
+      gradientColors: isDark 
+        ? ['#1E3A8A', '#1D4ED8', '#2563EB'] 
+        : ['#EFF6FF', '#DBEAFE', '#BFDBFE'],
+      textColor: isDark ? '#60A5FA' : '#1E40AF',
+      badgeColor: '#3B82F6',
+      badgeTextColor: '#FFFFFF',
+      statusLabel: 'PARTIAL',
+      borderColor: isDark ? '#2563EB' : '#BFDBFE'
+    };
   } else {
     return {
       icon: "alert-circle",
@@ -95,14 +108,26 @@ const StallPaymentCard = ({ stall, monthName, isDark, isLast }) => {
             </Text>
             
             {/* Amount Display */}
-            {stall.isUnpaid || stall.isPending ? (
-              <View style={styles.amountRow}>
-                <Text style={[styles.amountLabel, { color: config.textColor, opacity: 0.8 }]}>
-                  Amount Due:
-                </Text>
-                <Text style={[styles.amountValue, { color: config.textColor }]}>
-                  {stall.amountDue}
-                </Text>
+            {stall.isUnpaid || stall.isPending || stall.isPartial ? (
+              <View>
+                <View style={styles.amountRow}>
+                  <Text style={[styles.amountLabel, { color: config.textColor, opacity: 0.8 }]}>
+                    Amount Due:
+                  </Text>
+                  <Text style={[styles.amountValue, { color: config.textColor }]}>
+                    {stall.amountDue}
+                  </Text>
+                </View>
+                {stall.isPartial && (
+                  <View style={[styles.amountRow, { marginTop: 4 }]}>
+                    <Text style={[styles.amountLabel, { color: config.textColor, opacity: 0.8 }]}>
+                      Promise Date:
+                    </Text>
+                    <Text style={[styles.amountValue, { color: config.textColor, fontWeight: '700' }]}>
+                      {stall.promiseDate || '—'}
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : (
               <View style={styles.amountRow}>
@@ -116,7 +141,7 @@ const StallPaymentCard = ({ stall, monthName, isDark, isLast }) => {
             )}
           </View>
         </View>
-
+ 
         {/* Footer Info */}
         <View style={styles.footerRow}>
           <View style={styles.footerItem}>
@@ -132,7 +157,7 @@ const StallPaymentCard = ({ stall, monthName, isDark, isLast }) => {
               Rent: {stall.monthlyRent}
             </Text>
           </View>
-          {(stall.isUnpaid || stall.isPending) && (
+          {(stall.isUnpaid || stall.isPending || stall.isPartial) && (
             <>
               <View style={styles.footerDivider} />
               <View style={styles.footerItem}>
@@ -299,8 +324,8 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
       )}
 
       {/* Partial Payment Warning Banner */}
-      {partialPayments.map((partial) => (
-        <View key={partial.paymentId} style={{
+      {partialPayments.map((partial, index) => (
+        <View key={`partial_${partial.paymentId || index}`} style={{
           backgroundColor: isDark ? '#78350F' : '#FFFBEB',
           borderWidth: 1.5,
           borderColor: isDark ? '#B45309' : '#FDE68A',
@@ -345,7 +370,7 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
 
       {stalls.map((stall, index) => (
         <StallPaymentCard
-          key={stall.stallholderId || stall.stallId || index}
+          key={`stall_${stall.stallholderId || stall.stallId || index}`}
           stall={stall}
           monthName={monthlyStatus.currentMonthName}
           isDark={isDark}

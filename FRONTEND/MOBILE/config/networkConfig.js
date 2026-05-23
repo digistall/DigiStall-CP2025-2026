@@ -10,21 +10,19 @@ export const API_CONFIG = {
   // For LOCAL development, you can temporarily move localhost entries to top
   SERVERS: [
     // LOCAL DEVELOPMENT - at top for local testing with Expo Go
-    // Your current local IP: 178.16.100.6 (verified: May 22, 2026)
-    
-    'http://178.16.100.6:5001',  // Local Backend-Mobile API (primary)
-    'http://178.16.100.6:3002',  // Local Backend-Web API (fallback)
-    'http://178.16.100.6:3001',  // Alternative local port
+    'http://192.168.1.100:5001',  // Local Backend-Mobile API (primary)
+    'http://192.168.1.100:3002',  // Local Backend-Web API (fallback)
+    'http://192.168.1.100:3001',  // Alternative local port
     'http://localhost:5001',        // Only works on emulator
     'http://localhost:3002',        // Only works on emulator
     'http://localhost:3001',        // Only works on emulator
     
-    // DigitalOcean Production Server - MOVE TO TOP FOR DEPLOYED APPS
-    // Backend-Mobile runs on port 5001 in production (see docker-compose.yml)
-     'http://digi-stall.com:5001',    // Production Domain Backend-Mobile API
-     'http://68.183.154.125:5001',   // Production IP Backend-Mobile API
-     'http://digi-stall.com:5000',    // Production Domain Backend-Web API (fallback)
-     'http://68.183.154.125:5000',   // Production IP Backend-Web API (fallback)
+    // DigitalOcean Production Server - REMOVED FOR LOCAL DEV
+    // Uncomment these when building production APK
+    // 'http://digi-stall.com:5001',
+    // 'http://68.183.154.125:5001',
+    // 'http://digi-stall.com:5000',
+    // 'http://68.183.154.125:5000',
   ],
   
   // Static file server for images (Apache on port 80)

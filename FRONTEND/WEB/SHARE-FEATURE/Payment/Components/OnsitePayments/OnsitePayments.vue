@@ -318,7 +318,7 @@
               </v-col>
 
               <!-- Promise to Pay Date - Only shown for partial payment -->
-              <v-col cols="12" md="6" v-if="form.paymentType === 'partial_payment'">
+              <v-col cols="12" md="6" v-if="isPartialPayment">
                 <v-text-field
                   v-model="form.promiseToPayDate"
                   label="Promise to Pay Date"
@@ -609,6 +609,11 @@
                         {{ entry.status }}
                       </v-chip>
                     </div>
+                    <!-- Promise to Pay Date Row -->
+                    <div v-if="entry.status === 'Partial' && entry.promiseDate" class="tracker-promise-date-row" style="font-size: 11px; color: #ef4444; font-weight: 600; margin-top: 6px; border-top: 1px dashed rgba(239, 68, 68, 0.2); padding-top: 4px; display: flex; align-items: center; gap: 4px;">
+                      <v-icon size="12" color="#ef4444">mdi-calendar-clock</v-icon>
+                      Promise: {{ entry.promiseDate }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -642,8 +647,8 @@
         </v-card-title>
 
         <v-card-text class="entry-detail-body">
-          <!-- Payment Info (if paid/advance) -->
-          <div v-if="selectedEntry.hasPaid" class="entry-info-section">
+          <!-- Payment Info (if paid/advance/partial with receipt) -->
+          <div v-if="selectedEntry.hasPaid || (selectedEntry.status === 'Partial' && selectedEntry.receiptNo)" class="entry-info-section">
             <div class="entry-info-title">
               <v-icon size="16" color="#002181" class="mr-1">mdi-receipt-text</v-icon>
               Transaction Details
@@ -670,8 +675,8 @@
             </div>
           </div>
 
-          <!-- Unpaid Info (overdue/pending) -->
-          <div v-else class="entry-info-section">
+          <!-- Payment Information (for partial/overdue/pending/etc.) -->
+          <div v-if="!selectedEntry.hasPaid || selectedEntry.status === 'Partial'" class="entry-info-section">
             <div class="entry-info-title">
               <v-icon size="16" color="#002181" class="mr-1">mdi-information-outline</v-icon>
               Payment Information
@@ -680,6 +685,10 @@
               <div class="entry-info-item">
                 <span class="entry-info-label">Due Date</span>
                 <span class="entry-info-value">{{ selectedEntry.dueDateFormatted }}</span>
+              </div>
+              <div v-if="selectedEntry.status === 'Partial'" class="entry-info-item">
+                <span class="entry-info-label">Promise Date</span>
+                <span class="entry-info-value">{{ selectedEntry.promiseDate || '—' }}</span>
               </div>
               <div class="entry-info-item">
                 <span class="entry-info-label">Status</span>
