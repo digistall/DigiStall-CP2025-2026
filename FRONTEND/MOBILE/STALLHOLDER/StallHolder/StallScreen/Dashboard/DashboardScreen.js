@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
   Vibration,
 } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import UserStorageService from "../../../../services/UserStorageService";
@@ -376,16 +376,19 @@ const DashboardScreen = ({ onNavigate }) => {
 
   if (loading) {
     return (
+    <SafeAreaProvider>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
         </View>
       </SafeAreaView>
+    </SafeAreaProvider>
     );
   }
 
   return (
+    <SafeAreaProvider>
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         style={styles.scrollView}
@@ -650,8 +653,10 @@ const DashboardScreen = ({ onNavigate }) => {
       </ScrollView>
       <AlertComponent />
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
+
 
 const styles = StyleSheet.create({
   safeArea: {
