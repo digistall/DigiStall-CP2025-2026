@@ -2,11 +2,18 @@
  * Stallholders Management Routes
  * Routes for admin/manager to manage stallholders
  * 
- * @route /api/stallholders-management
+ * @route /api/stallholders
  */
 
 import express from 'express';
-import StallholderController from '../SHARE-CONTROLLER/stallholders/stallholderController.js';
+import StallholderController from '../BACKEND/MANAGER/stallholders/stallholderController.js';
+import {
+  getAllDocumentTypes,
+  getBranchDocumentRequirements,
+  createBranchDocumentRequirement,
+  setBranchDocumentRequirement,
+  removeBranchDocumentRequirement
+} from '../BACKEND/MANAGER/stallholders/documentController.js';
 import authMiddleware from '../middleware/auth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 
@@ -91,5 +98,44 @@ router.post('/import-data', viewOnlyForOwners, StallholderController.importExcel
  * @access Protected
  */
 router.get('/available-stalls', StallholderController.getAvailableStalls);
+
+// ============================================================
+// DOCUMENT REQUIREMENT ROUTES
+// ============================================================
+
+/**
+ * @route GET /api/stallholders/documents/types
+ * @desc Get all available document types
+ * @access Protected (Owner, Manager)
+ */
+router.get('/documents/types', getAllDocumentTypes);
+
+/**
+ * @route GET /api/stallholders/documents/requirements
+ * @desc Get branch document requirements (branch resolved from token)
+ * @access Protected (Owner, Manager)
+ */
+router.get('/documents/requirements', getBranchDocumentRequirements);
+
+/**
+ * @route POST /api/stallholders/documents/requirements
+ * @desc Create a new document requirement for a branch
+ * @access Protected (Owner, Manager)
+ */
+router.post('/documents/requirements', viewOnlyForOwners, createBranchDocumentRequirement);
+
+/**
+ * @route PUT /api/stallholders/documents/requirements/:documentTypeId
+ * @desc Update a document requirement (is_required, instructions)
+ * @access Protected (Owner, Manager)
+ */
+router.put('/documents/requirements/:documentTypeId', viewOnlyForOwners, setBranchDocumentRequirement);
+
+/**
+ * @route DELETE /api/stallholders/documents/requirements/:documentTypeId
+ * @desc Remove a document requirement from a branch
+ * @access Protected (Owner, Manager)
+ */
+router.delete('/documents/requirements/:documentTypeId', viewOnlyForOwners, removeBranchDocumentRequirement);
 
 export default router;

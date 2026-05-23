@@ -1,0 +1,451 @@
+import ToastNotification from '@SHARED_COMPONENTS/ToastNotification/ToastNotification.vue'
+import { useAvatar } from '@utils/avatarHelper.js'
+
+export default {
+  name: 'DailyPayments',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
+  emits: ['loading', 'count-updated'],
+  components: {
+    ToastNotification,
+  },
+  data() {
+    return {
+      searchQuery: '',
+      payments: [],
+      collectors: [],
+      vendors: [],
+      loadingCollectors: false,
+      loadingVendors: false,
+      showAddModal: false,
+      showViewModal: false,
+      showDeleteConfirm: false,
+      selectedPayment: null,
+      formValid: false,
+      submitting: false,
+      deleting: false,
+      // Stallholder details modal
+      showStallholderModal: false,
+      loadingStallholderDetails: false,
+      stallholderDetails: null,
+      avatarBuster: Date.now(),
+      // Zoom Lightbox states
+      showZoomModal: false,
+      zoomScale: 1.0,
+      panX: 0,
+      panY: 0,
+      isDragging: false,
+      form: {
+        collectorId: null,
+        vendorId: null,
+        amount: '',
+        referenceNo: '',
+        status: 'completed',
+      },
+      toast: {
+        show: false,
+        message: '',
+        type: 'success',
+      },
+    }
+  },
+  computed: {
+    filteredPayments() {
+      if (!this.searchQuery) {
+        return this.payments
+      }
+
+      const query = this.searchQuery.toLowerCase()
+      return this.payments.filter((payment) => {
+        return (
+          payment.receipt_id.toString().includes(query) ||
+          (payment.collector_name || '').toLowerCase().includes(query) ||
+          (payment.vendor_name || '').toLowerCase().includes(query) ||
+          (payment.reference_no || '').toLowerCase().includes(query) ||
+          (payment.status || '').toLowerCase().includes(query)
+        )
+      })
+    },
+  },
+  mounted() {
+    this.fetchPayments()
+    this.fetchCollectors()
+    this.fetchVendors()
+  },
+  methods: {
+    async fetchPayments() {
+      try {
+        this.$emit('loading', true)
+        const token = sessionStorage.getItem('authToken')
+
+        if (!token) {
+          console.log('🔐 No auth token found')
+          return
+        }
+
+        console.log('🔍 Fetching daily payments from API')
+        const response = await fetch('/api/payments/daily', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+
+          if (result.success && result.data) {
+            this.payments = result.data.map((payment) => ({
+              receipt_id: payment.receipt_id,
+              collector_id: payment.collector_id,
+              collector_name: payment.collector_name || 'N/A',
+              vendor_id: payment.vendor_id,
+              vendor_name: payment.vendor_name || 'N/A',
+              amount: parseFloat(payment.amount || 0),
+              reference_no: payment.reference_no || '',
+              status: payment.status || 'completed',
+              statusColor: this.getStatusColor(payment.status),
+              time_date: payment.time_date,
+            }))
+
+            this.$emit('count-updated', this.payments.length)
+            console.log('📊 Daily payments loaded:', this.payments.length)
+          }
+        } else {
+          console.error('Failed to fetch daily payments:', response.statusText)
+          this.showToast('Failed to load daily payments', 'error')
+        }
+      } catch (error) {
+        console.error('Error fetching daily payments:', error)
+        this.showToast('An error occurred while loading payments', 'error')
+      } finally {
+        this.$emit('loading', false)
+      }
+    },
+
+    async fetchCollectors() {
+      try {
+        this.loadingCollectors = true
+        const token = sessionStorage.getItem('authToken')
+
+        if (!token) return
+
+        const response = await fetch('/api/payments/daily/collectors', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            this.collectors = result.data
+            console.log('📊 Collectors loaded:', this.collectors.length)
+            console.log('👥 Collector data:', this.collectors)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching collectors:', error)
+      } finally {
+        this.loadingCollectors = false
+      }
+    },
+
+    async fetchVendors() {
+      try {
+        this.loadingVendors = true
+        const token = sessionStorage.getItem('authToken')
+
+        if (!token) return
+
+        const response = await fetch('/api/payments/daily/vendors', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            this.vendors = result.data
+            console.log('📊 Vendors loaded:', this.vendors.length)
+            console.log('🏪 Vendor data:', this.vendors)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching vendors:', error)
+      } finally {
+        this.loadingVendors = false
+      }
+    },
+
+    getStatusColor(status) {
+      const statusMap = {
+        completed: 'success',
+        pending: 'warning',
+        failed: 'error',
+        cancelled: 'grey',
+      }
+      return statusMap[status?.toLowerCase()] || 'grey'
+    },
+
+    openAddModal() {
+      this.resetForm()
+      this.showAddModal = true
+    },
+
+    closeAddModal() {
+      this.showAddModal = false
+      this.resetForm()
+    },
+
+    resetForm() {
+      this.form = {
+        collectorId: null,
+        vendorId: null,
+        amount: '',
+        referenceNo: '',
+        status: 'completed',
+      }
+      if (this.$refs.addForm) {
+        this.$refs.addForm.resetValidation()
+      }
+    },
+
+    async submitPayment() {
+      if (!this.$refs.addForm.validate()) {
+        return
+      }
+
+      try {
+        this.submitting = true
+        const token = sessionStorage.getItem('authToken')
+
+        if (!token) {
+          this.showToast('Please login to continue', 'error')
+          return
+        }
+
+        const paymentData = {
+          collectorId: this.form.collectorId,
+          vendorId: this.form.vendorId,
+          amount: parseFloat(this.form.amount),
+          referenceNo: this.form.referenceNo || null,
+          status: this.form.status,
+        }
+
+        console.log('➕ Adding daily payment:', paymentData)
+
+        const response = await fetch('/api/payments/daily', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(paymentData),
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+
+          if (result.success) {
+            this.showToast('Payment added successfully', 'success')
+            this.closeAddModal()
+            await this.fetchPayments()
+          } else {
+            this.showToast(result.message || 'Failed to add payment', 'error')
+          }
+        } else {
+          const errorData = await response.json()
+          this.showToast(errorData.message || 'Failed to add payment', 'error')
+        }
+      } catch (error) {
+        console.error('Error adding payment:', error)
+        this.showToast('An error occurred while adding payment', 'error')
+      } finally {
+        this.submitting = false
+      }
+    },
+
+    viewPayment(payment) {
+      this.selectedPayment = payment
+      this.showViewModal = true
+    },
+
+    closeViewModal() {
+      this.showViewModal = false
+      this.selectedPayment = null
+    },
+
+    confirmDelete() {
+      this.showDeleteConfirm = true
+    },
+
+    async deletePayment() {
+      if (!this.selectedPayment) return
+
+      try {
+        this.deleting = true
+        const token = sessionStorage.getItem('authToken')
+
+        if (!token) {
+          this.showToast('Please login to continue', 'error')
+          return
+        }
+
+        console.log('🗑️ Deleting daily payment:', this.selectedPayment.receipt_id)
+
+        const response = await fetch(`/api/payments/daily/${this.selectedPayment.receipt_id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+
+          if (result.success) {
+            this.showToast('Payment deleted successfully', 'success')
+            this.showDeleteConfirm = false
+            this.closeViewModal()
+            await this.fetchPayments()
+          } else {
+            this.showToast(result.message || 'Failed to delete payment', 'error')
+          }
+        } else {
+          const errorData = await response.json()
+          this.showToast(errorData.message || 'Failed to delete payment', 'error')
+        }
+      } catch (error) {
+        console.error('Error deleting payment:', error)
+        this.showToast('An error occurred while deleting payment', 'error')
+      } finally {
+        this.deleting = false
+      }
+    },
+
+    formatCurrency(amount) {
+      return `₱${parseFloat(amount).toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
+    },
+
+    formatDate(dateString) {
+      if (!dateString || dateString === '0000-00-00') return '—';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } catch (err) {
+        return '—';
+      }
+    },
+
+    formatDateTime(dateString) {
+      if (!dateString) return '—';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '—';
+        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit' };
+        return `${date.toLocaleDateString('en-US', dateOptions)} ${date.toLocaleTimeString('en-US', timeOptions)}`;
+      } catch (err) {
+        return '—';
+      }
+    },
+
+    showToast(message, type = 'success') {
+      this.toast = {
+        show: true,
+        message,
+        type,
+      };
+    },
+
+    async showStallholderDetails(stallholderId) {
+      if (!stallholderId) return;
+      this.showStallholderModal = true;
+      this.loadingStallholderDetails = true;
+      this.stallholderDetails = null;
+      this.avatarBuster = Date.now();
+      
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            this.stallholderDetails = result.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stallholder details:', error);
+      } finally {
+        this.loadingStallholderDetails = false;
+      }
+    },
+
+    // Zoom Lightbox handlers
+    openZoomModal() {
+      if (!this.stallholderDetails || !(this.stallholderDetails.stallholder_id || this.stallholderDetails.id)) return;
+      this.zoomScale = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+      this.isDragging = false;
+      this.showZoomModal = true;
+    },
+    closeZoomModal() {
+      this.showZoomModal = false;
+    },
+    zoomIn() {
+      this.zoomScale = Math.min(this.zoomScale + 0.25, 4.0);
+    },
+    zoomOut() {
+      this.zoomScale = Math.max(this.zoomScale - 0.25, 0.5);
+      if (this.zoomScale < 1.0) {
+        this.panX = 0;
+        this.panY = 0;
+      }
+    },
+    resetZoom() {
+      this.zoomScale = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+    },
+    startDrag(e) {
+      if (this.zoomScale <= 1.0) return;
+      this.isDragging = true;
+      this.startX = e.clientX - this.panX;
+      this.startY = e.clientY - this.panY;
+    },
+    onDrag(e) {
+      if (!this.isDragging) return;
+      this.panX = e.clientX - this.startX;
+      this.panY = e.clientY - this.startY;
+    },
+    endDrag() {
+      this.isDragging = false;
+    },
+    onWheel(e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.min(Math.max(this.zoomScale + delta, 0.5), 4.0);
+      this.zoomScale = newScale;
+      if (newScale <= 1.0) {
+        this.panX = 0;
+        this.panY = 0;
+      }
+    }
+  },
+}
+

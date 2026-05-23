@@ -8,56 +8,95 @@ region: sgp
 
 # ===== SERVICES =====
 services:
-  # Backend API Service
-  - name: digistall-api
+  # Backend Web API Service
+  - name: digistall-api-web
     github:
       branch: FullBranch
       deploy_on_push: true
       repo: digistall/DigiStall-CP2025-2026
-    source_dir: /Backend/Backend-Web
+    source_dir: /
+    dockerfile_path: Dockerfile
     http_port: 3001
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
     routes:
       - path: /api
-    build_command: npm install
-    run_command: node server.js
     envs:
       # Server Configuration
       - key: NODE_ENV
         value: production
-        scope: RUN_TIME
-      - key: WEB_PORT
+      - key: PORT
         value: "3001"
-        scope: RUN_TIME
       # Database Configuration (DigitalOcean Managed Database)
       - key: DB_HOST
         value: ${digistall-db.HOSTNAME}
-        scope: RUN_TIME
       - key: DB_PORT
         value: ${digistall-db.PORT}
-        scope: RUN_TIME
       - key: DB_USER
         value: ${digistall-db.USERNAME}
-        scope: RUN_TIME
       - key: DB_PASSWORD
         value: ${digistall-db.PASSWORD}
-        scope: RUN_TIME
       - key: DB_NAME
         value: ${digistall-db.DATABASE}
-        scope: RUN_TIME
       - key: DB_SSL
         value: "true"
-        scope: RUN_TIME
+      # CORS
+      - key: CORS_ORIGIN
+        value: "http://digi-stall.com"
+      - key: ALLOWED_ORIGINS
+        value: "http://digi-stall.com,http://68.183.154.125"
       # JWT Configuration
       - key: JWT_SECRET
         type: SECRET
         value: your-super-secret-jwt-key-change-this-in-production
-        scope: RUN_TIME
       - key: JWT_REFRESH_SECRET
         type: SECRET
         value: your-refresh-secret-key-change-this-in-production
-        scope: RUN_TIME
+
+  # Backend Mobile API Service
+  - name: digistall-api-mobile
+    github:
+      branch: FullBranch
+      deploy_on_push: true
+      repo: digistall/DigiStall-CP2025-2026
+    source_dir: /
+    dockerfile_path: Dockerfile
+    http_port: 3001
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    routes:
+      - path: /api/mobile
+    envs:
+      # Server Configuration
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      # Database Configuration
+      - key: DB_HOST
+        value: ${digistall-db.HOSTNAME}
+      - key: DB_PORT
+        value: ${digistall-db.PORT}
+      - key: DB_USER
+        value: ${digistall-db.USERNAME}
+      - key: DB_PASSWORD
+        value: ${digistall-db.PASSWORD}
+      - key: DB_NAME
+        value: ${digistall-db.DATABASE}
+      - key: DB_SSL
+        value: "true"
+      # CORS (Allow all for mobile)
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      # JWT Configuration
+      - key: JWT_SECRET
+        type: SECRET
+        value: your-super-secret-jwt-key-mobile-change-this
+      - key: JWT_REFRESH_SECRET
+        type: SECRET
+        value: your-refresh-secret-key-mobile-change-this
 
 # ===== STATIC SITES =====
 static_sites:
@@ -67,7 +106,8 @@ static_sites:
       branch: FullBranch
       deploy_on_push: true
       repo: digistall/DigiStall-CP2025-2026
-    source_dir: /Frontend/Web
+    source_dir: /FRONTEND/WEB
+    dockerfile_path: Dockerfile.prod
     build_command: npm install && npm run build
     output_dir: dist
     index_document: index.html

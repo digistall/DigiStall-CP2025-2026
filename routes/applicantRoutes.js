@@ -15,7 +15,7 @@ import {
   getParticipantsByStall,
   autoCleanupApplicants,
   triggerCleanup
-} from '../SHARE-CONTROLLER/applicants/applicantsController.js'
+} from '../BACKEND/MANAGER/applicants/applicantsController.js'
 
 // Import document controller and multer config
 import {
@@ -23,8 +23,11 @@ import {
   getApplicantDocuments,
   deleteApplicantDocument,
   deleteAllDocuments
-} from '../SHARE-CONTROLLER/applicants/applicantDocumentController.js'
+} from '../BACKEND/MANAGER/applicants/applicantDocumentController.js'
 import { uploadApplicantDocs } from '../config/multerApplicantDocuments.js'
+
+// Import image compression middleware
+import { compressUploads } from '../config/imageCompression.js'
 
 // Import BLOB document controller for cloud storage
 import {
@@ -35,7 +38,7 @@ import {
   deleteApplicantDocumentBlob,
   updateDocumentVerificationStatus,
   getApplicantDocumentByType
-} from '../SHARE-CONTROLLER/applicants/applicantDocumentBlobController.js'
+} from '../BACKEND/MANAGER/applicants/applicantDocumentBlobController.js'
 
 const router = express.Router()
 
@@ -82,6 +85,7 @@ router.post('/cleanup/trigger', triggerCleanup)       // Manual trigger for admi
 router.post(
   '/:applicant_id/documents',
   uploadApplicantDocs,
+  compressUploads({ type: 'document' }),
   uploadApplicantDocuments
 )
 
@@ -101,21 +105,21 @@ router.delete('/:applicant_id/documents', deleteAllDocuments)
 // POST /api/applicants/documents/blob/upload
 router.post('/documents/blob/upload', uploadApplicantDocumentBlob)
 
+// Get document by document ID (returns binary) - MUST be before :applicant_id/:document_type_id
+// GET /api/applicants/documents/blob/id/:document_id
+router.get('/documents/blob/id/:document_id', getApplicantDocumentBlobById)
+
+// Get document by type name (e.g., signature, valid_id) - MUST be before :applicant_id/:document_type_id
+// GET /api/applicants/documents/blob/type/:applicant_id/:document_type
+router.get('/documents/blob/type/:applicant_id/:document_type', getApplicantDocumentByType)
+
 // Get document by applicant ID and document type (returns binary)
 // GET /api/applicants/documents/blob/:applicant_id/:document_type_id
 router.get('/documents/blob/:applicant_id/:document_type_id', getApplicantDocumentBlob)
 
-// Get document by document ID (returns binary)
-// GET /api/applicants/documents/blob/id/:document_id
-router.get('/documents/blob/id/:document_id', getApplicantDocumentBlobById)
-
 // Get all documents for applicant (returns metadata with optional base64)
 // GET /api/applicants/:applicant_id/documents/blob
 router.get('/:applicant_id/documents/blob', getApplicantDocumentsBlob)
-
-// Get document by type name (e.g., signature, valid_id)
-// GET /api/applicants/documents/blob/type/:applicant_id/:document_type
-router.get('/documents/blob/type/:applicant_id/:document_type', getApplicantDocumentByType)
 
 // Delete document BLOB
 // DELETE /api/applicants/documents/blob/:document_id

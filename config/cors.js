@@ -43,7 +43,6 @@ export const corsConfig = {
     ];
     
     if (allowedOrigins.includes(origin)) {
-      console.log('✅ Mobile CORS allowing origin:', origin);
       callback(null, true);
     } else {
       // In production, allow any origin that matches server IP or domain
@@ -55,7 +54,6 @@ export const corsConfig = {
                                origin.match(/^https?:\/\/[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/); // Any domain
       
       if (isDeployedOrigin || isProduction) {
-        console.log('✅ Mobile CORS allowing deployed origin:', origin);
         callback(null, true);
       } else {
         console.warn('⚠️ Mobile CORS blocked origin:', origin);

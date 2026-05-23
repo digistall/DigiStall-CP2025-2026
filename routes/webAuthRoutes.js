@@ -4,11 +4,12 @@ import {
   // Unified authentication
   login,
   verifyToken as verifyTokenHandler,
-  getCurrentUser
-} from '../SHARE-CONTROLLER/auth/unifiedAuthController.js'
+  getCurrentUser,
+  updateProfile
+} from '../BACKEND/AUTH/auth/unifiedAuthController.js'
 
 // Import logout and heartbeat from enhanced auth controller
-import { logout, heartbeat } from '../SHARE-CONTROLLER/auth/enhancedAuthController.js'
+import { logout, heartbeat } from '../BACKEND/AUTH/auth/enhancedAuthController.js'
 
 // Legacy authentication (for backward compatibility)
 import {
@@ -17,10 +18,10 @@ import {
   createAdminUser,
   createPasswordHash,
   testDb
-} from '../SHARE-CONTROLLER/auth/loginController.js'
+} from '../BACKEND/AUTH/auth/loginController.js'
 
 // Import password reset controller
-import passwordResetController from '../SHARE-CONTROLLER/auth/passwordResetController.js'
+import passwordResetController from '../BACKEND/AUTH/auth/passwordResetController.js'
 
 const router = express.Router()
 
@@ -58,5 +59,6 @@ router.use(authMiddleware.authenticateToken) // Apply auth middleware to routes 
 router.get('/me', getCurrentUser)                      // GET /api/auth/me - Get current user info
 router.get('/business-manager-info', getCurrentUser)    // GET /api/auth/business-manager-info - Get business manager info (alias for backward compatibility)
 router.get('/business-owner-info', getCurrentUser)             // GET /api/auth/business-owner-info - Get business owner info (alias for backward compatibility)
+router.put('/profile/update', updateProfile)          // PUT /api/auth/profile/update - Update profile
 
 export default router
