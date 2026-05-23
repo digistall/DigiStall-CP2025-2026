@@ -1,5 +1,11 @@
+import { useAvatar } from '@utils/avatarHelper.js'
+
 export default {
   name: 'PenaltyPayments',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   emits: ['loading'],
   data() {
     return {
@@ -15,7 +21,18 @@ export default {
       sortBy: 'createdAt',
       sortOrder: 'desc',
       showViewModal: false,
-      selectedPayment: null
+      selectedPayment: null,
+      // Stallholder details modal
+      showStallholderModal: false,
+      loadingStallholderDetails: false,
+      stallholderDetails: null,
+      avatarBuster: Date.now(),
+      // Zoom Lightbox states
+      showZoomModal: false,
+      zoomScale: 1.0,
+      panX: 0,
+      panY: 0,
+      isDragging: false
     }
   },
   computed: {
@@ -93,13 +110,14 @@ export default {
     },
 
     formatDate(dateString) {
-      if (!dateString) return '-';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      if (!dateString || dateString === '0000-00-00') return '—';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } catch (err) {
+        return '—';
+      }
     },
 
     formatTime(timeString) {
@@ -156,6 +174,85 @@ export default {
     viewPayment(payment) {
       this.selectedPayment = payment;
       this.showViewModal = true;
+    },
+
+    async showStallholderDetails(stallholderId) {
+      if (!stallholderId) return;
+      this.showStallholderModal = true;
+      this.loadingStallholderDetails = true;
+      this.stallholderDetails = null;
+      this.avatarBuster = Date.now();
+      
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            this.stallholderDetails = result.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stallholder details:', error);
+      } finally {
+        this.loadingStallholderDetails = false;
+      }
+    },
+
+    // Zoom Lightbox handlers
+    openZoomModal() {
+      if (!this.stallholderDetails || !(this.stallholderDetails.stallholder_id || this.stallholderDetails.id)) return;
+      this.zoomScale = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+      this.isDragging = false;
+      this.showZoomModal = true;
+    },
+    closeZoomModal() {
+      this.showZoomModal = false;
+    },
+    zoomIn() {
+      this.zoomScale = Math.min(this.zoomScale + 0.25, 4.0);
+    },
+    zoomOut() {
+      this.zoomScale = Math.max(this.zoomScale - 0.25, 0.5);
+      if (this.zoomScale < 1.0) {
+        this.panX = 0;
+        this.panY = 0;
+      }
+    },
+    resetZoom() {
+      this.zoomScale = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+    },
+    startDrag(e) {
+      if (this.zoomScale <= 1.0) return;
+      this.isDragging = true;
+      this.startX = e.clientX - this.panX;
+      this.startY = e.clientY - this.panY;
+    },
+    onDrag(e) {
+      if (!this.isDragging) return;
+      this.panX = e.clientX - this.startX;
+      this.panY = e.clientY - this.startY;
+    },
+    endDrag() {
+      this.isDragging = false;
+    },
+    onWheel(e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.min(Math.max(this.zoomScale + delta, 0.5), 4.0);
+      this.zoomScale = newScale;
+      if (newScale <= 1.0) {
+        this.panX = 0;
+        this.panY = 0;
+      }
     }
   }
 }
+

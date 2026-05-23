@@ -1,4 +1,5 @@
 import { createConnection } from '../../../config/database.js';
+import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
 
 /**
  * Get payment records for a stallholder
@@ -188,13 +189,37 @@ export const getAllPaymentRecords = async (req, res) => {
     // Fetch payments for ALL stallholders (regular + penalty)
     let allPayments = [];
     for (const shId of stallholderIds) {
-      // Get regular payments via stored procedure
-      const [paymentResult] = await connection.execute(
-        'CALL sp_getAllPaymentsByStallholder(?)',
+      // Get regular payments via direct query to include promise_to_pay_date
+      const [payments] = await connection.execute(
+        `SELECT 
+          p.payment_id,
+          p.stallholder_id,
+          p.payment_method,
+          p.amount,
+          p.payment_date,
+          p.payment_time,
+          p.payment_for_month,
+          p.payment_type,
+          p.reference_number,
+          p.collected_by,
+          p.payment_status,
+          p.notes,
+          p.branch_id,
+          p.created_at,
+          p.promise_to_pay_date,
+          b.branch_name,
+          s.stall_number,
+          s.stall_type
+        FROM payments p
+        LEFT JOIN branch b ON p.branch_id = b.branch_id
+        LEFT JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+        LEFT JOIN stall s ON sh.stall_id = s.stall_id
+        WHERE p.stallholder_id = ?
+        ORDER BY p.payment_date DESC, p.created_at DESC`,
         [shId]
       );
-      const payments = (paymentResult[0] || []).map(p => ({ ...p, source: 'regular' }));
-      allPayments = allPayments.concat(payments);
+      const regularPayments = (payments || []).map(p => ({ ...p, source: 'regular' }));
+      allPayments = allPayments.concat(regularPayments);
       
       // Get penalty payments
       const [penaltyResult] = await connection.query(
@@ -240,7 +265,8 @@ export const getAllPaymentRecords = async (req, res) => {
       createdAt: payment.created_at,
       // NEW: Include stall information
       stallNumber: payment.stall_number || 'N/A',
-      stallType: payment.stall_type || 'N/A'
+      stallType: payment.stall_type || 'N/A',
+      promiseToPayDate: payment.promise_to_pay_date ? formatDate(payment.promise_to_pay_date) : null
     }));
     
     // Sort by date descending (latest first)
@@ -371,7 +397,11 @@ export const getPaymentSummary = async (req, res) => {
 function formatDate(date) {
   if (!date) return 'N/A';
   const d = new Date(date);
-  return d.toISOString().split('T')[0]; // YYYY-MM-DD format
+  if (isNaN(d.getTime())) return 'N/A';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatCurrency(amount) {
@@ -490,16 +520,14 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       const shId = stallInfo.stallholder_id;
       const monthlyRent = parseFloat(stallInfo.monthly_rent) || 0;
 
-      // Check completed payment
+      // Check completed/paid payments (sum them up in case of multiple partials)
       const [paymentResult] = await connection.execute(
-        `SELECT payment_id, amount, payment_date, payment_status, payment_for_month, payment_type
+        `SELECT SUM(amount) as total_paid, MAX(payment_date) as last_payment_date, MAX(promise_to_pay_date) as promise_date
          FROM payments
          WHERE stallholder_id = ?
            AND payment_for_month = ?
-           AND payment_status IN ('completed', 'paid')
-           AND payment_type = 'rental'
-         ORDER BY payment_date DESC
-         LIMIT 1`,
+           AND payment_status IN ('completed', 'paid', 'partial')
+           AND payment_type IN ('rental', 'partial_payment')`,
         [shId, currentMonth]
       );
 
@@ -510,29 +538,57 @@ export const getMonthlyPaymentStatus = async (req, res) => {
          WHERE stallholder_id = ?
            AND payment_for_month = ?
            AND payment_status = 'pending'
-           AND payment_type = 'rental'
+           AND payment_type IN ('rental', 'partial_payment')
          ORDER BY created_at DESC
          LIMIT 1`,
         [shId, currentMonth]
       );
 
-      const currentPayment = paymentResult[0];
+      const totalPaid = parseFloat(paymentResult[0]?.total_paid || 0);
+      const lastPaymentDate = paymentResult[0]?.last_payment_date;
+      const promiseDateRaw = paymentResult[0]?.promise_date;
       const pendingPayment = pendingResult[0];
 
       let status = 'unpaid';
       let statusMessage = '';
       let amountDue = monthlyRent;
       let paymentDate = null;
+      let promiseDate = null;
 
-      if (currentPayment) {
+      // Query move_in_date for dynamic calculation
+      let moveInDate = null;
+      try {
+        const [shData] = await connection.execute(
+          'SELECT move_in_date FROM stallholder WHERE stallholder_id = ?',
+          [shId]
+        );
+        moveInDate = shData[0]?.move_in_date || stallInfo.contract_start_date || stallInfo.move_in_date;
+      } catch (err) {
+        moveInDate = stallInfo.contract_start_date || stallInfo.move_in_date;
+      }
+
+      const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInDate, monthlyRent);
+
+      if (computedStatus === 'paid' || computedStatus === 'discount') {
         status = 'paid';
         statusMessage = `Payment completed for ${currentMonthName}`;
         amountDue = 0;
-        paymentDate = formatDate(currentPayment.payment_date);
-      } else if (pendingPayment) {
+        paymentDate = formatDate(lastPaymentDate);
+      } else if (computedStatus === 'partial') {
+        status = 'partial';
+        statusMessage = `Partial payment recorded for ${currentMonthName}`;
+        amountDue = Math.max(0, monthlyRent - totalPaid);
+        paymentDate = formatDate(lastPaymentDate);
+        promiseDate = promiseDateRaw ? formatDate(promiseDateRaw) : null;
+      } else if (computedStatus === 'pending') {
         status = 'pending';
         statusMessage = `Payment pending verification for ${currentMonthName}`;
         amountDue = monthlyRent;
+      } else if (computedStatus === 'overdue') {
+        status = 'overdue';
+        statusMessage = `Payment overdue! Please settle immediately.`;
+        amountDue = Math.max(0, monthlyRent - totalPaid);
+        paymentDate = formatDate(lastPaymentDate);
       } else {
         status = 'unpaid';
         statusMessage = `Payment due for ${currentMonthName}`;
@@ -549,11 +605,13 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         isPaid: status === 'paid',
         isPending: status === 'pending',
         isUnpaid: status === 'unpaid',
+        isPartial: status === 'partial',
         amountDue: formatCurrency(amountDue),
         amountDueRaw: amountDue,
         monthlyRent: formatCurrency(monthlyRent),
         monthlyRentRaw: monthlyRent,
         paymentDate,
+        promiseDate,
         dueDate: getDueDate(now)
       });
     }
@@ -585,6 +643,71 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       stallStatus.unpaidViolationsCount = totalUnpaidViolations;
     }
 
+    // Check for active partial payments (show reminder 2 days before promised date)
+    let activePartialPayments = [];
+    try {
+      const [partialRows] = await connection.query(
+        `SELECT payment_id, amount, payment_for_month, promise_to_pay_date, stallholder_id 
+         FROM payments 
+         WHERE stallholder_id IN (${violationPlaceholders}) 
+           AND payment_status = 'partial' 
+           AND promise_to_pay_date IS NOT NULL`,
+        allStallholderIds
+      );
+      
+      const today = new Date();
+      const validPartials = [];
+      
+      for (const p of partialRows) {
+        // Check total paid for this specific month
+        const [totalPaidResult] = await connection.query(
+          `SELECT SUM(amount) as total_paid
+           FROM payments
+           WHERE stallholder_id = ?
+             AND payment_for_month = ?
+             AND payment_status IN ('completed', 'paid', 'partial')
+             AND payment_type IN ('rental', 'partial_payment')`,
+          [p.stallholder_id, p.payment_for_month]
+        );
+        const totalPaid = parseFloat(totalPaidResult[0]?.total_paid || 0);
+        
+        // Get the rent for this stallholder
+        const stallInfo = allStalls.find(s => s.stallholder_id === p.stallholder_id);
+        const monthlyRent = parseFloat(stallInfo?.monthly_rent) || 0;
+        
+        // Only keep if NOT fully paid (using 99% threshold for floating point safety)
+        if (totalPaid < monthlyRent * 0.99) {
+          validPartials.push(p);
+        }
+      }
+
+      // Format and filter by days remaining
+      const formattedPartials = validPartials.map(p => {
+        const promiseDate = new Date(p.promise_to_pay_date);
+        const diffTime = promiseDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return {
+          paymentId: p.payment_id,
+          amount: parseFloat(p.amount),
+          paymentForMonth: p.payment_for_month,
+          promiseDate: formatDate(p.promise_to_pay_date),
+          daysRemaining: diffDays
+        };
+      }).filter(p => p.daysRemaining <= 2);
+
+      // Remove duplicates for the same month
+      const seenMonths = new Set();
+      for (const p of formattedPartials) {
+        if (!seenMonths.has(p.paymentForMonth)) {
+          seenMonths.add(p.paymentForMonth);
+          activePartialPayments.push(p);
+        }
+      }
+    } catch (err) {
+      console.error('⚠️ Error checking partial payments:', err.message);
+    }
+
     await connection.end();
 
     // Use the first stall for backward-compatible single-stall fields
@@ -596,6 +719,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         stalls: stallStatuses,
         currentMonth,
         currentMonthName,
+        activePartialPayments,
         // Legacy single-stall fields for backward compatibility
         ...primary
       }

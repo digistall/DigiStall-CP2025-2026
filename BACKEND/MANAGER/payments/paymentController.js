@@ -2,6 +2,7 @@ import { createConnection } from '../../../config/database.js';
 import jwt from 'jsonwebtoken';
 import { getBranchFilter } from '../../../middleware/rolePermissions.js';
 import { decryptData } from '../../../services/encryptionService.js';
+import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {
@@ -242,6 +243,34 @@ const PaymentController = {
         console.log('✅ Sample stallholder AFTER decryption:', JSON.stringify(decryptedStallholders[0], null, 2));
       }
       
+      // ================================================================
+      // COMPUTE REAL-TIME PAYMENT STATUS FROM ACTUAL PAYMENT RECORDS
+      // This replaces the stale stallholder.payment_status column
+      // ================================================================
+      for (const sh of decryptedStallholders) {
+        const shId = sh.id;
+        const rental = parseFloat(sh.rental_price || sh.monthlyRental || 0);
+        const moveInStr = sh.contract_start_date;
+        const previousStatus = sh.payment_status;
+
+        const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInStr, rental);
+        sh.payment_status = computedStatus;
+
+        // Self-healing database sync: Only update DB column if it differs
+        if (previousStatus !== computedStatus) {
+          try {
+            await connection.execute(
+              "UPDATE stallholder SET payment_status = ? WHERE stallholder_id = ?",
+              [computedStatus, parseInt(shId)]
+            );
+            console.log(`⚡ Self-healed database payment_status to '${computedStatus}' for stallholder ID ${shId}`);
+          } catch (dbErr) {
+            console.error(`⚠️ Failed to self-heal database status for stallholder ID ${shId}:`, dbErr.message);
+          }
+        }
+      }
+      console.log('✅ Real-time payment statuses computed and self-healed for', decryptedStallholders.length, 'stallholders');
+      
       res.status(200).json({
         success: true,
         message: 'Stallholders retrieved successfully',
@@ -453,7 +482,8 @@ const PaymentController = {
         paymentType,
         referenceNumber,
         collectedBy,
-        notes
+        notes,
+        promiseToPayDate
       } = req.body;
       
       if (!stallholderId || !amount || !paymentDate || !referenceNumber) {
@@ -477,6 +507,44 @@ const PaymentController = {
         }
       }
       
+      // Get the stallholder's monthly rental to validate partial payments
+      const [rentalResult] = await connection.execute(
+        `SELECT s.rental_price, s.monthly_rent FROM stallholder sh 
+         JOIN stall s ON sh.stall_id = s.stall_id WHERE sh.stallholder_id = ?`,
+        [parseInt(stallholderId)]
+      );
+      const monthlyRent = parseFloat(rentalResult[0]?.rental_price || rentalResult[0]?.monthly_rent || 0);
+      
+      // Calculate remaining balance for this month to check if they are just paying off the rest
+      const currentMonth = paymentForMonth || `${new Date(paymentDate).getFullYear()}-${String(new Date(paymentDate).getMonth() + 1).padStart(2, '0')}`;
+      const [monthPaymentsAlready] = await connection.execute(
+        `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
+         WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status IN ('completed', 'partial')`,
+        [parseInt(stallholderId), currentMonth]
+      );
+      const totalPaidAlready = parseFloat(monthPaymentsAlready[0]?.totalPaid || 0);
+      const remainingBalance = Math.max(0, monthlyRent - totalPaidAlready);
+      
+      console.log(`[DEBUG] 30% Rule check:`, { monthlyRent, currentMonth, totalPaidAlready, remainingBalance, amount: parseFloat(amount) });
+      
+      // Enforce 30% minimum payment rule for rental payments (unless it's an auto-distributed overflow amount or paying off the remaining balance)
+      const isDistributed = req.body.isDistributed === true;
+      const isPayingOffRemaining = remainingBalance > 0 && parseFloat(amount) >= remainingBalance - 0.01;
+      
+      console.log(`[DEBUG] Flags:`, { isDistributed, isPayingOffRemaining, paymentType });
+      
+      if (!isDistributed && !isPayingOffRemaining && (paymentType === 'rental' || paymentType === 'partial_payment')) {
+        const minPayment = monthlyRent * 0.30;
+        if (parseFloat(amount) < minPayment) {
+          return res.status(400).json({
+            success: false,
+            message: `Payment amount must be at least 30% of the monthly rental (\u20B1${minPayment.toFixed(2)}) for consideration.`
+          });
+        }
+      }
+      
+      const paymentStatus = paymentType === 'partial_payment' ? 'partial' : 'completed';
+
       // Use direct INSERT instead of stored procedure for compatibility
       const [insertResult] = await connection.execute(`
         INSERT INTO payments (
@@ -492,9 +560,10 @@ const PaymentController = {
           collected_by,
           notes,
           payment_status,
+          promise_to_pay_date,
           created_by,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'onsite', ?, ?, ?, 'completed', ?, NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'onsite', ?, ?, ?, ?, ?, ?, NOW())
       `, [
         parseInt(stallholderId),
         branchId,
@@ -506,6 +575,8 @@ const PaymentController = {
         referenceNumber,
         collectedBy || userInfo.username || 'System',
         notes || null,
+        paymentStatus,
+        promiseToPayDate || null,
         userInfo.userId
       ]);
       
@@ -515,35 +586,34 @@ const PaymentController = {
         throw new Error('Failed to add payment');
       }
       
-      // Check total payments for this month to determine if fully paid
-      const currentMonth = paymentForMonth || `${new Date(paymentDate).getFullYear()}-${String(new Date(paymentDate).getMonth() + 1).padStart(2, '0')}`;
+      // Check total payments for this month to determine if fully paid (currentMonth is already declared above)
       const [monthPayments] = await connection.execute(
         `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
-         WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+         WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status IN ('completed', 'partial')`,
         [parseInt(stallholderId), currentMonth]
       );
       const totalPaidThisMonth = parseFloat(monthPayments[0]?.totalPaid || 0);
       
-      // Get the stallholder's monthly rental to compare
-      const [rentalResult] = await connection.execute(
-        `SELECT s.rental_price, s.monthly_rent FROM stallholder sh 
-         JOIN stall s ON sh.stall_id = s.stall_id WHERE sh.stallholder_id = ?`,
-        [parseInt(stallholderId)]
-      );
-      const monthlyRent = parseFloat(rentalResult[0]?.rental_price || rentalResult[0]?.monthly_rent || 0);
+      // Get the stallholder's monthly rental to compare (already fetched above)
+      // const monthlyRent = parseFloat(rentalResult[0]?.rental_price || rentalResult[0]?.monthly_rent || 0);
       
       // Determine payment status: paid if total >= rental (with small tolerance for rounding)
       const isFullyPaid = totalPaidThisMonth >= (monthlyRent * 0.99);
       const remaining = Math.max(0, monthlyRent - totalPaidThisMonth);
       
-      // Update stallholder payment status
-      if (isFullyPaid) {
-        await connection.execute(
-          "UPDATE stallholder SET payment_status = 'paid' WHERE stallholder_id = ?",
-          [parseInt(stallholderId)]
-        );
-      }
-      // If partial, keep current status (don't overwrite to 'paid')
+      // Update stallholder payment status dynamically using shared helper
+      const [shData] = await connection.execute(
+        'SELECT move_in_date FROM stallholder WHERE stallholder_id = ?',
+        [parseInt(stallholderId)]
+      );
+      const moveInDate = shData[0]?.move_in_date;
+      const computedStatus = await calculateStallholderPaymentStatus(connection, stallholderId, moveInDate, monthlyRent);
+      
+      await connection.execute(
+        "UPDATE stallholder SET payment_status = ? WHERE stallholder_id = ?",
+        [computedStatus, parseInt(stallholderId)]
+      );
+      console.log(`⚡ Dynamically updated payment_status to '${computedStatus}' for stallholder ID ${stallholderId}`);
       
       console.log('✅ Payment added successfully:', { paymentId, amount: parseFloat(amount), totalPaidThisMonth, monthlyRent, isFullyPaid, remaining, referenceNumber });
       
@@ -1413,10 +1483,11 @@ const PaymentController = {
           p.reference_number as receiptNo,
           p.collected_by as collectedBy,
           p.payment_status as status,
+          p.promise_to_pay_date as promiseDate,
           p.notes
         FROM payments p
         WHERE p.stallholder_id = ?
-          AND p.payment_type = 'rental'
+          AND p.payment_type IN ('rental', 'partial_payment')
           AND p.payment_method = 'onsite'
         ORDER BY p.payment_date ASC
       `, [parseInt(stallholderId)]);

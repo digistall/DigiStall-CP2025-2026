@@ -46,7 +46,7 @@ if ($Help) {
     Write-Host "  Frontend Mobile: Expo QR Code          (npx expo start)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Environment:" -ForegroundColor White
-    Write-Host "  Expo Go  -> Connects to LOCAL backend  (192.168.1.105:5001)" -ForegroundColor Gray
+    Write-Host "  Expo Go  -> Connects to LOCAL backend  (192.168.1.100:5001)" -ForegroundColor Gray
     Write-Host "  APK      -> Connects to DIGITALOCEAN   (68.183.154.125:5001)" -ForegroundColor Gray
     Write-Host ""
     exit
@@ -167,6 +167,8 @@ if ($startAll -or $Mobile) {
             Write-Host 'Installing dependencies...' -ForegroundColor Yellow
             npm install
             Write-Host ''
+            `$env:EXPO_OFFLINE = '1'
+            `$env:EXPO_NO_TELEMETRY = '1'
             npx expo start -c
 "@
     } else {
@@ -176,8 +178,10 @@ if ($startAll -or $Mobile) {
             Write-Host '========================================' -ForegroundColor Green
             Write-Host '  FRONTEND MOBILE - Expo' -ForegroundColor Green
             Write-Host '  Location: FRONTEND/MOBILE' -ForegroundColor Green
-            Write-Host '========================================' -ForegroundColor Green
+            Write-Host '  ========================================' -ForegroundColor Green
             Write-Host ''
+            `$env:EXPO_OFFLINE = '1'
+            `$env:EXPO_NO_TELEMETRY = '1'
             npx expo start -c
 "@
     }
@@ -210,7 +214,7 @@ Write-Host "  - Frontend runs from FRONTEND/" -ForegroundColor DarkGray
 Write-Host "  - Database: DigitalOcean MySQL (cloud)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Mobile Backend Routing:" -ForegroundColor White
-Write-Host "  - Expo Go (dev)  -> Local backend  (192.168.1.105:5001)" -ForegroundColor DarkGray
+Write-Host "  - Expo Go (dev)  -> Local backend  (192.168.1.100:5001)" -ForegroundColor DarkGray
 Write-Host "  - APK (prod)     -> DigitalOcean    (68.183.154.125:5001)" -ForegroundColor DarkGray
 Write-Host "  - Auto-detected via __DEV__ flag (no manual config needed)" -ForegroundColor DarkGray
 Write-Host ""
