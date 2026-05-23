@@ -23,13 +23,14 @@ export async function uploadFaceVerification(req, res) {
     let imageBuffer = file.buffer;
 
     // 1. AI Validation
-    const validation = await validateFaceImage(imageBuffer);
+    const isRealTime = req.body.validate_only === 'true' || req.body.validate_only === true;
+    const validation = await validateFaceImage(imageBuffer, isRealTime);
     if (!validation.isValid) {
       return res.status(400).json({ success: false, message: validation.message });
     }
 
     // Early return if only validating
-    if (req.body.validate_only === 'true' || req.body.validate_only === true) {
+    if (isRealTime) {
       console.log('🧪 validate_only mode active. Returning early with validation success!');
       return res.status(200).json({
         success: true,
@@ -114,12 +115,63 @@ export async function getFaceImageBinary(req, res) {
 
     const encryptionKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
     
+    // 1. Try to get image for the exact stallholder_id requested
     const [rows] = await connection.execute(
       'CALL sp_getFaceVerification(?, ?)',
       [stallholder_id, encryptionKey]
     );
 
-    const records = rows[0];
+    let records = rows[0];
+
+    // 2. If no image found, check if this user has another stall with an image
+    if (!records || records.length === 0 || !records[0].image_data) {
+      // Find the mobile_user_id or applicant_id for this stallholder
+      const [shRows] = await connection.execute(
+        'SELECT mobile_user_id, applicant_id FROM stallholder WHERE stallholder_id = ? LIMIT 1',
+        [stallholder_id]
+      );
+
+      if (shRows && shRows.length > 0) {
+        const { mobile_user_id, applicant_id } = shRows[0];
+        
+        if (mobile_user_id || applicant_id) {
+          // Find any other stallholder_id for this same user that HAS a face verification record
+          let query = `
+            SELECT fv.stallholder_id 
+            FROM face_verification fv
+            JOIN stallholder sh ON fv.stallholder_id = sh.stallholder_id
+            WHERE sh.stallholder_id != ? AND 
+          `;
+          let params = [stallholder_id];
+          
+          if (mobile_user_id && applicant_id) {
+            query += '(sh.mobile_user_id = ? OR sh.applicant_id = ?)';
+            params.push(mobile_user_id, applicant_id);
+          } else if (mobile_user_id) {
+            query += 'sh.mobile_user_id = ?';
+            params.push(mobile_user_id);
+          } else {
+            query += 'sh.applicant_id = ?';
+            params.push(applicant_id);
+          }
+          query += ' LIMIT 1';
+
+          const [otherFaceRows] = await connection.execute(query, params);
+          
+          if (otherFaceRows && otherFaceRows.length > 0) {
+            const otherStallholderId = otherFaceRows[0].stallholder_id;
+            
+            // Get the image using the OTHER stallholder_id
+            const [fallbackRows] = await connection.execute(
+              'CALL sp_getFaceVerification(?, ?)',
+              [otherStallholderId, encryptionKey]
+            );
+            
+            records = fallbackRows[0];
+          }
+        }
+      }
+    }
 
     if (!records || records.length === 0 || !records[0].image_data) {
       return res.status(404).json({ success: false, message: 'No face image found' });

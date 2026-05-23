@@ -27,8 +27,15 @@
           class="stallholder-item"
         >
           <template #prepend>
-            <v-avatar size="40" color="primary">
-              {{ (item.raw?.stallholderData?.name || 'U').charAt(0).toUpperCase() }}
+            <img 
+              v-if="item.raw?.stallholderData?.id"
+              :src="getAvatarUrl(item.raw.stallholderData.id) + '?t=' + avatarBuster"
+              @error="handleAvatarError"
+              style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;"
+              alt="Avatar"
+            />
+            <v-avatar v-else size="40" color="primary">
+              {{ getInitials(item.raw?.stallholderData?.name || 'U') }}
             </v-avatar>
           </template>
           
@@ -69,8 +76,15 @@
 
       <template #selection="{ item }">
         <div class="selected-stallholder">
-          <v-avatar size="24" color="primary" class="mr-2">
-            {{ (item.raw?.stallholderData?.name || 'U').charAt(0).toUpperCase() }}
+          <img 
+            v-if="item.raw?.stallholderData?.id"
+            :src="getAvatarUrl(item.raw.stallholderData.id) + '?t=' + avatarBuster"
+            @error="handleAvatarError"
+            style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 8px; border: 1px solid #e5e7eb;"
+            alt="Avatar"
+          />
+          <v-avatar v-else size="24" color="primary" class="mr-2">
+            {{ getInitials(item.raw?.stallholderData?.name || 'U') }}
           </v-avatar>
           <span>{{ item.raw?.stallholderData?.name || 'Unknown Stallholder' }}</span>
           <v-chip 
@@ -146,8 +160,14 @@
 </template>
 
 <script>
+import { useAvatar } from '@utils/avatarHelper.js'
+
 export default {
   name: 'StallholderDropdown',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   props: {
     modelValue: {
       type: [String, Number],
@@ -174,7 +194,8 @@ export default {
       loading: false,
       searchQuery: '',
       debounceTimer: null,
-      internalErrorMessage: ''
+      internalErrorMessage: '',
+      avatarBuster: Date.now()
     }
   },
   computed: {

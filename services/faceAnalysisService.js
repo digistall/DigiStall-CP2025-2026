@@ -30,9 +30,10 @@ async function loadModels() {
 /**
  * Validates a face image for quality and visibility
  * @param {Buffer} imageBuffer - The image buffer to analyze
+ * @param {boolean} isRealTime - Whether this is a real-time check loop (strict verification, no bypass on error)
  * @returns {Promise<{isValid: boolean, message: string}>}
  */
-export async function validateFaceImage(imageBuffer) {
+export async function validateFaceImage(imageBuffer, isRealTime = false) {
   try {
     await loadModels();
     
@@ -67,8 +68,8 @@ export async function validateFaceImage(imageBuffer) {
     
     console.log(`📷 Analyzing face image (resized for detection): size=${img.width}x${img.height}, brightness=${avgBrightness.toFixed(2)}`);
 
-    // SsdMobilenetv1Options: lower minConfidence to 0.3 to be robust with mobile captures
-    const detectionOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+    // SsdMobilenetv1Options: minConfidence raised to 0.55 to prevent background false positives, especially in real-time loops
+    const detectionOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.55 });
 
     // Detect faces with landmarks
     let detections = await faceapi.detectAllFaces(img, detectionOptions).withFaceLandmarks();
@@ -122,6 +123,22 @@ export async function validateFaceImage(imageBuffer) {
     
     if (faceRatio < 0.05) {
       return { isValid: false, message: 'Face is too far away. Please move closer to the camera.' };
+    }
+    
+    if (faceRatio > 0.35) {
+      return { isValid: false, message: 'Face is too close. Please move back to fit the circle.' };
+    }
+
+    // Heuristic: Check if face is centered in the frame
+    const faceCenterX = face.detection.box.x + face.detection.box.width / 2;
+    const faceCenterY = face.detection.box.y + face.detection.box.height / 2;
+    const imgCenterX = finalImg.width / 2;
+    const imgCenterY = finalImg.height / 2;
+    const xOffset = Math.abs(faceCenterX - imgCenterX) / finalImg.width;
+    const yOffset = Math.abs(faceCenterY - imgCenterY) / finalImg.height;
+
+    if (xOffset > 0.15 || yOffset > 0.15) {
+      return { isValid: false, message: 'Face is not centered. Please center your face inside the circle.' };
     }
     
     // AI Sunglasses & Eye Occlusion Scanner Heuristic
@@ -244,7 +261,11 @@ export async function validateFaceImage(imageBuffer) {
     
   } catch (error) {
     console.error('Error during face validation:', error);
-    // If validation fails due to library errors, we still allow it so we don't block users due to server issues,
+    if (isRealTime) {
+      // In real-time checking, do not bypass library errors to avoid false successes triggering auto-captures
+      return { isValid: false, message: 'AI Scanner is initializing or busy. Please wait...', isError: true };
+    }
+    // If validation fails due to library errors during final verification upload, we still allow it so we don't block users due to server issues,
     // but log the error.
     return { isValid: true, message: 'Face validation bypassed due to technical error.' };
   }
