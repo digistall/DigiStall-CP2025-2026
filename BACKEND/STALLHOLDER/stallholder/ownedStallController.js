@@ -1,5 +1,5 @@
 import { createConnection } from '../../../config/database.js';
-import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
+import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
 
 /**
  * Get all owned/rented stalls for a stallholder, grouped by branch
@@ -144,12 +144,18 @@ export const getOwnedStalls = async (req, res) => {
           };
 
           // Compute the REAL payment status from actual payment records
-          if (isPaidThisMonth) {
-            computedPaymentStatus = 'paid';
-          } else if (hasPendingThisMonth) {
-            computedPaymentStatus = 'pending';
-          } else {
-            computedPaymentStatus = stall.payment_status || 'unpaid';
+          computedPaymentStatus = await calculateStallholderPaymentStatus(connection, stall.stallholder_id, stall.contract_start_date, parseFloat(stall.monthly_rent));
+          
+          if (stall.payment_status !== computedPaymentStatus) {
+            try {
+              await connection.execute(
+                "UPDATE stallholder SET payment_status = ? WHERE stallholder_id = ?",
+                [computedPaymentStatus, parseInt(stall.stallholder_id)]
+              );
+              console.log(`⚡ Self-healed database payment_status to '${computedPaymentStatus}' for stallholder ID ${stall.stallholder_id}`);
+            } catch (dbErr) {
+              console.error(`⚠️ Failed to self-heal database status for stallholder ID ${stall.stallholder_id}:`, dbErr.message);
+            }
           }
         } catch (payError) {
           console.log('?? Could not fetch payment info for stallholder_id:', stall.stallholder_id);
