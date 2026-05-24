@@ -61,7 +61,28 @@
 
 .table-wrapper {
   width: 100%;
-  overflow-x: visible;
+  max-height: 420px;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #002181;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #001557;
 }
 
 .payments-table {
@@ -81,6 +102,10 @@
   font-weight: 600;
   color: white;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: #002181;
+  z-index: 10;
 }
 
 .payments-table tbody tr {

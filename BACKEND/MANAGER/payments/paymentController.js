@@ -253,17 +253,22 @@ const PaymentController = {
         const moveInStr = sh.contract_start_date;
         const previousStatus = sh.payment_status;
 
-        const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInStr, rental);
+        const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInStr, rental, true);
         sh.payment_status = computedStatus;
 
+        // Map to DB enum for self-healing
+        let dbStatus = computedStatus;
+        if (computedStatus === 'discount') dbStatus = 'unpaid';
+        if (computedStatus === 'due_soon') dbStatus = 'unpaid';
+
         // Self-healing database sync: Only update DB column if it differs
-        if (previousStatus !== computedStatus) {
+        if (previousStatus !== dbStatus) {
           try {
             await connection.execute(
               "UPDATE stallholder SET payment_status = ? WHERE stallholder_id = ?",
-              [computedStatus, parseInt(shId)]
+              [dbStatus, parseInt(shId)]
             );
-            console.log(`⚡ Self-healed database payment_status to '${computedStatus}' for stallholder ID ${shId}`);
+            console.log(`⚡ Self-healed database payment_status to '${dbStatus}' for stallholder ID ${shId}`);
           } catch (dbErr) {
             console.error(`⚠️ Failed to self-heal database status for stallholder ID ${shId}:`, dbErr.message);
           }
@@ -597,9 +602,17 @@ const PaymentController = {
       // Get the stallholder's monthly rental to compare (already fetched above)
       // const monthlyRent = parseFloat(rentalResult[0]?.rental_price || rentalResult[0]?.monthly_rent || 0);
       
-      // Determine payment status: paid if total >= rental (with small tolerance for rounding)
-      const isFullyPaid = totalPaidThisMonth >= (monthlyRent * 0.99);
-      const remaining = Math.max(0, monthlyRent - totalPaidThisMonth);
+      // Determine if there is any payment explicitly marked as completed/rental for this month
+      const [completedCheck] = await connection.execute(
+        `SELECT COUNT(*) as count FROM payments 
+         WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+        [parseInt(stallholderId), currentMonth]
+      );
+      const hasCompletedPayment = (completedCheck[0]?.count || 0) > 0;
+
+      // Determine payment status: paid if total >= rental, or if a completed payment exists, or if paymentType is rental
+      const isFullyPaid = (paymentType || 'rental') === 'rental' || totalPaidThisMonth >= (monthlyRent * 0.99) || hasCompletedPayment;
+      const remaining = isFullyPaid ? 0 : Math.max(0, monthlyRent - totalPaidThisMonth);
       
       // Update stallholder payment status dynamically using shared helper
       const [shData] = await connection.execute(
