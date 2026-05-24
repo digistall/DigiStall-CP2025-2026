@@ -32,6 +32,7 @@ const DashboardScreen = ({ onNavigate }) => {
 
   useEffect(() => {
     loadUserData();
+    ApiService.logStallholderAppAccess('dashboard');
   }, []);
 
   const loadUserData = async () => {
