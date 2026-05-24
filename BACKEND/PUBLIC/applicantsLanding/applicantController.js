@@ -64,6 +64,7 @@ export const applicantController = {
         applicant_birthdate,
         applicant_civil_status,
         applicant_educational_attainment,
+        gender,
 
         // Business Information
         nature_of_business,
@@ -104,6 +105,7 @@ export const applicantController = {
         applicant_birthdate: { value: applicant_birthdate, type: typeof applicant_birthdate },
         applicant_civil_status: { value: applicant_civil_status, type: typeof applicant_civil_status },
         applicant_educational_attainment: { value: applicant_educational_attainment, type: typeof applicant_educational_attainment },
+        gender: { value: gender, type: typeof gender },
         nature_of_business: { value: nature_of_business, type: typeof nature_of_business },
         capitalization: { value: capitalization, type: typeof capitalization },
         source_of_capital: { value: source_of_capital, type: typeof source_of_capital },
@@ -123,10 +125,10 @@ export const applicantController = {
       });
 
       // Validate required fields
-      if (!applicant_full_name || !applicant_contact_number || !email_address) {
+      if (!applicant_full_name || !applicant_contact_number || !email_address || !gender) {
         return res.status(400).json({
           success: false,
-          message: "Applicant name, contact number, and email address are required",
+          message: "Applicant name, contact number, email address, and gender are required",
         });
       }
 
@@ -158,6 +160,7 @@ export const applicantController = {
         toNull(house_sketch_location),                     // Not encrypted: file path
         toNull(valid_id),                                  // Not encrypted: file path
         encryptIfNotNull(email_address),                  // Encrypted: email
+        toNull(gender),                                    // 21st Parameter: Gender
       ];
 
       console.log("✅ Sensitive data encrypted successfully");
@@ -171,7 +174,8 @@ export const applicantController = {
           'previous_business_experience', 'relative_stall_owner',
           'spouse_full_name', 'spouse_birthdate', 'spouse_educational_attainment',
           'spouse_contact_number', 'spouse_occupation',
-          'signature_of_applicant', 'house_sketch_location', 'valid_id', 'email_address'
+          'signature_of_applicant', 'house_sketch_location', 'valid_id', 'email_address',
+          'gender'
         ];
         
         if (param === undefined) {
@@ -210,7 +214,7 @@ export const applicantController = {
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
-          ?, ?, ?, ?
+          ?, ?, ?, ?, ?
         )`,
         applicantParams
       );
@@ -276,10 +280,8 @@ export const applicantController = {
         );
         console.log("✅ Applicant status set to 'approved'");
 
-        // ── Generate credentials ──
-        const year = new Date().getFullYear().toString().slice(-2);
-        const randomDigits = Math.floor(10000 + Math.random() * 90000).toString();
-        const generatedUsername = `${year}-${randomDigits}`;
+        // Use email as username
+        const generatedUsername = email_address;
 
         const letters = 'abcdefghijklmnopqrstuvwxyz';
         const numbers = '0123456789';
@@ -538,12 +540,13 @@ export const applicantController = {
         spouse_full_name, spouse_birthdate, spouse_educational_attainment,
         spouse_contact_number, spouse_occupation,
         signature_of_applicant, house_sketch_location, valid_id, email_address,
+        gender,
       } = req.body;
 
-      if (!applicant_full_name || !applicant_contact_number || !email_address) {
+      if (!applicant_full_name || !applicant_contact_number || !email_address || !gender) {
         return res.status(400).json({
           success: false,
-          message: "Applicant name, contact number, and email address are required",
+          message: "Applicant name, contact number, email address, and gender are required",
         });
       }
 
@@ -571,12 +574,13 @@ export const applicantController = {
         toNull(house_sketch_location),
         toNull(valid_id),
         encryptIfNotNull(email_address),                  // Encrypted: email
+        toNull(gender),                                    // 21st parameter: gender
       ];
 
       console.log("✅ Sensitive data encrypted successfully");
 
       const [[result]] = await connection.execute(
-        `CALL createApplicantComplete(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `CALL createApplicantComplete(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         params
       );
 

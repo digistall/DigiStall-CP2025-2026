@@ -9,6 +9,7 @@
 // =============================================
 
 import { createConnection } from '../../../config/database.js'
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js'
 
 // =============================================
 // UPLOAD STALLHOLDER DOCUMENT AS BLOB
@@ -138,6 +139,29 @@ export async function uploadStallholderDocumentBlob(req, res) {
       documentId = insertRows[0][0].document_id
     }
     
+    // Log document upload/re-upload activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: parseInt(stallholder_id),
+        staffName: req.user?.fullName || req.user?.username || 'Stallholder',
+        branchId: null,
+        actionType: isUpdate ? 'UPDATE' : 'CREATE',
+        actionDescription: isUpdate
+          ? `Re-uploaded document (type ID: ${document_type_id}, file: ${generatedFileName})`
+          : `Uploaded new document (type ID: ${document_type_id}, file: ${generatedFileName})`,
+        module: 'Documents',
+        ipAddress,
+        userAgent: req.get ? req.get('User-Agent') : null,
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging document upload activity:', logErr);
+    }
+
     res.status(200).json({
       success: true,
       message: isUpdate ? 'Document updated successfully' : 'Document uploaded successfully',
@@ -500,6 +524,27 @@ export async function getStallholderDocuments(req, res) {
         : undefined
     }))
     
+    // Log document list view activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: parseInt(stallholder_id),
+        staffName: req.user?.fullName || req.user?.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed documents list (${transformedDocs.length} document(s))`,
+        module: 'Documents',
+        ipAddress,
+        userAgent: req.get ? req.get('User-Agent') : null,
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging document view activity:', logErr);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Documents retrieved successfully',

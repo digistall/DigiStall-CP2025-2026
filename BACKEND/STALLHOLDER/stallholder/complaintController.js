@@ -1,4 +1,5 @@
 import { createConnection } from '../../../config/database.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Submit a complaint from stallholder
@@ -112,6 +113,27 @@ export const submitComplaint = async (req, res) => {
     
     console.log('✅ Complaint submitted successfully, ID:', result.complaint_id);
     
+    // Log submit complaint activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: stallholderId,
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
+        branchId: finalBranchId || null,
+        actionType: 'CREATE',
+        actionDescription: `Submitted complaint: "${subject}" (Type: ${complaint_type}, ID: ${result.complaint_id})`,
+        module: 'Complaints',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging complaint submission activity:', logErr);
+    }
+    
     return res.status(201).json({
       success: true,
       message: 'Complaint submitted successfully',
@@ -187,6 +209,27 @@ export const getMyComplaints = async (req, res) => {
     const complaints = complaintsResult[0] || [];
     
     console.log(`✅ Found ${complaints.length} complaints`);
+    
+    // Log view complaint status activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: stallholderId,
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed complaint status (${complaints.length} complaint(s))`,
+        module: 'Complaints',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view complaint status activity:', logErr);
+    }
     
     return res.status(200).json({
       success: true,

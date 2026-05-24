@@ -1,5 +1,6 @@
 export default {
   name: 'SearchStall',
+  emits: ['search', 'open-activity-log'],
   data() {
     return {
       searchQuery: '',

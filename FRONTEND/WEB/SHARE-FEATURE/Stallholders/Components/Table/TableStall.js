@@ -541,25 +541,6 @@ export default {
       this.imageZoom = 1
     },
 
-    isPreviewableImage(doc) {
-      if (!doc) return false
-      const fileName = (doc.file_name || doc.original_filename || '').toLowerCase()
-      const fileType = (doc.file_type || '').toLowerCase()
-      return fileType.startsWith('image/') || 
-             fileName.endsWith('.jpg') || 
-             fileName.endsWith('.jpeg') || 
-             fileName.endsWith('.png') || 
-             fileName.endsWith('.gif') ||
-             fileName.endsWith('.webp')
-    },
-
-    isPreviewablePdf(doc) {
-      if (!doc) return false
-      const fileName = (doc.file_name || doc.original_filename || '').toLowerCase()
-      const fileType = (doc.file_type || '').toLowerCase()
-      return fileType === 'application/pdf' || fileName.endsWith('.pdf')
-    },
-
     async downloadDocument(doc) {
       try {
         const documentId = doc.document_id

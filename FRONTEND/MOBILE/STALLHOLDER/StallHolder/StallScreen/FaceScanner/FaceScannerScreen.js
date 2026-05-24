@@ -163,7 +163,7 @@ const FaceScannerScreen = ({ route, navigation }) => {
             if (returnToSettings) {
               navigation.navigate('StallHome');
             } else {
-              navigation.replace('StallHome');
+              navigation.replace('IdScannerScreen', { stallholderId });
             }
           }
         });
