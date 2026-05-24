@@ -33,19 +33,27 @@ import JoinedStallsScreen from "./JoinedStalls/JoinedStallsScreen";
 
 const { width, height } = Dimensions.get("window");
 
-const StallHome = ({ navigation }) => {
+const StallHome = ({ route, navigation }) => {
   // Get theme from context
   const { theme, isDarkMode } = useTheme();
 
+  const forceValidIdUpload = route?.params?.forceValidIdUpload || route?.params?.userData?.forceValidIdUpload || false;
+
   // Single source of truth for current screen
-  const [currentScreen, setCurrentScreen] = useState("stall");
+  const [currentScreen, setCurrentScreen] = useState(
+    forceValidIdUpload ? "documents" : (route?.params?.screen || "stall")
+  );
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showProfileDirectly, setShowProfileDirectly] = useState(false);
 
   React.useEffect(() => {
-    // Face verification is now handled during login and App.js initialization
-  }, []);
+    if (forceValidIdUpload) {
+      setCurrentScreen("documents");
+    } else if (route?.params?.screen) {
+      setCurrentScreen(route.params.screen);
+    }
+  }, [route?.params?.screen, forceValidIdUpload]);
 
   const handleLogout = async () => {
     // Prevent multiple clicks
@@ -188,7 +196,13 @@ const StallHome = ({ navigation }) => {
       case "notifications":
         return <NotificationsScreen />;
       case "documents":
-        return <DocumentsScreen />;
+        return (
+          <DocumentsScreen 
+            promptUploadId={route?.params?.promptUploadId || false} 
+            forceValidIdUpload={forceValidIdUpload}
+            navigation={navigation}
+          />
+        );
       case "payment":
         return <PaymentScreen />;
       case "owned-stalls":
@@ -209,7 +223,13 @@ const StallHome = ({ navigation }) => {
           translucent={false}
         />
 
-        <Header onMenuPress={handleMenuPress} title={getPageTitle()} theme={theme} isDarkMode={isDarkMode} />
+        <Header 
+          onMenuPress={forceValidIdUpload ? null : handleMenuPress} 
+          title={getPageTitle()} 
+          theme={theme} 
+          isDarkMode={isDarkMode} 
+          hideMenu={forceValidIdUpload}
+        />
 
         {/* Main Content */}
         {needsScrollView ? (
@@ -224,26 +244,30 @@ const StallHome = ({ navigation }) => {
           <View style={[styles.contentView, { backgroundColor: theme.colors.background }]}>{renderCurrentScreen()}</View>
         )}
 
-        {/* Bottom Navigation Component */}
-        <Navbar
-          activeTab={getActiveNavTab()}
-          onStallPress={() => handleNavigation("stall")}
-          onDocumentsPress={() => handleNavigation("documents")}
-          onPaymentPress={() => handleNavigation("payment")}
-          theme={theme}
-          isDarkMode={isDarkMode}
-        />
+        {/* Bottom Navigation Component - Hidden when locked */}
+        {!forceValidIdUpload && (
+          <Navbar
+            activeTab={getActiveNavTab()}
+            onStallPress={() => handleNavigation("stall")}
+            onDocumentsPress={() => handleNavigation("documents")}
+            onPaymentPress={() => handleNavigation("payment")}
+            theme={theme}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
-        {/* Sidebar Component */}
-        <Sidebar
-          isVisible={sidebarVisible}
-          onClose={handleSidebarClose}
-          onProfilePress={handleProfilePress}
-          onMenuItemPress={handleMenuItemPress}
-          activeMenuItem={currentScreen}
-          theme={theme}
-          isDarkMode={isDarkMode}
-        />
+        {/* Sidebar Component - Hidden when locked */}
+        {!forceValidIdUpload && (
+          <Sidebar
+            isVisible={sidebarVisible}
+            onClose={handleSidebarClose}
+            onProfilePress={handleProfilePress}
+            onMenuItemPress={handleMenuItemPress}
+            activeMenuItem={currentScreen}
+            theme={theme}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
         {/* Logout Loading Screen */}
         <LogoutLoadingScreen
