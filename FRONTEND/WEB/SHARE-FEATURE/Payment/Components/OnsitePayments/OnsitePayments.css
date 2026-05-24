@@ -344,7 +344,6 @@
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  --payments-table-max-height: calc(100vh - 360px); /* adapt to viewport so scroll appears only when needed */
 }
 
 .payments-card {
@@ -353,7 +352,7 @@
 
 .table-wrapper {
   width: 100%;
-  max-height: var(--payments-table-max-height, 416px) !important;
+  max-height: var(--table-scroll-max-height) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
 }

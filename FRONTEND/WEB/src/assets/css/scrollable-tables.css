@@ -6,7 +6,12 @@
   /* Make the table area use most of the viewport so the page body
      doesn't need to scroll — adjust the 220px value if your header/search
      area is taller or shorter on specific pages. */
-  --table-scroll-max-height: calc(100vh - 220px);
+  --table-scroll-offset: 220px;
+  --table-scroll-bottom-gap: 0px;
+  --table-scroll-max-height: calc(
+    100vh - var(--v-layout-top, 0px) - var(--v-layout-bottom, 0px)
+      - var(--table-scroll-offset, 220px) - var(--table-scroll-bottom-gap, 0px)
+  );
   /* Approximate single row height used for 'show-seven-rows' utility.
      Components can override --table-row-height if their rows are taller. */
   --table-row-height: 56px;
@@ -33,6 +38,19 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin !important;
   scrollbar-color: #002181 #f1f1f1 !important;
+}
+
+/* Dashboards keep native page scrolling and should not clamp table height. */
+.dashboard-container .table-wrapper,
+.dashboard-container .table-body,
+.dashboard-container .scrollable-table-wrapper,
+.dashboard-container .v-data-table__wrapper,
+.system-admin-dashboard .table-wrapper,
+.system-admin-dashboard .table-body,
+.system-admin-dashboard .scrollable-table-wrapper,
+.system-admin-dashboard .v-data-table__wrapper {
+  max-height: none !important;
+  overflow-y: visible !important;
 }
 
 /* Ensure tables inside the scrollable wrappers wrap content vertically
@@ -179,7 +197,7 @@ body.no-page-scroll .v-application {
    only when the page opts in */
 body.no-page-scroll .v-main {
   height: 100% !important;
-  overflow: hidden !important;
+  overflow: auto !important;
 }
 
 /* The main content container should fill available space and not overflow the page
@@ -203,7 +221,7 @@ body.no-page-scroll .payments-table-container {
 @media (min-width: 961px) {
   body.no-page-scroll .payments-table-container .table-wrapper {
     flex: 1 1 auto !important;
-    max-height: var(--payments-table-max-height, 416px) !important; /* default to ~7 rows unless overridden per page */
+    max-height: var(--table-scroll-max-height) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }

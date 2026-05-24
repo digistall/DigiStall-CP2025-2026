@@ -12,6 +12,7 @@ import vuetify from './plugins/vuetify'
 import router from './router'
 import App from './App.vue'
 import './services/fetchInterceptor'
+import startTableAutoHeight from './services/tableAutoHeight'
 
 // Create Pinia store
 const pinia = createPinia()
@@ -23,3 +24,4 @@ app.use(pinia)
 app.use(router)
 app.use(vuetify)
 app.mount('#app')
+startTableAutoHeight()
