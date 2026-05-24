@@ -261,7 +261,6 @@
               <tr>
                 <th>Staff Type</th>
                 <th>Staff Name</th>
-                <th>Stallholder Type</th>
                 <th>Action</th>
                 <th>Description</th>
                 <th>Module</th>
@@ -272,13 +271,13 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="9" class="loading-cell">
+                <td colspan="8" class="loading-cell">
                   <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
                   <span class="ml-3">Loading activities...</span>
                 </td>
               </tr>
               <tr v-else-if="filteredLogs.length === 0">
-                <td colspan="9" class="empty-cell">
+                <td colspan="8" class="empty-cell">
                   <v-icon size="48" color="grey-lighten-1">mdi-history</v-icon>
                   <p class="empty-title">No Activity Logs Found</p>
                   <p class="empty-subtitle">Activity logs will appear here when stallholders perform actions</p>
@@ -297,18 +296,6 @@
                   </v-chip>
                 </td>
                 <td class="staff-name">{{ item.staff_name || 'Unknown' }}</td>
-
-                <!-- Stallholder Type: from DB or derived from module -->
-                <td>
-                  <v-chip
-                    :color="getStallholderTypeColor(item)"
-                    size="small"
-                    variant="tonal"
-                  >
-                    <v-icon size="14" class="mr-1">{{ getStallholderTypeIcon(item) }}</v-icon>
-                    {{ item.stallholder_type || getStallholderType(item) }}
-                  </v-chip>
-                </td>
                 <td>
                   <v-chip
                     :color="getActionColor(item.action_type)"
