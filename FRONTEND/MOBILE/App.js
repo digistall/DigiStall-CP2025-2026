@@ -17,6 +17,7 @@ import LoginScreen from './AUTH/LoginScreen/LoginScreen';
 import LoadingScreen from './AUTH/LoadingScreen/LoadingScreen';
 import ForgotPasswordScreen from './AUTH/ForgotPasswordScreen/ForgotPasswordScreen';
 import FaceScannerScreen from './STALLHOLDER/StallHolder/StallScreen/FaceScanner/FaceScannerScreen';
+import IdScannerScreen from './STALLHOLDER/StallHolder/StallScreen/FaceScanner/IdScannerScreen';
 
 // Role Screens
 import StallHome from './STALLHOLDER/StallHolder/StallScreen/StallHome';
@@ -26,6 +27,7 @@ import VendorHome from './VENDOR/VendorHome';
 
 // Services
 import UserStorageService from './services/UserStorageService';
+import ApiService from './services/ApiService';
 import PickerActiveFlag from './services/PickerActiveFlag';
 import { API_CONFIG, NetworkUtils } from './config/shared/networkConfig';
 
@@ -185,6 +187,30 @@ export default function App() {
               if (faceResult && !faceResult.hasVerifiedFace) {
                 console.log('🚨 No verified face found on startup. Redirecting to FaceScanner.');
                 nextRoute = 'FaceScannerScreen';
+              } else {
+                // Face is verified, check if they have uploaded a Valid ID
+                const applicantId = storedUserData.user?.applicant_id || storedUserData.user?.id;
+                if (applicantId) {
+                  const docsResult = await ApiService.getStallholderStallsWithDocuments(applicantId);
+                  
+                  // Check profile valid_id field as primary verification
+                  const otherInfo = storedUserData.other_info || storedUserData.profile?.other_info || {};
+                  let hasUploadedValidId = otherInfo.valid_id != null && otherInfo.valid_id !== '';
+                  
+                  // Or check if they have uploaded it as a branch document
+                  if (!hasUploadedValidId && docsResult.success && docsResult.data) {
+                    hasUploadedValidId = docsResult.data.grouped_by_branch.some(branch => 
+                      branch.document_requirements.some(doc => 
+                        doc.document_type_id === 3 && doc.status !== 'not_uploaded'
+                      )
+                    );
+                  }
+                  
+                  if (!hasUploadedValidId) {
+                    console.log('🚨 No valid ID uploaded yet on startup. Redirecting to IdScannerScreen.');
+                    nextRoute = 'IdScannerScreen';
+                  }
+                }
               }
             } catch (err) {
               console.log('⚠️ Could not verify face on startup, proceeding to StallHome', err);
@@ -241,6 +267,14 @@ export default function App() {
                 name="FaceScannerScreen" 
                 component={FaceScannerScreen}
                 initialParams={userData ? { stallholderId: userData.stallholder?.stallholder_id } : undefined}
+              />
+              <Stack.Screen 
+                name="IdScannerScreen" 
+                component={IdScannerScreen}
+                initialParams={userData ? { 
+                  stallholderId: userData.stallholder?.stallholder_id,
+                  applicantId: userData.user?.applicant_id || userData.user?.id
+                } : undefined}
               />
               <Stack.Screen 
                 name="StallHome" 
