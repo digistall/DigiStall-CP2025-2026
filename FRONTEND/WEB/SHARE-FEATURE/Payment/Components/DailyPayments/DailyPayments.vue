@@ -430,3 +430,33 @@
 
 <script src="./DailyPayments.js"></script>
 <style scoped src="./DailyPayments.css"></style>
+
+<style>
+/* Force visible blue scrollbar on Daily table-wrapper globally to override App.vue white scrollbars and scrollable-tables.css hidden rules */
+.daily-payments .scrollable-table-wrapper {
+  scrollbar-width: thin !important;
+  scrollbar-color: #002181 #f1f1f1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.daily-payments .scrollable-table-wrapper::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.daily-payments .scrollable-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 4px !important;
+}
+
+.daily-payments .scrollable-table-wrapper::-webkit-scrollbar-thumb {
+  background: #002181 !important;
+  border-radius: 4px !important;
+}
+
+.daily-payments .scrollable-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #001557 !important;
+}
+</style>
