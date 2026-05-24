@@ -1,6 +1,7 @@
 // Import the components
 import SearchStall from './Components/Search/SearchStall.vue'
 import TableStall from './Components/Table/TableStall.vue'
+import ActivityLogDialog from './Components/ActivityLogDialog/ActivityLogDialog.vue'
 import DocumentsView from './Components/Documents/DocumentsView.vue'
 import DocumentDetail from './Components/Documents/View/DocumentDetail.vue'
 import AddStallholder from './Components/Add/AddStallholder.vue'
@@ -11,6 +12,7 @@ export default {
   components: {
     SearchStall,
     TableStall,
+    ActivityLogDialog,
     DocumentsView,
     DocumentDetail,
     AddStallholder,
@@ -22,6 +24,7 @@ export default {
       searchQuery: '',
       activeFilter: 'all',
       loading: true, // Start with loading true until TableStall data is ready
+      showActivityLogDialog: false,
       showDocumentsModal: false,
       showDocumentDetail: false,
       showAddStallholderModal: false,
@@ -74,6 +77,14 @@ export default {
       this.searchQuery = searchData.query
       this.activeFilter = searchData.filter
       console.log('Search data:', searchData)
+    },
+
+    openActivityLogDialog() {
+      this.showActivityLogDialog = true
+    },
+
+    closeActivityLogDialog() {
+      this.showActivityLogDialog = false
     },
 
     // Handle stallholder actions from TableStall component

@@ -488,11 +488,7 @@ export default {
         graceDate.setHours(23, 59, 59, 999)
 
         if (isFirstMonth) {
-          if (now > graceDate) {
-            expectedAmount = rental * (1 + LATE_FEE_RATE)
-          } else {
-            expectedAmount = rental * (1 - ADVANCE_DISCOUNT)
-          }
+          expectedAmount = rental * (1 - ADVANCE_DISCOUNT)
         } else if (now > dueDate) {
           expectedAmount = rental * (1 + LATE_FEE_RATE)
         } else {
@@ -504,15 +500,21 @@ export default {
           }
         }
 
-        // For fully paid check: compare totalPaid against the base rental (not time-adjusted)
-        // This ensures retroactively applying overdue/advance multiplier doesn't break paid months
-        const isFullyPaid = totalPaidForMonth >= rental * 0.99;
+        const hasCompletedPayment = monthPayments.some(p => {
+          const pStatus = (p.paymentStatus || p.status || '').toLowerCase();
+          return pStatus === 'completed' || pStatus === 'paid' || pStatus === 'discount';
+        });
+
+        const isFullyPaid = totalPaidForMonth >= rental * 0.99 || totalPaidForMonth >= expectedAmount * 0.99 || hasCompletedPayment;
         
         if (isFullyPaid) {
            const firstPayment = monthPayments[0];
            const payDate = firstPayment ? new Date(firstPayment.paymentDate) : now;
            const daysEarly = Math.floor((dueDate - payDate) / (1000 * 60 * 60 * 24))
-           if (daysEarly >= ADVANCE_DAYS) {
+           const daysSinceMoveIn = Math.floor((payDate - moveIn) / (1000 * 60 * 60 * 24));
+           const gotFirstMonthDiscount = isFirstMonth && daysSinceMoveIn <= ADVANCE_DAYS;
+
+           if (daysEarly >= ADVANCE_DAYS || gotFirstMonthDiscount) {
              status = 'Advance'
            } else {
              status = 'Paid'
@@ -906,13 +908,20 @@ export default {
           
           const opt = this.unpaidMonthsOptions.find(o => o.value === monthVal);
           if (opt) {
-            if (remainingAmountToDistribute >= opt.amount * 0.99) {
-              amountForThisMonth = opt.amount;
-              remainingAmountToDistribute -= opt.amount;
+            if (this.form.paymentType === 'rental') {
+              amountForThisMonth = Math.min(remainingAmountToDistribute, opt.amount);
+              remainingAmountToDistribute -= amountForThisMonth;
+              isPartialForThisMonth = false;
             } else {
-              amountForThisMonth = remainingAmountToDistribute;
-              remainingAmountToDistribute = 0;
-              isPartialForThisMonth = true;
+              if (remainingAmountToDistribute >= opt.amount * 0.99) {
+                amountForThisMonth = opt.amount;
+                remainingAmountToDistribute -= opt.amount;
+                isPartialForThisMonth = false;
+              } else {
+                amountForThisMonth = remainingAmountToDistribute;
+                remainingAmountToDistribute = 0;
+                isPartialForThisMonth = true;
+              }
             }
           } else {
             amountForThisMonth = remainingAmountToDistribute;
@@ -925,7 +934,7 @@ export default {
              remainingAmountToDistribute = 0;
           }
 
-          const currentPaymentType = isPartialForThisMonth ? 'partial_payment' : (this.form.paymentType === 'partial_payment' ? 'partial_payment' : this.form.paymentType);
+          const currentPaymentType = this.form.paymentType === 'partial_payment' ? 'partial_payment' : 'rental';
           
           const refArray = this.form.receiptNo ? this.form.receiptNo.split(',').map(r => r.trim()).filter(Boolean) : [];
           let refNo = this.form.receiptNo;

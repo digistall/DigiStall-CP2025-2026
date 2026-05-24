@@ -2,6 +2,7 @@ import { createConnection } from '../../config/database.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { decryptApplicantData, decryptStallholderData, decryptSpouseData } from '../../services/mysqlDecryptionService.js'
+import { logStaffActivity } from '../OWNER/activityLog/staffActivityLogController.js'
 
 // ===== MOBILE LOGIN =====
 export const mobileLogin = async (req, res) => {
@@ -201,11 +202,11 @@ export const mobileLogin = async (req, res) => {
         }
 
         if (isOverdue) {
-          // Double-check: see if total payments this month cover the rental
+          // Double-check: see if total payments this month cover the expected amount
           const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
           const [monthPayments] = await connection.execute(
             `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
-             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status IN ('completed', 'paid', 'partial')`,
             [sh.stallholder_id, currentMonth]
           );
           const totalPaid = parseFloat(monthPayments[0]?.totalPaid || 0);
@@ -213,8 +214,35 @@ export const mobileLogin = async (req, res) => {
           // Get rental price to compare
           const rentalPrice = parseFloat(sh.stall_rental_price || sh.stall_monthly_rent || 0);
 
-          // Not fully paid if total paid < 99% of rental (tolerance for rounding)
-          if (totalPaid < rentalPrice * 0.99) {
+          // Calculate expected amount for the month
+          let expectedAmount = rentalPrice;
+          if (moveInDate) {
+            const isFirstMonth = moveInDate.getFullYear() === now.getFullYear() && moveInDate.getMonth() === now.getMonth();
+            if (isFirstMonth) {
+              expectedAmount = rentalPrice * 0.75;
+            } else {
+              const dueDay = moveInDate.getDate();
+              let dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+              if (dueDate.getMonth() !== now.getMonth()) {
+                dueDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+              }
+              const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24));
+              if (daysUntilDue >= 5) {
+                expectedAmount = rentalPrice * 0.75;
+              }
+            }
+          }
+
+          // Double check completed check
+          const [completedCheck] = await connection.execute(
+            `SELECT COUNT(*) as count FROM payments 
+             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+            [sh.stallholder_id, currentMonth]
+          );
+          const hasCompletedPayment = (completedCheck[0]?.count || 0) > 0;
+
+          // Not fully paid if total paid < 99% of expected amount AND no completed payment exists
+          if (totalPaid < expectedAmount * 0.99 && !hasCompletedPayment) {
             // Update DB status to overdue
             await connection.execute(
               "UPDATE stallholder SET payment_status = 'overdue' WHERE stallholder_id = ?",
@@ -249,6 +277,7 @@ export const mobileLogin = async (req, res) => {
         userId: decryptedUser.applicant_id,
         username: decryptedUser.user_name,
         email: decryptedUser.applicant_email,
+        fullName: decryptedUser.applicant_full_name,
         userType: 'mobile_user',
         registrationId: decryptedUser.registrationid,
         stallholderId: stallholderData.length > 0 ? stallholderData[0].stallholder_id : null
@@ -258,6 +287,28 @@ export const mobileLogin = async (req, res) => {
     );
     
     console.log('✅ Login successful for:', username);
+
+    // Log stallholder login activity (mobile app)
+    if (stallholderData.length > 0) {
+      const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      const userAgent = req.get('User-Agent');
+      for (const stallholder of stallholderData) {
+        await logStaffActivity({
+          staffType: 'stallholder',
+          staffId: stallholder.stallholder_id,
+          staffName: stallholder.full_name || stallholder.stallholder_name || decryptedUser.applicant_full_name || 'Unknown',
+          branchId: stallholder.branch_id || null,
+          actionType: 'LOGIN',
+          actionDescription: 'Stallholder logged in via mobile app',
+          module: 'mobile_app',
+          ipAddress,
+          userAgent,
+          requestMethod: req.method,
+          requestPath: req.originalUrl,
+          status: 'success'
+        });
+      }
+    }
     
     // Helper to map stallholder row to response object
     const mapStallholderRow = (row) => ({
@@ -521,6 +572,59 @@ export const mobileLogout = async (req, res) => {
       if (affectedRows === 0) {
         console.warn(`⚠️ No rows updated - applicant_id ${applicantId} may not exist in credential table`);
       }
+
+      // Log stallholder logout activity (mobile app)
+      try {
+        const [stallholderRows] = await connection.execute(
+          `SELECT stallholder_id, full_name, branch_id
+           FROM stallholder
+           WHERE applicant_id = ? OR mobile_user_id = ?
+           LIMIT 1`,
+          [applicantId, applicantId]
+        );
+        const stallholderData = stallholderRows || [];
+        const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+        const userAgent = req.get('User-Agent');
+
+        if (stallholderData.length > 0) {
+          for (const stallholder of stallholderData) {
+            const decryptedStallholder = await decryptStallholderData(stallholder);
+            await logStaffActivity({
+              staffType: 'stallholder',
+              staffId: decryptedStallholder.stallholder_id,
+              staffName: decryptedStallholder.full_name || decryptedStallholder.stallholder_name || 'Unknown',
+              branchId: decryptedStallholder.branch_id || null,
+              actionType: 'LOGOUT',
+              actionDescription: 'Stallholder logged out from mobile app',
+              module: 'mobile_app',
+              ipAddress,
+              userAgent,
+              requestMethod: req.method,
+              requestPath: req.originalUrl,
+              status: 'success'
+            });
+          }
+        } else {
+          // Fallback: log using JWT user data (e.g., applicant not yet a stallholder)
+          console.log('⚠️ No stallholder record found for logout log — logging with applicant ID as fallback');
+          await logStaffActivity({
+            staffType: 'stallholder',
+            staffId: applicantId,
+            staffName: req.user?.fullName || req.user?.username || 'Unknown',
+            branchId: null,
+            actionType: 'LOGOUT',
+            actionDescription: 'Mobile user logged out from mobile app',
+            module: 'mobile_app',
+            ipAddress,
+            userAgent,
+            requestMethod: req.method,
+            requestPath: req.originalUrl,
+            status: 'success'
+          });
+        }
+      } catch (logError) {
+        console.error('❌ Error logging stallholder logout activity:', logError);
+      }
     } else {
       console.warn('⚠️ No applicant ID found in request - cannot update last_logout');
     }
@@ -544,4 +648,3 @@ export const mobileLogout = async (req, res) => {
     }
   }
 };
-

@@ -326,7 +326,7 @@
                         outlined
                         density="compact"
                         prepend-inner-icon="mdi-map-marker"
-                        :search-input.sync="locationSearch"
+                        v-model:search-input="locationSearch"
                       ></v-autocomplete>
                     </v-col>
                     <v-col cols="12" md="6">

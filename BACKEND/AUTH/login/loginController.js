@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { createConnection } from '../../../config/database.js'
 import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB, decryptAES256GCM, decryptObjectFields } from '../../../services/mysqlDecryptionService.js'
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
 export const mobileLogin = async (req, res) => {
@@ -336,6 +337,26 @@ export const mobileLogin = async (req, res) => {
     
     console.log('🔐 JWT token generated for user:', fullName);
 
+    // Log stallholder login activity (mobile app)
+    if (stallholderInfo?.stallholder_id) {
+      const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress
+      const userAgent = req.get('User-Agent')
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: stallholderInfo.stallholder_id,
+        staffName: stallholderInfo.stallholder_name || fullName || 'Unknown',
+        branchId: stallholderInfo.branch_id || null,
+        actionType: 'LOGIN',
+        actionDescription: 'Stallholder logged in via mobile app',
+        module: 'mobile_app',
+        ipAddress,
+        userAgent,
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      })
+    }
+
     res.json({
       success: true,
       message: 'Mobile login successful',
@@ -454,4 +475,3 @@ export const submitApplication = async (req, res) => {
     await connection.end()
   }
 }
-

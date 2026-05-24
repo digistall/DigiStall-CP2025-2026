@@ -33,6 +33,16 @@
                 </label>
 
                 <label>
+                    Gender:
+                    <select v-model="gender" required :class="{ 'input-error': errors.gender }">
+                        <option disabled value="">Please select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="LGBTQ">LGBTQ</option>
+                    </select>
+                </label>
+
+                <label>
                     Date of Birth:
                     <input type="text" v-model="formattedBirthdate" @click="datePickerMenu = true" required readonly
                         placeholder="Click to select date" :class="{ 'input-error': errors.birthdate }"
@@ -106,6 +116,7 @@ export default {
         return {
             fullName: '',
             education: '',
+            gender: '',
             birthdate: '',
             birthdateDate: null,
             datePickerMenu: false,
@@ -116,6 +127,7 @@ export default {
             errors: {
                 fullName: false,
                 education: false,
+                gender: false,
                 birthdate: false,
                 civilStatus: false,
                 contactNumber: false,
@@ -146,6 +158,7 @@ export default {
             this.firstName = this.savedData.firstName || '';
             this.middleName = this.savedData.middleName || '';
             this.education = this.savedData.education || '';
+            this.gender = this.savedData.gender || '';
             this.birthdate = this.savedData.birthdate || '';
             this.civilStatus = this.savedData.civilStatus || '';
             this.contactNumber = this.savedData.contactNumber || '';
@@ -200,6 +213,7 @@ export default {
             this.errors = {
                 fullName: false,
                 education: false,
+                gender: false,
                 birthdate: false,
                 civilStatus: false,
                 contactNumber: false,
@@ -226,10 +240,11 @@ export default {
             const address = this.mailingAddress.trim();
 
             // Check required fields
-            if (!name || !this.education || !this.birthdate || !this.civilStatus || !contact || !address) {
+            if (!name || !this.education || !this.birthdate || !this.civilStatus || !contact || !address || !this.gender) {
                 const missingFields = [];
                 if (!name) missingFields.push('fullName');
                 if (!this.education) missingFields.push('education');
+                if (!this.gender) missingFields.push('gender');
                 if (!this.birthdate) missingFields.push('birthdate');
                 if (!this.civilStatus) missingFields.push('civilStatus');
                 if (!contact) missingFields.push('contactNumber');
@@ -255,6 +270,7 @@ export default {
             const formData = {
                 fullName: name,
                 education: this.education,
+                gender: this.gender,
                 birthdate: this.birthdate,
                 age: this.calculatedAge,
                 civilStatus: this.civilStatus,

@@ -206,6 +206,7 @@ export const handleLogin = async (
       // Navigate to loading screen instead of directly to StallHome
       if (navigation) {
         let finalNextScreen = 'StallHome';
+        let additionalParams = {};
         
         // Face Verification Check for Stallholders
         try {
@@ -221,6 +222,31 @@ export const handleLogin = async (
             if (faceResult && !faceResult.hasVerifiedFace) {
               console.log('🚨 No verified face found. Redirecting to scanner.');
               finalNextScreen = 'FaceScannerScreen';
+            } else {
+              // Face is verified, check if they have uploaded a Valid ID
+              const applicantId = userData.user?.applicant_id || userData.user?.id;
+              if (applicantId) {
+                const docsResult = await ApiService.getStallholderStallsWithDocuments(applicantId);
+                
+                // Check profile valid_id field as primary verification
+                const otherInfo = userData.other_info || userData.profile?.other_info || {};
+                let hasUploadedValidId = otherInfo.valid_id != null && otherInfo.valid_id !== '';
+                
+                // Or check if they have uploaded it as a branch document
+                if (!hasUploadedValidId && docsResult.success && docsResult.data) {
+                  hasUploadedValidId = docsResult.data.grouped_by_branch.some(branch => 
+                    branch.document_requirements.some(doc => 
+                      doc.document_type_id === 3 && doc.status !== 'not_uploaded'
+                    )
+                  );
+                }
+                
+                if (!hasUploadedValidId) {
+                  console.log('🚨 No valid ID uploaded yet on login. Redirecting to IdScannerScreen.');
+                  finalNextScreen = 'IdScannerScreen';
+                  additionalParams = {};
+                }
+              }
             }
           }
         } catch (err) {
@@ -236,8 +262,10 @@ export const handleLogin = async (
           isStallholder,
           stallNo,
           stallholderId: userData.stallholder?.stallholder_id,
+          applicantId: userData.user?.applicant_id || userData.user?.id,
           nextScreen: finalNextScreen,
-          loadingDuration: 3000
+          loadingDuration: 3000,
+          ...additionalParams
         });
       } else {
         setIsLoading(false);
