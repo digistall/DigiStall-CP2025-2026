@@ -203,7 +203,7 @@ body.no-page-scroll .payments-table-container {
 @media (min-width: 961px) {
   body.no-page-scroll .payments-table-container .table-wrapper {
     flex: 1 1 auto !important;
-    max-height: 416px !important; /* limit to 7 rows of data visible (52px * 7 + 52px header) */
+    max-height: var(--payments-table-max-height, 416px) !important; /* default to ~7 rows unless overridden per page */
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
