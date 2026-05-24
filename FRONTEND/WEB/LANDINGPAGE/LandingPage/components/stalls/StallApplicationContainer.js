@@ -294,6 +294,7 @@ export default {
         applicant_birthdate: toNull(personal.birthdate),
         applicant_civil_status: toNull(personal.civilStatus) || 'Single',
         applicant_educational_attainment: toNull(personal.education),
+        gender: toNull(personal.gender) || '',
 
         // Spouse Information - all optional
         spouse_full_name: toNull(spouse.spouseName),
@@ -377,8 +378,9 @@ export default {
       // Validate required fields
       if (!completeApplicationData.applicant_full_name || 
           !completeApplicationData.applicant_contact_number || 
-          !completeApplicationData.email_address) {
-        throw new Error('Missing required fields: applicant name, contact number, and email address are required')
+          !completeApplicationData.email_address ||
+          !completeApplicationData.gender) {
+        throw new Error('Missing required fields: applicant name, contact number, email address, and gender are required')
       }
 
       const response = await fetch(
