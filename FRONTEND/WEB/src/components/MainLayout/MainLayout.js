@@ -97,6 +97,9 @@ export default {
     document.body.classList.add('main-layout-active')
     document.documentElement.classList.add('main-layout-active')
 
+    // Ensure any leftover page-level scroll locks are cleared on initial load
+    this.resetPageScrollLock()
+
     this.setMenuItemsBasedOnUserType()
     this.loadCurrentUserName()
     // Listen for sidebar logout event (trigger-logout from eventBus)
@@ -113,7 +116,10 @@ export default {
     // update header title on route change
     $route: {
       immediate: true,
-      handler(to) {
+      handler(to, from) {
+        if (!from || to.path !== from.path) {
+          this.resetPageScrollLock()
+        }
         this.pageTitle = to.meta?.title || to.name || 'Dashboard'
         // Also check if user type has changed and update menu items
         this.setMenuItemsBasedOnUserType()
@@ -121,6 +127,20 @@ export default {
     },
   },
   methods: {
+    resetPageScrollLock() {
+      try {
+        document.body.classList.remove('no-page-scroll')
+        document.documentElement.classList.remove('no-page-scroll')
+        try {
+          const prevHtml = document.documentElement.dataset._prevOverflow || ''
+          const prevBody = document.body.dataset._prevOverflow || ''
+          document.documentElement.style.overflow = prevHtml
+          document.body.style.overflow = prevBody
+          delete document.documentElement.dataset._prevOverflow
+          delete document.body.dataset._prevOverflow
+        } catch { /* empty */ }
+      } catch { /* empty */ }
+    },
     setMenuItemsBasedOnUserType() {
       const userType = sessionStorage.getItem('userType')
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}')

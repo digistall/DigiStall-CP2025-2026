@@ -22,6 +22,19 @@ export default {
     this.initializePayment()
   },
   beforeUnmount() {
+    try {
+      document.body.classList.remove('no-page-scroll')
+      document.documentElement.classList.remove('no-page-scroll')
+      try {
+        // restore previous inline overflow values
+        const prevHtml = document.documentElement.dataset._prevOverflow || ''
+        const prevBody = document.body.dataset._prevOverflow || ''
+        document.documentElement.style.overflow = prevHtml
+        document.body.style.overflow = prevBody
+        delete document.documentElement.dataset._prevOverflow
+        delete document.body.dataset._prevOverflow
+      } catch { /* empty */ }
+    } catch { /* empty */ }
   },
   methods: {
     // Initialize payment page
