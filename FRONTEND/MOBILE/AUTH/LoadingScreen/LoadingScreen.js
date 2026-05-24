@@ -7,10 +7,13 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getSafeDisplayValue } from '../../services/DataDisplayUtils';
+import ApiService from '../../services/ApiService';
+import UserStorageService from '../../services/UserStorageService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,6 +33,11 @@ const LoadingScreen = ({
 
   // Use safe display value to prevent showing encrypted data
   const displayName = getSafeDisplayValue(userName, 'User');
+
+  const [faceVerified, setFaceVerified] = useState(null);
+  const [validIdUploaded, setValidIdUploaded] = useState(null);
+  const [resolvedNextScreen, setResolvedNextScreen] = useState(nextScreen);
+  const [resolvedParams, setResolvedParams] = useState(params);
 
   // Animation values
   const logoScale = useRef(new Animated.Value(0.3)).current;
@@ -68,21 +76,88 @@ const LoadingScreen = ({
       }, stepInterval * index);
     });
 
+    const performChecks = async () => {
+      const { stallholderId, applicantId } = params;
+      
+      // Load stored user data
+      let storedUserData = null;
+      try {
+        storedUserData = await UserStorageService.getUserData();
+      } catch (err) {
+        console.log('⚠️ LoadingScreen could not load stored user data', err);
+      }
+
+      if (isStallholder && stallholderId) {
+        try {
+          console.log('🔄 LoadingScreen checking face verification for ID:', stallholderId);
+          const faceResult = await ApiService.checkFaceVerification(stallholderId);
+          const hasFace = faceResult && faceResult.hasVerifiedFace;
+          setFaceVerified(hasFace);
+
+          console.log('🔄 LoadingScreen checking Valid ID status for applicant:', applicantId);
+          let hasId = false;
+          if (applicantId) {
+            const docsResult = await ApiService.getStallholderStallsWithDocuments(applicantId);
+            
+            // Check profile valid_id field as primary verification
+            const otherInfo = storedUserData?.other_info || storedUserData?.profile?.other_info || {};
+            hasId = otherInfo.valid_id != null && otherInfo.valid_id !== '';
+            
+            // Or check if they have uploaded it as a branch document
+            if (!hasId && docsResult.success && docsResult.data) {
+              hasId = docsResult.data.grouped_by_branch.some(branch => 
+                branch.document_requirements.some(doc => 
+                  doc.document_type_id === 3 && doc.status !== 'not_uploaded'
+                )
+              );
+            }
+          } else {
+            hasId = true;
+          }
+          setValidIdUploaded(hasId);
+
+          // Determine next destination dynamically
+          let next = 'StallHome';
+          let nextParams = { ...params };
+
+          if (!hasFace) {
+            next = 'FaceScannerScreen';
+            nextParams.forceValidIdUpload = false;
+            nextParams.screen = undefined;
+          } else if (!hasId) {
+            next = 'IdScannerScreen';
+            nextParams.forceValidIdUpload = false;
+            nextParams.screen = undefined;
+          } else {
+            next = 'StallHome';
+            nextParams.forceValidIdUpload = false;
+            nextParams.screen = 'dashboard';
+          }
+
+          setResolvedNextScreen(next);
+          setResolvedParams(nextParams);
+          console.log('✅ LoadingScreen dynamic checks resolved. Destination:', next, 'Params:', nextParams);
+        } catch (err) {
+          console.error('❌ Error during LoadingScreen dynamic checks:', err);
+          setFaceVerified(true);
+          setValidIdUploaded(true);
+          setResolvedNextScreen('StallHome');
+          setResolvedParams({ ...params, screen: 'dashboard' });
+        }
+      } else {
+        setFaceVerified(true);
+        setValidIdUploaded(true);
+        setResolvedNextScreen(nextScreen);
+        setResolvedParams(params);
+      }
+    };
+
+    performChecks();
+
     // Show welcome screen after loading
     setTimeout(() => {
       setShowWelcome(true);
     }, loadingDuration);
-
-    // Navigate after welcome display
-    setTimeout(() => {
-      if (navigation && nextScreen) {
-        // Forward all params to the next screen (important for stallholderId)
-        navigation.replace(nextScreen, { ...params });
-      }
-      if (onLoadComplete) {
-        onLoadComplete();
-      }
-    }, loadingDuration + 2500);
   }, []);
 
   useEffect(() => {
@@ -93,6 +168,22 @@ const LoadingScreen = ({
       return () => clearTimeout(timer);
     }
   }, [showWelcome]);
+
+  // Separate navigation effect when welcome finishes
+  useEffect(() => {
+    if (showWelcome) {
+      const timer = setTimeout(() => {
+        if (navigation && resolvedNextScreen) {
+          console.log('🚀 LoadingScreen replacing route with:', resolvedNextScreen, resolvedParams);
+          navigation.replace(resolvedNextScreen, resolvedParams);
+        }
+        if (onLoadComplete) {
+          onLoadComplete();
+        }
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showWelcome, resolvedNextScreen, resolvedParams]);
 
   const startAnimations = () => {
     // Logo entrance animation
@@ -227,6 +318,36 @@ const LoadingScreen = ({
                 <Text style={styles.infoText}>Authentication Verified</Text>
               </View>
               
+              {isStallholder && (
+                <>
+                  <View style={styles.infoRow}>
+                    {faceVerified === null ? (
+                      <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                    ) : faceVerified ? (
+                      <Ionicons name="scan-circle" size={20} color="#48bb78" />
+                    ) : (
+                      <Ionicons name="alert-circle" size={20} color="#f59e0b" />
+                    )}
+                    <Text style={styles.infoText}>
+                      Face Scanner: {faceVerified === null ? 'Checking...' : faceVerified ? 'Verified' : 'Pending Upload'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    {validIdUploaded === null ? (
+                      <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                    ) : validIdUploaded ? (
+                      <Ionicons name="document-text" size={20} color="#48bb78" />
+                    ) : (
+                      <Ionicons name="alert-circle" size={20} color="#ef4444" />
+                    )}
+                    <Text style={styles.infoText}>
+                      Valid ID: {validIdUploaded === null ? 'Checking...' : validIdUploaded ? 'Uploaded' : 'Missing / Required'}
+                    </Text>
+                  </View>
+                </>
+              )}
+              
               {isStallholder && stallNo && (
                 <View style={styles.infoRow}>
                   <MaterialCommunityIcons name="store" size={20} color="#4299e1" />
@@ -248,7 +369,13 @@ const LoadingScreen = ({
 
             {/* Redirecting text */}
             <View style={styles.redirectContainer}>
-              <Text style={styles.redirectText}>Redirecting to dashboard...</Text>
+              <Text style={styles.redirectText}>
+                {resolvedNextScreen === 'FaceScannerScreen' 
+                  ? 'Redirecting to Face Scanner...' 
+                  : resolvedNextScreen === 'StallHome' && resolvedParams.forceValidIdUpload 
+                    ? 'Redirecting to Valid ID Upload...' 
+                    : 'Redirecting to dashboard...'}
+              </Text>
               <View style={styles.loadingDotsSmall}>
                 <Animated.View 
                   style={[

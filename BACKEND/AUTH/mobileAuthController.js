@@ -202,11 +202,11 @@ export const mobileLogin = async (req, res) => {
         }
 
         if (isOverdue) {
-          // Double-check: see if total payments this month cover the rental
+          // Double-check: see if total payments this month cover the expected amount
           const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
           const [monthPayments] = await connection.execute(
             `SELECT COALESCE(SUM(amount), 0) as totalPaid FROM payments 
-             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status IN ('completed', 'paid', 'partial')`,
             [sh.stallholder_id, currentMonth]
           );
           const totalPaid = parseFloat(monthPayments[0]?.totalPaid || 0);
@@ -214,8 +214,35 @@ export const mobileLogin = async (req, res) => {
           // Get rental price to compare
           const rentalPrice = parseFloat(sh.stall_rental_price || sh.stall_monthly_rent || 0);
 
-          // Not fully paid if total paid < 99% of rental (tolerance for rounding)
-          if (totalPaid < rentalPrice * 0.99) {
+          // Calculate expected amount for the month
+          let expectedAmount = rentalPrice;
+          if (moveInDate) {
+            const isFirstMonth = moveInDate.getFullYear() === now.getFullYear() && moveInDate.getMonth() === now.getMonth();
+            if (isFirstMonth) {
+              expectedAmount = rentalPrice * 0.75;
+            } else {
+              const dueDay = moveInDate.getDate();
+              let dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+              if (dueDate.getMonth() !== now.getMonth()) {
+                dueDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+              }
+              const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24));
+              if (daysUntilDue >= 5) {
+                expectedAmount = rentalPrice * 0.75;
+              }
+            }
+          }
+
+          // Double check completed check
+          const [completedCheck] = await connection.execute(
+            `SELECT COUNT(*) as count FROM payments 
+             WHERE stallholder_id = ? AND payment_for_month = ? AND payment_status = 'completed'`,
+            [sh.stallholder_id, currentMonth]
+          );
+          const hasCompletedPayment = (completedCheck[0]?.count || 0) > 0;
+
+          // Not fully paid if total paid < 99% of expected amount AND no completed payment exists
+          if (totalPaid < expectedAmount * 0.99 && !hasCompletedPayment) {
             // Update DB status to overdue
             await connection.execute(
               "UPDATE stallholder SET payment_status = 'overdue' WHERE stallholder_id = ?",
