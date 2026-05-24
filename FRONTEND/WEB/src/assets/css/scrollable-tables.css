@@ -28,9 +28,11 @@
 [class*="table-body"],
 [class*="table-card"] {
   max-height: var(--table-scroll-max-height);
-  overflow-y: auto;
+  overflow-y: auto !important; /* vertical scrollbar will only show if data overflows */
   overflow-x: hidden !important; /* prevent left-right scrolling inside the page */
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin !important;
+  scrollbar-color: #002181 #f1f1f1 !important;
 }
 
 /* Ensure tables inside the scrollable wrappers wrap content vertically
@@ -58,6 +60,25 @@
    horizontal scroll on desktop by default */
 .v-data-table__wrapper {
   overflow-x: hidden !important;
+}
+
+.scrollable-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollable-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.scrollable-table-wrapper::-webkit-scrollbar-thumb {
+  background: #002181;
+  border-radius: 4px;
+}
+
+.scrollable-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #001557;
 }
 
 /* Make thead cells sticky so headers remain visible while scrolling body */
@@ -182,13 +203,14 @@ body.no-page-scroll .payments-table-container {
 @media (min-width: 961px) {
   body.no-page-scroll .payments-table-container .table-wrapper {
     flex: 1 1 auto !important;
-    max-height: 100% !important;
+    max-height: 416px !important; /* limit to 7 rows of data visible (52px * 7 + 52px header) */
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
 
   /* A safety fallback on desktop: prefer internal scroll behavior when page is opted-in. */
   body.no-page-scroll .table-wrapper {
+    overflow-y: auto !important;
     overflow-x: hidden !important;
   }
 }

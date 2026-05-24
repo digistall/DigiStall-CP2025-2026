@@ -61,9 +61,9 @@
 
 .table-wrapper {
   width: 100%;
-  max-height: 420px;
+  max-height: 416px !important; /* exactly 7 rows of data visible (52px * 7 + 52px header) */
   overflow-y: auto !important;
-  overflow-x: auto !important;
+  overflow-x: hidden !important;
 }
 
 .table-wrapper::-webkit-scrollbar {
