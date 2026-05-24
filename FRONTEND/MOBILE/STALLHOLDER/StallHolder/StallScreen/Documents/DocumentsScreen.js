@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Image,
 } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 import { useCustomAlert } from '../../../../components/Common/CustomAlert';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,7 +29,7 @@ import useLoading from "../../../../hooks/useLoading";
 
 const { width, height } = Dimensions.get("window");
 
-const DocumentsScreen = () => {
+const DocumentsScreen = ({ promptUploadId = false, forceValidIdUpload = false, navigation }) => {
   const { theme, isDark } = useTheme();
   const { startLoading, stopLoading, overlayProps } = useLoading();
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -64,6 +65,40 @@ const DocumentsScreen = () => {
       console.log('📋 No applicantId found, skipping loadStallholderDocuments');
     }
   }, [userData]);
+
+  useEffect(() => {
+    if (forceValidIdUpload) {
+      console.log('📱 DocumentsScreen - forceValidIdUpload active, displaying custom alert');
+      setTimeout(() => {
+        showAlert(
+          'warning',
+          'Valid ID Required',
+          'To proceed and access your stallholder dashboard, you must upload your Valid ID. Please tap the "Upload" button next to "Valid ID" to capture or upload it now.',
+          [
+            {
+              text: 'Upload Now',
+              style: 'default',
+            }
+          ]
+        );
+      }, 1000);
+    } else if (promptUploadId) {
+      console.log('📱 DocumentsScreen - promptUploadId active, displaying custom alert');
+      setTimeout(() => {
+        showAlert(
+          'success',
+          'Face Verification Complete!',
+          'To fully activate your stallholder account, please upload your Valid ID. Tapping the "Upload" button next to "Valid ID" will let you capture it now using your camera.',
+          [
+            {
+              text: 'Understood',
+              style: 'default',
+            }
+          ]
+        );
+      }, 1000);
+    }
+  }, [promptUploadId, forceValidIdUpload]);
 
   const loadUserData = async () => {
     try {
@@ -307,6 +342,43 @@ const DocumentsScreen = () => {
       const response = await ApiService.uploadStallholderDocumentBlob(uploadPayload, currentToken);
       
       if (response.success) {
+        // If forceValidIdUpload is true, re-evaluate if Valid ID is successfully uploaded now
+        if (forceValidIdUpload) {
+          const applicantId = userData?.user?.applicant_id || userData?.user?.id;
+          if (applicantId) {
+            const latestResponse = await ApiService.getStallholderStallsWithDocuments(applicantId);
+            if (latestResponse.success && latestResponse.data) {
+              const hasUploadedValidId = latestResponse.data.grouped_by_branch.every(branch => 
+                branch.document_requirements.some(doc => 
+                  doc.document_name.toLowerCase().includes('valid id') && doc.status !== 'not_uploaded'
+                )
+              );
+              
+              if (hasUploadedValidId) {
+                console.log('🎉 Valid ID successfully uploaded! Unlocking dashboard...');
+                showAlert(
+                  'success',
+                  'Verification Complete',
+                  'Your Valid ID has been uploaded successfully! You can now access your dashboard.',
+                  [
+                    {
+                      text: 'Let\'s Go',
+                      onPress: () => {
+                        if (navigation) {
+                          navigation.setParams({ forceValidIdUpload: false, promptUploadId: false });
+                          navigation.navigate('StallHome', { screen: 'dashboard' });
+                        }
+                      }
+                    }
+                  ]
+                );
+                await loadStallholderDocuments();
+                return;
+              }
+            }
+          }
+        }
+        
         showAlert('success', 'Success', 'Document uploaded successfully and is pending verification');
         await loadStallholderDocuments();
       } else {
@@ -680,6 +752,19 @@ const DocumentsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Top Locked warning banner */}
+      {forceValidIdUpload && (
+        <View style={styles.lockedBanner}>
+          <View style={styles.lockedIconWrapper}>
+            <Ionicons name="lock-closed" size={18} color="#ffffff" />
+          </View>
+          <View style={styles.lockedTextContainer}>
+            <Text style={styles.lockedBannerTitle}>Action Required: Valid ID Needed</Text>
+            <Text style={styles.lockedBannerSubtitle}>Please upload your Valid ID below to unlock access to your dashboard.</Text>
+          </View>
+        </View>
+      )}
+
       {/* Document Preview Modal */}
       <DocumentPreviewModal
         visible={previewModalVisible}
@@ -1105,6 +1190,42 @@ const styles = StyleSheet.create({
   viewDetailsText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  lockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E74C3C',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  lockedIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  lockedTextContainer: {
+    flex: 1,
+  },
+  lockedBannerTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  lockedBannerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
   },
 });
 

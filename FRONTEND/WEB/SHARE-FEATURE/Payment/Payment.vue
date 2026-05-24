@@ -20,7 +20,7 @@
                   align-tabs="start"
                 >
                   <v-tab value="stall" class="text-subtitle-1 font-weight-bold"
-                    >STALL APPLICANTS</v-tab
+                    >RENTAL PAYMENTS</v-tab
                   >
                   <v-tab value="daily" class="text-subtitle-1 font-weight-bold"
                     >DAILY PAYMENTS</v-tab
