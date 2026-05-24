@@ -2,6 +2,8 @@
 .payment-page {
   min-height: 100vh;
   background-color: #f5f7fa;
+  --table-scroll-offset: 360px;
+  --table-scroll-bottom-gap: 96px;
 }
 
 .v-main {
