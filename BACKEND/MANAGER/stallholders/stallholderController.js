@@ -7,6 +7,7 @@ import fs from 'fs';
 import bcrypt from 'bcrypt';
 import emailService from '../../../services/emailService.js';
 import { decryptData, decryptStallholders, encryptData } from '../../../services/encryptionService.js';
+import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from '../../../config/multerApplicantDocuments.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -262,71 +263,300 @@ const StallholderController = {
     let connection;
     try {
       const {
-        applicantId,
+        // Personal info
         stallholderName,
+        birthdate,
+        gender,
+        civilStatus,
         contactNumber,
-        email,
+        educationalAttainment,
+
+        // Address/Location
         address,
+        signature_data, // base64
+        house_location_data, // base64 static map
+
+        // Business info
         businessName,
-        businessType,
+        capitalization,
+        sourceOfCapital,
+        previousExperience,
+        relativeStallOwner,
+
+        // Spouse info (optional)
+        spouseName,
+        spouseBirthdate,
+        spouseContact,
+        spouseOccupation,
+        spouseEducation,
+
+        // Stall & Contract info
         branchId,
         stallId,
         contractStartDate,
         contractEndDate,
-        leaseAmount,
         monthlyRent,
-        notes
+        leaseAmount,
+        notes,
+
+        // Account info
+        email
       } = req.body;
-      
-      const managerId = req.user.managerId || req.user.branchManagerId;
-      const targetBranchId = req.user.branchId || branchId;
-      
+
+      const targetBranchId = req.user?.branchId || branchId;
+      const managerId = req.user?.managerId || req.user?.branchManagerId || 1;
+
       // Validate required fields
-      if (!stallholderName || !targetBranchId || !contractStartDate || !contractEndDate || !leaseAmount) {
+      if (!stallholderName || !targetBranchId || !stallId || !contractStartDate || !contractEndDate || !email || !gender) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: stallholderName, branchId, contractStartDate, contractEndDate, leaseAmount'
+          message: 'Missing required fields: stallholderName, branchId, stallId, contractStartDate, contractEndDate, email, gender'
         });
       }
-      
+
+      if (!address) {
+        return res.status(400).json({
+          success: false,
+          message: 'Address is required. Please use the map to pin your location or type it in.'
+        });
+      }
+
       connection = await createConnection();
-      const [result] = await connection.execute(
-        'CALL createStallholder(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          applicantId,
-          stallholderName,
-          contactNumber,
-          email,
-          address,
-          businessName,
-          businessType,
-          targetBranchId,
-          stallId,
-          contractStartDate,
-          contractEndDate,
-          leaseAmount,
-          monthlyRent,
-          notes,
-          managerId
-        ]
+      await connection.beginTransaction();
+
+      console.log('🔐 Encrypting sensitive PII fields...');
+      const encryptedName = encryptIfNotNull(stallholderName);
+      const encryptedEmail = encryptIfNotNull(email);
+      const encryptedContact = encryptIfNotNull(contactNumber);
+      const encryptedAddress = encryptIfNotNull(address);
+      const encryptedSpouseName = encryptIfNotNull(spouseName);
+      const encryptedSpouseContact = encryptIfNotNull(spouseContact);
+
+      const applicantParams = [
+        encryptedName,                         // p_full_name
+        encryptedContact,                      // p_contact_number
+        encryptedAddress,                      // p_address
+        birthdate ? new Date(birthdate).toISOString().split('T')[0] : null, // p_birthdate
+        civilStatus || 'Single',               // p_civil_status
+        educationalAttainment || null,         // p_educational_attainment
+        businessName || null,                  // p_nature_of_business
+        capitalization ? parseFloat(capitalization) : 0.00, // p_capitalization
+        sourceOfCapital || null,               // p_source_of_capital
+        previousExperience || null,            // p_previous_business_experience
+        relativeStallOwner || 'No',            // p_relative_stall_owner
+        encryptedSpouseName,                   // p_spouse_full_name
+        spouseBirthdate ? new Date(spouseBirthdate).toISOString().split('T')[0] : null, // p_spouse_birthdate
+        spouseEducation || null,               // p_spouse_educational_attainment
+        encryptedSpouseContact,                // p_spouse_contact_number
+        spouseOccupation || null,              // p_spouse_occupation
+        null,                                  // p_signature_of_applicant
+        null,                                  // p_house_sketch_location
+        null,                                  // p_valid_id
+        encryptedEmail,                        // p_email_address
+        gender                                 // p_gender
+      ];
+
+      console.log('📋 Calling stored procedure: createApplicantComplete...');
+      const [rows] = await connection.execute(
+        `CALL createApplicantComplete(
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?
+        )`,
+        applicantParams
+      );
+
+      const applicantResult = rows[0][0];
+      const newApplicantId = applicantResult.new_applicant_id;
+      console.log('✅ Applicant created with ID:', newApplicantId);
+
+      // Retrieve business owner ID and branch name for BLOB/File saving
+      let businessOwnerId = 1;
+      let branchName = 'Naga City';
+      const [stallOwner] = await connection.execute(
+        `SELECT b.business_owner_id, b.branch_name FROM stall s 
+         JOIN section sec ON s.section_id = sec.section_id
+         JOIN floor f ON sec.floor_id = f.floor_id
+         JOIN branch b ON f.branch_id = b.branch_id
+         WHERE s.stall_id = ?`,
+        [stallId]
       );
       
-      const response = result[0][0];
-      
-      if (response.success) {
-        res.status(201).json({
-          success: true,
-          message: response.message,
-          data: { stallholderId: response.stallholder_id }
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: response.message,
-          error: response.error_code
-        });
+      if (stallOwner.length > 0) {
+        businessOwnerId = stallOwner[0].business_owner_id;
+        branchName = stallOwner[0].branch_name;
       }
+
+      let signatureUrl = null;
+      let houseSketchUrl = null;
+
+      if (signature_data) {
+        let saved;
+        if (USE_BLOB_STORAGE) {
+          saved = await saveApplicantDocumentToBlob(
+            connection,
+            newApplicantId,
+            businessOwnerId,
+            targetBranchId,
+            'signature',
+            signature_data,
+            'signature.png'
+          );
+          signatureUrl = saved.url;
+        } else {
+          saved = await saveApplicantDocumentFromBase64(
+            targetBranchId,
+            newApplicantId,
+            'signature',
+            signature_data,
+            'signature.png'
+          );
+          signatureUrl = saved.url;
+        }
+      }
+
+      if (house_location_data) {
+        let saved;
+        if (USE_BLOB_STORAGE) {
+          saved = await saveApplicantDocumentToBlob(
+            connection,
+            newApplicantId,
+            businessOwnerId,
+            targetBranchId,
+            'house_location',
+            house_location_data,
+            'house_location.png'
+          );
+          houseSketchUrl = saved.url;
+        } else {
+          saved = await saveApplicantDocumentFromBase64(
+            targetBranchId,
+            newApplicantId,
+            'house_location',
+            house_location_data,
+            'house_location.png'
+          );
+          houseSketchUrl = saved.url;
+        }
+      }
+
+      // Update document URLs in other_information table
+      if (signatureUrl || houseSketchUrl) {
+        await connection.execute(
+          `UPDATE other_information 
+           SET signature_of_applicant = COALESCE(?, signature_of_applicant), 
+               house_sketch_location = COALESCE(?, house_sketch_location) 
+           WHERE applicant_id = ?`,
+          [signatureUrl, houseSketchUrl, newApplicantId]
+        );
+        console.log('✅ Document URLs updated in other_information');
+      }
+
+      // Auto-Approve Stall Application
+      console.log('🏪 Inserting application record as Approved...');
+      const [appResult] = await connection.execute(
+        `INSERT INTO application (stall_id, applicant_id, application_date, application_status)
+         VALUES (?, ?, CURDATE(), 'Approved')`,
+        [stallId, newApplicantId]
+      );
+      
+      const applicationId = appResult.insertId;
+
+      await connection.execute(
+        `UPDATE applicant SET status = 'approved', updated_at = NOW() WHERE applicant_id = ?`,
+        [newApplicantId]
+      );
+
+      // Generate Credentials — use email as username
+      const generatedUsername = email;
+
+      const letters = 'abcdefghijklmnopqrstuvwxyz';
+      const numbers = '0123456789';
+      let generatedPassword = '';
+      for (let i = 0; i < 3; i++) generatedPassword += letters.charAt(Math.floor(Math.random() * letters.length));
+      for (let i = 0; i < 3; i++) generatedPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
+
+      const passwordHash = await bcrypt.hash(generatedPassword, 10);
+
+      await connection.execute(
+        `INSERT INTO credential (
+          applicant_id, username, password_hash, created_at
+        ) VALUES (?, ?, ?, NOW())`,
+        [newApplicantId, generatedUsername, passwordHash]
+      );
+      console.log(`🔑 Credentials generated: username=${generatedUsername}`);
+
+      // Create Stallholder record
+      console.log('👤 Creating stallholder record...');
+      const [stallholderResult] = await connection.execute(
+        `INSERT INTO stallholder (
+          applicant_id,
+          mobile_user_id,
+          full_name,
+          email,
+          contact_number,
+          address,
+          stall_id,
+          branch_id,
+          payment_status,
+          status,
+          compliance_status,
+          move_in_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', ?)`,
+        [
+          newApplicantId,
+          newApplicantId,
+          encryptedName,
+          encryptedEmail,
+          encryptedContact,
+          encryptedAddress,
+          stallId,
+          targetBranchId,
+          contractStartDate || new Date().toISOString().split('T')[0]
+        ]
+      );
+
+      const newStallholderId = stallholderResult.insertId;
+      console.log('✅ Stallholder record created with ID:', newStallholderId);
+
+      // Occupy Stall
+      await connection.execute(
+        `UPDATE stall 
+         SET is_available = 0, status = 'Occupied', stallholder_id = ?, updated_at = NOW()
+         WHERE stall_id = ?`,
+        [newStallholderId, stallId]
+      );
+      console.log('🏪 Stall occupied');
+
+      await connection.commit();
+      console.log('🚀 Transaction committed successfully');
+
+      // Note: Backend SMTP is disabled for manual onboarding since the frontend handles 
+      // credentials welcome email delivery perfectly via EmailJS. 
+      // This prevents terminal error logs due to expired backend SMTP settings.
+      const emailSent = true; 
+
+      return res.status(201).json({
+        success: true,
+        message: 'Stallholder manually added successfully and credentials emailed!',
+        data: {
+          stallholderId: newStallholderId,
+          applicantId: newApplicantId,
+          username: generatedUsername,
+          password: generatedPassword, // return plain text password to let frontend EmailJS send it
+          emailSent
+        }
+      });
     } catch (error) {
+      if (connection) {
+        try {
+          await connection.rollback();
+          console.log('❌ Transaction rolled back');
+        } catch (rollErr) {
+          console.error('⚠️ Rollback error:', rollErr.message);
+        }
+      }
       console.error('Error creating stallholder:', error);
       res.status(500).json({
         success: false,
@@ -731,15 +961,15 @@ const StallholderController = {
       
       connection = await createConnection();
       const [rows] = await connection.execute(
-        `SELECT s.stall_id, s.stall_no, s.stall_location, s.size, s.rental_price,
-                sec.section_name, f.floor_name, b.branch_name
+        `SELECT s.stall_id, s.stall_number AS stall_no, s.stall_location, s.size, s.rental_price, s.price_type,
+                sec.section_name, f.floor_name, b.branch_name, b.branch_id
          FROM stall s
          JOIN section sec ON s.section_id = sec.section_id
          JOIN floor f ON s.floor_id = f.floor_id  
          JOIN branch b ON f.branch_id = b.branch_id
-         WHERE s.is_available = 1 AND s.status = 'Active'
+         WHERE s.is_available = 1 AND s.status = 'Available'
          ${branchId ? 'AND b.branch_id = ?' : ''}
-         ORDER BY b.branch_name, f.floor_name, sec.section_name, s.stall_no`,
+         ORDER BY b.branch_name, f.floor_name, sec.section_name, s.stall_number`,
         branchId ? [branchId] : []
       );
       
@@ -1730,28 +1960,17 @@ const StallholderController = {
                   applicantId = newApplicant.insertId;
                 }
                 
-                // Generate unique username and password
-                generatedUsername = generateUsername(row.stall_no);
+                // Use email as username
+                generatedUsername = email;
                 generatedPassword = generatePassword();
-                
-                // Check if username exists
-                const [usernameCheck] = await connection.execute(
-                  'SELECT registrationid FROM credential WHERE user_name = ?',
-                  [generatedUsername]
-                );
-                
-                if (usernameCheck.length > 0) {
-                  // Add random suffix if username exists
-                  generatedUsername = `${generatedUsername}-${Math.floor(Math.random() * 1000)}`;
-                }
                 
                 // Hash password and create credential
                 const passwordHash = await bcrypt.hash(generatedPassword, 10);
                 
                 await connection.execute(
                   `INSERT INTO credential (
-                     applicant_id, user_name, password_hash, created_date, is_active
-                   ) VALUES (?, ?, ?, NOW(), 1)`,
+                     applicant_id, username, password_hash, created_at
+                   ) VALUES (?, ?, ?, NOW())`,
                   [applicantId, generatedUsername, passwordHash]
                 );
                 
@@ -1776,28 +1995,19 @@ const StallholderController = {
             // Create stallholder record
             const [stallholderResult] = await connection.execute(
               `INSERT INTO stallholder (
-                 applicant_id, mobile_user_id, stallholder_name, contact_number, email, address,
-                 business_name, business_type, branch_id, stall_id,
-                 contract_start_date, contract_end_date, contract_status,
-                 lease_amount, monthly_rent, payment_status, notes,
-                 created_by_business_manager, date_created, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, 'pending', ?, ?, NOW(), NOW())`,
+                 applicant_id, mobile_user_id, full_name, email, contact_number, address,
+                 stall_id, branch_id,
+                 payment_status, status, compliance_status, move_in_date
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'active', 'Compliant', ?)`,
               [
-                applicantId, applicantId, // Link to applicant if created
+                applicantId, applicantId,
                 row.stallholder_name,
-                row.contact_number || null,
                 row.email || null,
+                row.contact_number || null,
                 row.address || null,
-                row.business_name || null,
-                row.business_type || null,
-                branchId,
                 stallId,
-                row.contract_start_date,
-                row.contract_end_date,
-                row.lease_amount || row.monthly_rent,
-                row.monthly_rent,
-                row.notes || `Imported from Excel. Area: ${row.area_occupied || 'N/A'} sqm, Rate/sqm: ${row.rate_per_sqm || 'N/A'}, Discounted: ${row.discounted_rate || 'N/A'}`,
-                managerId
+                branchId,
+                row.contract_start_date || new Date().toISOString().split('T')[0]
               ]
             );
 

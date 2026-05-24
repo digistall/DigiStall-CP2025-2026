@@ -30,6 +30,20 @@ router.use(authMiddleware.authenticateToken);
 router.get('/', StallholderController.getAllStallholders);
 
 /**
+ * @route GET /api/stallholders-management/template
+ * @desc Download Excel template
+ * @access Protected
+ */
+router.get('/template', StallholderController.downloadExcelTemplate);
+
+/**
+ * @route GET /api/stallholders-management/available-stalls
+ * @desc Get available stalls for assignment
+ * @access Protected
+ */
+router.get('/available-stalls', StallholderController.getAvailableStalls);
+
+/**
  * @route GET /api/stallholders-management/:id
  * @desc Get stallholder by ID
  * @access Protected
@@ -72,13 +86,6 @@ router.delete('/:id', viewOnlyForOwners, StallholderController.deleteStallholder
 router.post('/import', viewOnlyForOwners, StallholderController.importFromExcel);
 
 /**
- * @route GET /api/stallholders-management/template
- * @desc Download Excel template
- * @access Protected
- */
-router.get('/template', StallholderController.downloadExcelTemplate);
-
-/**
  * @route POST /api/stallholders-management/preview
  * @desc Preview Excel data before import
  * @access Protected (Admin, Manager)
@@ -91,13 +98,6 @@ router.post('/preview', viewOnlyForOwners, StallholderController.previewExcelDat
  * @access Protected (Admin, Manager)
  */
 router.post('/import-data', viewOnlyForOwners, StallholderController.importExcelData);
-
-/**
- * @route GET /api/stallholders-management/available-stalls
- * @desc Get available stalls for assignment
- * @access Protected
- */
-router.get('/available-stalls', StallholderController.getAvailableStalls);
 
 // ============================================================
 // DOCUMENT REQUIREMENT ROUTES
