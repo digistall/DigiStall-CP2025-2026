@@ -925,7 +925,7 @@
   scrollbar-color: #002181 #f1f1f1 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  max-height: 416px !important; /* exactly 7 rows of data visible (52px * 7 + 52px header) */
+  max-height: var(--payments-table-max-height, 416px) !important;
 }
 
 .onsite-payments .table-wrapper::-webkit-scrollbar {
