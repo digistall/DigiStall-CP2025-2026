@@ -32,7 +32,9 @@ export const logAppAccessScreen = async (req, res) => {
     const screenLabels = {
       dashboard: 'Dashboard',
       notifications: 'Notifications',
-      reports: 'Reports'
+      reports: 'Reports',
+      payment: 'Payments',
+      payments: 'Payments'
     };
 
     const screenLabel = screenLabels[screen.toLowerCase()] || screen;

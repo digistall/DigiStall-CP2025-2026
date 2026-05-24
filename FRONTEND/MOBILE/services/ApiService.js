@@ -2504,6 +2504,52 @@ class ApiService {
       };
     }
   }
+
+  /**
+   * Log stallholder app screen access (Dashboard, Payments, etc.)
+   * @param {string} screen - Screen identifier
+   */
+  static async logStallholderAppAccess(screen) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+      
+      if (!token) {
+        console.log('⚠️ App access log skipped: no auth token found');
+        return { success: false, message: 'Authentication token not found' };
+      }
+      
+      const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.APP_ACCESS_LOG}`;
+      console.log('📝 Logging app access:', screen);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...API_CONFIG.HEADERS,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ screen })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to log app access');
+      }
+      
+      return {
+        success: true,
+        data: data.data,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ App access log error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred'
+      };
+    }
+  }
   // ===== FACE VERIFICATION METHODS =====
 
   // Check if stallholder has a verified face

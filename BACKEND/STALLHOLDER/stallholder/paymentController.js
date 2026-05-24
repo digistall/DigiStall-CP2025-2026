@@ -1,5 +1,6 @@
 import { createConnection } from '../../../config/database.js';
 import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get payment records for a stallholder
@@ -817,4 +818,3 @@ function getDueDate(date) {
     year: 'numeric' 
   });
 }
-
