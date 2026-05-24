@@ -438,6 +438,7 @@
   scrollbar-color: #002181 #f1f1f1 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  max-height: 420px !important; /* exactly 7 data rows (60px * 7) */
 }
 
 .daily-payments .scrollable-table-wrapper::-webkit-scrollbar {
