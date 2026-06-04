@@ -376,7 +376,6 @@ export async function deleteStallImageByFilename(req, res) {
       branchId = stalls[0].branch_id
     }
     
-    console.log(`🗑️ Deleting image: ${filename} for stall ${stallNumber} (branch ${branchId})`)
     
     // Delete the file from htdocs
     const deleted = deleteImageFile(branchId, stallNumber, filename)

@@ -27,8 +27,15 @@
           class="stallholder-item"
         >
           <template #prepend>
-            <v-avatar size="40" color="primary">
-              {{ (item.raw?.stallholderData?.name || 'U').charAt(0).toUpperCase() }}
+            <img 
+              v-if="item.raw?.stallholderData?.id"
+              :src="getAvatarUrl(item.raw.stallholderData.id) + '?t=' + avatarBuster"
+              @error="handleAvatarError"
+              style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;"
+              alt="Avatar"
+            />
+            <v-avatar v-else size="40" color="primary">
+              {{ getInitials(item.raw?.stallholderData?.name || 'U') }}
             </v-avatar>
           </template>
           
@@ -55,7 +62,7 @@
                 :color="getPaymentStatusColor(item.raw?.stallholderData?.paymentStatus)"
                 variant="flat"
               >
-                {{ item.raw?.stallholderData?.paymentStatus || 'current' }}
+                {{ formatStatusLabel(item.raw?.stallholderData?.paymentStatus) }}
               </v-chip>
             </div>
             <!-- Violation Warning -->
@@ -69,8 +76,15 @@
 
       <template #selection="{ item }">
         <div class="selected-stallholder">
-          <v-avatar size="24" color="primary" class="mr-2">
-            {{ (item.raw?.stallholderData?.name || 'U').charAt(0).toUpperCase() }}
+          <img 
+            v-if="item.raw?.stallholderData?.id"
+            :src="getAvatarUrl(item.raw.stallholderData.id) + '?t=' + avatarBuster"
+            @error="handleAvatarError"
+            style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 8px; border: 1px solid #e5e7eb;"
+            alt="Avatar"
+          />
+          <v-avatar v-else size="24" color="primary" class="mr-2">
+            {{ getInitials(item.raw?.stallholderData?.name || 'U') }}
           </v-avatar>
           <span>{{ item.raw?.stallholderData?.name || 'Unknown Stallholder' }}</span>
           <v-chip 
@@ -146,8 +160,14 @@
 </template>
 
 <script>
+import { useAvatar } from '@utils/avatarHelper.js'
+
 export default {
   name: 'StallholderDropdown',
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   props: {
     modelValue: {
       type: [String, Number],
@@ -174,7 +194,8 @@ export default {
       loading: false,
       searchQuery: '',
       debounceTimer: null,
-      internalErrorMessage: ''
+      internalErrorMessage: '',
+      avatarBuster: Date.now()
     }
   },
   computed: {
@@ -256,7 +277,7 @@ export default {
               monthlyRental: stallholder.monthlyRental || stallholder.rental_price || stallholder.monthly_rental,
               branchName: stallholder.branchName || stallholder.branch_name,
               contractStatus: stallholder.contractStatus || stallholder.contract_status,
-              paymentStatus: stallholder.totalPayments > 0 ? 'paid' : 'pending',
+              paymentStatus: stallholder.payment_status || 'unpaid',
               totalPayments: stallholder.totalPayments || 0,
               lastPaymentDate: stallholder.lastPaymentDate,
               hasViolation: parseInt(stallholder.unpaid_violations_count) > 0,
@@ -325,11 +346,27 @@ export default {
 
     getPaymentStatusColor(status) {
       const statusColors = {
-        'current': 'success',
-        'overdue': 'error',
-        'grace_period': 'warning'
+        'paid': '#10b981',
+        'discount': '#1e88e5',
+        'partial': '#3b82f6',
+        'overdue': '#ef4444',
+        'due_soon': '#f59e0b',
+        'pending': '#9ca3af'
       }
-      return statusColors[status] || 'grey'
+      return statusColors[status?.toLowerCase()] || '#9ca3af'
+    },
+
+    formatStatusLabel(status) {
+      if (!status) return 'Pending';
+      const labels = {
+        'paid': 'Paid',
+        'discount': 'Discount',
+        'partial': 'Partial',
+        'overdue': 'Overdue',
+        'due_soon': 'Due Soon',
+        'pending': 'Pending'
+      };
+      return labels[status.toLowerCase()] || status.charAt(0).toUpperCase() + status.slice(1);
     },
 
     loadFallbackStallholders() {

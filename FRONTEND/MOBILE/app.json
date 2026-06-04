@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/DigiStall-Icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "plugins": [
       "expo-image-picker",
       "expo-document-picker",

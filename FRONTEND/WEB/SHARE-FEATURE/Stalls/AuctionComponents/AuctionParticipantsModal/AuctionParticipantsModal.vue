@@ -222,7 +222,65 @@
       </div>
 
 
-    </v-card>
+      </v-card>
+
+    <!-- Update Stall Price Modal -->
+    <v-dialog v-model="showUpdatePriceModal" max-width="520px">
+      <v-card class="update-price-card">
+        <div class="update-price-header">
+          <div class="update-price-title">
+            <v-icon size="22" color="white">mdi-cash-check</v-icon>
+            <span>Update Stall Price</span>
+          </div>
+          <v-btn icon size="small" color="white" variant="text" @click="closeUpdatePriceModal">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+        <v-card-text class="update-price-body">
+          <div class="update-price-subtitle">
+            Confirm the winning bid for
+            <strong>{{ selectedWinner?.personalInfo?.fullName || 'Selected Participant' }}</strong>.
+          </div>
+          <v-text-field
+            label="Previous Stall Price"
+            :model-value="formatPrice(previousStallPrice)"
+            prefix="₱"
+            variant="outlined"
+            density="comfortable"
+            readonly
+          />
+          <v-text-field
+            v-model="winningBidAmount"
+            label="New Stall Price (Winning Bid Amount)"
+            prefix="₱"
+            type="number"
+            min="0"
+            step="0.01"
+            variant="outlined"
+            density="comfortable"
+            :error-messages="winningBidError"
+            @input="clearWinningBidError"
+          />
+          <v-textarea
+            v-model="winningBidRemarks"
+            label="Notes / Remarks (Optional)"
+            variant="outlined"
+            density="comfortable"
+            rows="3"
+          />
+        </v-card-text>
+        <v-card-actions class="update-price-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" color="grey" @click="closeUpdatePriceModal">
+            Cancel
+          </v-btn>
+          <v-btn color="success" variant="elevated" @click="confirmWinnerSelection" :loading="finalizingWinner">
+            <v-icon start size="small">mdi-check-circle</v-icon>
+            Confirm
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Participant Detail Modal -->
     <ParticipantDetailModal

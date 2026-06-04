@@ -24,7 +24,14 @@
         >
           <div class="table-cell name-col">
             <div class="stallholder-name-wrapper">
-              <div class="stallholder-avatar">
+              <img 
+                v-if="stallholder.stallholder_id"
+                :src="getAvatarUrl(stallholder.stallholder_id) + '?t=' + avatarBuster"
+                @error="handleAvatarError"
+                class="avatar-img"
+                alt="Avatar"
+              />
+              <div class="stallholder-avatar avatar-initials" :style="{ display: stallholder.stallholder_id ? 'none' : 'flex' }">
                 {{ getInitials(stallholder.stallholder_name) }}
               </div>
               <span class="stallholder-name-text">{{ stallholder.stallholder_name }}</span>
@@ -916,8 +923,15 @@
     <v-dialog v-model="showDocRejectDialog" max-width="500">
       <v-card>
         <v-card-title class="bg-error text-white">
-          <v-icon class="mr-2">mdi-file-document-remove</v-icon>
-          Reject Document
+          <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2">mdi-file-document-remove</v-icon>
+              <span>Reject Document</span>
+            </div>
+            <v-btn icon variant="text" @click="showDocRejectDialog = false" size="small" color="white">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
         <v-card-text class="pa-4">
           <p class="mb-4">
@@ -936,7 +950,6 @@
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showDocRejectDialog = false">Cancel</v-btn>
           <v-btn
             color="error"
             variant="flat"

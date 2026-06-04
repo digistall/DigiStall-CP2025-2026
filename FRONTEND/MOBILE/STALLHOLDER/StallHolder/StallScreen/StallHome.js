@@ -12,6 +12,7 @@ import ApiService from "../../../services/ApiService";
 import UserStorageService from "../../../services/UserStorageService";
 import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
 
+
 // nav bar and sidebar components
 import Header from "./StallComponents/header";
 import Navbar from "./StallComponents/navbar";
@@ -32,15 +33,27 @@ import JoinedStallsScreen from "./JoinedStalls/JoinedStallsScreen";
 
 const { width, height } = Dimensions.get("window");
 
-const StallHome = ({ navigation }) => {
+const StallHome = ({ route, navigation }) => {
   // Get theme from context
   const { theme, isDarkMode } = useTheme();
-  
+
+  const forceValidIdUpload = route?.params?.forceValidIdUpload || route?.params?.userData?.forceValidIdUpload || false;
+
   // Single source of truth for current screen
-  const [currentScreen, setCurrentScreen] = useState("stall");
+  const [currentScreen, setCurrentScreen] = useState(
+    forceValidIdUpload ? "documents" : (route?.params?.screen || "stall")
+  );
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showProfileDirectly, setShowProfileDirectly] = useState(false);
+
+  React.useEffect(() => {
+    if (forceValidIdUpload) {
+      setCurrentScreen("documents");
+    } else if (route?.params?.screen) {
+      setCurrentScreen(route.params.screen);
+    }
+  }, [route?.params?.screen, forceValidIdUpload]);
 
   const handleLogout = async () => {
     // Prevent multiple clicks
@@ -48,28 +61,28 @@ const StallHome = ({ navigation }) => {
       console.log('⏳ Logout already in progress, ignoring...');
       return;
     }
-    
+
     // Close sidebar first
     setSidebarVisible(false);
-    
+
     // Show logout loading screen
     setIsLoggingOut(true);
-    
+
     try {
       // Get user data before clearing
       const userData = await UserStorageService.getUserData();
-      const token = userData?.token;
+      const token = await UserStorageService.getAuthToken();
       const userId = userData?.user?.applicant_id || userData?.user?.id;
-      
+
       // Call logout API to update last_logout in database
       if (token) {
         await ApiService.mobileLogout(token, userId);
         console.log('✅ Logout API called - last_logout updated');
       }
-      
+
       // Add small delay to show the animation (1.5 seconds)
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Clear local storage
       await UserStorageService.clearUserData();
     } catch (error) {
@@ -78,7 +91,7 @@ const StallHome = ({ navigation }) => {
     } finally {
       setIsLoggingOut(false);
     }
-    
+
     navigation.navigate("LoginScreen");
   };
 
@@ -179,11 +192,17 @@ const StallHome = ({ navigation }) => {
       case "reports":
         return <ComplaintScreen />;
       case "settings":
-        return <SettingsScreen initialShowProfile={showProfileDirectly} />;
+        return <SettingsScreen initialShowProfile={showProfileDirectly} navigation={navigation} />;
       case "notifications":
         return <NotificationsScreen />;
       case "documents":
-        return <DocumentsScreen />;
+        return (
+          <DocumentsScreen 
+            promptUploadId={route?.params?.promptUploadId || false} 
+            forceValidIdUpload={forceValidIdUpload}
+            navigation={navigation}
+          />
+        );
       case "payment":
         return <PaymentScreen />;
       case "owned-stalls":
@@ -204,7 +223,13 @@ const StallHome = ({ navigation }) => {
           translucent={false}
         />
 
-        <Header onMenuPress={handleMenuPress} title={getPageTitle()} theme={theme} isDarkMode={isDarkMode} />
+        <Header 
+          onMenuPress={forceValidIdUpload ? null : handleMenuPress} 
+          title={getPageTitle()} 
+          theme={theme} 
+          isDarkMode={isDarkMode} 
+          hideMenu={forceValidIdUpload}
+        />
 
         {/* Main Content */}
         {needsScrollView ? (
@@ -219,33 +244,39 @@ const StallHome = ({ navigation }) => {
           <View style={[styles.contentView, { backgroundColor: theme.colors.background }]}>{renderCurrentScreen()}</View>
         )}
 
-        {/* Bottom Navigation Component */}
-        <Navbar
-          activeTab={getActiveNavTab()}
-          onStallPress={() => handleNavigation("stall")}
-          onDocumentsPress={() => handleNavigation("documents")}
-          onPaymentPress={() => handleNavigation("payment")}
-          theme={theme}
-          isDarkMode={isDarkMode}
-        />
+        {/* Bottom Navigation Component - Hidden when locked */}
+        {!forceValidIdUpload && (
+          <Navbar
+            activeTab={getActiveNavTab()}
+            onStallPress={() => handleNavigation("stall")}
+            onDocumentsPress={() => handleNavigation("documents")}
+            onPaymentPress={() => handleNavigation("payment")}
+            theme={theme}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
-        {/* Sidebar Component */}
-        <Sidebar
-          isVisible={sidebarVisible}
-          onClose={handleSidebarClose}
-          onProfilePress={handleProfilePress}
-          onMenuItemPress={handleMenuItemPress}
-          activeMenuItem={currentScreen}
-          theme={theme}
-          isDarkMode={isDarkMode}
-        />
+        {/* Sidebar Component - Hidden when locked */}
+        {!forceValidIdUpload && (
+          <Sidebar
+            isVisible={sidebarVisible}
+            onClose={handleSidebarClose}
+            onProfilePress={handleProfilePress}
+            onMenuItemPress={handleMenuItemPress}
+            activeMenuItem={currentScreen}
+            theme={theme}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
         {/* Logout Loading Screen */}
-        <LogoutLoadingScreen 
+        <LogoutLoadingScreen
           visible={isLoggingOut}
           message="Logging out..."
           subMessage="Please wait while we securely log you out"
         />
+
+
       </SafeAreaView>
     </SafeAreaProvider>
   );

@@ -16,16 +16,17 @@ CREATE PROCEDURE sp_getStallInfoByApplicant(
 BEGIN
     DECLARE v_count INT DEFAULT 0;
     
-    -- First check if stallholder has stall linked directly
+    -- First check if stallholder has stall linked directly and is active
     SELECT COUNT(*) INTO v_count
     FROM stallholder s
     LEFT JOIN stall st ON s.stall_id = st.stall_id
     WHERE s.applicant_id = p_applicant_id
+      AND LOWER(s.status) = 'active'
       AND s.stall_id IS NOT NULL
       AND st.stall_number IS NOT NULL;
     
     IF v_count > 0 THEN
-        -- Get stall info from stallholder table directly
+        -- Get stall info from stallholder table directly (get all active stalls)
         SELECT 
             s.stallholder_id,
             s.applicant_id,
@@ -38,11 +39,11 @@ BEGIN
         FROM stallholder s
         LEFT JOIN stall st ON s.stall_id = st.stall_id
         WHERE s.applicant_id = p_applicant_id
+          AND LOWER(s.status) = 'active'
           AND s.stall_id IS NOT NULL
-          AND st.stall_number IS NOT NULL
-        LIMIT 1;
+          AND st.stall_number IS NOT NULL;
     ELSE
-        -- Fallback: check application table for approved application
+        -- Fallback: check application table for approved application, ensuring no inactive stallholder record exists
         SELECT 
             sh.stallholder_id,
             a.applicant_id,
@@ -57,6 +58,7 @@ BEGIN
         LEFT JOIN stallholder sh ON sh.applicant_id = a.applicant_id
         WHERE a.applicant_id = p_applicant_id
           AND LOWER(a.application_status) = 'approved'
+          AND (sh.status IS NULL OR LOWER(sh.status) = 'active')
         ORDER BY a.application_date DESC
         LIMIT 1;
     END IF;

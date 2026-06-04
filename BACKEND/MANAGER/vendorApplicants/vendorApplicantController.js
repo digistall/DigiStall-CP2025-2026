@@ -282,7 +282,7 @@ export const approveVendorApplicant = async (req, res) => {
     const [accountResult] = await connection.execute(
       `INSERT INTO vendor_account (
         vendor_email,
-        vendor_password
+        vendor_password_hash
       ) VALUES (?, ?)`,
       [normalizedEmail, passwordHash],
     )

@@ -31,7 +31,6 @@ export const subscribeToDashboard = async (req, res) => {
   const userId = req.user?.userId || 'anonymous';
   const connectionId = `${userId}-${Date.now()}`;
   
-  console.log(`📡 Dashboard SSE connection opened: ${connectionId}`);
 
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -194,7 +193,6 @@ export const subscribeToDashboard = async (req, res) => {
 
       // Only send update if there are changes
       if (hasChanges) {
-        console.log(`📤 Sending dashboard update to ${connectionId}`);
         res.write(`event: update\ndata: ${JSON.stringify({ 
           timestamp: new Date().toISOString(),
           updates 
@@ -220,7 +218,6 @@ export const subscribeToDashboard = async (req, res) => {
 
   // Handle connection close
   req.on('close', () => {
-    console.log(`📡 Dashboard SSE connection closed: ${connectionId}`);
     clearInterval(intervalId);
     activeConnections.delete(connectionId);
     
@@ -245,7 +242,6 @@ export const subscribeToDashboard = async (req, res) => {
  * Can be called when data changes (e.g., after a payment is made)
  */
 export const triggerDashboardUpdate = async (updateType = 'all') => {
-  console.log(`📢 Triggering dashboard update for: ${updateType}`);
   
   // For each active connection, clear the relevant hash to force an update
   for (const [connectionId, connection] of activeConnections) {

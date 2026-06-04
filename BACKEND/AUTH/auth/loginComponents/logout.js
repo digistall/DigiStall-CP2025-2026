@@ -4,7 +4,6 @@ export const logout = async (req, res) => {
     // In a stateless JWT setup, logout is typically handled client-side
     // But we can log the logout event for audit purposes
     const user = req.user;
-    console.log('🚪 User logout:', user?.username || 'Unknown');
 
     res.json({
       success: true,

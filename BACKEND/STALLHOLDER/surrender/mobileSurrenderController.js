@@ -1,5 +1,6 @@
 import { createConnection } from '../../../config/database.js';
 import { decryptApplicantData } from '../../../services/mysqlDecryptionService.js';
+import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
 
 export const checkEligibility = async (req, res) => {
   let connection;
@@ -24,13 +25,27 @@ export const checkEligibility = async (req, res) => {
        return res.status(400).json({ success: false, message: 'You do not own an active stall.' });
     }
 
-    // Check Payments (outstanding balances) by looking at stallholder payment_status
-    const [stInfo] = await connection.execute(
-      "SELECT payment_status FROM stallholder WHERE stallholder_id = ?",
+    // Check Payments (outstanding balances) using REAL-TIME calculation from payments table
+    const [shInfo] = await connection.execute(
+      "SELECT sh.move_in_date, s.rental_price as monthly_rent FROM stallholder sh JOIN stall s ON sh.stall_id = s.stall_id WHERE sh.stallholder_id = ?",
       [stallholderId]
     );
-    const paymentStatus = stInfo.length > 0 ? stInfo[0].payment_status : 'unpaid';
-    const isUnpaid = (paymentStatus !== 'paid' && paymentStatus !== 'Paid' && paymentStatus !== 'completed');
+    let isUnpaid = true; // default to unpaid (safe fallback)
+    if (shInfo.length > 0 && shInfo[0].move_in_date && shInfo[0].monthly_rent) {
+      const computedStatus = await calculateStallholderPaymentStatus(
+        connection, stallholderId, shInfo[0].move_in_date, parseFloat(shInfo[0].monthly_rent)
+      );
+      isUnpaid = (computedStatus !== 'paid' && computedStatus !== 'partial');
+      // Self-heal the stale column while we're here
+      try {
+        await connection.execute(
+          "UPDATE stallholder SET payment_status = ? WHERE stallholder_id = ?",
+          [computedStatus, parseInt(stallholderId)]
+        );
+      } catch (healErr) {
+      }
+    } else {
+    }
 
     // Check Violations (active violations)
     const [[{ active_violations }]] = await connection.execute(

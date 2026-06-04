@@ -30,9 +30,7 @@ export const getAllStalls = async (req, res) => {
       ORDER BY s.created_at DESC
     `);
 
-    console.log(`🔍 Raw stalls from database:`, stalls.length);
     if (stalls.length > 0) {
-      console.log(`🔍 First stall sample:`, stalls[0]);
     }
 
     // Format stalls to match the expected frontend response structure
@@ -67,9 +65,7 @@ export const getAllStalls = async (req, res) => {
       };
     });
 
-    console.log(`🔍 Formatted stalls count:`, formattedStalls.length);
     if (formattedStalls.length > 0) {
-      console.log(`🔍 First formatted stall:`, formattedStalls[0]);
     }
 
     res.json({

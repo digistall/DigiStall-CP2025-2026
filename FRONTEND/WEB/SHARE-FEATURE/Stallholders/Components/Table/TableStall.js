@@ -4,6 +4,7 @@ import ExcelImport from '../ExcelImport/ExcelImport.vue'
 import DocumentCustomization from '../DocumentCustomization/DocumentCustomization.vue'
 import AddStallholderChoiceModal from '../ChoicesModal/AddStallholderChoiceModal.vue'
 import '@/assets/css/scrollable-tables.css'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 export default {
   name: 'TableStall',
@@ -27,6 +28,10 @@ export default {
       default: null
     }
   },
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
   data() {
     return {
       currentPage: 1,
@@ -37,6 +42,7 @@ export default {
       showInfoDialog: false,
       selectedStallholder: null,
       activeTab: 'personal',
+      avatarBuster: Date.now(),
 
       // Violation history state
       violationHistory: [],
@@ -211,6 +217,7 @@ export default {
         this.$emit('data-ready') // Notify parent
       } finally {
         this.loading = false
+        this.avatarBuster = Date.now() // Refresh avatars after data load
         this.$emit('loading-change', false) // Notify parent
       }
     },
@@ -221,6 +228,7 @@ export default {
       this.activeTab = 'personal'
       this.violationHistory = [] // Reset violations
       this.stallholderDocuments = [] // Reset documents
+      this.avatarBuster = Date.now() // Refresh avatar
       this.fetchViolationHistory(stallholder.stallholder_id)
     },
 
@@ -533,25 +541,6 @@ export default {
       this.imageZoom = 1
     },
 
-    isPreviewableImage(doc) {
-      if (!doc) return false
-      const fileName = (doc.file_name || doc.original_filename || '').toLowerCase()
-      const fileType = (doc.file_type || '').toLowerCase()
-      return fileType.startsWith('image/') || 
-             fileName.endsWith('.jpg') || 
-             fileName.endsWith('.jpeg') || 
-             fileName.endsWith('.png') || 
-             fileName.endsWith('.gif') ||
-             fileName.endsWith('.webp')
-    },
-
-    isPreviewablePdf(doc) {
-      if (!doc) return false
-      const fileName = (doc.file_name || doc.original_filename || '').toLowerCase()
-      const fileType = (doc.file_type || '').toLowerCase()
-      return fileType === 'application/pdf' || fileName.endsWith('.pdf')
-    },
-
     async downloadDocument(doc) {
       try {
         const documentId = doc.document_id
@@ -760,3 +749,4 @@ export default {
     this.fetchStallholders()
   }
 }
+

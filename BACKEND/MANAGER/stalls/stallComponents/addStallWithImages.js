@@ -76,7 +76,6 @@ export const addStallWithImages = async (req, res) => {
       if (areaSqm_final > 0) {
         calculatedRatePerSqm = Math.round((calculatedRentalPrice / areaSqm_final) * 100) / 100;
       }
-      console.log(`📊 RENTAL RATE 2010: ${baseRate_final} | Monthly Rent (×2): ${calculatedRentalPrice} | Rate/sqm: ${calculatedRatePerSqm}`);
     } else {
       calculatedRentalPrice = parseFloat(rental_price || price || 0);
     }
@@ -155,22 +154,7 @@ export const addStallWithImages = async (req, res) => {
       });
     }
 
-    console.log('🔍 Creating stall with params:', {
-      stallNo_final,
-      location_final,
-      size,
-      areaSqm_final,
-      floor_id_final,
-      section_id_final,
-      finalPrice,
-      baseRate_final,
-      calculatedRatePerSqm,
-      priceType_final,
-      status: isAvailable !== false ? "Available" : "Maintenance",
-      userId,
-      userType,
-      branchId
-    });
+
 
     // 1. Create stall record using direct SQL
     const [insertResult] = await connection.execute(
@@ -233,7 +217,6 @@ export const addStallWithImages = async (req, res) => {
 
     const stallId = insertResult.insertId;
 
-    console.log('📊 Stall created with ID:', stallId);
 
     // 2. Handle image uploads if files exist OR if base64 images are provided
     const uploadedImages = [];
@@ -243,7 +226,6 @@ export const addStallWithImages = async (req, res) => {
     
     if (base64Images && Array.isArray(base64Images) && base64Images.length > 0) {
       // BLOB Storage: Store images as binary data in database
-      console.log(`📸 Processing ${base64Images.length} base64 images for BLOB storage...`);
       
       for (let i = 0; i < base64Images.length && i < 10; i++) {
         const imgData = base64Images[i];

@@ -36,7 +36,6 @@ export const getLandingPageStats = async (req, res) => {
     const totalStallholders = stats.total_stallholders || 0;
     const totalBranches = stats.total_branches || 0;
 
-    console.log('📊 Landing page stats fetched:', { totalStalls, availableStalls, totalStallholders, totalBranches });
 
     res.status(200).json({
       success: true,

@@ -30,7 +30,6 @@ export const getAllComplaints = async (req, res) => {
     const { status, search } = req.query;
     const userType = req.user?.userType;
 
-    console.log('📋 Fetching complaints with filters:', { status, search, userType });
 
     connection = await createConnection();
 
@@ -45,7 +44,6 @@ export const getAllComplaints = async (req, res) => {
 
     if (branchFilter === null) {
       // System administrator - see all complaints
-      console.log('🔍 getAllComplaints - System admin viewing all branches');
       const [records] = await connection.execute(
         'CALL getAllComplaintsDecrypted(?, ?, ?)',
         [null, statusParam, searchParam]
@@ -53,11 +51,9 @@ export const getAllComplaints = async (req, res) => {
       complaints = records[0];
     } else if (branchFilter.length === 0) {
       // Business owner with no accessible branches
-      console.log('⚠️ getAllComplaints - Business owner has no accessible branches');
       complaints = [];
     } else if (branchFilter.length === 1) {
       // Single branch (business manager or owner with one branch)
-      console.log(`🔍 getAllComplaints - Fetching for branch: ${branchFilter[0]}`);
       const [records] = await connection.execute(
         'CALL getAllComplaintsDecrypted(?, ?, ?)',
         [branchFilter[0], statusParam, searchParam]
@@ -65,7 +61,6 @@ export const getAllComplaints = async (req, res) => {
       complaints = records[0];
     } else {
       // Multiple branches (business owner with multiple branches)
-      console.log(`🔍 getAllComplaints - Fetching for branches: ${branchFilter.join(', ')}`);
       // Query each branch and combine results
       const allRecords = [];
       for (const branchId of branchFilter) {
@@ -121,7 +116,6 @@ export const getComplaintById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log(`📄 Fetching complaint ID: ${id}`);
 
     connection = await createConnection();
 
@@ -184,7 +178,6 @@ export const createComplaint = async (req, res) => {
     const userType = req.user?.userType;
     const userBranchId = req.user?.branchId;
 
-    console.log('📝 Creating new complaint:', req.body);
 
     // Validation
     if (!complaint_type || !sender_name || !subject || !description) {
@@ -263,7 +256,6 @@ export const updateComplaint = async (req, res) => {
     const { id } = req.params;
     const { complaint_type, subject, description, priority, status } = req.body;
 
-    console.log(`📝 Updating complaint ID: ${id}`, req.body);
 
     // Validation
     if (!complaint_type && !subject && !description && !priority && !status) {
@@ -432,7 +424,6 @@ export const deleteComplaint = async (req, res) => {
     const { id } = req.params;
     const userType = req.user?.userType;
 
-    console.log(`🗑️ Deleting complaint ID: ${id}`);
 
     // Only system admins, business owners, and business managers can delete
     if (userType !== 'system_administrator' && userType !== 'stall_business_owner' && userType !== 'business_manager') {

@@ -90,8 +90,6 @@ export const handleLogin = async (
         setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
       }
 
-      setIsLoading(false);
-
       // Navigate based on staff type
       const staffType = staffResponse.staffType || staffResponse.user?.staffType;
       const staffName = getSafeStaffName({ staff: staffResponse.user }, 'Staff');
@@ -148,8 +146,6 @@ export const handleLogin = async (
         setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
       }
 
-      setIsLoading(false);
-
       const vendorName = vendorResponse.data?.vendor?.full_name || 'Vendor';
 
       if (navigation) {
@@ -200,12 +196,7 @@ export const handleLogin = async (
         console.log('⚠️ WARNING: No token received from backend! Token is:', response.token);
       }
       
-      if (setLoadingState) {
-        setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
-      }
-
-      // Stop the initial loading
-      setIsLoading(false);
+      // Delay setting progress=100 and setIsLoading(false) until after face verification
 
       // Get user info for loading screen using safe utilities
       const userName = getSafeUserName(userData.user, 'User');
@@ -214,13 +205,70 @@ export const handleLogin = async (
 
       // Navigate to loading screen instead of directly to StallHome
       if (navigation) {
+        let finalNextScreen = 'StallHome';
+        let additionalParams = {};
+        
+        // Face Verification Check for Stallholders
+        try {
+          if (setLoadingState) {
+            setLoadingState({ step: 3, message: 'Checking security requirements...', progress: 80 });
+          }
+          
+          const actualStallholderId = userData.stallholder?.stallholder_id;
+          
+          if (actualStallholderId) {
+            console.log('🔍 Checking face verification for ID:', actualStallholderId);
+            const faceResult = await ApiService.checkFaceVerification(actualStallholderId);
+            if (faceResult && !faceResult.hasVerifiedFace) {
+              console.log('🚨 No verified face found. Redirecting to scanner.');
+              finalNextScreen = 'FaceScannerScreen';
+            } else {
+              // Face is verified, check if they have uploaded a Valid ID
+              const applicantId = userData.user?.applicant_id || userData.user?.id;
+              if (applicantId) {
+                const docsResult = await ApiService.getStallholderStallsWithDocuments(applicantId);
+                
+                // Check profile valid_id field as primary verification
+                const otherInfo = userData.other_info || userData.profile?.other_info || {};
+                let hasUploadedValidId = otherInfo.valid_id != null && otherInfo.valid_id !== '';
+                
+                // Or check if they have uploaded it as a branch document
+                if (!hasUploadedValidId && docsResult.success && docsResult.data) {
+                  hasUploadedValidId = docsResult.data.grouped_by_branch.some(branch => 
+                    branch.document_requirements.some(doc => 
+                      doc.document_type_id === 3 && doc.status !== 'not_uploaded'
+                    )
+                  );
+                }
+                
+                if (!hasUploadedValidId) {
+                  console.log('🚨 No valid ID uploaded yet on login. Redirecting to IdScannerScreen.');
+                  finalNextScreen = 'IdScannerScreen';
+                  additionalParams = {};
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('❌ Error checking face verification during login:', err);
+        }
+        
+        if (setLoadingState) {
+          setLoadingState({ step: 4, message: 'Almost ready...', progress: 100 });
+        }
+        
         navigation.navigate('LoadingScreen', {
           userName,
           isStallholder,
           stallNo,
-          nextScreen: 'StallHome',
-          loadingDuration: 3000
+          stallholderId: userData.stallholder?.stallholder_id,
+          applicantId: userData.user?.applicant_id || userData.user?.id,
+          nextScreen: finalNextScreen,
+          loadingDuration: 3000,
+          ...additionalParams
         });
+      } else {
+        setIsLoading(false);
       }
 
     } else {
@@ -235,6 +283,13 @@ export const handleLogin = async (
           title: 'Account Disabled',
           message: response.message || 'Your account has been temporarily disabled due to an overdue payment. Please settle your rental payment at the market office to regain access.',
           type: 'error'
+        });
+      } else if (response.warning) {
+        setErrorModal({
+          visible: true,
+          title: 'Warning',
+          message: response.message,
+          type: 'warning'
         });
       } else {
         // Generic login failure
@@ -359,8 +414,6 @@ export const handleStaffLogin = async (
         console.log('🔐 Staff auth token saved');
       }
 
-      setIsLoading(false);
-
       // Navigate based on staff type using safe utilities
       const staffType = response.staffType || response.user?.staffType;
       const staffName = getSafeStaffName({ staff: response.user }, 'Staff');
@@ -401,12 +454,21 @@ export const handleStaffLogin = async (
       console.log('❌ Staff login failed:', response.message);
       setIsLoading(false);
 
-      setErrorModal({
-        visible: true,
-        title: 'Authentication Failed',
-        message: response.message || 'Invalid staff credentials. Please check your username and password.',
-        type: 'error'
-      });
+      if (response.warning) {
+        setErrorModal({
+          visible: true,
+          title: 'Warning',
+          message: response.message,
+          type: 'warning'
+        });
+      } else {
+        setErrorModal({
+          visible: true,
+          title: 'Authentication Failed',
+          message: response.message || 'Invalid staff credentials. Please check your username and password.',
+          type: 'error'
+        });
+      }
     }
   } catch (error) {
     console.error('❌ Staff login error:', error);

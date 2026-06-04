@@ -70,7 +70,6 @@ export const addStall = async (req, res) => {
       if (areaSqm_final > 0) {
         calculatedRatePerSqm = Math.round((calculatedRentalPrice / areaSqm_final) * 100) / 100;
       }
-      console.log(`📊 RENTAL RATE 2010: ${baseRate_final} | Monthly Rent (×2): ${calculatedRentalPrice} | Rate/sqm: ${calculatedRatePerSqm}`);
     } else {
       calculatedRentalPrice = parseFloat(rental_price || price || 0);
     }
@@ -268,7 +267,6 @@ export const addStall = async (req, res) => {
     if (connection) {
       try {
         await connection.rollback();
-        console.log("🔄 Transaction rolled back due to error");
       } catch (rollbackError) {
         console.error("❌ Rollback error:", rollbackError);
       }

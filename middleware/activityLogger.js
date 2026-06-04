@@ -224,7 +224,7 @@ export const activityLogger = async (req, res, next) => {
         const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown';
         
         await connection.execute(`
-          CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           staffType,
           staffId,
@@ -237,7 +237,9 @@ export const activityLogger = async (req, res, next) => {
           req.get('User-Agent')?.substring(0, 255) || null,
           req.method,
           path.substring(0, 255),
-          status
+          status,
+          null, // stallholder_user_type (web employee logs — not applicable)
+          null  // stallholder_type (web employee logs — not applicable)
         ]);
         
         // Only log significant actions to console
@@ -283,7 +285,7 @@ export const logActivity = async ({
     connection = await createConnection();
     
     await connection.execute(`
-      CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       staffType,
       staffId,
@@ -296,7 +298,9 @@ export const logActivity = async ({
       null, // userAgent
       null, // method
       null, // path
-      status
+      status,
+      null, // stallholder_user_type
+      null  // stallholder_type
     ]);
     
     return true;

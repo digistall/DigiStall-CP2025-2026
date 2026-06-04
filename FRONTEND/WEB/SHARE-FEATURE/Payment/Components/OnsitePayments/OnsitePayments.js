@@ -1,5 +1,7 @@
 import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
 import ToastNotification from '@common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@common/LoadingOverlay/LoadingOverlay.vue'
+import { useAvatar } from '@utils/avatarHelper.js'
 
 // Discount and fee constants
 const ADVANCE_DISCOUNT = 0.25     // 25% off when paid 5+ days early
@@ -9,7 +11,12 @@ const ADVANCE_DAYS    = 5        // days before due to qualify for discount
 export default {
   name: 'OnsitePayments',
   emits: ['payment-added', 'delete-payment', 'count-updated', 'loading'],
-  components: { StallholderDropdown, ToastNotification },
+  components: { StallholderDropdown, ToastNotification, LoadingOverlay },
+
+  setup() {
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
+    return { getAvatarUrl, handleAvatarError, getInitials };
+  },
 
   data() {
     return {
@@ -40,6 +47,18 @@ export default {
       showEntryDetail: false,
       selectedEntry: null,
 
+      // Stallholder details modal
+      showStallholderModal: false,
+      loadingStallholderDetails: false,
+      stallholderDetails: null,
+      avatarBuster: Date.now(),
+      // Zoom Lightbox states
+      showZoomModal: false,
+      zoomScale: 1.0,
+      panX: 0,
+      panY: 0,
+      isDragging: false,
+
       // Add payment modal
       showAddModal: false,
       formValid: false,
@@ -53,17 +72,20 @@ export default {
         amount: '',
         paymentDate: new Date().toISOString().split('T')[0],
         paymentTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
-        paymentForMonth: new Date().toISOString().substring(0, 7),
+        paymentForMonth: [new Date().toISOString().substring(0, 7)],
         paymentType: 'rental',
         collectedBy: '',
         receiptNo: '',
         notes: '',
-        selectedViolation: null
+        selectedViolation: null,
+        promiseToPayDate: ''
       },
 
       stallholders: [],
       unpaidViolations: [],
-      loadingViolations: false
+      loadingViolations: false,
+      unpaidMonthsOptions: [],
+      loadingUnpaidMonths: false
     }
   },
 
@@ -141,6 +163,22 @@ export default {
       return this.form.paymentType === 'penalty'
     },
 
+    isPartialPayment() {
+      if (this.form.paymentType === 'partial_payment') return true
+      if (this.form.paymentType === 'rental' && this.form.amount) {
+        let sumAmount = 0
+        const months = Array.isArray(this.form.paymentForMonth) ? this.form.paymentForMonth : [this.form.paymentForMonth]
+        for (const m of months) {
+          const opt = this.unpaidMonthsOptions.find(o => o.value === m)
+          if (opt) {
+            sumAmount += opt.amount
+          }
+        }
+        return sumAmount > 0 && parseFloat(this.form.amount) < sumAmount * 0.99
+      }
+      return false
+    },
+
     violationItems() {
       return this.unpaidViolations.map(v => ({
         title: `${v.violationType} - \u20B1${v.penaltyAmount.toLocaleString()} (${v.severity}) - ${this.formatDate(v.dateReported)}`,
@@ -163,7 +201,51 @@ export default {
           this.unpaidViolations = []
           this.form.selectedViolation = null
         }
+        
+        // Auto-calculate 30% if partial_payment
+        if (newType === 'partial_payment' && Array.isArray(this.form.paymentForMonth) && this.form.paymentForMonth.length > 0) {
+          let sum = 0;
+          for (const m of this.form.paymentForMonth) {
+            const selectedMonth = this.unpaidMonthsOptions.find(opt => opt.value === m);
+            if (selectedMonth && selectedMonth.monthlyRental) {
+              sum += selectedMonth.monthlyRental;
+            }
+          }
+          if (sum > 0) {
+            this.form.amount = (sum * 0.3).toFixed(2);
+          } else if (this.stallholderDetails && this.stallholderDetails.monthly_rent) {
+            this.form.amount = (this.stallholderDetails.monthly_rent * 0.3).toFixed(2);
+          } else if (this.stallList) {
+            const stall = this.stallList.find(s => s.id === this.form.stallholderId);
+            if (stall && stall.monthlyRental) {
+              this.form.amount = (stall.monthlyRental * 0.3).toFixed(2);
+            }
+          }
+        }
       }
+    },
+    'form.paymentForMonth': {
+      handler(newMonths) {
+        if (Array.isArray(newMonths) && newMonths.length > 0) {
+          let sumAmount = 0;
+          let sumRental = 0;
+          for (const m of newMonths) {
+            const opt = this.unpaidMonthsOptions.find(o => o.value === m);
+            if (opt) {
+               sumAmount += opt.amount;
+               sumRental += opt.monthlyRental || opt.amount;
+            }
+          }
+          if (sumAmount > 0) {
+            if (this.form.paymentType === 'partial_payment') {
+              this.form.amount = (sumRental * 0.3).toFixed(2);
+            } else {
+              this.form.amount = sumAmount.toFixed(2);
+            }
+          }
+        }
+      },
+      deep: true
     },
     'form.selectedViolation': {
       handler(newViolation) {
@@ -220,15 +302,13 @@ export default {
             monthlyRental: parseFloat(s.monthlyRental || s.rental_price || 0),
             moveInDate: s.contract_start_date || s.move_in_date || null,
             paymentStatus: s.payment_status || 'unpaid',
-            unpaidViolations: parseInt(s.unpaid_violations_count) || 0,
-            // Check if current month has been paid (from backend subquery)
-            _currentMonthPaid: parseFloat(s.current_month_paid_amount || 0) > 0
+            unpaidViolations: parseInt(s.unpaid_violations_count) || 0
           }))
         } else {
           this.showToast('Failed to load stall list', 'error')
         }
       } catch (e) {
-        console.error('âŒ fetchStallList error:', e)
+        console.error('❌ fetchStallList error:', e)
         this.showToast('Error loading stall list', 'error')
       } finally {
         this.loading = false
@@ -236,57 +316,29 @@ export default {
       }
     },
 
+
+
     // =========================================================
     // STATUS CONFIG (for main table Status column)
     // =========================================================
-    // Checks actual payment records for current month to determine paid status
-    // 3-tier: Paid | Discount (5+ days early) | Due Soon (within 5 days) | Overdue (past due)
+    // Uses backend-computed real-time payment status based on actual payment records
     getStatusConfig(stall) {
-      const now = new Date()
-      const moveIn = stall.moveInDate ? new Date(stall.moveInDate) : null
-      if (!moveIn) return { label: 'Pending', color: '#9ca3af' }
+      const status = (stall.paymentStatus || '').toLowerCase()
 
-      const dueDay = moveIn.getDate()
-
-      // Current month due date
-      const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay)
-      if (dueDate.getMonth() !== now.getMonth()) {
-        dueDate.setDate(0)
-      }
-
-      // Check if paid: use DB payment_status OR check if tracker shows payment for current month
-      const isPaid = (stall.paymentStatus || '').toLowerCase() === 'paid' || stall._currentMonthPaid
-      if (isPaid) {
-        return { label: 'Paid', color: '#10b981' }
-      }
-
-      // Check if this is the move-in month (first month)
-      const isFirstMonth = moveIn.getFullYear() === now.getFullYear() && moveIn.getMonth() === now.getMonth()
-
-      if (isFirstMonth) {
-        // First month: 5-day window from move-in = Discount, after that = Overdue
-        const graceDate = new Date(moveIn)
-        graceDate.setDate(graceDate.getDate() + ADVANCE_DAYS)
-        graceDate.setHours(23, 59, 59, 999)
-
-        if (now > graceDate) {
+      switch (status) {
+        case 'paid':
+          return { label: 'Paid', color: '#10b981' }
+        case 'partial':
+          return { label: 'Partial', color: '#3b82f6' }
+        case 'overdue':
           return { label: 'Overdue', color: '#ef4444' }
-        }
-        return { label: 'Discount', color: '#1e88e5' }
+        case 'discount':
+          return { label: 'Discount', color: '#1e88e5' }
+        case 'due_soon':
+          return { label: 'Due Soon', color: '#f59e0b' }
+        default:
+          return { label: 'Pending', color: '#9ca3af' }
       }
-
-      // Subsequent months
-      if (now > dueDate) {
-        return { label: 'Overdue', color: '#ef4444' }
-      }
-
-      const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24))
-      if (daysUntilDue >= ADVANCE_DAYS) {
-        return { label: 'Discount', color: '#1e88e5' }
-      }
-
-      // Within 5 days of due date = Normal price period
-      return { label: 'Due Soon', color: '#f59e0b' }
     },
 
     // =========================================================
@@ -364,16 +416,18 @@ export default {
             payments || []
           )
         } else {
-          console.error('âŒ Tracker fetch failed:', response.status)
+          console.error('❌ Tracker fetch failed:', response.status)
           this.showToast('Failed to load payment tracker', 'error')
         }
       } catch (e) {
-        console.error('âŒ fetchPaymentTracker error:', e)
+        console.error('❌ fetchPaymentTracker error:', e)
         this.showToast('Error loading tracker', 'error')
       } finally {
         this.trackerLoading = false
       }
     },
+
+
 
     /**
      * Build the monthly payment timeline from moveInDate to today.
@@ -409,81 +463,108 @@ export default {
           dueDate = new Date(year, month + 1, 0) // last day of intended month
         }
 
-        // Find actual payment for this month
-        const monthPayment = payments.find(p => {
+        // Find ALL valid payments for this month
+        const monthPayments = payments.filter(p => {
+          const pStatus = (p.paymentStatus || p.status || '').toLowerCase()
+          const isValidStatus = ['completed', 'paid', 'partial'].includes(pStatus)
           if (p.paymentForMonth) {
             const [pY, pM] = p.paymentForMonth.split('-').map(Number)
-            return pY === year && pM === month + 1
+            return pY === year && pM === month + 1 && isValidStatus
           }
           const pd = new Date(p.paymentDate)
-          return pd.getFullYear() === year && pd.getMonth() === month
+          return pd.getFullYear() === year && pd.getMonth() === month && isValidStatus
         })
+
+        const totalPaidForMonth = monthPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
         let status, amount
 
         // Check if this is the move-in month (first month)
         const isFirstMonth = moveIn.getFullYear() === year && moveIn.getMonth() === month
 
-        if (monthPayment) {
-          const payDate = new Date(monthPayment.paymentDate)
-          const daysEarly = Math.floor((dueDate - payDate) / (1000 * 60 * 60 * 24))
-          if (daysEarly >= ADVANCE_DAYS) {
-            status = 'Advance'
-            amount = parseFloat(monthPayment.amount)
-          } else {
-            status = 'Paid'
-            amount = parseFloat(monthPayment.amount)
-          }
-        } else if (isFirstMonth) {
-          // First month: within 5 days of move-in = Discount, after = Overdue
-          const graceDate = new Date(moveIn)
-          graceDate.setDate(graceDate.getDate() + ADVANCE_DAYS)
-          graceDate.setHours(23, 59, 59, 999)
+        // Calculate expected amount
+        let expectedAmount = rental;
+        const graceDate = new Date(moveIn)
+        graceDate.setDate(graceDate.getDate() + ADVANCE_DAYS)
+        graceDate.setHours(23, 59, 59, 999)
 
-          if (now > graceDate) {
-            status = 'Overdue'
-            amount = rental * (1 + LATE_FEE_RATE)
-          } else {
-            status = 'Advance'
-            amount = rental * (1 - ADVANCE_DISCOUNT)
-          }
+        if (isFirstMonth) {
+          expectedAmount = rental * (1 - ADVANCE_DISCOUNT)
         } else if (now > dueDate) {
-          // Past due date = Overdue (+10%)
-          status = 'Overdue'
-          amount = rental * (1 + LATE_FEE_RATE)
+          expectedAmount = rental * (1 + LATE_FEE_RATE)
         } else {
-          // Before due date
           const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24))
           if (daysUntilDue >= ADVANCE_DAYS) {
-            // 5+ days before due = Discount period
-            status = 'Pending'
-            amount = rental * (1 - ADVANCE_DISCOUNT)
+            expectedAmount = rental * (1 - ADVANCE_DISCOUNT)
           } else {
-            // Within 5 days of due = Normal price (partial payments allowed)
-            status = 'Normal'
-            amount = rental
+            expectedAmount = rental
           }
+        }
+
+        const hasCompletedPayment = monthPayments.some(p => {
+          const pStatus = (p.paymentStatus || p.status || '').toLowerCase();
+          return pStatus === 'completed' || pStatus === 'paid' || pStatus === 'discount';
+        });
+
+        const isFullyPaid = totalPaidForMonth >= rental * 0.99 || totalPaidForMonth >= expectedAmount * 0.99 || hasCompletedPayment;
+        
+        if (isFullyPaid) {
+           const firstPayment = monthPayments[0];
+           const payDate = firstPayment ? new Date(firstPayment.paymentDate) : now;
+           const daysEarly = Math.floor((dueDate - payDate) / (1000 * 60 * 60 * 24))
+           const daysSinceMoveIn = Math.floor((payDate - moveIn) / (1000 * 60 * 60 * 24));
+           const gotFirstMonthDiscount = isFirstMonth && daysSinceMoveIn <= ADVANCE_DAYS;
+
+           if (daysEarly >= ADVANCE_DAYS || gotFirstMonthDiscount) {
+             status = 'Advance'
+           } else {
+             status = 'Paid'
+           }
+           amount = totalPaidForMonth
+        } else if (totalPaidForMonth > 0) {
+           status = 'Partial'
+           amount = Math.max(0, rental - totalPaidForMonth)
+        } else {
+           amount = expectedAmount
+           if (isFirstMonth) {
+             status = now > graceDate ? 'Overdue' : 'Advance'
+           } else if (now > dueDate) {
+             status = 'Overdue'
+           } else {
+             const daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24))
+             status = daysUntilDue >= ADVANCE_DAYS ? 'Pending' : 'Normal'
+           }
+        }
+
+        const lastPayment = monthPayments.length > 0 ? monthPayments[monthPayments.length - 1] : null
+
+        let dueDateFormatted = `${new Date(year, month).toLocaleString('en-US', {month: 'long'})} 5, ${year}`;
+
+        let promiseDateStr = null;
+        if (lastPayment?.promiseDate) {
+          const d = new Date(lastPayment.promiseDate);
+          promiseDateStr = `${d.toLocaleString('en-US', {month: 'long'})} ${d.getDate()}, ${d.getFullYear()}`;
         }
 
         tracker.push({
           year,
           month,
+          monthName: new Date(year, month).toLocaleString('default', { month: 'long' }) + ' ' + year,
           dueDate,
-          dueDateFormatted: dueDate.toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric'
-          }),
+          dueDateFormatted,
           amount,
           status,
-          receiptNo: monthPayment?.receiptNo || null,
-          paymentId: monthPayment?.id || null,
-          paymentDate: monthPayment?.paymentDate || null,
-          paymentTime: monthPayment?.paymentTime || null,
-          paymentForMonth: monthPayment?.paymentForMonth || null,
-          collectedBy: monthPayment?.collectedBy || null,
-          paymentStatus: monthPayment?.status || null,
-          notes: monthPayment?.notes || null,
+          receiptNo: lastPayment?.receiptNo || null,
+          paymentId: lastPayment?.id || null,
+          paymentDate: lastPayment?.paymentDate || null,
+          paymentTime: lastPayment?.paymentTime || null,
+          paymentForMonth: lastPayment?.paymentForMonth || null,
+          collectedBy: lastPayment?.collectedBy || null,
+          paymentStatus: lastPayment?.status || null,
+          promiseDate: promiseDateStr,
+          notes: lastPayment?.notes || null,
           monthlyRental: rental,
-          hasPaid: !!monthPayment
+          hasPaid: isFullyPaid
         })
 
         month++
@@ -497,10 +578,11 @@ export default {
     getTrackerStatusConfig(status) {
       const map = {
         'Paid':    { color: '#10b981', iconColor: '#10b981', icon: 'mdi-check-circle' },
-        'Advance': { color: '#1e88e5', iconColor: '#1e88e5', icon: 'mdi-clock-fast' },
-        'Normal':  { color: '#f59e0b', iconColor: '#f59e0b', icon: 'mdi-cash-clock' },
+        'Advance': { color: '#3b82f6', iconColor: '#3b82f6', icon: 'mdi-star-circle' },
+        'Normal':  { color: '#f59e0b', iconColor: '#f59e0b', icon: 'mdi-clock-outline' },
         'Overdue': { color: '#ef4444', iconColor: '#ef4444', icon: 'mdi-alert-circle' },
-        'Pending': { color: '#9ca3af', iconColor: '#9ca3af', icon: 'mdi-clock-outline' }
+        'Pending': { color: '#8b5cf6', iconColor: '#8b5cf6', icon: 'mdi-calendar-clock' },
+        'Partial': { color: '#3b82f6', iconColor: '#3b82f6', icon: 'mdi-chart-pie' }
       }
       return map[status] || { color: '#9ca3af', iconColor: '#9ca3af', icon: 'mdi-help-circle' }
     },
@@ -545,6 +627,8 @@ export default {
         items.push({ label: 'Total Due', value: this.formatCurrency(entry.amount), isTotal: true })
       } else if (entry.status === 'Paid') {
         items.push({ label: 'Total Paid', value: this.formatCurrency(entry.amount), isTotal: true })
+      } else if (entry.status === 'Partial') {
+        items.push({ label: 'Remaining Balance', value: this.formatCurrency(entry.amount), isTotal: true })
       } else if (entry.status === 'Normal') {
         items.push({ label: 'Normal Price (Due Soon)', value: this.formatCurrency(rental) })
         items.push({ label: 'Partial payments accepted', value: '', isNote: true })
@@ -552,7 +636,7 @@ export default {
       } else {
         const discount = rental * ADVANCE_DISCOUNT
         items.push({ label: `Early Payment Discount (${ADVANCE_DISCOUNT * 100}%)`, value: `- ${this.formatCurrency(discount)}`, isDiscount: true })
-        items.push({ label: 'Amount if Paid Early', value: this.formatCurrency(entry.amount), isTotal: true })
+        items.push({ label: 'Total Due', value: this.formatCurrency(entry.amount), isTotal: true })
       }
       return items
     },
@@ -572,7 +656,7 @@ export default {
           this.stallholders = result.data || []
         }
       } catch (e) {
-        console.error('âŒ loadStallholders error:', e)
+        console.error('❌ loadStallholders error:', e)
       }
     },
 
@@ -649,8 +733,9 @@ export default {
           this.form.amount = computedAmount.toFixed(2)
           this.form.paymentDate = today.toISOString().split('T')[0]
           this.form.paymentTime = today.toTimeString().split(' ')[0].substring(0, 5)
-          this.form.paymentForMonth = today.toISOString().substring(0, 7)
+          this.form.paymentForMonth = [today.toISOString().substring(0, 7)]
           this.setCurrentUser()
+          await this.loadUnpaidMonths(stallholder.id)
         } else {
           this.form.stallholderId = stallholder.id
           this.form.stallholderName = stallholder.name
@@ -658,16 +743,18 @@ export default {
           this.form.amount = stallholder.monthlyRental || ''
           this.form.paymentDate = new Date().toISOString().split('T')[0]
           this.form.paymentTime = new Date().toTimeString().split(' ')[0].substring(0, 5)
-          this.form.paymentForMonth = new Date().toISOString().substring(0, 7)
+          this.form.paymentForMonth = [new Date().toISOString().substring(0, 7)]
           this.setCurrentUser()
+          await this.loadUnpaidMonths(stallholder.id)
         }
       } catch (e) {
-        console.error('âŒ onStallholderSelected error:', e)
+        console.error('❌ onStallholderSelected error:', e)
         this.form.stallholderId = stallholder.id
         this.form.stallholderName = stallholder.name
         this.form.stallNo = stallholder.stallNo
         this.form.amount = stallholder.monthlyRental || ''
         this.setCurrentUser()
+        await this.loadUnpaidMonths(stallholder.id)
       }
     },
 
@@ -682,7 +769,7 @@ export default {
           this.form.receiptNo = result.receiptNumber
         }
       } catch (e) {
-        console.error('âŒ generateReceiptNumber error:', e)
+        console.error('❌ generateReceiptNumber error:', e)
       }
     },
 
@@ -691,11 +778,48 @@ export default {
         stallholderId: null, stallholderName: '', stallNo: '', amount: '',
         paymentDate: new Date().toISOString().split('T')[0],
         paymentTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
-        paymentForMonth: new Date().toISOString().substring(0, 7),
+        paymentForMonth: [new Date().toISOString().substring(0, 7)],
         paymentType: 'rental', collectedBy: this.form.collectedBy,
-        receiptNo: '', notes: '', selectedViolation: null
+        receiptNo: '', notes: '', selectedViolation: null, promiseToPayDate: ''
       }
       this.unpaidViolations = []
+      this.unpaidMonthsOptions = []
+    },
+
+    async loadUnpaidMonths(stallholderId) {
+      try {
+        this.loadingUnpaidMonths = true
+        const token = sessionStorage.getItem('authToken')
+        if (!token) return
+        const response = await fetch(`/api/payments/tracker/${stallholderId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+        })
+        if (response.ok) {
+          const result = await response.json()
+          const { stallholder, payments } = result.data
+          const tracker = this.buildPaymentTracker(stallholder, payments || [])
+          this.unpaidMonthsOptions = tracker.filter(t => !t.hasPaid).map(t => {
+            const date = new Date(t.year, t.month);
+            const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+            return {
+              title: `${monthName} ${t.year} - ${t.status} (\u20B1${t.amount.toLocaleString()})`,
+              value: `${t.year}-${String(t.month + 1).padStart(2, '0')}`,
+              amount: t.amount,
+              monthlyRental: t.monthlyRental
+            }
+          })
+          // If there are unpaid months, default to the oldest unpaid month
+          if (this.unpaidMonthsOptions.length > 0) {
+            this.form.paymentForMonth = [this.unpaidMonthsOptions[0].value]
+            // Note: form.amount will be set by the watcher
+          }
+        }
+      } catch (e) {
+        console.error('Error loading unpaid months:', e)
+        this.unpaidMonthsOptions = []
+      } finally {
+        this.loadingUnpaidMonths = false
+      }
     },
 
     async loadUnpaidViolations(stallholderId) {
@@ -714,7 +838,7 @@ export default {
           this.unpaidViolations = []
         }
       } catch (e) {
-        console.error('âŒ loadUnpaidViolations error:', e)
+        console.error('❌ loadUnpaidViolations error:', e)
         this.unpaidViolations = []
       } finally {
         this.loadingViolations = false
@@ -740,15 +864,17 @@ export default {
         })
         const result = await response.json()
         if (response.ok && result.success) {
-          this.showToast(`Violation payment processed! \u20B1${result.data.paidAmount.toLocaleString()}`, 'success')
+          this.clearCache(this.form.stallholderId)
           this.closeAddModal()
+          this.showTrackerModal = false
+          this.showToast(`Violation payment processed! \u20B1${result.data.paidAmount.toLocaleString()}`, 'success')
           this.$emit('payment-added', result)
           await this.fetchStallList()
         } else {
           this.showToast(result.message || 'Failed to process payment', 'error')
         }
       } catch (e) {
-        console.error('âŒ processViolationPayment error:', e)
+        console.error('❌ processViolationPayment error:', e)
         this.showToast('Error processing payment', 'error')
       } finally {
         this.loading = false
@@ -764,34 +890,94 @@ export default {
         const token = sessionStorage.getItem('authToken')
         if (!token) return
 
-        const response = await fetch('/api/payments/onsite', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            stallholderId: this.form.stallholderId,
-            amount: parseFloat(this.form.amount),
-            paymentDate: this.form.paymentDate,
-            paymentTime: this.form.paymentTime,
-            paymentForMonth: this.form.paymentForMonth,
-            paymentType: this.form.paymentType,
-            referenceNumber: this.form.receiptNo,
-            collectedBy: this.form.collectedBy,
-            notes: this.form.notes
-          })
-        })
-
-        const result = await response.json()
-        if (response.ok && result.success) {
-          this.showToast('Payment added successfully!', 'success')
-          await this.fetchStallList()
-          this.closeAddModal()
-          this.$emit('payment-added', result)
-        } else {
-          this.showToast(result.message || 'Failed to add payment', 'error')
+        let monthsToPay = Array.isArray(this.form.paymentForMonth) ? [...this.form.paymentForMonth] : [this.form.paymentForMonth];
+        if (monthsToPay.length === 0) {
+          this.showToast('Please select at least one month', 'error');
+          this.loading = false;
+          return;
         }
+
+        monthsToPay.sort(); // Sort chronologically (oldest first)
+        let remainingAmountToDistribute = parseFloat(this.form.amount);
+
+        for (let i = 0; i < monthsToPay.length; i++) {
+          const monthVal = monthsToPay[i];
+          if (remainingAmountToDistribute <= 0) break;
+          
+          let amountForThisMonth = 0;
+          let isPartialForThisMonth = false;
+          
+          const opt = this.unpaidMonthsOptions.find(o => o.value === monthVal);
+          if (opt) {
+            if (this.form.paymentType === 'rental') {
+              amountForThisMonth = Math.min(remainingAmountToDistribute, opt.amount);
+              remainingAmountToDistribute -= amountForThisMonth;
+              isPartialForThisMonth = false;
+            } else {
+              if (remainingAmountToDistribute >= opt.amount * 0.99) {
+                amountForThisMonth = opt.amount;
+                remainingAmountToDistribute -= opt.amount;
+                isPartialForThisMonth = false;
+              } else {
+                amountForThisMonth = remainingAmountToDistribute;
+                remainingAmountToDistribute = 0;
+                isPartialForThisMonth = true;
+              }
+            }
+          } else {
+            amountForThisMonth = remainingAmountToDistribute;
+            remainingAmountToDistribute = 0;
+          }
+
+          // If this is the last selected month, put all remaining extra amount into it
+          if (i === monthsToPay.length - 1 && remainingAmountToDistribute > 0) {
+             amountForThisMonth += remainingAmountToDistribute;
+             remainingAmountToDistribute = 0;
+          }
+
+          const currentPaymentType = this.form.paymentType === 'partial_payment' ? 'partial_payment' : 'rental';
+          
+          const refArray = this.form.receiptNo ? this.form.receiptNo.split(',').map(r => r.trim()).filter(Boolean) : [];
+          let refNo = this.form.receiptNo;
+          if (refArray.length > 1) {
+            refNo = refArray[i] || refArray[refArray.length - 1]; // Use matching ref or repeat the last one
+          } else if (monthsToPay.length > 1 && refArray.length === 1) {
+            refNo = `${refArray[0]}-${i+1}`; // Fallback to hyphenated if only one provided for multiple months
+          }
+
+          const response = await fetch('/api/payments/onsite', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              stallholderId: this.form.stallholderId,
+              amount: parseFloat(amountForThisMonth.toFixed(2)),
+              paymentDate: this.form.paymentDate,
+              paymentTime: this.form.paymentTime,
+              paymentForMonth: monthVal,
+              paymentType: currentPaymentType,
+              referenceNumber: refNo,
+              collectedBy: this.form.collectedBy,
+              notes: this.form.notes,
+              promiseToPayDate: currentPaymentType === 'partial_payment' ? this.form.promiseToPayDate : null,
+              isDistributed: monthsToPay.length > 1
+            })
+          })
+
+          const result = await response.json()
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || `Failed to add payment for ${monthVal}`);
+          }
+        }
+
+        this.clearCache(this.form.stallholderId)
+        this.closeAddModal()
+        this.showTrackerModal = false
+        this.showToast('Payment(s) added successfully!', 'success')
+        this.$emit('payment-added')
+        await this.fetchStallList()
       } catch (e) {
-        console.error('âŒ addPayment error:', e)
-        this.showToast('Error adding payment', 'error')
+        console.error('❌ addPayment error:', e)
+        this.showToast(e.message || 'Error adding payment', 'error')
       } finally {
         this.loading = false
       }
@@ -819,10 +1005,95 @@ export default {
     },
 
     formatDate(dateString) {
-      if (!dateString) return 'â€”'
-      const d = new Date(dateString)
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      if (!dateString || dateString === '0000-00-00') return '—';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } catch (err) {
+        return '—';
+      }
+    },
+
+    async showStallholderDetails(stallholderId) {
+      if (!stallholderId) return;
+      this.showStallholderModal = true;
+      this.loadingStallholderDetails = true;
+      this.stallholderDetails = null;
+      this.avatarBuster = Date.now();
+      
+      try {
+        const token = sessionStorage.getItem('authToken');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            this.stallholderDetails = result.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching stallholder details:', error);
+      } finally {
+        this.loadingStallholderDetails = false;
+      }
+    },
+
+    // Zoom Lightbox handlers
+    openZoomModal() {
+      if (!this.stallholderDetails || !(this.stallholderDetails.stallholder_id || this.stallholderDetails.id)) return;
+      this.zoomScale = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+      this.isDragging = false;
+      this.showZoomModal = true;
+    },
+    closeZoomModal() {
+      this.showZoomModal = false;
+    },
+    zoomIn() {
+      this.zoomScale = Math.min(this.zoomScale + 0.25, 4.0);
+    },
+    zoomOut() {
+      this.zoomScale = Math.max(this.zoomScale - 0.25, 0.5);
+      if (this.zoomScale < 1.0) {
+        this.panX = 0;
+        this.panY = 0;
+      }
+    },
+    resetZoom() {
+      this.zoomScale = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+    },
+    startDrag(e) {
+      if (this.zoomScale <= 1.0) return;
+      this.isDragging = true;
+      this.startX = e.clientX - this.panX;
+      this.startY = e.clientY - this.panY;
+    },
+    onDrag(e) {
+      if (!this.isDragging) return;
+      this.panX = e.clientX - this.startX;
+      this.panY = e.clientY - this.startY;
+    },
+    endDrag() {
+      this.isDragging = false;
+    },
+    onWheel(e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.min(Math.max(this.zoomScale + delta, 0.5), 4.0);
+      this.zoomScale = newScale;
+      if (newScale <= 1.0) {
+        this.panX = 0;
+        this.panY = 0;
+      }
+    },
+    clearCache() {
+      // No-op: caching removed, data is always fetched fresh from backend
     }
   }
 }
-

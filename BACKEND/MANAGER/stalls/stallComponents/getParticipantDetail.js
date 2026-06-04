@@ -12,7 +12,6 @@ export const getParticipantDetail = async (req, res) => {
   try {
     const { applicantId } = req.params;
 
-    console.log('📋 Getting participant detail for applicant:', applicantId);
 
     if (!applicantId) {
       return res.status(400).json({

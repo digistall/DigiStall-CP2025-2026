@@ -53,6 +53,14 @@ const LoginScreen = ({ navigation }) => {
   const dotAnim3 = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  // Reset loading state on screen focus (e.g. after logout or back navigation)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setIsLoading(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   // Pulse animation for logo
   useEffect(() => {
     if (isLoading) {
@@ -183,13 +191,15 @@ const LoginScreen = ({ navigation }) => {
   const getModalIcon = () => {
     switch (errorModal.type) {
       case "error":
-        return "alert-circle";
+        return "close-circle-outline";
+      case "warning":
+        return "warning-outline";
       case "info":
-        return "information-circle";
+        return "information-circle-outline";
       case "success":
-        return "checkmark-circle";
+        return "checkmark-circle-outline";
       default:
-        return "alert-circle";
+        return "alert-circle-outline";
     }
   };
 
@@ -197,6 +207,8 @@ const LoginScreen = ({ navigation }) => {
     switch (errorModal.type) {
       case "error":
         return "#e74c3c";
+      case "warning":
+        return "#f39c12";
       case "info":
         return "#3498db";
       case "success":
@@ -243,16 +255,14 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.formTitle}>Sign In</Text>
 
               <View style={styles.inputContainer}>
-                <View style={styles.inputIconWrapper}>
-                  <Ionicons
-                    name="person"
-                    size={20}
-                    color="#4472C4"
-                    style={styles.inputIcon}
-                  />
-                </View>
+                <Ionicons
+                  name="person"
+                  size={20}
+                  color="#4472C4"
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={[styles.textInput, styles.textInputWithIcon]}
+                  style={styles.textInput}
                   placeholder="Username"
                   placeholderTextColor="#999"
                   value={username}
@@ -262,16 +272,14 @@ const LoginScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.inputContainer}>
-                <View style={styles.inputIconWrapper}>
-                  <Ionicons
-                    name="lock-closed"
-                    size={20}
-                    color="#4472C4"
-                    style={styles.inputIcon}
-                  />
-                </View>
+                <Ionicons
+                  name="lock-closed"
+                  size={20}
+                  color="#4472C4"
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={[styles.textInput, styles.textInputWithIcon]}
+                  style={styles.textInput}
                   placeholder="Password"
                   placeholderTextColor="#999"
                   value={password}
@@ -280,7 +288,6 @@ const LoginScreen = ({ navigation }) => {
                   autoCapitalize="none"
                 />
                 <TouchableOpacity
-                  style={styles.passwordToggle}
                   onPress={() => setShowPassword(!showPassword)}
                 >
                   <Ionicons

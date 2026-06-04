@@ -8,7 +8,6 @@ import { createConnection } from '../../../config/database.js';
 export const getBranchDocumentRequirements = async (req, res) => {
   let connection;
   try {
-    console.log('🔍 User from token:', JSON.stringify(req.user, null, 2));
     
     const userRole = req.user.role;
     const userId = req.user.userId;
@@ -17,7 +16,6 @@ export const getBranchDocumentRequirements = async (req, res) => {
     
     // Business owners manage document requirements for ALL their branches
     if (userRole === 'stall_business_owner') {
-      console.log('👤 Business owner accessing document requirements');
       
       // Get all branches owned by this business owner
       const [branches] = await connection.execute(`
@@ -37,7 +35,6 @@ export const getBranchDocumentRequirements = async (req, res) => {
       }
       
       const branchIds = branches.map(b => b.branch_id);
-      console.log(`📍 Owner manages ${branchIds.length} branches:`, branchIds);
       
       // Get document requirements for the first branch using stored procedure
       const firstBranchId = branchIds[0];
@@ -67,8 +64,6 @@ export const getBranchDocumentRequirements = async (req, res) => {
       });
     }
     
-    console.log('🎯 Branch ID detected:', branch_id);
-    console.log('📋 Available user fields:', Object.keys(req.user || {}));
 
     if (!connection) {
       connection = await createConnection();
@@ -1100,7 +1095,6 @@ export const getStallholderDocumentBlob = async (req, res) => {
       });
     }
 
-    console.log(`📄 Fetching document blob for document_id: ${documentId}`);
     
     connection = await createConnection();
     

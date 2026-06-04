@@ -1,15 +1,16 @@
-/* Modal Container */
+/* Premium Stepper Modal container */
 .add-stallholder-modal {
-  border-radius: 12px !important;
+  border-radius: 16px !important;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2) !important;
+  background-color: #fafbfd !important;
 }
 
 /* Modal Header */
 .modal-header {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+  background: #1e3a8a !important; /* Plain main color blue just like on the system */
   color: white !important;
-  padding: 20px 24px !important;
+  padding: 20px 28px !important;
   position: relative;
   display: flex !important;
   justify-content: space-between !important;
@@ -18,219 +19,296 @@
 
 .modal-title {
   color: white !important;
-  font-size: 20px !important;
-  font-weight: 600 !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
   margin: 0 !important;
   letter-spacing: 0.5px;
 }
 
 .close-btn {
-  background-color: #ef4444 !important;
+  background-color: #2563eb !important; /* Premium brand blue instead of red */
   border-radius: 50% !important;
   width: 32px !important;
   height: 32px !important;
   min-width: unset !important;
   margin: 0 !important;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
   transition: all 0.2s ease !important;
 }
 
 .close-btn:hover {
-  background-color: #dc2626 !important;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+  background-color: #1d4ed8 !important;
+  transform: scale(1.08);
 }
 
-.close-btn .v-icon {
-  font-size: 18px !important;
+/* Stepper Custom Progress Indicator Header */
+.stepper-header-custom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f1f5f9;
+  padding: 16px 28px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
 }
 
-/* Modal Content */
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  min-width: 75px;
+}
+
+.step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 60%;
+  width: 80%;
+  height: 2px;
+  background-color: #cbd5e1;
+  z-index: 1;
+}
+
+.step-item.completed:not(:last-child)::after {
+  background-color: #22c55e;
+}
+
+.step-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  z-index: 2;
+  transition: all 0.3s ease;
+  border: 2px solid #cbd5e1;
+}
+
+.step-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+  z-index: 2;
+}
+
+.step-item.active .step-badge {
+  background-color: #1e3a8a;
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.step-item.active .step-name {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.step-item.completed .step-badge {
+  background-color: #22c55e;
+  color: white;
+  border-color: #22c55e;
+}
+
+.step-item.completed .step-name {
+  color: #15803d;
+}
+
+/* Modal Content Step Layout */
 .modal-content {
-  padding: 24px !important;
-  background-color: #fafafa !important;
+  padding: 28px !important;
+  background-color: #fafbfc !important;
+  max-height: 520px;
+  overflow-y: auto;
 }
 
-/* Form Groups */
+.step-content {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.step-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+/* Form Styles */
 .form-group {
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .form-label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
   margin-bottom: 8px;
-  line-height: 1.4;
+  letter-spacing: 0.1px;
 }
 
-/* Form Inputs */
-.form-input {
-  margin-bottom: 0 !important;
+.form-label .required {
+  color: #ef4444;
+  margin-left: 2px;
 }
 
-.form-input .v-field {
-  background-color: #e5e7eb !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-  min-height: 45px !important;
-  box-shadow: none !important;
+.form-input :deep(.v-field) {
+  background-color: #f8fafc !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #cbd5e1 !important;
+  transition: all 0.2s ease !important;
 }
 
-.form-input .v-field__input {
-  padding: 0 12px !important;
-  color: #374151 !important;
-  font-size: 14px !important;
-  min-height: 45px !important;
-  background-color: transparent !important;
-}
-
-.form-input .v-field__input::placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
-}
-
-/* Input Focus States */
-.form-input .v-field--focused {
+.form-input :deep(.v-field--focused) {
   background-color: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
-}
-
-.form-input .v-field--focused .v-field__outline {
   border-color: #3b82f6 !important;
-  border-width: 2px !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
 }
 
-/* Input Error States */
-.form-input .v-field--error {
-  background-color: #fef2f2 !important;
+.form-input :deep(.v-field__outline) {
+  display: none !important;
 }
 
-.form-input .v-field--error .v-field__outline {
-  border-color: #ef4444 !important;
+/* Map Location Styles */
+.leaflet-map-container {
+  height: 300px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  z-index: 10;
 }
 
-/* Error Messages */
-.v-messages__message {
-  color: #ef4444 !important;
-  font-size: 12px !important;
-  margin-top: 4px !important;
+.coord-badge {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #334155;
+  margin-bottom: 12px;
+  text-align: center;
 }
 
-/* Modal Footer */
+/* Signature Drawing Canvas */
+.signature-canvas-outer {
+  background-color: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.sig-canvas {
+  width: 100%;
+  height: 200px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none; /* disables standard scrolling behavior on mobile screens while signing */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.canvas-controls {
+  padding-top: 4px;
+}
+
+.canvas-status {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Credentials Preview Card */
+.credentials-preview-card {
+  border-radius: 12px !important;
+  border: 1px dashed rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.05) !important;
+}
+
+/* Modal Footer Navigation */
 .modal-footer {
-  padding: 0 24px 24px 24px !important;
-  background-color: #fafafa !important;
-  justify-content: center !important;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc !important;
 }
 
-/* Submit Button */
+.nav-btn {
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+  text-transform: none !important;
+  min-width: 110px !important;
+}
+
 .submit-btn {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
-  color: white !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-  letter-spacing: 1px !important;
-  padding: 0 48px !important;
-  height: 48px !important;
-  border-radius: 6px !important;
-  text-transform: uppercase !important;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
-  transition: all 0.3s ease !important;
-  min-width: 150px !important;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25) !important;
+  transition: all 0.2s ease !important;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e40af 0%, #002181 100%) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.35) !important;
 }
 
-.submit-btn:disabled {
-  background: #9ca3af !important;
-  color: #ffffff !important;
-  opacity: 0.6 !important;
-  cursor: not-allowed !important;
-  transform: none !important;
-  box-shadow: none !important;
+.nav-dots {
+  display: flex;
+  gap: 6px;
 }
 
-.submit-btn .v-btn__loader {
-  color: white !important;
+.dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #cbd5e1;
+  transition: all 0.3s ease;
 }
 
-/* Form Validation */
-.v-form .v-input--error .v-field {
-  background-color: #fef2f2 !important;
+.dot-indicator.active {
+  background-color: #1e3a8a;
+  transform: scale(1.3);
 }
 
-.v-form .v-input--error .v-field__outline {
-  border-color: #ef4444 !important;
-  border-width: 2px !important;
-}
-
-/* Responsive Design */
+/* Responsive Overrides */
 @media (max-width: 768px) {
-  .modal-header {
-    padding: 16px 20px !important;
+  .stepper-header-custom {
+    padding: 12px 16px;
   }
   
-  .modal-title {
-    font-size: 18px !important;
+  .step-name {
+    display: none;
+  }
+  
+  .step-item::after {
+    left: 70% !important;
   }
   
   .modal-content {
     padding: 20px !important;
   }
-  
-  .modal-footer {
-    padding: 0 20px 20px 20px !important;
-  }
-  
-  .form-label {
-    font-size: 13px !important;
-  }
-  
-  .form-input .v-field__input {
-    font-size: 13px !important;
-  }
-  
-  .submit-btn {
-    font-size: 13px !important;
-    height: 44px !important;
-    min-width: 120px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .add-stallholder-modal {
-    margin: 16px !important;
-    max-width: calc(100vw - 32px) !important;
-  }
-  
-  .modal-title {
-    font-size: 16px !important;
-  }
-  
-  .close-btn {
-    width: 28px !important;
-    height: 28px !important;
-  }
-  
-  .close-btn .v-icon {
-    font-size: 16px !important;
-  }
-}
-
-/* Animation for modal appearance */
-.v-dialog-transition-enter-active,
-.v-dialog-transition-leave-active {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-}
-
-.v-dialog-transition-enter-from,
-.v-dialog-transition-leave-to {
-  opacity: 0 !important;
-  transform: scale(0.9) translateY(-20px) !important;
 }

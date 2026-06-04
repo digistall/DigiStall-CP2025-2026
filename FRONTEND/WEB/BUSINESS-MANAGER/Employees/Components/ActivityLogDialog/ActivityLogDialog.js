@@ -44,6 +44,8 @@ export default {
         startDate: null,
         endDate: null
       },
+      // NOTE: 'stallholder' is intentionally excluded — stallholder logs
+      // are shown on the Stallholders page, not the Employees page.
       staffTypeOptions: [
         { title: 'All Types', value: null },
         { title: 'Business Employee', value: 'business_employee' },
@@ -258,7 +260,7 @@ export default {
         );
       }
       
-      this.filteredLogs = logs;
+      this.filteredLogs = logs.filter(log => log.staff_type !== 'stallholder');
     },
 
     async fetchLogs() {
@@ -267,7 +269,13 @@ export default {
         const token = sessionStorage.getItem('authToken');
         const params = new URLSearchParams();
         
-        if (this.filters.staffType) params.append('staffType', this.filters.staffType);
+        // Always filter to a specific staff type when one is selected
+        if (this.filters.staffType) {
+          params.append('staffType', this.filters.staffType);
+        }
+        // NOTE: When no specific type is selected we do NOT pass staffType=null
+        // so the backend returns all types — but we strip stallholder client-side
+        // in filterLogs(). This ensures the Employee page never shows stallholder logs.
         if (this.filters.startDate) params.append('startDate', this.filters.startDate);
         if (this.filters.endDate) params.append('endDate', this.filters.endDate);
         if (this.staffId) params.append('staffId', this.staffId);

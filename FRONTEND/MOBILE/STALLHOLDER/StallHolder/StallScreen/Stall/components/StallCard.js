@@ -112,7 +112,7 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
       const apiBaseUrl = getApiBaseUrl();
       const stallId = stall.id || stall.stall_id;
       
-      console.log(`📷 Card: Fetching images for stall ${stallId} from BLOB API...`);
+      // console.log(`📷 Card: Fetching images for stall ${stallId} from BLOB API...`);
 
       if (!stallId) {
         setImages([{ id: 'default', image_url: stall.image || DEFAULT_STALL_IMAGE, is_primary: true }]);
@@ -134,10 +134,10 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
             is_primary: img.is_primary,
           }));
           
-          console.log(`📷 Card: Found ${blobImages.length} images in BLOB storage for stall ${stallId}`);
+          // console.log(`📷 Card: Found ${blobImages.length} images in BLOB storage for stall ${stallId}`);
           setImages(blobImages);
         } else {
-          console.log(`📷 Card: No BLOB images found for stall ${stallId}, using fallback`);
+          // console.log(`📷 Card: No BLOB images found for stall ${stallId}, using fallback`);
           // Use stall's primary image or default
           if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
             setImages([{ id: 'primary', image_url: stall.image, is_primary: true }]);
@@ -146,7 +146,7 @@ const StallCard = ({ stall, onApply, applying, theme = defaultTheme, isDark = fa
           }
         }
       } catch (apiError) {
-        console.log(`📷 Card: BLOB API error for stall ${stallId}:`, apiError.message);
+        // console.log(`📷 Card: BLOB API error for stall ${stallId}:`, apiError.message);
         // Fallback to default image
         if (stall.image && !stall.image.includes('oldspitalfieldsmarket')) {
           setImages([{ id: 'primary', image_url: stall.image, is_primary: true }]);

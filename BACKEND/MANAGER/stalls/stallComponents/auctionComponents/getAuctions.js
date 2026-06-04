@@ -7,12 +7,7 @@ export const getActiveAuctions = async (req, res) => {
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
 
-    console.log("🔍 getActiveAuctions - User details:", {
-      userType,
-      userId,
-      branchId: req.user?.branchId,
-      permissions: req.user?.permissions,
-    });
+
 
     if (!userId) {
       return res.status(400).json({
@@ -164,7 +159,6 @@ export const getActiveAuctions = async (req, res) => {
       });
     }
 
-    console.log(`📋 Found ${auctions.length} auction stalls for ${userType} ${userId}`);
 
     res.json({
       success: true,

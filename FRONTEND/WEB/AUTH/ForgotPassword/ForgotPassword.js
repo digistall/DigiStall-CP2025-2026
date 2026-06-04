@@ -3,12 +3,12 @@
 import axios from 'axios'
 import emailjs from '@emailjs/browser'
 
-// EmailJS Configuration - reusing the same service as credentials
-const EMAILJS_SERVICE_ID = 'service_am6pozg'
-const EMAILJS_TEMPLATE_ID = 'template_3wccajf'
-const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FjatviG'
-const SENDER_EMAIL = 'digistall@unc.edu.ph'
-const SENDER_NAME = 'Naga-Stall'
+// EmailJS Configuration — read from Vite environment variables (set in FRONTEND/WEB/.env)
+const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
+const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+const SENDER_EMAIL        = import.meta.env.VITE_EMAILJS_SENDER_EMAIL || 'digistall@unc.edu.ph'
+const SENDER_NAME         = import.meta.env.VITE_EMAILJS_SENDER_NAME  || 'Naga-Stall'
 
 let isEmailJSInitialized = false
 

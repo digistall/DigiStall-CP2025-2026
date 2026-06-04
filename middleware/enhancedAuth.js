@@ -76,8 +76,6 @@ const authenticateToken = (req, res, next) => {
       jti: decoded.jti // JWT ID
     };
 
-    console.log('🔍 User authenticated successfully');
-
     next();
   });
 };
@@ -105,7 +103,6 @@ const authorizeRole = (...allowedRoles) => {
     );
 
     if (!hasRole) {
-      console.log('❌ Access denied - insufficient role');
       return res.status(403).json({
         success: false,
         message: `Access denied. Required role: ${allowedRoles.join(' or ')}`,
@@ -115,7 +112,6 @@ const authorizeRole = (...allowedRoles) => {
       });
     }
 
-    console.log('✅ Role authorization passed');
     next();
   };
 };
@@ -139,7 +135,6 @@ const authorizePermission = (...requiredPermissions) => {
 
     // System administrators and stall business owners have all permissions
     if (userRole === 'system_administrator' || userRole === 'stall_business_owner' || userRole === 'business_manager') {
-      console.log(`✅ Permission granted to ${userRole} (admin/manager override)`);
       return next();
     }
 
@@ -157,7 +152,6 @@ const authorizePermission = (...requiredPermissions) => {
       });
 
       if (!hasPermission) {
-        console.log(`❌ Permission denied for employee. Required: ${requiredPermissions.join(', ')}`);
         return res.status(403).json({
           success: false,
           message: `Access denied. Required permission: ${requiredPermissions.join(' or ')}`,
@@ -167,12 +161,10 @@ const authorizePermission = (...requiredPermissions) => {
         });
       }
 
-      console.log(`✅ Permission check passed for employee`);
       return next();
     }
 
     // Unknown role
-    console.log(`❌ Access denied for unknown role: ${userRole}`);
     return res.status(403).json({
       success: false,
       message: 'Access denied',
@@ -204,7 +196,6 @@ const authorizeRoleOrPermission = (allowedRoles = [], allowedPermissions = []) =
     );
 
     if (hasRole) {
-      console.log(`✅ Access granted via role: ${userRole}`);
       return next();
     }
 
@@ -220,13 +211,11 @@ const authorizeRoleOrPermission = (allowedRoles = [], allowedPermissions = []) =
       });
 
       if (hasPermission) {
-        console.log(`✅ Access granted via permission for employee`);
         return next();
       }
     }
 
     // Access denied
-    console.log(`❌ Access denied for ${userRole}. Required roles: ${allowedRoles.join(', ')} OR permissions: ${allowedPermissions.join(', ')}`);
     return res.status(403).json({
       success: false,
       message: 'Access denied. Insufficient privileges',
@@ -287,7 +276,6 @@ const checkBranchAccess = (req, res, next) => {
   const requestedBranchId = req.params.branchId || req.body.branchId || req.query.branchId;
 
   if (!userBranchId) {
-    console.log('❌ User has no branch association');
     return res.status(403).json({
       success: false,
       message: 'User not associated with any branch',
@@ -296,7 +284,6 @@ const checkBranchAccess = (req, res, next) => {
   }
 
   if (requestedBranchId && parseInt(userBranchId) !== parseInt(requestedBranchId)) {
-    console.log(`❌ Branch access denied. User branch: ${userBranchId}, Requested: ${requestedBranchId}`);
     return res.status(403).json({
       success: false,
       message: 'Access denied. You can only access your own branch data',

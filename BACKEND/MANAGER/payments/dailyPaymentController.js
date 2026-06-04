@@ -17,7 +17,6 @@ const safeDecrypt = (value) => {
     }
     return value;
   } catch (error) {
-    console.error("⚠️ Decryption failed for value:", error.message);
     return value;
   }
 };
@@ -42,12 +41,10 @@ const DailyPaymentController = {
     try {
       connection = await createConnection();
 
-      console.log("🔍 Fetching all daily payments");
 
       const [result] = await connection.execute("CALL getAllDailyPayments()");
 
       const rawPayments = result[0] || [];
-      console.log("📊 Daily payments found:", rawPayments.length);
 
       // Decrypt collector names (encrypted with AES-256-GCM) and build display names
       const payments = rawPayments.map((payment) => {
@@ -115,7 +112,6 @@ const DailyPaymentController = {
         });
       }
 
-      console.log("🔍 Fetching daily payment with receipt ID:", parsedId);
 
       const [result] = await connection.execute("CALL getDailyPaymentById(?)", [
         parsedId,
@@ -141,7 +137,6 @@ const DailyPaymentController = {
         ),
       };
 
-      console.log("📊 Daily payment found:", payment);
 
       res.status(200).json({
         success: true,
@@ -207,13 +202,7 @@ const DailyPaymentController = {
         status,
       });
 
-      console.log("🔍 Parsed values:", {
-        collectorId: parseInt(collectorId),
-        vendorId: parseInt(vendorId),
-        amount: parseFloat(amount),
-        referenceNo: referenceNo || null,
-        status,
-      });
+
 
       const [result] = await connection.execute(
         "CALL addDailyPayment(?, ?, ?, ?, ?)",
@@ -239,10 +228,8 @@ const DailyPaymentController = {
 
       const paymentData = procedureResult[0];
 
-      console.log("📦 Stored procedure result:", paymentData);
 
       if (!paymentData.success) {
-        console.log("⚠️ Payment creation failed:", paymentData.message);
         return res.status(400).json({
           success: false,
           message: paymentData.message || "Failed to add daily payment",
@@ -381,7 +368,6 @@ const DailyPaymentController = {
         });
       }
 
-      console.log("🗑️ Deleting daily payment:", receiptId);
 
       const [result] = await connection.execute("CALL deleteDailyPayment(?)", [
         parseInt(receiptId),
@@ -429,14 +415,12 @@ const DailyPaymentController = {
     try {
       connection = await createConnection();
 
-      console.log("🔍 Fetching all vendors");
 
       const [result] = await connection.execute(
         "CALL getAllVendorsForDailyPayments()",
       );
 
       const rawVendors = result[0] || [];
-      console.log("📊 Vendors found:", rawVendors.length);
 
       // Decrypt vendor names if encrypted and build display names
       const vendors = rawVendors.map((vendor) => {
@@ -485,14 +469,12 @@ const DailyPaymentController = {
     try {
       connection = await createConnection();
 
-      console.log("🔍 Fetching all collectors");
 
       const [result] = await connection.execute(
         "CALL getAllCollectorsForDailyPayments()",
       );
 
       const rawCollectors = result[0] || [];
-      console.log("📊 Collectors found:", rawCollectors.length);
 
       // Decrypt collector names (encrypted with AES-256-GCM) and build display names
       const collectors = rawCollectors.map((collector) => {

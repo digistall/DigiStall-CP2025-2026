@@ -48,12 +48,12 @@ const Sidebar = ({
     const loadUserData = async () => {
       try {
         const storedUserData = await UserStorageService.getUserData();
-        console.log('Inspector Sidebar - Retrieved user data:', JSON.stringify(storedUserData, null, 2));
+        // console.log('Inspector Sidebar - Retrieved user data:', JSON.stringify(storedUserData, null, 2));
         if (storedUserData) {
           setUserData(storedUserData);
-          console.log('Inspector Sidebar - Set user data:', storedUserData);
+          // console.log('Inspector Sidebar - Set user data:', storedUserData);
         } else {
-          console.log('Inspector Sidebar - No stored data found');
+          // console.log('Inspector Sidebar - No stored data found');
         }
       } catch (error) {
         console.error('Error loading user data for sidebar:', error);

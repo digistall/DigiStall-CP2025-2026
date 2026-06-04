@@ -9,6 +9,7 @@
 // =============================================
 
 import { createConnection } from '../../../config/database.js'
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js'
 
 // =============================================
 // UPLOAD STALLHOLDER DOCUMENT AS BLOB
@@ -17,9 +18,6 @@ export async function uploadStallholderDocumentBlob(req, res) {
   let connection
   
   try {
-    console.log('📥 [BLOB Upload] Request received')
-    console.log('📥 [BLOB Upload] req.body keys:', Object.keys(req.body))
-    console.log('📥 [BLOB Upload] req.file:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'none')
 
     const {
       stallholder_id,
@@ -49,14 +47,12 @@ export async function uploadStallholderDocumentBlob(req, res) {
       documentBuffer = req.file.buffer
       actualMimeType = mime_type || req.file.mimetype || 'image/jpeg'
       resolvedFileName = file_name || req.file.originalname || `doc_${Date.now()}`
-      console.log('📥 [BLOB Upload] Using multipart file buffer, size:', documentBuffer.length, 'bytes')
     } else if (document_data) {
       // --- Legacy base64 JSON path ---
       const base64Data = document_data.replace(/^data:[^;]+;base64,/, '')
       documentBuffer = Buffer.from(base64Data, 'base64')
       actualMimeType = mime_type || 'image/jpeg'
       resolvedFileName = file_name || `doc_${Date.now()}`
-      console.log('📥 [BLOB Upload] Using base64 body, buffer size:', documentBuffer.length, 'bytes')
     } else {
       console.log('❌ [BLOB Upload] No file or document_data provided')
       return res.status(400).json({
@@ -65,7 +61,6 @@ export async function uploadStallholderDocumentBlob(req, res) {
       })
     }
 
-    console.log('📥 [BLOB Upload] Buffer size:', documentBuffer.length, 'bytes')
     
     // Validate mime type
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'application/pdf']
@@ -138,6 +133,29 @@ export async function uploadStallholderDocumentBlob(req, res) {
       documentId = insertRows[0][0].document_id
     }
     
+    // Log document upload/re-upload activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: parseInt(stallholder_id),
+        staffName: req.user?.fullName || req.user?.username || 'Stallholder',
+        branchId: null,
+        actionType: isUpdate ? 'UPDATE' : 'CREATE',
+        actionDescription: isUpdate
+          ? `Re-uploaded document (type ID: ${document_type_id}, file: ${generatedFileName})`
+          : `Uploaded new document (type ID: ${document_type_id}, file: ${generatedFileName})`,
+        module: 'Documents',
+        ipAddress,
+        userAgent: req.get ? req.get('User-Agent') : null,
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging document upload activity:', logErr);
+    }
+
     res.status(200).json({
       success: true,
       message: isUpdate ? 'Document updated successfully' : 'Document uploaded successfully',
@@ -360,7 +378,6 @@ export async function getStallholderDocumentBlobById(req, res) {
       })
     }
 
-    console.log(`📥 Fetching document blob for ID: ${document_id}`)
     
     connection = await createConnection()
     
@@ -378,7 +395,6 @@ export async function getStallholderDocumentBlobById(req, res) {
     documents = rows
 
     if (!documents || documents.length === 0) {
-      console.log(`⚠️ Document not found for ID: ${document_id}`)
       return res.status(404).json({
         success: false,
         message: 'Document not found or no blob data available'
@@ -388,7 +404,6 @@ export async function getStallholderDocumentBlobById(req, res) {
     const doc = documents[0]
 
     if (!doc.document_data) {
-      console.log(`⚠️ Document ${document_id} has no blob data`)
       return res.status(404).json({
         success: false,
         message: 'Document blob data not found'
@@ -500,6 +515,27 @@ export async function getStallholderDocuments(req, res) {
         : undefined
     }))
     
+    // Log document list view activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: parseInt(stallholder_id),
+        staffName: req.user?.fullName || req.user?.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed documents list (${transformedDocs.length} document(s))`,
+        module: 'Documents',
+        ipAddress,
+        userAgent: req.get ? req.get('User-Agent') : null,
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging document view activity:', logErr);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Documents retrieved successfully',
@@ -634,7 +670,6 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
       })
     }
 
-    console.log(`📥 Fetching document blob as base64 for ID: ${document_id}`)
     
     connection = await createConnection()
     
@@ -652,7 +687,6 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
     documents = rows
 
     if (!documents || documents.length === 0) {
-      console.log(`⚠️ Document not found for ID: ${document_id}`)
       return res.status(404).json({
         success: false,
         message: 'Document not found or no blob data available'
@@ -662,7 +696,6 @@ export async function getStallholderDocumentBlobByIdBase64(req, res) {
     const doc = documents[0]
 
     if (!doc.document_data) {
-      console.log(`⚠️ Document ${document_id} has no blob data`)
       return res.status(404).json({
         success: false,
         message: 'Document blob data not found'

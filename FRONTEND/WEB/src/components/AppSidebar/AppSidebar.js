@@ -325,35 +325,35 @@ export default {
         const employeePermissions = sessionStorage.getItem('employeePermissions')
         const authToken = sessionStorage.getItem('authToken')
 
-        console.log('🔍 Debug sessionStorage:')
-        console.log('  - userType:', userType)
-        console.log('  - employeePermissions:', employeePermissions)
-        console.log('  - authToken exists:', !!authToken)
-        console.log(
-          '  - authToken preview:',
-          authToken ? authToken.substring(0, 20) + '...' : 'null',
-        )
+        // console.log('🔍 Debug sessionStorage:')
+        // console.log('  - userType:', userType)
+        // console.log('  - employeePermissions:', employeePermissions)
+        // console.log('  - authToken exists:', !!authToken)
+        // console.log(
+        //   '  - authToken preview:',
+        //   authToken ? authToken.substring(0, 20) + '...' : 'null',
+        // )
 
         // Early exit if no authentication data
         if (!userType || !authToken) {
-          console.log('❌ No authentication data found, skipping stall type check')
-          console.log('   - userType:', userType)
-          console.log('   - authToken exists:', !!authToken)
-          this.logAuthState()
+          // console.log('❌ No authentication data found, skipping stall type check')
+          // console.log('   - userType:', userType)
+          // console.log('   - authToken exists:', !!authToken)
+          // this.logAuthState()
           return
         }
 
         // Validate JWT token format
         if (!authToken.includes('.') || authToken.split('.').length !== 3) {
-          console.log('❌ Invalid JWT token format, skipping stall type check')
-          console.log('   - Token:', authToken)
-          this.logAuthState()
+          // console.log('❌ Invalid JWT token format, skipping stall type check')
+          // console.log('   - Token:', authToken)
+          // this.logAuthState()
           return
         }
 
-        console.log('User permissions:', this.userPermissions)
-        console.log('Is branch manager:', this.isBranchManager)
-        console.log('Has stalls permission:', this.hasStallsPermission)
+        // console.log('User permissions:', this.userPermissions)
+        // console.log('Is branch manager:', this.isBranchManager)
+        // console.log('Has stalls permission:', this.hasStallsPermission)
 
         // EXTRA DEFENSIVE CHECK: If this is an employee, double-check permissions
         if (userType === 'business_employee') {
@@ -407,7 +407,7 @@ export default {
         }
 
         console.log('✅ User has stalls permission, fetching stall types...')
-        console.log('🔑 About to make API call with token:', token.substring(0, 30) + '...')
+        // console.log('🔑 About to make API call with token:', token.substring(0, 30) + '...')
 
         const response = await fetch(`${this.apiBaseUrl}/stalls`, {
           method: 'GET',
@@ -553,16 +553,16 @@ export default {
 
     // Debug helper to log current authentication state
     logAuthState() {
-      console.log('🔍 Current Authentication State:')
-      console.log('   - userType:', sessionStorage.getItem('userType'))
-      console.log('   - authToken exists:', !!sessionStorage.getItem('authToken'))
-      console.log(
-        '   - authToken preview:',
-        sessionStorage.getItem('authToken')?.substring(0, 30) + '...',
-      )
-      console.log('   - permissions (new):', sessionStorage.getItem('permissions'))
-      console.log('   - employeePermissions (old):', sessionStorage.getItem('employeePermissions'))
-      console.log('   - currentUser exists:', !!sessionStorage.getItem('currentUser'))
+      // console.log('🔍 Current Authentication State:')
+      // console.log('   - userType:', sessionStorage.getItem('userType'))
+      // console.log('   - authToken exists:', !!sessionStorage.getItem('authToken'))
+      // console.log(
+      //   '   - authToken preview:',
+      //   sessionStorage.getItem('authToken')?.substring(0, 30) + '...',
+      // )
+      // console.log('   - permissions (new):', sessionStorage.getItem('permissions'))
+      // console.log('   - employeePermissions (old):', sessionStorage.getItem('employeePermissions'))
+      // console.log('   - currentUser exists:', !!sessionStorage.getItem('currentUser'))
     },
   },
 }

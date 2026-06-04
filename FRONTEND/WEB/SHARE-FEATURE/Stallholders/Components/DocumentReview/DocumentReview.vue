@@ -152,8 +152,16 @@
         <v-divider></v-divider>
 
         <div class="stallholder-info">
-          <v-avatar size="32" color="primary" class="mr-2">
-            <span class="text-white text-body-2">{{ getInitials(submission.stallholder_name) }}</span>
+          <v-avatar size="32" color="primary" class="mr-2 overflow-visible">
+            <img 
+              v-if="submission.stallholder_id"
+              :src="getAvatarUrl(submission.stallholder_id) + '?t=' + avatarBuster"
+              @error="handleAvatarError"
+              class="avatar-img"
+              style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"
+              alt="Avatar"
+            />
+            <span class="text-white text-body-2 avatar-initials" :style="{ display: submission.stallholder_id ? 'none' : 'flex' }">{{ getInitials(submission.stallholder_name) }}</span>
           </v-avatar>
           <div class="stallholder-details">
             <span class="stallholder-name">{{ submission.stallholder_name }}</span>
@@ -335,8 +343,15 @@
     <v-dialog v-model="showRejectDialog" max-width="500">
       <v-card>
         <v-card-title class="bg-error text-white">
-          <v-icon class="mr-2">mdi-file-document-remove</v-icon>
-          Reject Document
+          <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2">mdi-file-document-remove</v-icon>
+              <span>Reject Document</span>
+            </div>
+            <v-btn icon variant="text" @click="showRejectDialog = false" size="small" color="white">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
         <v-card-text class="pa-4">
           <p class="mb-4">
@@ -355,7 +370,6 @@
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showRejectDialog = false">Cancel</v-btn>
           <v-btn 
             color="error" 
             variant="flat"

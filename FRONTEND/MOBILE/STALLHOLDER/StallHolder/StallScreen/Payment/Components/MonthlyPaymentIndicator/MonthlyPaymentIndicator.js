@@ -40,6 +40,19 @@ const getStatusConfigForStall = (stall, isDark) => {
       statusLabel: 'PENDING',
       borderColor: isDark ? '#B45309' : '#FDE68A'
     };
+  } else if (stall.isPartial) {
+    return {
+      icon: "pie-chart",
+      iconColor: "#3B82F6", // Blue
+      gradientColors: isDark 
+        ? ['#1E3A8A', '#1D4ED8', '#2563EB'] 
+        : ['#EFF6FF', '#DBEAFE', '#BFDBFE'],
+      textColor: isDark ? '#60A5FA' : '#1E40AF',
+      badgeColor: '#3B82F6',
+      badgeTextColor: '#FFFFFF',
+      statusLabel: 'PARTIAL',
+      borderColor: isDark ? '#2563EB' : '#BFDBFE'
+    };
   } else {
     return {
       icon: "alert-circle",
@@ -95,14 +108,26 @@ const StallPaymentCard = ({ stall, monthName, isDark, isLast }) => {
             </Text>
             
             {/* Amount Display */}
-            {stall.isUnpaid || stall.isPending ? (
-              <View style={styles.amountRow}>
-                <Text style={[styles.amountLabel, { color: config.textColor, opacity: 0.8 }]}>
-                  Amount Due:
-                </Text>
-                <Text style={[styles.amountValue, { color: config.textColor }]}>
-                  {stall.amountDue}
-                </Text>
+            {stall.isUnpaid || stall.isPending || stall.isPartial ? (
+              <View>
+                <View style={styles.amountRow}>
+                  <Text style={[styles.amountLabel, { color: config.textColor, opacity: 0.8 }]}>
+                    Amount Due:
+                  </Text>
+                  <Text style={[styles.amountValue, { color: config.textColor }]}>
+                    {stall.amountDue}
+                  </Text>
+                </View>
+                {stall.isPartial && (
+                  <View style={[styles.amountRow, { marginTop: 4 }]}>
+                    <Text style={[styles.amountLabel, { color: config.textColor, opacity: 0.8 }]}>
+                      Promise Date:
+                    </Text>
+                    <Text style={[styles.amountValue, { color: config.textColor, fontWeight: '700' }]}>
+                      {stall.promiseDate || '—'}
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : (
               <View style={styles.amountRow}>
@@ -116,7 +141,7 @@ const StallPaymentCard = ({ stall, monthName, isDark, isLast }) => {
             )}
           </View>
         </View>
-
+ 
         {/* Footer Info */}
         <View style={styles.footerRow}>
           <View style={styles.footerItem}>
@@ -132,7 +157,7 @@ const StallPaymentCard = ({ stall, monthName, isDark, isLast }) => {
               Rent: {stall.monthlyRent}
             </Text>
           </View>
-          {(stall.isUnpaid || stall.isPending) && (
+          {(stall.isUnpaid || stall.isPending || stall.isPartial) && (
             <>
               <View style={styles.footerDivider} />
               <View style={styles.footerItem}>
@@ -241,6 +266,9 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
   const hasViolation = stalls.some(s => s.hasViolation);
   const violationCount = stalls[0]?.unpaidViolationsCount || 0;
 
+  // Partial Payments
+  const partialPayments = monthlyStatus.activePartialPayments || [];
+
   return (
     <Animated.View 
       style={[
@@ -295,9 +323,54 @@ const MonthlyPaymentIndicator = ({ theme, isDark, onRefresh, onViewAllMonths }) 
         </View>
       )}
 
+      {/* Partial Payment Warning Banner */}
+      {partialPayments.map((partial, index) => (
+        <View key={`partial_${partial.paymentId || index}`} style={{
+          backgroundColor: isDark ? '#78350F' : '#FFFBEB',
+          borderWidth: 1.5,
+          borderColor: isDark ? '#B45309' : '#FDE68A',
+          borderRadius: 16,
+          padding: 14,
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}>
+          <View style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 12,
+          }}>
+            <Ionicons name="alert-circle" size={24} color="#F59E0B" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{
+              fontSize: 14,
+              fontWeight: '700',
+              color: isDark ? '#FBBF24' : '#92400E',
+              marginBottom: 2,
+            }}>
+              Partial Payment Due
+            </Text>
+            <Text style={{
+              fontSize: 12,
+              fontWeight: '500',
+              color: isDark ? '#FBBF24' : '#92400E',
+              opacity: 0.85,
+              lineHeight: 16,
+            }}>
+              Reminder: You promised to fully pay your remaining balance for {partial.paymentForMonth} by {partial.promiseDate}. {partial.daysRemaining < 0 ? 'This is now overdue.' : partial.daysRemaining === 0 ? 'This is due today.' : `Due in ${partial.daysRemaining} day(s).`}
+            </Text>
+          </View>
+        </View>
+      ))}
+
       {stalls.map((stall, index) => (
         <StallPaymentCard
-          key={stall.stallholderId || stall.stallId || index}
+          key={`stall_${stall.stallholderId || stall.stallId || index}`}
           stall={stall}
           monthName={monthlyStatus.currentMonthName}
           isDark={isDark}

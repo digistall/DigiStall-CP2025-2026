@@ -1,3 +1,4 @@
+import './utils/silenceLogs.js';
 // ===== DIGISTALL - MVC ROLE-BASED BACKEND SERVER =====
 // Main server entry point using new folder structure
 // Run: node server.js
@@ -15,6 +16,10 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config();
 
+// Import custom production logger and system log utilities
+import productionLogger, { systemLog } from './middleware/productionLogger.js';
+
+
 // Import shared config
 import { corsConfig } from './config/cors.js';
 import { createConnection, testConnection } from './config/database.js';
@@ -23,6 +28,7 @@ import { createConnection, testConnection } from './config/database.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
 
 // Import session cleanup service (auto-logout inactive users)
 import { startSessionCleanup } from './services/sessionCleanupService.js';
@@ -66,6 +72,7 @@ import stallholderMobileRoutes from './routes/stallholderRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import mobileSurrenderRoutes from './routes/mobileSurrenderRoutes.js';
 import webSurrenderRoutes from './routes/webSurrenderRoutes.js';
+import avatarRoutes from './routes/avatarRoutes.js';
 
 // Activity Log routes
 import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.js';
@@ -73,7 +80,11 @@ import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for rate limiting behind reverse proxies (DigitalOcean load balancers/Nginx)
+app.set('trust proxy', 1);
+
 // ===== MIDDLEWARE =====
+app.use(productionLogger);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser());
@@ -81,6 +92,14 @@ app.use(cors(corsConfig));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Health check endpoint (used by Docker healthcheck, bypasses rate limiting)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Apply global API rate limiter (excluding health check, which is registered above)
+app.use('/api', apiLimiter);
 
 console.log('\n========================================');
 console.log('  DIGISTALL - MVC ROLE-BASED SERVER');
@@ -129,6 +148,8 @@ app.use('/api/mobile/user', userRoutes);
 app.use('/api/mobile/stalls', mobileStallRoutes);  // Mobile stall routes (type, area, etc)
 app.use('/api/mobile/vendor-applications', vendorApplicationRoutes);  // Backward compat (prefer /api/public/vendor-applications)
 app.use('/api/mobile/surrender', enhancedAuthMiddleware.authenticateToken, mobileSurrenderRoutes);
+app.use('/api/mobile/face', avatarRoutes);
+app.use('/api/face', avatarRoutes);
 console.log('✅ STALL-HOLDER routes loaded');
 
 // ACTIVITY LOG ROUTES
@@ -144,43 +165,37 @@ console.log('✅ APPLICANTS routes loaded');
 // AUTH ROUTES
 console.log('✅ AUTH routes loaded');
 
-// Health check endpoint (used by Docker healthcheck)
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 // Error handler
 app.use(errorHandler);
 
 // ===== START SERVER =====
 async function startServer() {
-  console.log('📦 Testing database connection...');
+  const isWeb = parseInt(PORT) === 5000 || PORT === '5000';
+  const serverName = isWeb ? 'Web Backend' : (parseInt(PORT) === 5001 || PORT === '5001' ? 'Mobile Backend' : 'Unified Backend');
+  const envMode = (process.env.NODE_ENV || 'development').toUpperCase();
+
+  systemLog(`📦 Testing database connection for ${serverName}...`);
   const dbTest = await testConnection();
   
+  let dbStatus = '';
   if (dbTest.success) {
-    console.log('✅ Database connection successful\n');
-    
+    dbStatus = 'CONNECTED';
     // Start session cleanup service (auto-logout inactive users)
     startSessionCleanup();
   } else {
-    console.log('⚠️  Database connection failed - continuing without DB\n');
+    dbStatus = 'FAILED (Continuing without DB)';
   }
   
   app.listen(PORT, () => {
-    console.log('========================================');
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 http://localhost:${PORT}`);
-    console.log('========================================\n');
-    console.log('Role folders active:');
-    console.log('  • LGU-NAGA (Business Owner)');
-    console.log('  • BRANCH-MANAGER');
-    console.log('  • STALL-HOLDER');
-    console.log('  • EMPLOYEE (Inspector, Collector)');
-    console.log('  • VENDOR');
-    console.log('  • APPLICANTS');
-    console.log('  • AUTH');
-    console.log('  • PUBLIC-LANDINGPAGE');
-    console.log('\n💡 Press Ctrl+C to stop\n');
+    systemLog('\n============================================================');
+    systemLog(`🚀 DIGISTALL - ${serverName.toUpperCase()} ONLINE`);
+    systemLog('============================================================');
+    systemLog(`[Env Mode]   ${envMode}`);
+    systemLog(`[Port]       ${PORT}`);
+    systemLog(`[URL]        http://localhost:${PORT}`);
+    systemLog(`[Database]   ${dbStatus}`);
+    systemLog(`[Status]     READY & SECURELY ROUTING TRANSACTIONS`);
+    systemLog('============================================================\n');
   });
 }
 

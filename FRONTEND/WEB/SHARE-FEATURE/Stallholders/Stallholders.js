@@ -1,6 +1,7 @@
 // Import the components
 import SearchStall from './Components/Search/SearchStall.vue'
 import TableStall from './Components/Table/TableStall.vue'
+import ActivityLogDialog from './Components/ActivityLogDialog/ActivityLogDialog.vue'
 import DocumentsView from './Components/Documents/DocumentsView.vue'
 import DocumentDetail from './Components/Documents/View/DocumentDetail.vue'
 import AddStallholder from './Components/Add/AddStallholder.vue'
@@ -11,6 +12,7 @@ export default {
   components: {
     SearchStall,
     TableStall,
+    ActivityLogDialog,
     DocumentsView,
     DocumentDetail,
     AddStallholder,
@@ -22,6 +24,7 @@ export default {
       searchQuery: '',
       activeFilter: 'all',
       loading: true, // Start with loading true until TableStall data is ready
+      showActivityLogDialog: false,
       showDocumentsModal: false,
       showDocumentDetail: false,
       showAddStallholderModal: false,
@@ -32,41 +35,6 @@ export default {
   },
   mounted() {
     console.log('Stallholders page initialized - waiting for TableStall data')
-    // Opt-in: use table scrolling inside page instead of page scrollbar
-    try {
-      document.body.classList.add('no-page-scroll')
-      document.documentElement.classList.add('no-page-scroll')
-      try {
-        const prevHtmlOverflow = document.documentElement.style.overflow
-        const prevBodyOverflow = document.body.style.overflow
-        document.documentElement.dataset._prevOverflow = prevHtmlOverflow || ''
-        document.body.dataset._prevOverflow = prevBodyOverflow || ''
-        document.documentElement.style.overflow = 'hidden'
-        document.body.style.overflow = 'hidden'
-      // eslint-disable-next-line no-unused-vars
-      } catch (e) {
-        /* ignore */
-      }
-    // eslint-disable-next-line no-unused-vars
-    } catch (e) {
-      /* ignore */
-    }
-  },
-  beforeUnmount() {
-    try {
-      document.body.classList.remove('no-page-scroll')
-      document.documentElement.classList.remove('no-page-scroll')
-      try {
-        const prevHtml = document.documentElement.dataset._prevOverflow || ''
-        const prevBody = document.body.dataset._prevOverflow || ''
-        document.documentElement.style.overflow = prevHtml
-        document.body.style.overflow = prevBody
-        delete document.documentElement.dataset._prevOverflow
-        delete document.body.dataset._prevOverflow
-      // eslint-disable-next-line no-unused-vars, no-empty
-      } catch (e) {}
-    // eslint-disable-next-line no-unused-vars, no-empty
-    } catch (e) {}
   },
   methods: {
     // Handle search from SearchStall component
@@ -74,6 +42,14 @@ export default {
       this.searchQuery = searchData.query
       this.activeFilter = searchData.filter
       console.log('Search data:', searchData)
+    },
+
+    openActivityLogDialog() {
+      this.showActivityLogDialog = true
+    },
+
+    closeActivityLogDialog() {
+      this.showActivityLogDialog = false
     },
 
     // Handle stallholder actions from TableStall component

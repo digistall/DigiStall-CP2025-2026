@@ -30,7 +30,6 @@ export const getLandingPageStallsList = async (req, res) => {
     const statusFilter = status || null;
     const priceTypeFilter = priceType || null;
     
-    console.log('📊 Executing stalls SP with params:', { searchTerm, branchFilter, statusFilter, priceTypeFilter, limitNum, offset });
     
     // Use stored procedure for landing page stalls
     const [rows] = await connection.execute(
@@ -39,7 +38,6 @@ export const getLandingPageStallsList = async (req, res) => {
     );
     const stalls = rows[0];
     
-    console.log(`📊 Landing page stalls fetched: ${stalls.length} records`);
     
     res.status(200).json({
       success: true,

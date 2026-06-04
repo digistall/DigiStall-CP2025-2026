@@ -7,6 +7,10 @@
           <v-icon left>mdi-account-plus</v-icon>
           Add New Vendor
         </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="closeDialog" :disabled="loading" color="white" variant="text" size="small">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
       </v-toolbar>
 
       <!-- Tabbed Content -->
@@ -452,7 +456,6 @@
       <v-divider></v-divider>
       <!-- Action Buttons (matching Stallholders) -->
       <v-card-actions class="px-6 py-4">
-        <v-btn color="grey" text @click="closeDialog">Cancel</v-btn>
         <v-spacer></v-spacer>
         <v-btn
           color="primary"

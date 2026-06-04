@@ -149,8 +149,11 @@
         <!-- Edit Dialog -->
         <v-dialog v-model="editDialog" max-width="500px">
             <v-card>
-                <v-card-title class="text-h6 bg-primary text-white pa-4">
-                    Edit {{ editType === 'floor' ? 'Floor' : 'Section' }}
+                <v-card-title class="text-h6 bg-primary text-white pa-4 d-flex align-center justify-space-between w-100">
+                    <span>Edit {{ editType === 'floor' ? 'Floor' : 'Section' }}</span>
+                    <v-btn icon variant="text" @click="editDialog = false" size="small" color="white">
+                        <v-icon>mdi-close</v-icon>
+                    </v-btn>
                 </v-card-title>
                 <v-card-text class="pa-4">
                     <v-text-field
@@ -170,38 +173,29 @@
                 </v-card-text>
                 <v-card-actions class="pa-4">
                     <v-spacer></v-spacer>
-                    <v-btn color="grey" variant="outlined" @click="editDialog = false">Cancel</v-btn>
                     <v-btn color="primary" @click="saveEdit">Save Changes</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
         <!-- Delete Confirmation Dialog -->
-        <v-dialog v-model="deleteDialog" max-width="450px">
-            <v-card>
-                <v-card-title class="text-h6 bg-error text-white pa-4">
-                    <v-icon class="mr-2">mdi-alert</v-icon>
-                    Confirm Delete
-                </v-card-title>
-                <v-card-text class="pa-4">
-                    <p class="text-body-1">
-                        Are you sure you want to delete this {{ deleteType }}?
-                    </p>
-                    <p v-if="deleteItem" class="font-weight-bold text-h6 mt-2">
-                        "{{ deleteItem.name }}"
-                    </p>
-                    <p class="text-caption text-error mt-2">
-                        <v-icon size="small" color="error">mdi-information</v-icon>
-                        This action cannot be undone.
-                    </p>
-                </v-card-text>
-                <v-card-actions class="pa-4">
-                    <v-spacer></v-spacer>
-                    <v-btn color="grey" variant="outlined" @click="deleteDialog = false">Cancel</v-btn>
-                    <v-btn color="error" @click="deleteItem_">Delete</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <ConfirmDialog
+          v-model="deleteDialog"
+          :title="'Delete ' + (deleteType === 'floor' ? 'Floor' : 'Section')"
+          :type="'danger'"
+          confirm-text="Delete"
+          cancel-text="Cancel"
+          note="This action cannot be undone."
+          note-icon="mdi-alert-circle-outline"
+          note-icon-color="error"
+          @confirm="deleteItem_"
+          @cancel="deleteDialog = false"
+        >
+          <template #message>
+            Are you sure you want to delete this {{ deleteType }}
+            <strong v-if="deleteItem">"{{ deleteItem.name }}"</strong>?
+          </template>
+        </ConfirmDialog>
 
         <!-- Snackbar for notifications -->
         <v-snackbar
@@ -229,5 +223,15 @@
     </div>
 </template>
 
-<script src="./ViewFloorsSections.js"></script>
+<script>
+import ViewFloorsSectionsScript from './ViewFloorsSections.js'
+import ConfirmDialog from '@common/ConfirmDialog/ConfirmDialog.vue'
+export default {
+  ...ViewFloorsSectionsScript,
+  components: {
+    ...ViewFloorsSectionsScript.components,
+    ConfirmDialog
+  }
+}
+</script>
 <style scoped src="./ViewFloorsSections.css"></style>

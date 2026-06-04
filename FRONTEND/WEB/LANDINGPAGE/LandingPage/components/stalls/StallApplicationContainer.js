@@ -134,19 +134,19 @@ export default {
             console.log('📧 Sending credentials email to:', email)
 
             const emailPayload = {
-              service_id: 'service_am6pozg',
-              template_id: 'template_3wccajf',
-              user_id: 'F2fUGiyhf-FjatviG',
+              service_id: import.meta.env.VITE_EMAILJS_SERVICE_ID,
+              template_id: import.meta.env.VITE_EMAILJS_APPROVE_TEMPLATE_ID || import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+              user_id: import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
               template_params: {
-                from_name: 'Stall Management System',
-                from_email: 'digistall@unc.edu.ph',
+                from_name: import.meta.env.VITE_EMAILJS_SENDER_NAME || 'Stall Management System',
+                from_email: import.meta.env.VITE_EMAILJS_SENDER_EMAIL || 'digistall@unc.edu.ph',
                 to_email: email,
                 to_name: applicantName,
                 subject: 'Stall Application Approved - Your Login Credentials',
                 message: `Dear ${applicantName},\n\nCongratulations! Your stall application has been APPROVED.\n\nHere are your login credentials to access the stall management system:\n\nUsername: ${username}\nPassword: ${password}\n\nIMPORTANT INSTRUCTIONS:\n1. Please save these credentials securely\n2. Use these credentials to log into the mobile app\n3. Change your password after first login for security\n\nBest regards,\nStall Management Admin Team`,
                 username: username,
                 password: password,
-                reply_to: 'digistall@unc.edu.ph',
+                reply_to: import.meta.env.VITE_EMAILJS_SENDER_EMAIL || 'digistall@unc.edu.ph',
               },
             }
 
@@ -294,6 +294,7 @@ export default {
         applicant_birthdate: toNull(personal.birthdate),
         applicant_civil_status: toNull(personal.civilStatus) || 'Single',
         applicant_educational_attainment: toNull(personal.education),
+        gender: toNull(personal.gender) || '',
 
         // Spouse Information - all optional
         spouse_full_name: toNull(spouse.spouseName),
@@ -377,8 +378,9 @@ export default {
       // Validate required fields
       if (!completeApplicationData.applicant_full_name || 
           !completeApplicationData.applicant_contact_number || 
-          !completeApplicationData.email_address) {
-        throw new Error('Missing required fields: applicant name, contact number, and email address are required')
+          !completeApplicationData.email_address ||
+          !completeApplicationData.gender) {
+        throw new Error('Missing required fields: applicant name, contact number, email address, and gender are required')
       }
 
       const response = await fetch(

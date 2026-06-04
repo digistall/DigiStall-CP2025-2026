@@ -1,4 +1,6 @@
 import { createConnection } from '../../../config/database.js';
+import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get all owned/rented stalls for a stallholder, grouped by branch
@@ -13,7 +15,6 @@ export const getOwnedStalls = async (req, res) => {
 
   try {
     const userData = req.user;
-    console.log('?? Owned Stalls - User data from token:', JSON.stringify(userData, null, 2));
 
     let applicantId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
 
@@ -25,7 +26,6 @@ export const getOwnedStalls = async (req, res) => {
       });
     }
 
-    console.log('?? Fetching owned stalls for applicant:', applicantId);
 
     connection = await createConnection();
 
@@ -63,7 +63,6 @@ export const getOwnedStalls = async (req, res) => {
       AND sh.status = 'active' AND sh.stall_id IS NOT NULL`,
       [applicantId, applicantId]
     );
-    console.log('?? Raw stalls from DB:', rawStalls.length);
 
     // For each stall, get additional details (images, payment info)
     const enrichedStalls = [];
@@ -83,7 +82,6 @@ export const getOwnedStalls = async (req, res) => {
             }
           }
         } catch (imgError) {
-          console.log('?? Could not fetch stall image for stall_id:', stall.stall_id);
         }
       }
 
@@ -118,9 +116,9 @@ export const getOwnedStalls = async (req, res) => {
             `SELECT COUNT(*) as paid_count 
              FROM payments 
              WHERE stallholder_id = ? 
-             AND payment_for_month = ? 
+             AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
              AND payment_status IN ('completed', 'paid')`,
-            [stall.stallholder_id, currentMonth]
+            [stall.stallholder_id, currentMonth, currentMonth]
           );
 
           // Also check for pending payments this month
@@ -128,9 +126,9 @@ export const getOwnedStalls = async (req, res) => {
             `SELECT COUNT(*) as pending_count 
              FROM payments 
              WHERE stallholder_id = ? 
-             AND payment_for_month = ? 
+             AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
              AND payment_status = 'pending'`,
-            [stall.stallholder_id, currentMonth]
+            [stall.stallholder_id, currentMonth, currentMonth]
           );
           
           const isPaidThisMonth = paidCheck[0]?.paid_count > 0;
@@ -142,16 +140,19 @@ export const getOwnedStalls = async (req, res) => {
             is_current_month_paid: isPaidThisMonth
           };
 
-          // Compute the REAL payment status from actual payment records
-          if (isPaidThisMonth) {
-            computedPaymentStatus = 'paid';
-          } else if (hasPendingThisMonth) {
-            computedPaymentStatus = 'pending';
-          } else {
-            computedPaymentStatus = stall.payment_status || 'unpaid';
+          computedPaymentStatus = await calculateStallholderPaymentStatus(connection, stall.stallholder_id, stall.contract_start_date, parseFloat(stall.monthly_rent), false, currentMonth);
+          
+          if (stall.payment_status !== computedPaymentStatus) {
+            try {
+              await connection.execute(
+                "UPDATE stallholder SET payment_status = ? WHERE stallholder_id = ?",
+                [computedPaymentStatus, parseInt(stall.stallholder_id)]
+              );
+              console.log(`⚡ Self-healed database payment_status to '${computedPaymentStatus}' for stallholder ID ${stall.stallholder_id}`);
+            } catch (dbErr) {
+            }
           }
         } catch (payError) {
-          console.log('?? Could not fetch payment info for stallholder_id:', stall.stallholder_id);
         }
       }
 
@@ -203,7 +204,28 @@ export const getOwnedStalls = async (req, res) => {
       totalMonthlyRent += stall.monthly_rent;
     });
 
-    console.log(`? Found ${enrichedStalls.length} owned stalls across ${branchList.length} branches`);
+    console.log(`✅ Found ${enrichedStalls.length} owned stalls across ${branchList.length} branches`);
+
+    // Log view dashboard activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: applicantId,
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed dashboard (${enrichedStalls.length} stall(s) across ${branchList.length} branch(es))`,
+        module: 'Dashboard',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view dashboard activity:', logErr);
+    }
 
     return res.status(200).json({
       success: true,
@@ -218,7 +240,6 @@ export const getOwnedStalls = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('? Error fetching owned stalls:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch owned stalls',
