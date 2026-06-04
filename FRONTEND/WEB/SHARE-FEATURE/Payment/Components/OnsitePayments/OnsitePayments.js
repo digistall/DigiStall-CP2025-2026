@@ -1,5 +1,6 @@
 import StallholderDropdown from '../StallholderDropdown/StallholderDropdown.vue'
 import ToastNotification from '@common/ToastNotification/ToastNotification.vue'
+import LoadingOverlay from '@common/LoadingOverlay/LoadingOverlay.vue'
 import { useAvatar } from '@utils/avatarHelper.js'
 
 // Discount and fee constants
@@ -10,7 +11,7 @@ const ADVANCE_DAYS    = 5        // days before due to qualify for discount
 export default {
   name: 'OnsitePayments',
   emits: ['payment-added', 'delete-payment', 'count-updated', 'loading'],
-  components: { StallholderDropdown, ToastNotification },
+  components: { StallholderDropdown, ToastNotification, LoadingOverlay },
 
   setup() {
     const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();

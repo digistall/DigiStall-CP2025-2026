@@ -1,5 +1,6 @@
 import { createConnection } from '../../../config/database.js';
 import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get all owned/rented stalls for a stallholder, grouped by branch
@@ -119,9 +120,9 @@ export const getOwnedStalls = async (req, res) => {
             `SELECT COUNT(*) as paid_count 
              FROM payments 
              WHERE stallholder_id = ? 
-             AND payment_for_month = ? 
+             AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
              AND payment_status IN ('completed', 'paid')`,
-            [stall.stallholder_id, currentMonth]
+            [stall.stallholder_id, currentMonth, currentMonth]
           );
 
           // Also check for pending payments this month
@@ -129,9 +130,9 @@ export const getOwnedStalls = async (req, res) => {
             `SELECT COUNT(*) as pending_count 
              FROM payments 
              WHERE stallholder_id = ? 
-             AND payment_for_month = ? 
+             AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
              AND payment_status = 'pending'`,
-            [stall.stallholder_id, currentMonth]
+            [stall.stallholder_id, currentMonth, currentMonth]
           );
           
           const isPaidThisMonth = paidCheck[0]?.paid_count > 0;
@@ -143,8 +144,7 @@ export const getOwnedStalls = async (req, res) => {
             is_current_month_paid: isPaidThisMonth
           };
 
-          // Compute the REAL payment status from actual payment records
-          computedPaymentStatus = await calculateStallholderPaymentStatus(connection, stall.stallholder_id, stall.contract_start_date, parseFloat(stall.monthly_rent));
+          computedPaymentStatus = await calculateStallholderPaymentStatus(connection, stall.stallholder_id, stall.contract_start_date, parseFloat(stall.monthly_rent), false, currentMonth);
           
           if (stall.payment_status !== computedPaymentStatus) {
             try {

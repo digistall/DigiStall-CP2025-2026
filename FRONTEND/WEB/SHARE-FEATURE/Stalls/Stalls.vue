@@ -108,23 +108,16 @@
     </div>
 
     <!-- Warning Container Dialog -->
-    <v-dialog v-model="showWarningContainer" max-width="400" persistent>
-      <v-card>
-        <v-card-title class="text-h6 bg-primary text-white">
-          <v-icon class="mr-2" color="white">mdi-information</v-icon>
-          {{ warningData.title }}
-        </v-card-title>
-        <v-card-text class="pt-4">
-          <v-alert type="info" variant="tonal" class="mb-0">
-            {{ warningData.message }}
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" variant="flat" @click="closeWarningAndShowModal"> Continue </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="showWarningContainer"
+      :title="warningData.title"
+      :message="warningData.message"
+      type="primary"
+      confirm-text="Continue"
+      cancel-text="Cancel"
+      @confirm="closeWarningAndShowModal"
+      @cancel="showWarningContainer = false"
+    />
 
     <!-- Toast Notification -->
     <ToastNotification
@@ -146,5 +139,15 @@
   </div>
 </template>
 
-<script src="./Stalls.js"></script>
+<script>
+import StallsScript from './Stalls.js'
+import ConfirmDialog from '@common/ConfirmDialog/ConfirmDialog.vue'
+export default {
+  ...StallsScript,
+  components: {
+    ...StallsScript.components,
+    ConfirmDialog
+  }
+}
+</script>
 <style scoped src="./Stalls.css"></style>

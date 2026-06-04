@@ -421,9 +421,7 @@
           <v-spacer></v-spacer>
 
           <!-- Cancel and Save Buttons (Right Side) -->
-          <v-btn variant="text" color="grey-darken-1" @click="handleClose" :disabled="loading">
-            Cancel
-          </v-btn>
+
 
           <v-btn
             color="primary"
@@ -456,9 +454,14 @@
       <!-- Image Delete Confirmation Dialog -->
       <v-dialog v-model="showImageDeleteDialog" max-width="500" persistent>
         <v-card class="image-delete-dialog" elevation="8">
-          <v-card-title class="d-flex align-center bg-error pa-4">
-            <v-icon size="32" color="white" class="mr-3">mdi-alert-circle</v-icon>
-            <span class="text-h6 text-white">Delete Image</span>
+          <v-card-title class="d-flex align-center justify-space-between bg-error pa-4 w-100">
+            <div class="d-flex align-center">
+              <v-icon size="32" color="white" class="mr-3">mdi-alert-circle</v-icon>
+              <span class="text-h6 text-white">Delete Image</span>
+            </div>
+            <v-btn icon variant="text" @click="cancelDeleteImage" :disabled="deletingImage" size="small" color="white">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
           </v-card-title>
 
           <v-card-text class="pt-6 pb-4">
@@ -489,15 +492,6 @@
           <v-divider></v-divider>
 
           <v-card-actions class="pa-4">
-            <v-btn
-              variant="text"
-              color="grey-darken-1"
-              @click="cancelDeleteImage"
-              :disabled="deletingImage"
-            >
-              <v-icon left>mdi-close</v-icon>
-              Cancel
-            </v-btn>
             <v-spacer></v-spacer>
             <v-btn
               color="error"
