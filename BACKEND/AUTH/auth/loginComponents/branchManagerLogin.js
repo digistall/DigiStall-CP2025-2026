@@ -13,7 +13,6 @@ export const branchManagerLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    console.log('🔐 Business Manager login attempt:');
     console.log('- Username:', username);
     console.log('- Password length:', password ? password.length : 'undefined');
 
@@ -29,14 +28,12 @@ export const branchManagerLogin = async (req, res) => {
     connection = await createConnection();
 
     // Query business_manager table using stored procedure
-    console.log('🔍 Searching for business manager with username:', username);
 
     const [[businessManager]] = await connection.execute(
       'CALL getBusinessManagerByUsername(?)',
       [username]
     );
 
-    console.log('🔍 Found business managers:', businessManager ? 1 : 0);
 
     if (!businessManager) {
       console.log('❌ No business manager found with username:', username);
@@ -45,13 +42,7 @@ export const branchManagerLogin = async (req, res) => {
         message: 'Invalid credentials or inactive account',
       });
     }
-    console.log('📍 Business Manager found:', {
-      id: businessManager.business_manager_id,
-      name: `${businessManager.first_name} ${businessManager.last_name}`,
-      branch: businessManager.branch_name,
-      area: businessManager.area,
-      location: businessManager.location
-    });
+
 
     // Verify password
     let isPasswordValid = false;
@@ -59,14 +50,11 @@ export const branchManagerLogin = async (req, res) => {
     if (businessManager.manager_password_hash.startsWith('$2b$') || businessManager.manager_password_hash.startsWith('$2a$')) {
       // Hashed password
       isPasswordValid = await compare(password, businessManager.manager_password_hash);
-      console.log('🔐 Using bcrypt verification');
     } else {
       // Plain text password (temporary for testing)
       isPasswordValid = password === businessManager.manager_password_hash;
-      console.log('🔓 Using plain text verification (NOT RECOMMENDED for production)');
     }
 
-    console.log('🔍 Password verification result:', isPasswordValid);
 
     if (!isPasswordValid) {
       console.log('❌ Invalid password for business manager:', username);
@@ -97,12 +85,7 @@ export const branchManagerLogin = async (req, res) => {
     );
 
     console.log('✅ Business Manager login successful for:', username);
-    console.log('🎯 Token payload:', { 
-      userId: businessManager.business_manager_id, 
-      role: 'business_manager', 
-      type: 'business_manager',
-      userType: 'business_manager' 
-    });
+
 
     res.json({
       success: true,

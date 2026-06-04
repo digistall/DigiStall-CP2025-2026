@@ -21,7 +21,6 @@ const encryptIfNotNull = (value) => {
   try {
     return encryptData(value);
   } catch (error) {
-    console.error('⚠️ Encryption failed, storing as plain text:', error.message);
     return value;
   }
 };
@@ -38,7 +37,6 @@ const decryptSafe = (value) => {
     }
     return value; // Return as-is if not encrypted
   } catch (error) {
-    console.error('⚠️ Decryption failed, returning as-is:', error.message);
     return value;
   }
 };
@@ -49,11 +47,9 @@ export const applicantController = {
     let connection;
 
     try {
-      console.log("🔍 Creating database connection...");
       connection = await createConnection();
       console.log("✅ Database connection established");
 
-      console.log("🔍 DEBUG: Full request body received:");
       console.log(JSON.stringify(req.body, null, 2));
 
       const {
@@ -97,7 +93,6 @@ export const applicantController = {
         application_date,
       } = req.body;
 
-      console.log("🔍 DEBUG: Destructured values BEFORE toNull:");
       console.log({
         applicant_full_name: { value: applicant_full_name, type: typeof applicant_full_name },
         applicant_contact_number: { value: applicant_contact_number, type: typeof applicant_contact_number },
@@ -132,7 +127,6 @@ export const applicantController = {
         });
       }
 
-      console.log("🔐 Encrypting sensitive data before storage...");
       
       // Prepare all applicant parameters with toNull conversion AND encryption for sensitive PII fields
       const applicantParams = [
@@ -165,7 +159,6 @@ export const applicantController = {
 
       console.log("✅ Sensitive data encrypted successfully");
 
-      console.log("🔍 DEBUG: Parameters AFTER toNull (checking for undefined):");
       applicantParams.forEach((param, index) => {
         const paramNames = [
           'applicant_full_name', 'applicant_contact_number', 'applicant_address',
@@ -206,8 +199,6 @@ export const applicantController = {
       let applicantId, applicationId = null;
 
       // Step 1: Create applicant
-      console.log("📋 Calling stored procedure createApplicantComplete...");
-      console.log("📋 With parameters:", applicantParams);
       
       const [rows] = await connection.execute(
         `CALL createApplicantComplete(
@@ -220,14 +211,12 @@ export const applicantController = {
       );
 
       // The stored procedure returns a SELECT statement, so we get the result from the first row set
-      console.log("📋 Raw procedure result:", rows);
       const applicantResult = rows[0][0]; // First row set, first row
       applicantId = applicantResult.new_applicant_id;
       console.log("✅ Applicant created with ID:", applicantId);
 
       // Step 2: Create application if stall_id provided
       if (stall_id) {
-        console.log("🏪 Creating application for stall_id:", stall_id);
         
         // Check if stall exists and is available
         const [stallCheck] = await connection.execute(
@@ -235,7 +224,6 @@ export const applicantController = {
           [stall_id]
         );
 
-        console.log("🏪 Stall check result:", stallCheck);
 
         if (stallCheck.length === 0) {
           throw new Error("Selected stall does not exist");
@@ -246,12 +234,7 @@ export const applicantController = {
         const isAvailable = stall.is_available === 1 || stall.is_available === true || stall.is_available === '1';
         const hasValidStatus = stall.status === 'Available' || stall.status === 'Active';
         
-        console.log("🏪 Stall availability check:", { 
-          raw_is_available: stall.is_available, 
-          isAvailable, 
-          status: stall.status, 
-          hasValidStatus 
-        });
+
 
         if (!isAvailable || !hasValidStatus) {
           throw new Error("Selected stall is not available");
@@ -271,7 +254,6 @@ export const applicantController = {
         applicationId = applicationResult.insertId;
         console.log("✅ Application created with ID:", applicationId);
       } else {
-        console.log("👤 General application (no specific stall) - auto-approving...");
 
         // ── Auto-approve: set applicant status to 'approved' ──
         await connection.execute(
@@ -289,12 +271,10 @@ export const applicantController = {
         for (let i = 0; i < 3; i++) generatedPassword += letters.charAt(Math.floor(Math.random() * letters.length));
         for (let i = 0; i < 3; i++) generatedPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
 
-        console.log("🔑 Generated credentials - Username:", generatedUsername);
 
         // ── Hash password using bcrypt (compatible with login controller) ──
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(generatedPassword, saltRounds);
-        console.log("🔐 Password hashed with bcrypt");
 
         // ── Save credentials to credential table ──
         const [existingCred] = await connection.execute(
@@ -360,7 +340,6 @@ export const applicantController = {
         }
       }
 
-      console.log(`📄 Using BLOB storage: ${USE_BLOB_STORAGE}`);
 
       if (signature_data) {
         try {
@@ -389,7 +368,6 @@ export const applicantController = {
           savedDocuments.push({ type: 'signature', ...saved });
           console.log("✅ Saved signature document:", saved.url);
         } catch (docError) {
-          console.error("⚠️ Failed to save signature:", docError.message);
         }
       }
 
@@ -418,7 +396,6 @@ export const applicantController = {
           savedDocuments.push({ type: 'house_location', ...saved });
           console.log("✅ Saved house location document:", saved.url);
         } catch (docError) {
-          console.error("⚠️ Failed to save house location:", docError.message);
         }
       }
 
@@ -447,11 +424,9 @@ export const applicantController = {
           savedDocuments.push({ type: 'valid_id', ...saved });
           console.log("✅ Saved valid ID document:", saved.url);
         } catch (docError) {
-          console.error("⚠️ Failed to save valid ID:", docError.message);
         }
       }
 
-      console.log(`📄 Saved ${savedDocuments.length} document(s) for applicant ${applicantId} (storage: ${USE_BLOB_STORAGE ? 'BLOB' : 'file'})`);
 
       // Generate response (stall-specific application only - general apps already returned above)
       res.status(201).json({
@@ -519,9 +494,7 @@ export const applicantController = {
       if (connection) {
         try {
           await connection.end();
-          console.log("🔒 Database connection closed");
         } catch (closeError) {
-          console.error("⚠️ Error closing connection:", closeError.message);
         }
       }
     }
@@ -550,7 +523,6 @@ export const applicantController = {
         });
       }
 
-      console.log("🔐 Encrypting sensitive data before storage...");
 
       // Encrypt sensitive PII fields before storage
       const params = [
@@ -727,7 +699,6 @@ export const applicantController = {
         signature_of_applicant, house_sketch_location, valid_id, email_address,
       } = req.body;
 
-      console.log("🔐 Encrypting sensitive data before update...");
 
       await connection.execute(
         `CALL updateApplicantComplete(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

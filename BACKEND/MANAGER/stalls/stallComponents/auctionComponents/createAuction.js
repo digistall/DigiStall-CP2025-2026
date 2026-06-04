@@ -23,7 +23,6 @@ export const createAuction = async (req, res) => {
       });
     }
 
-    console.log(`🏺 Creating auction for stall ${stallId} with ${durationHours} hours duration, starting at ₱${startingPrice}`);
 
     connection = await createConnection();
 

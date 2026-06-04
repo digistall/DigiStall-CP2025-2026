@@ -40,7 +40,6 @@ export async function uploadFaceVerification(req, res) {
 
     // 2. Use rotated buffer if face detection corrected orientation
     if (validation.rotatedBuffer) {
-      console.log('🔄 Saving rotated upright face verification image');
       imageBuffer = validation.rotatedBuffer;
     }
 

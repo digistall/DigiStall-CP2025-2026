@@ -7,8 +7,6 @@ import emailService from '../../../../services/emailService.js'
 export const createBranchManager = async (req, res) => {
   let connection;
   try {
-    console.log('🔧 Creating branch manager - Request received')
-    console.log('📋 Request body:', JSON.stringify(req.body, null, 2))
 
     const {
       branch_id,
@@ -35,7 +33,6 @@ export const createBranchManager = async (req, res) => {
     const userRole = currentUser?.role || currentUser?.userType
     const userId = currentUser?.userId || currentUser?.id
 
-    console.log('🔍 Mapped values:')
     console.log('- Branch ID:', finalBranchId)
     console.log('- Name:', finalFirstName, finalLastName)
     console.log('- Email:', email)
@@ -82,7 +79,6 @@ export const createBranchManager = async (req, res) => {
     
     // If there's a current manager, deactivate them
     if (currentManagerId) {
-      console.log('📝 Deactivating previous manager ID:', currentManagerId)
       await connection.execute(
         'UPDATE business_manager SET status = ? WHERE business_manager_id = ?',
         ['Inactive', currentManagerId]
@@ -131,9 +127,6 @@ export const createBranchManager = async (req, res) => {
     const encryptedLastName = encryptData(finalLastName)
     const encryptedContact = finalContactNumber ? encryptData(finalContactNumber) : null
     
-    console.log('🔐 Credentials generated and encrypted')
-    console.log('📧 Email (username):', email)
-    console.log('🔑 Generated password:', generatedPassword)
     
     // Get business_owner_id (either from current user or from branch)
     let businessOwnerId = null
@@ -144,7 +137,6 @@ export const createBranchManager = async (req, res) => {
       businessOwnerId = branchExists[0].business_owner_id || null
     }
     
-    console.log('👤 Business Owner ID:', businessOwnerId)
     
     // Create branch manager using stored procedure
     const [[result]] = await connection.execute(
@@ -178,7 +170,6 @@ export const createBranchManager = async (req, res) => {
       
       console.log('✅ Welcome email sent to:', email)
     } catch (emailError) {
-      console.error('⚠️ Failed to send email (non-critical):', emailError.message)
       // Don't fail the request if email fails - frontend will send via EmailJS
     }
     

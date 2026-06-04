@@ -5,11 +5,6 @@ import { getBranchFilter } from '../../../../middleware/rolePermissions.js'
 export const getFloors = async (req, res) => {
   const userType = req.user?.userType || req.user?.role;
   const userId = req.user?.userId;
-
-  console.log("🏢 GET FLOORS DEBUG:");
-  console.log("- User Type:", userType);
-  console.log("- User ID:", userId);
-
   if (!userId) {
     return res.status(400).json({
       success: false,
@@ -23,7 +18,6 @@ export const getFloors = async (req, res) => {
     
     // Get branch filter based on user role
     const branchFilter = await getBranchFilter(req, connection);
-    
     let floors = [];
 
     if (branchFilter === null) {
@@ -49,8 +43,6 @@ export const getFloors = async (req, res) => {
       );
       floors = rows[0];
     }
-
-    console.log(`✅ Found ${floors.length} floors for ${userType} (ID: ${userId})`);
 
     res.json({
       success: true,

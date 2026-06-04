@@ -34,7 +34,6 @@ export const getAllComplianceRecords = async (req, res) => {
     const { status, search } = req.query;
     const userType = req.user?.userType;
 
-    console.log('📋 Fetching compliance records with filters:', { status, search, userType });
 
     connection = await createConnection();
 
@@ -49,7 +48,6 @@ export const getAllComplianceRecords = async (req, res) => {
 
     if (branchFilter === null) {
       // System administrator - see all compliance records
-      console.log('🔍 getAllComplianceRecords - System admin viewing all branches');
       const [records] = await connection.execute(
         'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
         [null, statusParam, searchParam]
@@ -57,11 +55,9 @@ export const getAllComplianceRecords = async (req, res) => {
       complianceRecords = records[0];
     } else if (branchFilter.length === 0) {
       // Business owner with no accessible branches
-      console.log('⚠️ getAllComplianceRecords - Business owner has no accessible branches');
       complianceRecords = [];
     } else if (branchFilter.length === 1) {
       // Single branch (business manager or owner with one branch)
-      console.log(`🔍 getAllComplianceRecords - Fetching for branch: ${branchFilter[0]}`);
       const [records] = await connection.execute(
         'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
         [branchFilter[0], statusParam, searchParam]
@@ -69,7 +65,6 @@ export const getAllComplianceRecords = async (req, res) => {
       complianceRecords = records[0];
     } else {
       // Multiple branches (business owner with multiple branches)
-      console.log(`🔍 getAllComplianceRecords - Fetching for branches: ${branchFilter.join(', ')}`);
       // Query each branch and combine results
       const allRecords = [];
       for (const branchId of branchFilter) {
@@ -142,7 +137,6 @@ export const getComplianceRecordById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log(`📄 Fetching compliance record ID: ${id}`);
 
     connection = await createConnection();
 
@@ -229,7 +223,6 @@ export const createComplianceRecord = async (req, res) => {
     const userType = req.user?.userType;
     const userBranchId = req.user?.branchId;
 
-    console.log('📝 Creating new compliance record:', req.body);
 
     // Validation
     if (!stallholder_id) {
@@ -316,7 +309,6 @@ export const updateComplianceRecord = async (req, res) => {
     const { status, remarks } = req.body;
     const userId = req.user?.userId || req.user?.branchManagerId || req.user?.employeeId;
 
-    console.log(`📝 Updating compliance record ID: ${id}`, { status, remarks });
 
     // Validation
     if (!status && !remarks) {
@@ -393,7 +385,6 @@ export const deleteComplianceRecord = async (req, res) => {
     const { id } = req.params;
     const userType = req.user?.userType;
 
-    console.log(`🗑️ Deleting compliance record ID: ${id}`);
 
     // Only system admins, business owners, and business managers can delete
     if (userType !== 'system_administrator' && userType !== 'stall_business_owner' && userType !== 'business_manager') {
@@ -451,7 +442,6 @@ export const getComplianceStatistics = async (req, res) => {
     const userType = req.user?.userType;
     const userBranchId = req.user?.branchId;
 
-    console.log('📊 Fetching compliance statistics');
 
     connection = await createConnection();
 
@@ -493,7 +483,6 @@ export const getComplianceStatistics = async (req, res) => {
 export const getAllInspectors = async (req, res) => {
   let connection;
   try {
-    console.log('👮 Fetching all active inspectors');
 
     connection = await createConnection();
 
@@ -529,7 +518,6 @@ export const getAllInspectors = async (req, res) => {
 export const getAllViolations = async (req, res) => {
   let connection;
   try {
-    console.log('📜 Fetching all violation types');
 
     connection = await createConnection();
 
@@ -567,7 +555,6 @@ export const getViolationPenalties = async (req, res) => {
   try {
     const { violationId } = req.params;
 
-    console.log(`💰 Fetching penalties for violation ID: ${violationId}`);
 
     connection = await createConnection();
 
@@ -609,7 +596,6 @@ export const getComplianceEvidencePhotos = async (req, res) => {
   try {
     const { id } = req.params;
     
-    console.log(`📷 Fetching evidence BLOB for compliance ID: ${id}`);
     
     connection = await createConnection();
     
@@ -686,7 +672,6 @@ export const getComplianceEvidenceImage = async (req, res) => {
   try {
     const { id } = req.params;
     
-    console.log(`📷 Serving evidence image for compliance ID: ${id}`);
     
     connection = await createConnection();
     

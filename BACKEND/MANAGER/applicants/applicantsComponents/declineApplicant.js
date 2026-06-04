@@ -38,8 +38,6 @@ export const declineApplicant = async (req, res) => {
     const applicant = encryptionService.decryptObjectFields(applicantData[0], 'applicant');
 
     // Log the decline action before deletion
-    console.log(`🗑️ Declining and deleting applicant: ${applicant.applicant_full_name} (ID: ${id})`);
-    console.log(`📝 Decline reason: ${reason}`);
 
     // Delete all related data using stored procedure cascade delete
     const [deleteResult] = await connection.execute(

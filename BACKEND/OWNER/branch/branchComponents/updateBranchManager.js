@@ -5,11 +5,6 @@ import bcrypt from 'bcrypt';
 export const updateBranchManager = async (req, res) => {
   let connection;
   try {
-    console.log('🔧 Updating branch manager - Request received');
-    console.log('📄 Request method:', req.method);
-    console.log('📄 Request URL:', req.url);
-    console.log('📋 Request params:', req.params);
-    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
 
     const { managerId } = req.params; // Get manager ID from URL params
     const {
@@ -38,7 +33,6 @@ export const updateBranchManager = async (req, res) => {
     const finalPassword = manager_password || password;
     const finalContactNumber = contactNumber || contact_number || phone;
 
-    console.log('🔍 Update validation:');
     console.log('- managerId:', managerId, '(valid:', !!managerId, ')');
     console.log('- finalBranchId:', finalBranchId, '(valid:', !!finalBranchId, ')');
     console.log('- finalFirstName:', finalFirstName, '(valid:', !!finalFirstName, ')');
@@ -63,12 +57,10 @@ export const updateBranchManager = async (req, res) => {
       });
     }
 
-    console.log('🔌 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connection established');
 
     // Check if manager exists
-    console.log('🔍 Checking if manager exists:', managerId);
     const [existingManager] = await connection.execute(
       'SELECT branch_manager_id, branch_id, manager_username FROM branch_manager WHERE branch_manager_id = ?',
       [managerId]
@@ -86,7 +78,6 @@ export const updateBranchManager = async (req, res) => {
 
     // Check if new username is already taken by another manager
     if (finalUsername !== existingManager[0].manager_username) {
-      console.log('🔍 Checking username availability:', finalUsername);
       const [usernameExists] = await connection.execute(
         'SELECT branch_manager_id FROM branch_manager WHERE manager_username = ? AND branch_manager_id != ?',
         [finalUsername, managerId]
@@ -103,7 +94,6 @@ export const updateBranchManager = async (req, res) => {
 
     // If branch_id is provided, validate it
     if (finalBranchId) {
-      console.log('🔍 Validating branch ID:', finalBranchId);
       const [branchExists] = await connection.execute(
         'SELECT branch_id, branch_name FROM branch WHERE branch_id = ?',
         [finalBranchId]
@@ -155,7 +145,6 @@ export const updateBranchManager = async (req, res) => {
 
     // Handle password update if provided
     if (finalPassword) {
-      console.log('🔐 Hashing new password...');
       const hashedPassword = await bcrypt.hash(finalPassword, 12);
       updateFields.push('manager_password_hash = ?');
       updateValues.push(hashedPassword);
@@ -165,8 +154,6 @@ export const updateBranchManager = async (req, res) => {
     // Add manager ID for WHERE clause
     updateValues.push(managerId);
 
-    console.log('🔄 Updating branch manager...');
-    console.log('📝 Update fields:', updateFields.join(', '));
 
     const [updateResult] = await connection.execute(
       `UPDATE branch_manager SET ${updateFields.join(', ')} WHERE branch_manager_id = ?`,
@@ -176,7 +163,6 @@ export const updateBranchManager = async (req, res) => {
     console.log('✅ Manager updated successfully, affected rows:', updateResult.affectedRows);
 
     if (updateResult.affectedRows === 0) {
-      console.log('⚠️ No rows were updated');
       return res.status(404).json({
         success: false,
         message: 'Branch manager not found or no changes made'
@@ -184,7 +170,6 @@ export const updateBranchManager = async (req, res) => {
     }
 
     // Get updated manager data
-    console.log('📊 Fetching updated manager data...');
     const [updatedManager] = await connection.execute(
       `SELECT 
         bm.branch_manager_id,
@@ -253,7 +238,6 @@ export const updateBranchManager = async (req, res) => {
     });
   } finally {
     if (connection) {
-      console.log('🔌 Closing database connection...');
       await connection.end();
       console.log('✅ Database connection closed');
     }

@@ -12,7 +12,6 @@ export const getPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token:', JSON.stringify(userData, null, 2));
     
     const { page = 1, limit = 10 } = req.query;
     const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 10)); // Sanitize limit (1-100)
@@ -26,7 +25,6 @@ export const getPaymentRecords = async (req, res) => {
     let stallholderIds = [];
     
     if (lookupId) {
-      console.log('🔍 Looking up stallholder_ids for applicant/user ID:', lookupId);
       const [stallholderResult] = await connection.execute(
         'CALL sp_getStallholderIdByApplicant(?)',
         [lookupId]
@@ -45,7 +43,6 @@ export const getPaymentRecords = async (req, res) => {
       });
     }
     
-    console.log('📋 Fetching payment records for stallholders:', stallholderIds, 'page:', pageInt, 'limit:', limitInt);
     
     // Build placeholders for IN clause
     const placeholders = stallholderIds.map(() => '?').join(',');
@@ -154,7 +151,6 @@ export const getAllPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token (getAllPaymentRecords):', JSON.stringify(userData, null, 2));
     
     connection = await createConnection();
     
@@ -169,7 +165,6 @@ export const getAllPaymentRecords = async (req, res) => {
       });
     }
     
-    console.log('🔍 Looking up ALL stallholder_ids for applicant/user ID:', lookupId);
     const [stallholderResult] = await connection.execute(
       'CALL sp_getStallholderIdByApplicant(?)',
       [lookupId]
@@ -185,7 +180,6 @@ export const getAllPaymentRecords = async (req, res) => {
     }
     
     console.log('✅ Found stallholder_ids:', stallholderIds);
-    console.log('📋 Fetching ALL payment records for all stallholders...');
     
     // Fetch payments for ALL stallholders (regular + penalty)
     let allPayments = [];
@@ -330,7 +324,6 @@ export const getPaymentSummary = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token (getPaymentSummary):', JSON.stringify(userData, null, 2));
     
     connection = await createConnection();
     
@@ -339,7 +332,6 @@ export const getPaymentSummary = async (req, res) => {
     const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
     if (lookupId) {
-      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
       const [stallholderResult] = await connection.execute(
         'CALL sp_getStallholderIdByApplicant(?)',
         [lookupId]
@@ -357,7 +349,6 @@ export const getPaymentSummary = async (req, res) => {
       });
     }
     
-    console.log('📊 Fetching payment summary for stallholder:', stallholderId);
     
     // Get payment summary statistics using stored procedure
     const [summaryResult] = await connection.execute(
@@ -506,7 +497,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token (getMonthlyPaymentStatus):', JSON.stringify(userData, null, 2));
     
     const applicantId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
@@ -517,7 +507,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       });
     }
     
-    console.log('📅 Fetching monthly payment status for applicant:', applicantId);
     
     connection = await createConnection();
     
@@ -527,7 +516,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       [applicantId]
     );
     const allStalls = spResult[0] || [];
-    console.log('📅 Found stalls:', allStalls.length);
     
     if (allStalls.length === 0) {
       await connection.end();
@@ -555,7 +543,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const currentMonthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
-    console.log('📅 Checking payment for month:', currentMonth);
 
     // Build payment status for EACH stall
     const stallStatuses = [];
@@ -674,9 +661,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         allStallholderIds
       );
       totalUnpaidViolations = violationRows[0]?.violation_count || 0;
-      console.log('⚠️ Unpaid violations across all stalls:', totalUnpaidViolations);
     } catch (violationErr) {
-      console.error('⚠️ Error checking violations (non-fatal):', violationErr.message);
     }
 
     // Attach violation info to ALL stall statuses
@@ -748,7 +733,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         }
       }
     } catch (err) {
-      console.error('⚠️ Error checking partial payments:', err.message);
     }
 
     await connection.end();

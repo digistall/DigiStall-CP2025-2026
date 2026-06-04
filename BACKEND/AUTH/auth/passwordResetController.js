@@ -154,14 +154,12 @@ export const verifyEmailExists = async (req, res) => {
       });
     }
     
-    console.log('🔍 Verifying email exists:', email);
     
     connection = await createConnection();
     
     // Try each user type to find the email
     for (const config of userTypes) {
       try {
-        console.log(`🔍 Checking ${config.type}...`);
 
         let users = [];
 
@@ -243,7 +241,6 @@ export const storeResetCode = async (req, res) => {
       });
     }
     
-    console.log('📝 Storing reset code for:', email);
     
     const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
     
@@ -295,7 +292,6 @@ export const resendResetCode = async (req, res) => {
       });
     }
     
-    console.log('🔄 Resending reset code for:', email);
     
     connection = await createConnection();
     
@@ -402,7 +398,6 @@ export const verifyResetCode = async (req, res) => {
       });
     }
     
-    console.log('🔐 Verifying reset code for:', email);
     
     const storedData = resetCodes.get(email.toLowerCase());
     
@@ -476,7 +471,6 @@ export const resetPassword = async (req, res) => {
       });
     }
     
-    console.log('🔐 Resetting password for:', email);
     
     // Verify the code is valid and verified
     const storedData = resetCodes.get(email.toLowerCase());
@@ -597,13 +591,11 @@ export const resetPassword = async (req, res) => {
       finalPassword = await bcrypt.hash(newPassword, 10);
       updateQuery = `UPDATE credential SET password_hash = ? WHERE credential_id = ?`;
       updateId = credRows[0].credential_id;
-      console.log('🔐 Password bcrypt-hashed, updating credential table...');
     } else {
       // Web users use AES-256-GCM encryption in their own table
       finalPassword = encryptData(newPassword);
       updateQuery = `UPDATE ${foundConfig.updateTable} SET ${foundConfig.passwordField} = ? WHERE ${foundConfig.updateIdField} = ?`;
       updateId = foundUser[foundConfig.idField];
-      console.log('🔐 Password AES-encrypted, updating database...');
     }
 
     await connection.execute(updateQuery, [finalPassword, updateId]);

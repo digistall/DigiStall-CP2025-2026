@@ -2,8 +2,6 @@ import { createConnection } from '../../../../config/database.js'
 
 // Add new stall (for branch managers and employees with stalls permission)
 export const addStall = async (req, res) => {
-  console.log("🔥 EMPLOYEE STALL CREATION - VERSION 2.4 FIXED");
-  console.log("🔍 Request body received:", JSON.stringify(req.body, null, 2));
   
   let connection;
   try {
@@ -11,7 +9,6 @@ export const addStall = async (req, res) => {
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
     
-    console.log("🔍 ADD STALL DEBUG:");
     console.log("- User Type:", userType);
     console.log("- User ID:", userId);
     console.log("- Full User Object:", JSON.stringify(req.user, null, 2));
@@ -25,7 +22,6 @@ export const addStall = async (req, res) => {
 
     // Authorization check based on user type
     if (userType === "business_manager") {
-      console.log("🔍 Authorizing business manager for stall creation");
     } else if (userType === "business_employee") {
       // Employee authorization - check permissions
       const permissions = req.user?.permissions || [];
@@ -33,7 +29,6 @@ export const addStall = async (req, res) => {
         ? permissions.includes("stalls")
         : permissions.stalls || false;
 
-      console.log("🔍 Employee permission check for stall creation:", {
         permissions,
         hasStallsPermission,
       });
@@ -106,13 +101,9 @@ export const addStall = async (req, res) => {
       // baseRate is RENTAL RATE (2010), multiply by 2 to get monthly rent
       calculatedRentalPrice = Math.round(baseRate_final * 2 * 100) / 100; // Round to 2 decimals
       const discountedRate = Math.round(calculatedRentalPrice * 0.75 * 100) / 100;
-      console.log(`📊 RENTAL RATE 2010: ${baseRate_final}`);
-      console.log(`📊 Monthly Rent (×2): ${calculatedRentalPrice}`);
-      console.log(`📊 Discounted Rate (early payment): ${calculatedRentalPrice} × 0.75 = ${discountedRate}`);
       
       if (areaSqm_final > 0) {
         calculatedRatePerSqm = Math.round((calculatedRentalPrice / areaSqm_final) * 100) / 100;
-        console.log(`📊 Rate per Sq.m: ${calculatedRentalPrice} / ${areaSqm_final} = ${calculatedRatePerSqm}`);
       }
     } else {
       // If no base_rate, use rental_price directly (backward compatibility)
@@ -238,14 +229,12 @@ export const addStall = async (req, res) => {
       
     } else if (userType === "business_employee") {
       // 🔧 FIXED: For employees, get branch info differently
-      console.log("🔍 Getting employee branch information...");
       
       // Try to get branch ID from token first
       let employeeBranchId = req.user?.branchId || req.user?.branch_id;
       
       // If not in token, get from employee table using stored procedure
       if (!employeeBranchId) {
-        console.log("🔍 Branch ID not in token, querying employee table...");
         
         const [employeeResult] = await connection.execute(
           'CALL sp_getEmployeeWithBranchInfo(?)',
@@ -262,7 +251,6 @@ export const addStall = async (req, res) => {
         }
 
         employeeBranchId = employeeRecord[0].branch_id;
-        console.log("🔍 Found employee branch ID from database:", employeeBranchId);
       }
       
       if (!employeeBranchId) {
@@ -394,7 +382,6 @@ export const addStall = async (req, res) => {
     if (req.body.base64Images) {
       try {
         const base64Images = JSON.parse(req.body.base64Images)
-        console.log(`📸 Processing ${base64Images.length} images for BLOB storage...`)
         
         for (let i = 0; i < base64Images.length; i++) {
           const imgData = base64Images[i]
@@ -415,7 +402,6 @@ export const addStall = async (req, res) => {
         
         console.log(`✅ ${base64Images.length} images uploaded to BLOB storage`)
       } catch (imgError) {
-        console.error('⚠️ Error uploading images to BLOB:', imgError.message)
         // Don't fail the whole operation if images fail
       }
     }

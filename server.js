@@ -1,3 +1,4 @@
+import './utils/silenceLogs.js';
 // ===== DIGISTALL - MVC ROLE-BASED BACKEND SERVER =====
 // Main server entry point using new folder structure
 // Run: node server.js
@@ -14,6 +15,10 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
+
+// Import custom production logger and system log utilities
+import productionLogger, { systemLog } from './middleware/productionLogger.js';
+
 
 // Import shared config
 import { corsConfig } from './config/cors.js';
@@ -75,6 +80,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ===== MIDDLEWARE =====
+app.use(productionLogger);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser());
@@ -157,33 +163,32 @@ app.use(errorHandler);
 
 // ===== START SERVER =====
 async function startServer() {
-  console.log('📦 Testing database connection...');
+  const isWeb = parseInt(PORT) === 5000 || PORT === '5000';
+  const serverName = isWeb ? 'Web Backend' : (parseInt(PORT) === 5001 || PORT === '5001' ? 'Mobile Backend' : 'Unified Backend');
+  const envMode = (process.env.NODE_ENV || 'development').toUpperCase();
+
+  systemLog(`📦 Testing database connection for ${serverName}...`);
   const dbTest = await testConnection();
   
+  let dbStatus = '';
   if (dbTest.success) {
-    console.log('✅ Database connection successful\n');
-    
+    dbStatus = 'CONNECTED';
     // Start session cleanup service (auto-logout inactive users)
     startSessionCleanup();
   } else {
-    console.log('⚠️  Database connection failed - continuing without DB\n');
+    dbStatus = 'FAILED (Continuing without DB)';
   }
   
   app.listen(PORT, () => {
-    console.log('========================================');
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 http://localhost:${PORT}`);
-    console.log('========================================\n');
-    console.log('Role folders active:');
-    console.log('  • LGU-NAGA (Business Owner)');
-    console.log('  • BRANCH-MANAGER');
-    console.log('  • STALL-HOLDER');
-    console.log('  • EMPLOYEE (Inspector, Collector)');
-    console.log('  • VENDOR');
-    console.log('  • APPLICANTS');
-    console.log('  • AUTH');
-    console.log('  • PUBLIC-LANDINGPAGE');
-    console.log('\n💡 Press Ctrl+C to stop\n');
+    systemLog('\n============================================================');
+    systemLog(`🚀 DIGISTALL - ${serverName.toUpperCase()} ONLINE`);
+    systemLog('============================================================');
+    systemLog(`[Env Mode]   ${envMode}`);
+    systemLog(`[Port]       ${PORT}`);
+    systemLog(`[URL]        http://localhost:${PORT}`);
+    systemLog(`[Database]   ${dbStatus}`);
+    systemLog(`[Status]     READY & SECURELY ROUTING TRANSACTIONS`);
+    systemLog('============================================================\n');
   });
 }
 

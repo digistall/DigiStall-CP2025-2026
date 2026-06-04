@@ -14,7 +14,6 @@ const decryptSafe = (value) => {
     }
     return value; // Return as-is if not encrypted
   } catch (error) {
-    console.log('⚠️ Decryption skipped (not encrypted or different format):', value.substring(0, 20) + '...');
     return value;
   }
 };
@@ -34,16 +33,13 @@ export const getApplicantsByBranchManager = async (req, res) => {
     connection = await createConnection();
     
     // Get decryption key for encrypted data
+    // Get decryption key for encrypted data
     const encryptionKey = await getDecryptionKey(connection);
-
-    console.log("🔍 Request user info:", req.user);
 
     // Check if user is an employee, branch manager, or business owner
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
     const userBranchId = req.user?.branchId;
-
-    console.log("🎯 User details:", { userType, userId, userBranchId });
 
     const { application_status, price_type, search } = req.query;
 
@@ -52,10 +48,9 @@ export const getApplicantsByBranchManager = async (req, res) => {
     
     if (branchFilter === null) {
       // System administrator - see all
-      console.log('🔍 System admin viewing all applicants across all branches');
+      // System admin viewing all applicants across all branches
     } else if (branchFilter.length === 0) {
       // Business owner with no accessible branches
-      console.log('⚠️ Business owner has no accessible branches');
       return res.json({
         success: true,
         message: 'No accessible branches',
@@ -109,7 +104,6 @@ export const getApplicantsByBranchManager = async (req, res) => {
 
     } else if (userType === 'stall_business_owner') {
       // Business owners can view multiple branches
-      console.log(`🔍 Business owner viewing applicants for branches: ${branchIds.join(', ')}`);
       
       // Get business owner information
       const [ownerInfo] = await connection.execute(

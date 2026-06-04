@@ -21,7 +21,6 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       });
     }
 
-    console.log('📄 Fetching stallholder stalls with documents for applicant:', applicantId);
 
     // Get stallholder info and their stalls using direct query
     // Check both mobile_user_id AND applicant_id since new stallholders may only have applicant_id set
@@ -51,8 +50,6 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       [applicantId, applicantId]
     );
 
-    console.log('📊 Query result - stallholderStalls:', stallholderStalls.length, 'found');
-    console.log('📊 Stalls data:', JSON.stringify(stallholderStalls, null, 2));
 
     if (stallholderStalls.length === 0) {
       return res.status(200).json({
@@ -263,7 +260,6 @@ export const getBranchDocumentRequirements = async (req, res) => {
       });
     }
 
-    console.log('📄 Fetching document requirements for branch:', branchId);
 
     // Get document requirements for the branch using stored procedure
     const [reqRows] = await connection.execute(
@@ -349,7 +345,6 @@ export const uploadStallholderDocument = async (req, res) => {
       });
     }
 
-    console.log('📤 Uploading document for stallholder:', stallholder_id, 'type:', document_type_id);
 
     // Upload/update document using stored procedure
     const [uploadRows] = await connection.execute(

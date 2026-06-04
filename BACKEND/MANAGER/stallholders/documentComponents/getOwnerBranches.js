@@ -11,7 +11,6 @@ export const getOwnerBranches = async (req, res) => {
     const userId = req.user?.userId;
     const userType = req.user?.userType;
 
-    console.log('🔍 getOwnerBranches - User:', { userId, userType });
 
     // Only business owners can call this endpoint
     if (userType !== 'stall_business_owner') {

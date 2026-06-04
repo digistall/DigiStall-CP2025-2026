@@ -4,14 +4,9 @@ import { createConnection } from '../../../../config/database.js';
 export const getBranchManagerById = async (req, res) => {
   let connection;
   try {
-    console.log('🔍 Getting branch manager by ID - Request received');
-    console.log('📄 Request method:', req.method);
-    console.log('📄 Request URL:', req.url);
-    console.log('📋 Request params:', req.params);
 
     const { managerId } = req.params; // Get manager ID from URL params
 
-    console.log('🔍 Get validation:');
     console.log('- managerId:', managerId, '(valid:', !!managerId, ')');
 
     // Validation
@@ -23,12 +18,10 @@ export const getBranchManagerById = async (req, res) => {
       });
     }
 
-    console.log('🔌 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connection established');
 
     // Get manager data with branch information using stored procedure
-    console.log('🔍 Fetching manager data:', managerId);
     const [managerResult] = await connection.execute(
       'CALL sp_getBranchManagerById(?)',
       [managerId]
@@ -89,7 +82,6 @@ export const getBranchManagerById = async (req, res) => {
     });
   } finally {
     if (connection) {
-      console.log('🔌 Closing database connection...');
       await connection.end();
       console.log('✅ Database connection closed');
     }

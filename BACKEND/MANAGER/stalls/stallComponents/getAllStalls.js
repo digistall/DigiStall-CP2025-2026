@@ -95,8 +95,6 @@ export const getAllStalls = async (req, res) => {
       return stall;
     });
 
-    console.log(`? Retrieved ${decryptedStalls.length} stalls for branch ${branchId}`);
-
     res.json({
       success: true,
       message: "Stalls retrieved successfully",
@@ -105,7 +103,6 @@ export const getAllStalls = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("? Get all stalls error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to retrieve stalls",

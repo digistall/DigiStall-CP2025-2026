@@ -63,7 +63,6 @@ const decryptStaffFields = (staffData) => {
         if (result[field] && typeof result[field] === 'string' && result[field].includes(':')) {
             const decrypted = decryptAES256GCM(result[field]);
             if (decrypted !== result[field]) {
-                console.log(`🔓 Decrypted ${field}: ${decrypted}`);
                 result[field] = decrypted;
             }
         }
@@ -126,7 +125,6 @@ async function logStaffActivity(activityData) {
             philippineTime
         ]);
 
-        console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType} at ${philippineTime}`);
         return true;
     } catch (error) {
         console.error('❌ Error logging activity:', error);
@@ -144,7 +142,6 @@ export const mobileStaffLogin = async (req, res) => {
         connection = await createConnection();
         const { username, password } = req.body;
         
-        console.log('📱 Mobile staff login attempt for:', username);
         
         // Validate input
         if (!username || !password) {
@@ -166,19 +163,15 @@ export const mobileStaffLogin = async (req, res) => {
             );
             const inspectors = inspectorResult[0] || [];
             
-            console.log('🔍 RAW inspector result from stored procedure:', JSON.stringify(inspectors[0], null, 2));
             
             if (inspectors && inspectors.length > 0) {
                 staffData = inspectors[0];
-                console.log('🔍 BEFORE decryption - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 // Decrypt staff data using our custom function
                 staffData = decryptStaffFields(staffData);
-                console.log('🔍 AFTER decryption - first_name:', staffData.first_name, 'last_name:', staffData.last_name);
                 staffType = 'inspector';
                 console.log('✅ Found inspector:', staffData.first_name, staffData.last_name);
             }
         } catch (err) {
-            console.warn('⚠️ Error checking inspector:', err.message);
         }
         
         // If not inspector, check collector table using stored procedure
@@ -198,7 +191,6 @@ export const mobileStaffLogin = async (req, res) => {
                     console.log('✅ Found collector:', staffData.first_name, staffData.last_name);
                 }
             } catch (err) {
-                console.warn('⚠️ Error checking collector:', err.message);
             }
         }
         
@@ -214,7 +206,6 @@ export const mobileStaffLogin = async (req, res) => {
         let isValidPassword = false;
         const storedPassword = staffData.password_hash;
         
-        console.log('🔐 Password verification debug:');
         console.log('   - Stored password hash (first 20 chars):', storedPassword ? storedPassword.substring(0, 20) + '...' : 'NULL');
         console.log('   - Password length entered:', password.length);
         console.log('   - Is bcrypt hash:', storedPassword?.startsWith('$2b$') || storedPassword?.startsWith('$2a$'));
@@ -279,7 +270,6 @@ export const mobileStaffLogin = async (req, res) => {
         
         // Update last login with Philippine time - DIRECT SQL (more reliable than stored procedures)
         const philippineTime = getPhilippineTime();
-        console.log(`📅 Updating last_login for ${staffType} ${staffId} at ${philippineTime}`);
         
         // Set session timezone to Philippine time
         await connection.execute(`SET time_zone = '+08:00'`);
@@ -295,7 +285,6 @@ export const mobileStaffLogin = async (req, res) => {
         
         // Create/update staff session for online status tracking
         // Using DIRECT SQL with explicit Philippine time to ensure correct timestamps
-        console.log(`📊 Creating/updating staff session for ${staffType} ${staffId}...`);
         try {
             // Set session timezone to Philippine time
             await connection.execute(`SET time_zone = '+08:00'`);
@@ -392,10 +381,6 @@ export const mobileStaffLogout = async (req, res) => {
         const philippineTime = getPhilippineTime();
         
         console.log('='.repeat(60));
-        console.log('📱 MOBILE STAFF LOGOUT REQUEST');
-        console.log('📱 Timestamp:', new Date().toISOString());
-        console.log('📱 Extracted staffId:', staffId, 'staffType:', staffType);
-        console.log('📱 Philippine time:', philippineTime);
         console.log('='.repeat(60));
         
         if (staffId && staffType) {
@@ -512,7 +497,6 @@ export const mobileStaffHeartbeat = async (req, res) => {
         
         if (sessionCheck.length === 0) {
             // No active session - staff has logged out, don't update last_login
-            console.log(`⚠️ Heartbeat rejected - no active session for ${staffType} ${staffId}`);
             return res.json({
                 success: false,
                 message: 'No active session found',
@@ -539,7 +523,6 @@ export const mobileStaffHeartbeat = async (req, res) => {
             [staffId, staffType]
         );
         
-        console.log(`💓 Mobile heartbeat received from ${staffType} ${staffId}`);
         
         res.json({
             success: true,
