@@ -1,5 +1,6 @@
 import express from 'express'
 import authMiddleware from '../middleware/auth.js'
+import { authLimiter } from '../middleware/rateLimiter.js'
 import {
   // Unified authentication
   login,
@@ -26,24 +27,24 @@ import passwordResetController from '../BACKEND/AUTH/auth/passwordResetControlle
 const router = express.Router()
 
 // ===== PASSWORD RESET ENDPOINTS (Public) =====
-router.post('/verify-email-exists', passwordResetController.verifyEmailExists)
-router.post('/store-reset-code', passwordResetController.storeResetCode)
-router.post('/resend-reset-code', passwordResetController.resendResetCode)
-router.post('/verify-reset-code', passwordResetController.verifyResetCode)
-router.post('/reset-password', passwordResetController.resetPassword)
+router.post('/verify-email-exists', authLimiter, passwordResetController.verifyEmailExists)
+router.post('/store-reset-code', authLimiter, passwordResetController.storeResetCode)
+router.post('/resend-reset-code', authLimiter, passwordResetController.resendResetCode)
+router.post('/verify-reset-code', authLimiter, passwordResetController.verifyResetCode)
+router.post('/reset-password', authLimiter, passwordResetController.resetPassword)
 
 // ===== UNIFIED AUTHENTICATION ENDPOINTS =====
 // Single clean login endpoint for all user types
-router.post('/login', login)                            // POST /api/auth/login - Unified login (system_administrator, stall_business_owner, business_manager, business_employee)
+router.post('/login', authLimiter, login)                            // POST /api/auth/login - Unified login (system_administrator, stall_business_owner, business_manager, business_employee)
 router.get('/verify-token', verifyTokenHandler)         // GET /api/auth/verify-token - Verify JWT token
 
 // ===== LEGACY ENDPOINTS (Backward Compatibility) =====
-router.post('/business-owner/login', adminLogin)                 // POST /api/auth/business-owner/login - Business Owner login (legacy)
-router.post('/business-manager/login', branchManagerLogin) // POST /api/auth/business-manager/login - Business Manager login (legacy)
+router.post('/business-owner/login', authLimiter, adminLogin)                 // POST /api/auth/business-owner/login - Business Owner login (legacy)
+router.post('/business-manager/login', authLimiter, branchManagerLogin) // POST /api/auth/business-manager/login - Business Manager login (legacy)
 
 // ===== UTILITY ENDPOINTS =====
-router.post('/create-business-owner', createAdminUser)           // POST /api/auth/create-business-owner - Create business owner user
-router.post('/hash-password', createPasswordHash)       // POST /api/auth/hash-password - Create password hash
+router.post('/create-business-owner', authLimiter, createAdminUser)           // POST /api/auth/create-business-owner - Create business owner user
+router.post('/hash-password', authLimiter, createPasswordHash)       // POST /api/auth/hash-password - Create password hash
 router.get('/test-db', testDb)                         // GET /api/auth/test-db - Test database connection
 
 // ===== PUBLIC LOGOUT ROUTE =====

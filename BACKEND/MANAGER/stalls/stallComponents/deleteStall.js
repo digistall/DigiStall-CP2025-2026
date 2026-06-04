@@ -11,7 +11,6 @@ export const deleteStall = async (req, res) => {
     const userId = req.user?.userId;
     const branchId = req.user?.branchId;
 
-    console.log(`??? Delete stall request - ID: ${id}, UserType: ${userType}, UserId: ${userId}, BranchId: ${branchId}`);
 
     if (!userId) {
       return res.status(400).json({
@@ -32,7 +31,6 @@ export const deleteStall = async (req, res) => {
       [id]
     );
 
-    console.log(`?? Stall info query result:`, stallInfo);
 
     // Check if stall exists
     if (stallInfo.length === 0) {
@@ -99,11 +97,9 @@ export const deleteStall = async (req, res) => {
     try {
       // Delete stall images first (foreign key constraint)
       await connection.execute(`DELETE FROM stall_images WHERE stall_id = ?`, [id]);
-      console.log(`??? Deleted stall images for stall ${id}`);
 
       // Delete the stall
       const [deleteResult] = await connection.execute(`DELETE FROM stall WHERE stall_id = ?`, [id]);
-      console.log(`??? Delete result:`, deleteResult);
 
       if (deleteResult.affectedRows === 0) {
         await connection.rollback();
@@ -115,7 +111,6 @@ export const deleteStall = async (req, res) => {
 
       // Commit the transaction
       await connection.commit();
-      console.log(`? Transaction committed - Stall ${stall_number} deleted from database`);
 
       // Delete stall folder from file system
       const stallFolder = path.join('C:', 'xampp', 'htdocs', 'digistall_uploads', 'stalls', String(branch_id), stall_number);
@@ -123,9 +118,7 @@ export const deleteStall = async (req, res) => {
       if (fs.existsSync(stallFolder)) {
         try {
           fs.rmSync(stallFolder, { recursive: true, force: true });
-          console.log(`? Deleted stall folder: ${stallFolder}`);
         } catch (fsError) {
-          console.error(`?? Failed to delete stall folder: ${stallFolder}`, fsError.message);
         }
       }
 
@@ -136,12 +129,10 @@ export const deleteStall = async (req, res) => {
 
     } catch (deleteError) {
       await connection.rollback();
-      console.error('? Delete transaction error:', deleteError);
       throw deleteError;
     }
 
   } catch (error) {
-    console.error('? Delete stall error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete stall',

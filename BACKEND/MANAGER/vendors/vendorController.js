@@ -113,7 +113,6 @@ export async function createVendor(req, res) {
 
     connection = await createConnection();
 
-    console.log(`🏪 Creating vendor with relations: ${firstName} ${lastName}`);
 
     // Build parameter array for the stored procedure (27 params)
     const params = [
@@ -151,7 +150,6 @@ export async function createVendor(req, res) {
       locationName || null,
     ];
 
-    console.log("📦 Create vendor params:", JSON.stringify(params));
 
     // Use query() instead of execute() to avoid prepared statement protocol
     // issues with mysql2 and DigitalOcean MySQL ANSI mode
@@ -331,25 +329,8 @@ export async function updateVendor(req, res) {
 
     connection = await createConnection();
 
-    console.log(`🔄 Updating vendor with relations: ${id}`);
 
-    console.log("📦 Update payload received:", {
-      id,
-      firstName,
-      lastName,
-      suffix,
-      birthdate,
-      spouseFullName,
-      spouseAge,
-      spouseBirthdate,
-      childFullName,
-      childAge,
-      childBirthdate,
-      businessName,
-      vendingTimeStart,
-      vendingTimeEnd,
-      assignedLocationId,
-    });
+
 
     // Build parameter array for the stored procedure (28 params)
     const updateParams = [
@@ -423,7 +404,6 @@ export async function deleteVendor(req, res) {
 
     connection = await createConnection();
 
-    console.log(`🗑️ Deleting vendor with relations: ${id}`);
 
     // Delete vendor using stored procedure (soft delete by default)
     await connection.execute("CALL deleteVendorWithRelations(?, ?)", [

@@ -15,7 +15,6 @@ export const selectAuctionWinner = async (req, res) => {
       });
     }
 
-    console.log(`🎯 Confirming auction winner for auction ${auctionId}`);
 
     connection = await createConnection();
 
@@ -104,7 +103,6 @@ export const selectAuctionWinner = async (req, res) => {
 
       winner = manualWinner[0];
       winnerBidId = winner.bid_id || null;
-      console.log(`👑 Manually selected winner: ${winner.applicant_full_name}`);
     } else {
       // Auto-selection: Get winner info (highest bidder)
       const [winnerInfo] = await connection.execute(
@@ -127,7 +125,6 @@ export const selectAuctionWinner = async (req, res) => {
 
       winner = winnerInfo[0];
       winnerBidId = winner.bid_id;
-      console.log(`👑 Auto-selected highest bidder: ${winner.applicant_full_name} with bid ₱${winner.bid_amount}`);
     }
 
     const hasExplicitWinningBid = winningBidAmount !== undefined && winningBidAmount !== null && winningBidAmount !== '';
@@ -231,7 +228,6 @@ export const selectAuctionWinner = async (req, res) => {
     // Check if auto-removed from other auctions/raffles
     const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
     if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
-      console.log(`🚫 Applicant ${winner.applicant_id} now has ${resultSet[0].new_stall_count} stalls — auto-removed from other auctions/raffles`);
     }
 
     const formattedPreviousPrice = Number.isFinite(previousPrice) ? previousPrice.toFixed(2) : '0.00';
@@ -323,7 +319,6 @@ export const selectAuctionWinner = async (req, res) => {
 export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
   let connection;
   try {
-    console.log('🔄 Checking for expired auctions...');
 
     connection = await createConnection();
 
@@ -364,7 +359,6 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
             status: 'ended_no_bids'
           });
 
-          console.log(`📝 Auction ${auction.auction_id} closed - no bids`);
           continue;
         }
 
@@ -469,7 +463,6 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
         // Check if auto-removed from other auctions/raffles
         const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
         if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
-          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has ${resultSet[0].new_stall_count} stalls)`);
         }
 
         const formattedPreviousPrice = Number.isFinite(previousPrice) ? previousPrice.toFixed(2) : '0.00';
@@ -529,7 +522,6 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
           status: 'winner_selected'
         });
 
-        console.log(`👑 Auto-confirmed winner for auction ${auction.auction_id}: ${winner.applicant_full_name} (₱${finalBidAmount})`);
 
       } catch (error) {
         if (connection) {

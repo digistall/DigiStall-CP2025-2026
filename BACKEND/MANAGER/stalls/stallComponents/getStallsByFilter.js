@@ -4,18 +4,7 @@ export const getStallsByFilter = async (req, res) => {
   try {
     connection = await createConnection();
     
-    // Debug user information
-    console.log('🔍 Filter request received from user:', {
-      userId: req.user?.userId,
-      branchManagerId: req.user?.branchManagerId,
-      username: req.user?.username,
-      userType: req.user?.userType,
-      role: req.user?.role
-    });
-    
-    // Debug query parameters
-    console.log('🔍 Filter parameters received:', req.query);
-    
+
     const branchManagerId = req.user?.branchManagerId || req.user?.userId;
 
     if (!branchManagerId) {
@@ -87,8 +76,6 @@ export const getStallsByFilter = async (req, res) => {
       queryParams
     );
 
-    console.log('🔍 Query executed:', whereClause);
-    console.log('🔍 Query parameters:', queryParams);
     console.log('✅ Query returned', stalls.length, 'stalls');
 
     // Format the data to match frontend expectations

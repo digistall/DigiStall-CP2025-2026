@@ -87,7 +87,6 @@ export const getStallsByArea = async (req, res) => {
     });
 
     // Sort stalls: Fixed Price first, then Auction and Raffle
-    console.log(`📊 Sorting ${formattedStalls.length} stalls by price type...`);
 
     formattedStalls.sort((a, b) => {
       const getPriority = (priceType) => {
@@ -107,7 +106,6 @@ export const getStallsByArea = async (req, res) => {
       return acc;
     }, {});
 
-    console.log(`📋 Stall distribution:`, priceTypeCount);
     console.log(
       `✅ Found ${formattedStalls.length} stalls in ${filterType} '${filterParam}'`
     );

@@ -18,7 +18,6 @@ export const getStallholderProfile = async (req, res) => {
       });
     }
     
-    console.log('📋 Getting stallholder profile for ID:', stallholderId);
     
     connection = await createConnection();
     

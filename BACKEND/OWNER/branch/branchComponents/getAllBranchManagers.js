@@ -4,10 +4,6 @@ import { createConnection } from '../../../../config/database.js';
 export const getAllBranchManagers = async (req, res) => {
   let connection;
   try {
-    console.log('📋 Getting all branch managers - Request received');
-    console.log('📄 Request method:', req.method);
-    console.log('📄 Request URL:', req.url);
-    console.log('📋 Request query params:', req.query);
 
     // Optional query parameters for filtering
     const { 
@@ -17,7 +13,6 @@ export const getAllBranchManagers = async (req, res) => {
       search         // Search by name or username
     } = req.query;
 
-    console.log('🔌 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connection established');
 
@@ -48,9 +43,6 @@ export const getAllBranchManagers = async (req, res) => {
 
     const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
 
-    console.log('🔍 Fetching branch managers with filters...');
-    console.log('📝 Where clause:', whereClause);
-    console.log('📝 Query params:', queryParams);
 
     const [managers] = await connection.execute(
       `SELECT 
@@ -117,7 +109,6 @@ export const getAllBranchManagers = async (req, res) => {
       FROM branch_manager bm`
     );
 
-    console.log('📊 Manager statistics:', stats[0]);
 
     res.json({
       success: true,
@@ -152,7 +143,6 @@ export const getAllBranchManagers = async (req, res) => {
     });
   } finally {
     if (connection) {
-      console.log('🔌 Closing database connection...');
       await connection.end();
       console.log('✅ Database connection closed');
     }

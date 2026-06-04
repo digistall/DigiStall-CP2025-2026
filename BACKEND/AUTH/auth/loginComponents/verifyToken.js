@@ -13,7 +13,14 @@ export const verifyToken = async (req, res) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: JWT_SECRET is not set'
+      });
+    }
+    const decoded = jwt.verify(token, jwtSecret);
 
     res.json({
       success: true,

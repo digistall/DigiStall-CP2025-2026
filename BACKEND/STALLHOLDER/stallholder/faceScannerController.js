@@ -53,7 +53,6 @@ export const uploadFaceVerification = async (req, res) => {
 
     let imageBuffer = file.buffer;
     if (aiValidation.rotatedBuffer) {
-      console.log('🔄 Saving rotated upright face verification image');
       imageBuffer = aiValidation.rotatedBuffer;
     }
 

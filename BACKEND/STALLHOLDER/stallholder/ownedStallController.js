@@ -15,7 +15,6 @@ export const getOwnedStalls = async (req, res) => {
 
   try {
     const userData = req.user;
-    console.log('?? Owned Stalls - User data from token:', JSON.stringify(userData, null, 2));
 
     let applicantId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
 
@@ -27,7 +26,6 @@ export const getOwnedStalls = async (req, res) => {
       });
     }
 
-    console.log('?? Fetching owned stalls for applicant:', applicantId);
 
     connection = await createConnection();
 
@@ -65,7 +63,6 @@ export const getOwnedStalls = async (req, res) => {
       AND sh.status = 'active' AND sh.stall_id IS NOT NULL`,
       [applicantId, applicantId]
     );
-    console.log('?? Raw stalls from DB:', rawStalls.length);
 
     // For each stall, get additional details (images, payment info)
     const enrichedStalls = [];
@@ -85,7 +82,6 @@ export const getOwnedStalls = async (req, res) => {
             }
           }
         } catch (imgError) {
-          console.log('?? Could not fetch stall image for stall_id:', stall.stall_id);
         }
       }
 
@@ -154,11 +150,9 @@ export const getOwnedStalls = async (req, res) => {
               );
               console.log(`⚡ Self-healed database payment_status to '${computedPaymentStatus}' for stallholder ID ${stall.stallholder_id}`);
             } catch (dbErr) {
-              console.error(`⚠️ Failed to self-heal database status for stallholder ID ${stall.stallholder_id}:`, dbErr.message);
             }
           }
         } catch (payError) {
-          console.log('?? Could not fetch payment info for stallholder_id:', stall.stallholder_id);
         }
       }
 
@@ -246,7 +240,6 @@ export const getOwnedStalls = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('? Error fetching owned stalls:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch owned stalls',

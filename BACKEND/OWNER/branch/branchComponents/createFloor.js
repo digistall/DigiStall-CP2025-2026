@@ -63,10 +63,7 @@ export const createFloor = async (req, res) => {
       ? permissions.includes("floors") || permissions.includes("stalls")
       : permissions.floors || permissions.stalls || false;
 
-    console.log("🔍 Employee permission check for floor creation:", {
-      permissions,
-      hasFloorsPermission,
-    });
+
 
     if (!hasFloorsPermission) {
       return res.status(403).json({

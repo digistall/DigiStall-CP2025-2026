@@ -30,7 +30,7 @@ class ApiService {
     try {
       const server = await NetworkUtils.getActiveServer();
       
-      console.log('🔄 Attempting login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);
+      // console.log('🔄 Attempting login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`);
       console.log('📱 Request data:', { username, password: '***' });
 
       const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.LOGIN}`, {
@@ -39,14 +39,23 @@ class ApiService {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('📡 Response status:', response.status);
+      // console.log('📡 Response status:', response.status);
       const data = await response.json();
       
       // DEBUG: Log the FULL response to see if token is there
-      console.log('🔍 FULL API RESPONSE:', JSON.stringify(data, null, 2));
-      console.log('🔐 Token in response:', data.token ? 'YES (' + data.token.substring(0, 20) + '...)' : 'NO TOKEN!');
+      // console.log('🔍 FULL API RESPONSE:', JSON.stringify(data, null, 2));
+      // console.log('🔐 Token in response:', data.token ? 'YES (' + data.token.substring(0, 20) + '...)' : 'NO TOKEN!');
 
       if (!response.ok) {
+        // Check for rate limit warning
+        const remainingAttempts = response.headers.get('ratelimit-remaining');
+        if (response.status === 401 && remainingAttempts === '1') {
+          return {
+            success: false,
+            warning: true,
+            message: 'You have 1 last attempt before you get banned for 15mins.'
+          };
+        }
         // Pass through blocked account info (e.g., overdue payment)
         if (data.blocked) {
           return {
@@ -81,7 +90,7 @@ class ApiService {
     try {
       const server = await NetworkUtils.getActiveServer();
 
-      console.log('🔄 Attempting vendor login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.VENDOR_LOGIN}`);
+      // console.log('🔄 Attempting vendor login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.VENDOR_LOGIN}`);
 
       const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.VENDOR_LOGIN}`, {
         method: 'POST',
@@ -92,6 +101,14 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        const remainingAttempts = response.headers.get('ratelimit-remaining');
+        if (response.status === 401 && remainingAttempts === '1') {
+          return {
+            success: false,
+            warning: true,
+            message: 'You have 1 last attempt before you get banned for 15mins.'
+          };
+        }
         throw new Error(data.message || 'Vendor login failed');
       }
 
@@ -115,7 +132,7 @@ class ApiService {
     try {
       const server = await NetworkUtils.getActiveServer();
       
-      console.log('🔄 Attempting staff login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`);
+      // console.log('🔄 Attempting staff login to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`);
       console.log('📱 Request data:', { username, password: '***' });
 
       const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.STAFF_LOGIN}`, {
@@ -124,10 +141,18 @@ class ApiService {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('📡 Response status:', response.status);
+      // console.log('📡 Response status:', response.status);
       const data = await response.json();
 
       if (!response.ok) {
+        const remainingAttempts = response.headers.get('ratelimit-remaining');
+        if (response.status === 401 && remainingAttempts === '1') {
+          return {
+            success: false,
+            warning: true,
+            message: 'You have 1 last attempt before you get banned for 15mins.'
+          };
+        }
         throw new Error(data.message || 'Staff login failed');
       }
 
@@ -154,7 +179,7 @@ class ApiService {
     try {
       const server = await NetworkUtils.getActiveServer();
       
-      console.log('🔄 Attempting registration to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.REGISTER}`);
+      // console.log('🔄 Attempting registration to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.REGISTER}`);
 
       const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.REGISTER}`, {
         method: 'POST',
@@ -500,7 +525,7 @@ class ApiService {
       const server = await NetworkUtils.getActiveServer();
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_ALL_STALLS}?applicant_id=${applicantId}`;
       
-      console.log('🔄 Fetching all stalls from:', url);
+      // console.log('🔄 Fetching all stalls from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -535,7 +560,7 @@ class ApiService {
       const server = await NetworkUtils.getActiveServer();
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALLS_BY_TYPE}/${type}?applicant_id=${applicantId}`;
       
-      console.log('🔄 Fetching stalls by type:', type, 'from:', url);
+      // console.log('🔄 Fetching stalls by type:', type, 'from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -575,7 +600,7 @@ class ApiService {
         url += `&type=${type}`;
       }
       
-      console.log('🔄 Fetching stalls by area:', area, 'from:', url);
+      // console.log('🔄 Fetching stalls by area:', area, 'from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -611,7 +636,7 @@ class ApiService {
       const server = await NetworkUtils.getActiveServer();
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALL_IMAGES}/${stallId}`;
       
-      console.log('🖼️ Fetching images for stall ID:', stallId, 'from:', url);
+      // console.log('🖼️ Fetching images for stall ID:', stallId, 'from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -646,7 +671,7 @@ class ApiService {
       const server = await NetworkUtils.getActiveServer();
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_STALL_BY_ID}/${stallId}?applicant_id=${applicantId}`;
       
-      console.log('🔄 Fetching stall details for ID:', stallId, 'from:', url);
+      // console.log('🔄 Fetching stall details for ID:', stallId, 'from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -681,7 +706,7 @@ class ApiService {
       const server = await NetworkUtils.getActiveServer();
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.GET_AVAILABLE_AREAS}?applicant_id=${applicantId}`;
       
-      console.log('🔄 Fetching available areas from:', url);
+      // console.log('🔄 Fetching available areas from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -725,8 +750,8 @@ class ApiService {
       
       const url = `${server}${API_CONFIG.MOBILE_ENDPOINTS.SEARCH_STALLS}?${params.toString()}`;
       
-      console.log('🔄 Searching stalls with filters:', filters);
-      console.log('📡 URL:', url);
+      // console.log('🔄 Searching stalls with filters:', filters);
+      // console.log('📡 URL:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -762,7 +787,7 @@ class ApiService {
     try {
       const server = await NetworkUtils.getActiveServer();
       
-      console.log('🔄 Submitting application to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_APPLICATION}`);
+      // console.log('🔄 Submitting application to:', `${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_APPLICATION}`);
       console.log('📱 Application data:', applicationData);
 
       const response = await fetch(`${server}${API_CONFIG.MOBILE_ENDPOINTS.SUBMIT_APPLICATION}`, {

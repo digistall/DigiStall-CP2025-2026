@@ -28,7 +28,6 @@ export const getAllStalls = async (req, res) => {
                                applicantInfo.status === 'approved' && 
                                applicantInfo.application_count === 0
     
-    console.log(`📋 Applicant ${applicant_id} - Status: ${applicantInfo?.status}, Apps: ${applicantInfo?.application_count}, IsGeneral: ${isGeneralApplicant}`)
 
     // First, get the areas where this applicant has applied using stored procedure
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
@@ -56,7 +55,6 @@ export const getAllStalls = async (req, res) => {
 
     // For general applicants, get ALL available stalls (no area restriction)
     if (isGeneralApplicant) {
-      console.log('🌐 General applicant detected - fetching ALL available stalls')
       
       // Get all available stalls for general applicants using direct query
       // Note: stall_image is stored in separate stall_images table, fetched separately
@@ -227,7 +225,6 @@ export const getStallsByType = async (req, res) => {
                                applicantInfo.status === 'approved' && 
                                applicantInfo.application_count === 0
     
-    console.log(`📋 getStallsByType - Applicant ${applicant_id} - Status: ${applicantInfo?.status}, Apps: ${applicantInfo?.application_count}, IsGeneral: ${isGeneralApplicant}`)
 
     // First, get the areas where this applicant has applied using stored procedure
     const [appliedAreasRows] = await connection.execute('CALL sp_getAppliedAreasForApplicant(?)', [applicant_id])
@@ -255,7 +252,6 @@ export const getStallsByType = async (req, res) => {
     // For general applicants, use the dedicated stored procedure (no area restriction)
     // sp_getStallsByTypeForGeneralApplicant already computes application_status internally
     if (isGeneralApplicant) {
-      console.log(`🌐 General applicant - calling sp_getStallsByTypeForGeneralApplicant('${type}', ${applicant_id})`)
       const [spRows] = await connection.execute(
         'CALL sp_getStallsByTypeForGeneralApplicant(?, ?)',
         [type, applicant_id]
@@ -266,7 +262,6 @@ export const getStallsByType = async (req, res) => {
       // Regular applicants: use area-restricted stored procedure
       // Build area list for stored procedure (quoted values for IN clause)
       const areaList = appliedAreas.map(area => `'${area.area}'`).join(',')
-      console.log(`📋 Regular applicant - calling sp_getStallsByTypeForApplicant('${type}', ${applicant_id}, "${areaList}")`)
       
       const [stallsRows] = await connection.execute('CALL sp_getStallsByTypeForApplicant(?, ?, ?)', [type, applicant_id, areaList])
       stalls = stallsRows[0]
@@ -280,7 +275,6 @@ export const getStallsByType = async (req, res) => {
         [applicant_id]
       )
       joinedRaffleStallIds = new Set(raffleParticipations.map(r => r.stall_id))
-      console.log('🎰 Raffle participations found:', joinedRaffleStallIds.size, 'stalls')
 
       try {
         const [auctionParticipations] = await connection.execute(
@@ -303,7 +297,6 @@ export const getStallsByType = async (req, res) => {
     )
     const occupiedStallIds = new Set(occupiedRows.map(r => r.stall_id))
     stalls = stalls.filter(s => !occupiedStallIds.has(s.stall_id))
-    console.log(`🏪 Filtered out ${occupiedStallIds.size} occupied stalls, ${stalls.length} available stalls remain`)
 
     // Filter out stalls that this user has already joined via raffle or auction
     if (applicant_id) {
@@ -320,7 +313,6 @@ export const getStallsByType = async (req, res) => {
         ...joinedAuctionRows.map(r => r.stall_id)
       ])
       stalls = stalls.filter(s => !joinedStallIds.has(s.stall_id))
-      console.log(`🎟️ Filtered out ${joinedStallIds.size} already-joined stalls, ${stalls.length} stalls remain`)
     }
 
     // For each stall, fetch images from stall_images table (images stored as BLOB)
@@ -362,7 +354,6 @@ export const getStallsByType = async (req, res) => {
       
       // Debug log for joined status
       if (hasJoinedRaffle || hasJoinedAuction) {
-        console.log(`🎯 Stall ${stall.stall_id} (${stall.stall_number}): hasJoinedRaffle=${hasJoinedRaffle}, hasJoinedAuction=${hasJoinedAuction}, actualStatus=${actualStatus}`)
       }
       
       return {

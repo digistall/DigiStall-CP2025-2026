@@ -8,6 +8,7 @@ import {
     terminateCollector,
     resetStaffPassword
 } from '../BACKEND/MANAGER/mobileStaff/mobileStaffController.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -83,6 +84,6 @@ router.delete('/collectors/:id', terminateCollector);
  * @access  Business Manager / Admin
  * @body    { staffType: 'inspector' | 'collector', staffId: number, newPassword?: string }
  */
-router.post('/reset-password', resetStaffPassword);
+router.post('/reset-password', authLimiter, resetStaffPassword);
 
 export default router;

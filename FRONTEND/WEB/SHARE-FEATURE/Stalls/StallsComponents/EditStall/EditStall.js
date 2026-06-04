@@ -1090,7 +1090,7 @@ export default {
         if (floorsResponse.ok) {
           const floorsData = await floorsResponse.json()
           this.floors = floorsData.data || floorsData.floors || []
-          console.log('✅ Loaded floors:', this.floors)
+          // console.log('✅ Loaded floors:', this.floors)
         }
 
         // Fetch all sections in one call (each section already has floor_id)
@@ -1101,7 +1101,7 @@ export default {
           const sectionsData = await sectionsResponse.json()
           this.sections = sectionsData.data || sectionsData.sections || []
         }
-        console.log('✅ Loaded sections:', this.sections)
+        // console.log('✅ Loaded sections:', this.sections)
       } catch (error) {
         console.error('❌ Error fetching floors/sections:', error)
       }

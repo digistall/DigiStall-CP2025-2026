@@ -21,7 +21,6 @@ const encryptIfNotNull = (value) => {
     try {
         return encryptData(value);
     } catch (error) {
-        console.error('⚠️ Encryption failed:', error.message);
         return value;
     }
 };
@@ -42,14 +41,12 @@ const StallholderController = {
       const { branchId } = req.query;
       const userType = req.user?.userType;
       
-      console.log('📋 Fetching stallholders:', { userType, queryBranchId: branchId });
       
       connection = await createConnection();
       
       // Get branch filter based on user role
       const branchFilter = await getBranchFilter(req, connection);
       
-      console.log('🔍 Stallholder branchFilter:', branchFilter);
       
       let rows;
       
@@ -97,7 +94,6 @@ const StallholderController = {
         rows = result || [];
       } else if (branchFilter.length === 0) {
         // No branches accessible
-        console.log('⚠️ No branches accessible');
         return res.json({
           success: true,
           data: [],
@@ -105,7 +101,6 @@ const StallholderController = {
         });
       } else {
         // Filter by accessible branches
-        console.log(`🔍 Fetching stallholders for branches: ${branchFilter.join(', ')}`);
         const placeholders = branchFilter.map(() => '?').join(',');
         // Use correct column name: stall_number (stall_no doesn't exist)
         const [result] = await connection.execute(
@@ -324,7 +319,6 @@ const StallholderController = {
       connection = await createConnection();
       await connection.beginTransaction();
 
-      console.log('🔐 Encrypting sensitive PII fields...');
       const encryptedName = encryptIfNotNull(stallholderName);
       const encryptedEmail = encryptIfNotNull(email);
       const encryptedContact = encryptIfNotNull(contactNumber);
@@ -356,7 +350,6 @@ const StallholderController = {
         gender                                 // p_gender
       ];
 
-      console.log('📋 Calling stored procedure: createApplicantComplete...');
       const [rows] = await connection.execute(
         `CALL createApplicantComplete(
           ?, ?, ?, ?, ?, ?,
@@ -454,7 +447,6 @@ const StallholderController = {
       }
 
       // Auto-Approve Stall Application
-      console.log('🏪 Inserting application record as Approved...');
       const [appResult] = await connection.execute(
         `INSERT INTO application (stall_id, applicant_id, application_date, application_status)
          VALUES (?, ?, CURDATE(), 'Approved')`,
@@ -485,10 +477,8 @@ const StallholderController = {
         ) VALUES (?, ?, ?, NOW())`,
         [newApplicantId, generatedUsername, passwordHash]
       );
-      console.log(`🔑 Credentials generated: username=${generatedUsername}`);
 
       // Create Stallholder record
-      console.log('👤 Creating stallholder record...');
       const [stallholderResult] = await connection.execute(
         `INSERT INTO stallholder (
           applicant_id,
@@ -527,10 +517,8 @@ const StallholderController = {
          WHERE stall_id = ?`,
         [newStallholderId, stallId]
       );
-      console.log('🏪 Stall occupied');
 
       await connection.commit();
-      console.log('🚀 Transaction committed successfully');
 
       // Note: Backend SMTP is disabled for manual onboarding since the frontend handles 
       // credentials welcome email delivery perfectly via EmailJS. 
@@ -554,7 +542,6 @@ const StallholderController = {
           await connection.rollback();
           console.log('❌ Transaction rolled back');
         } catch (rollErr) {
-          console.error('⚠️ Rollback error:', rollErr.message);
         }
       }
       console.error('Error creating stallholder:', error);
@@ -1547,7 +1534,6 @@ const StallholderController = {
           if (rawAreaOccupied > 0) {
             calculatedRatePerSqm = Math.round((calculatedMonthlyRent / rawAreaOccupied) * 100) / 100;
           }
-          console.log(`📊 MASTERLIST Rental Calc: Base Rate ${rawBaseRate} × 2 = ${calculatedMonthlyRent}`);
         } else {
           // Priority 2: Try to get MONTHLY RENT directly
           calculatedMonthlyRent = parseFloat(getCellValue('MONTHLY RENT') || getCellValue('NEW RATE FOR 2013') || 0);
@@ -2029,7 +2015,6 @@ const StallholderController = {
           try {
             await emailService.sendStallholderWelcomeEmail(account);
             emailsSent++;
-            console.log(`📧 Welcome email sent to ${account.email}`);
           } catch (emailError) {
             console.error(`❌ Failed to send email to ${account.email}:`, emailError.message);
           }
@@ -2075,7 +2060,6 @@ const StallholderController = {
     try {
       const { id } = req.params;
 
-      console.log(`📋 Fetching violation history for stallholder ID: ${id}`);
 
       connection = await createConnection();
 

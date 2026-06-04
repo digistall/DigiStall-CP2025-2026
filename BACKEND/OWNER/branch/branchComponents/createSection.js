@@ -35,10 +35,7 @@ export const createSection = async (req, res) => {
       ? permissions.includes("sections") || permissions.includes("stalls")
       : permissions.sections || permissions.stalls || false;
 
-    console.log("🔍 Employee permission check for section creation:", {
-      permissions,
-      hasSectionsPermission,
-    });
+
 
     if (!hasSectionsPermission) {
       return res.status(403).json({

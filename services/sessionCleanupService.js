@@ -10,6 +10,13 @@
 
 import { createConnection } from '../config/database.js';
 
+// Silence background scheduler logging in production
+const console = {
+  log: process.env.NODE_ENV !== 'production' ? global.console.log : () => {},
+  warn: process.env.NODE_ENV !== 'production' ? global.console.warn : () => {},
+  error: global.console.error
+};
+
 // Configuration
 const HEARTBEAT_TIMEOUT_MINUTES = 2;  // Mark offline after 2 minutes of no heartbeat
 const CLEANUP_INTERVAL_MS = 30000;    // Run cleanup every 30 seconds

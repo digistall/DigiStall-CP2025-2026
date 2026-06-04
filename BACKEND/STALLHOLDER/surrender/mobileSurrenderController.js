@@ -43,10 +43,8 @@ export const checkEligibility = async (req, res) => {
           [computedStatus, parseInt(stallholderId)]
         );
       } catch (healErr) {
-        console.error(`⚠️ Failed to self-heal payment_status for stallholder ${stallholderId}:`, healErr.message);
       }
     } else {
-      console.warn(`⚠️ Missing move_in_date or monthly_rent for stallholder ${stallholderId}, defaulting to unpaid`);
     }
 
     // Check Violations (active violations)

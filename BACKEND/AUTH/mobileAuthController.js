@@ -12,7 +12,6 @@ export const mobileLogin = async (req, res) => {
     connection = await createConnection();
     const { username, password } = req.body;
     
-    console.log('🔐 Mobile login attempt for:', username);
     
     // Validate input
     if (!username || !password) {
@@ -23,24 +22,13 @@ export const mobileLogin = async (req, res) => {
     }
     
     // ===== Get mobile user from credential table using stored procedure =====
-    console.log('🔍 Querying mobile user with username:', username);
     let users = [];
     
     const [spResult] = await connection.execute('CALL sp_getMobileUserByUsername(?)', [username]);
     users = spResult[0] || [];
     
-    console.log('📋 Stored procedure returned:', users.length, 'users');
     if (users.length > 0) {
-      console.log('👤 User data structure:', {
-        registrationid: users[0].registrationid,
-        applicant_id: users[0].applicant_id,
-        user_name: users[0].user_name,
-        has_password_hash: !!users[0].password_hash,
-        password_hash_format: users[0].password_hash?.substring(0, 10) + '...',
-        has_applicant_email: !!users[0].applicant_email,
-        applicant_email: users[0].applicant_email,
-        applicant_full_name: users[0].applicant_full_name
-      });
+
     }
     
     if (users.length === 0) {
@@ -63,7 +51,6 @@ export const mobileLogin = async (req, res) => {
       } else {
         // Fallback for legacy plain text passwords (temporary fix)
         isValidPassword = password === user.password_hash;
-        console.log('⚠️ Using plain text password comparison for user:', username);
       }
     } catch (error) {
       console.error('❌ Password verification error:', error);
@@ -86,7 +73,6 @@ export const mobileLogin = async (req, res) => {
 
     // Decrypt user/applicant data if encrypted
     let decryptedUser = await decryptApplicantData(user);
-    console.log('🔓 User decrypted:', decryptedUser.applicant_full_name);
 
     // Get spouse information
     const [spouseResult] = await connection.execute('CALL sp_getSpouseByApplicantId(?)', [applicantId]);
@@ -95,17 +81,14 @@ export const mobileLogin = async (req, res) => {
     if (spouseData.length > 0) {
       spouseData[0] = await decryptSpouseData(spouseData[0]);
     }
-    console.log('👫 Spouse data:', spouseData.length > 0 ? 'Found' : 'Not found');
 
     // Get business information
     const [businessResult] = await connection.execute('CALL sp_getBusinessInfoByApplicantId(?)', [applicantId]);
     const businessData = businessResult[0] || [];
-    console.log('💼 Business data:', businessData.length > 0 ? 'Found' : 'Not found');
 
     // Get other information
     const [otherResult] = await connection.execute('CALL sp_getOtherInfoByApplicantId(?)', [applicantId]);
     const otherData = otherResult[0] || [];
-    console.log('📋 Other info data:', otherData.length > 0 ? 'Found' : 'Not found');
 
     // Get application status - direct query instead of SP to include section/floor data
     const [applicationResult] = await connection.execute(`
@@ -133,8 +116,6 @@ export const mobileLogin = async (req, res) => {
       LIMIT 1
     `, [applicantId]);
     const applicationData = applicationResult || [];
-    console.log('📝 Application data:', applicationData.length > 0 ? applicationData[0]?.application_status : 'Not found');
-    console.log('📝 Application raw data:', JSON.stringify(applicationData, null, 2));
 
     // Get stallholder information (if approved) - Using direct query instead of stored procedure
     // because sp_getStallholderByApplicantId depends on fn_getEncryptionKey which may not exist
@@ -168,8 +149,6 @@ export const mobileLogin = async (req, res) => {
     for (let i = 0; i < stallholderData.length; i++) {
       stallholderData[i] = await decryptStallholderData(stallholderData[i]);
     }
-    console.log('🏪 Stallholder data:', stallholderData.length > 0 ? `Found ${stallholderData.length} record(s) (IDs: ${stallholderData.map(s => s.stallholder_id).join(', ')})` : 'Not found');
-    console.log('🏪 Stallholder raw data:', JSON.stringify(stallholderData, null, 2));
 
     // ===== CHECK IF STALLHOLDER IS OVERDUE — BLOCK LOGIN =====
     if (stallholderData.length > 0 && stallholderData[0].status === 'active') {
@@ -249,7 +228,6 @@ export const mobileLogin = async (req, res) => {
               [sh.stallholder_id]
             );
 
-            console.log('🚫 Login blocked — stallholder is overdue:', sh.stallholder_id);
             return res.status(403).json({
               success: false,
               blocked: true,
@@ -412,14 +390,7 @@ export const mobileLogin = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('🚨 DETAILED Mobile login error:', {
-      message: error.message,
-      code: error.code,
-      sqlState: error.sqlState,
-      sqlMessage: error.sqlMessage,
-      stack: error.stack,
-      username: req.body.username
-    });
+
     res.status(500).json({
       success: false,
       message: 'Login failed',
@@ -441,7 +412,6 @@ export const mobileRegister = async (req, res) => {
     connection = await createConnection();
     const { username, email, password, fullName, contactNumber, address } = req.body;
     
-    console.log('📝 Mobile registration attempt for:', username);
     
     // Validate input
     if (!username || !email || !password || !fullName) {
@@ -536,15 +506,10 @@ export const mobileLogout = async (req, res) => {
     connection = await createConnection();
     
     // Debug: Log the entire request to see what we're receiving
-    console.log('📱 Mobile logout request received');
-    console.log('📱 req.user:', JSON.stringify(req.user, null, 2));
-    console.log('📱 req.body:', JSON.stringify(req.body, null, 2));
-    console.log('📱 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
     
     // Get user info from JWT token (set by auth middleware) or from body
     const applicantId = req.user?.userId || req.user?.applicantId || req.body?.applicantId || req.body?.userId;
     
-    console.log('📱 Extracted applicant ID:', applicantId);
     
     if (applicantId) {
       // Get Philippine time
@@ -558,7 +523,6 @@ export const mobileLogout = async (req, res) => {
       const seconds = String(phTime.getSeconds()).padStart(2, '0');
       const philippineTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       
-      console.log('📱 Updating credential table with time:', philippineTime);
       
       // Update last_logout in credential table using stored procedure
       const [result] = await connection.execute(
@@ -570,7 +534,6 @@ export const mobileLogout = async (req, res) => {
       console.log(`✅ Updated last_logout for applicant ${applicantId} at ${philippineTime}, affected rows: ${affectedRows}`);
       
       if (affectedRows === 0) {
-        console.warn(`⚠️ No rows updated - applicant_id ${applicantId} may not exist in credential table`);
       }
 
       // Log stallholder logout activity (mobile app)
@@ -606,7 +569,6 @@ export const mobileLogout = async (req, res) => {
           }
         } else {
           // Fallback: log using JWT user data (e.g., applicant not yet a stallholder)
-          console.log('⚠️ No stallholder record found for logout log — logging with applicant ID as fallback');
           await logStaffActivity({
             staffType: 'stallholder',
             staffId: applicantId,
@@ -626,7 +588,6 @@ export const mobileLogout = async (req, res) => {
         console.error('❌ Error logging stallholder logout activity:', logError);
       }
     } else {
-      console.warn('⚠️ No applicant ID found in request - cannot update last_logout');
     }
     
     res.status(200).json({

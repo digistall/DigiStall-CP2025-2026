@@ -4,14 +4,9 @@ import { createConnection } from '../../../../config/database.js';
 export const deleteBranchManager = async (req, res) => {
   let connection;
   try {
-    console.log('🗑️ Deleting branch manager - Request received');
-    console.log('📄 Request method:', req.method);
-    console.log('📄 Request URL:', req.url);
-    console.log('📋 Request params:', req.params);
 
     const { managerId } = req.params; // Get manager ID from URL params
 
-    console.log('🔍 Delete validation:');
     console.log('- managerId:', managerId, '(valid:', !!managerId, ')');
 
     // Validation
@@ -23,12 +18,10 @@ export const deleteBranchManager = async (req, res) => {
       });
     }
 
-    console.log('🔌 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connection established');
 
     // Get manager data before deletion for response
-    console.log('🔍 Fetching manager data before deletion:', managerId);
     const [managerData] = await connection.execute(
       `SELECT 
         bm.branch_manager_id,
@@ -68,18 +61,15 @@ export const deleteBranchManager = async (req, res) => {
 
     // Check if this is the only manager for the branch
     if (manager.branch_id) {
-      console.log('🔍 Checking if this is the only manager for branch:', manager.branch_id);
       const [managerCount] = await connection.execute(
         'SELECT COUNT(*) as count FROM branch_manager WHERE branch_id = ?',
         [manager.branch_id]
       );
 
-      console.log('📊 Manager count for branch:', managerCount[0].count);
 
       // Optional: You can uncomment this block if you want to prevent deletion of the last manager
       /*
       if (managerCount[0].count === 1) {
-        console.log('⚠️ Cannot delete the only manager for this branch');
         return res.status(400).json({
           success: false,
           message: 'Cannot delete the only manager assigned to this branch. Please assign another manager first.'
@@ -89,7 +79,6 @@ export const deleteBranchManager = async (req, res) => {
     }
 
     // Perform the deletion
-    console.log('🗑️ Deleting branch manager:', managerId);
     const [deleteResult] = await connection.execute(
       'DELETE FROM branch_manager WHERE branch_manager_id = ?',
       [managerId]
@@ -98,7 +87,6 @@ export const deleteBranchManager = async (req, res) => {
     console.log('✅ Manager deleted successfully, affected rows:', deleteResult.affectedRows);
 
     if (deleteResult.affectedRows === 0) {
-      console.log('⚠️ No rows were deleted');
       return res.status(404).json({
         success: false,
         message: 'Branch manager not found'
@@ -146,7 +134,6 @@ export const deleteBranchManager = async (req, res) => {
     });
   } finally {
     if (connection) {
-      console.log('🔌 Closing database connection...');
       await connection.end();
       console.log('✅ Database connection closed');
     }

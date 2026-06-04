@@ -46,16 +46,7 @@ const poolConfig = {
   acquireTimeout: 30000  // 30 seconds to acquire from pool - only valid for pools
 }
 
-console.log('🔧 Database Config:', {
-  host: dbConfig.host,
-  port: dbConfig.port,
-  user: dbConfig.user,
-  database: dbConfig.database,
-  passwordSet: !!dbConfig.password,
-  ssl: isCloudDB ? 'enabled' : 'disabled',
-  connectTimeout: dbConfig.connectTimeout,
-  connectionLimit: dbConfig.connectionLimit
-})
+
 
 // Connection pool singleton
 let pool = null
@@ -68,12 +59,7 @@ export function getPool() {
   if (!pool) {
     pool = mysql.createPool(poolConfig)
 
-    console.log('🔧 Database Pool Created:', {
-      host: poolConfig.host,
-      database: poolConfig.database,
-      connectionLimit: poolConfig.connectionLimit,
-      ssl: isCloudDB ? 'enabled' : 'disabled'
-    })
+
   }
   return pool
 }

@@ -41,34 +41,7 @@ export const login = async (req, res) => {
   try {
     connection = await createConnection();
     
-    // DEBUG: Check which database we're connected to
-    const [dbCheck] = await connection.execute('SELECT DATABASE() as db, @@hostname as host');
-    console.log('🔌 Connected to database:', dbCheck[0]);
-    
-    // DEBUG: Check if table exists
-    const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'system_administrator'");
-    console.log('📊 Table exists:', tableCheck);
-    
-    // DEBUG: Check table structure
-    const [structureCheck] = await connection.execute('DESCRIBE system_administrator');
-    console.log('📋 Table structure:', structureCheck.map(col => col.Field));
-    
-    // DEBUG: Check if admin exists with direct query
-    const [directCheck] = await connection.execute('SELECT system_admin_id, email, status FROM system_administrator LIMIT 1');
-    console.log('📋 Direct admin check:', directCheck);
-    
-    // DEBUG: Count total rows
-    const [countCheck] = await connection.execute('SELECT COUNT(*) as total FROM system_administrator');
-    console.log('📊 Total admins in table:', countCheck[0]);
-    
     const { email, password } = req.body;
-    
-    console.log('🔐 Email Login Attempt (Auto-Detection):', { 
-      hasEmail: !!email,
-      hasPassword: !!password,
-      passwordLength: password?.length,
-      timestamp: new Date().toISOString() 
-    });
     
     // Validate required fields
     if (!email || !password) {
@@ -81,7 +54,6 @@ export const login = async (req, res) => {
     
     // DO NOT encrypt email - it's stored as plain text for searching
     const searchEmail = email; // Use plain email to search
-    console.log('🔍 Searching for user with email:', email);
     
     // Try each user type until we find a match
     const userTypes = [
@@ -130,27 +102,21 @@ export const login = async (req, res) => {
     // Try each user type
     for (const config of userTypes) {
       try {
-        console.log(`🔍 Trying ${config.type}...`);
         const [userRows] = await connection.execute(`CALL ${config.procedure}(?)`, [searchEmail]);
-        console.log(`📊 Raw result for ${config.type}:`, JSON.stringify(userRows));
         const users = userRows[0] || [];
-        console.log(`📊 Users array for ${config.type}:`, users.length, 'rows');
         
         if (users.length > 0) {
           user = users[0];
           detectedUserType = config.type;
           userConfig = config;
-          console.log(`✅ Found user as ${config.type}`);
           break;
         }
       } catch (error) {
-        console.log(`❌ Error checking ${config.type}:`, error.message);
         // Continue to next user type
       }
     }
 
     if (!user || !detectedUserType) {
-      console.log('❌ User not found with this email');
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or inactive account'
@@ -159,19 +125,12 @@ export const login = async (req, res) => {
     
     // Decrypt the stored password and compare with provided password
     const encryptedPassword = user[userConfig.passwordField];
-    console.log('🔐 Password Verification:', { 
-      userType: detectedUserType,
-      hasEncryptedPassword: !!encryptedPassword
-    });
     
     try {
       const decryptedStoredPassword = decryptData(encryptedPassword);
       const isPasswordValid = password === decryptedStoredPassword;
       
-      console.log('🔓 Password comparison:', { isPasswordValid });
-      
       if (!isPasswordValid) {
-        console.log(`❌ Invalid password for ${detectedUserType}`);
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials'
@@ -216,11 +175,7 @@ export const login = async (req, res) => {
           user.last_name = employeeDecrypted.last_name;
           user.email = employeeDecrypted.email;
           user.phone_number = employeeDecrypted.phone_number;
-          console.log('✅ Employee data decrypted:', { 
-            first_name: user.first_name, 
-            last_name: user.last_name,
-            email: user.email?.substring(0, 5) + '***'
-          });
+          // Employee data decrypted successfully
         }
         
         // Parse permissions from JSON if stored as JSON string
@@ -272,21 +227,11 @@ export const login = async (req, res) => {
     let decryptedLastName = user.last_name;
     let decryptedEmail = user.email;
     
-    console.log('🔍 [DECRYPT DEBUG] Before decryption:');
-    console.log(`  firstName: ${user.first_name ? user.first_name.substring(0, 50) : 'NULL'}`);
-    console.log(`  lastName: ${user.last_name ? user.last_name.substring(0, 50) : 'NULL'}`);
-    console.log(`  email: ${user.email ? user.email.substring(0, 50) : 'NULL'}`);
-    
     // Always decrypt names - stored procedures may not decrypt properly
     decryptedFirstName = decryptSafe(user.first_name);
     decryptedLastName = decryptSafe(user.last_name);
     // Email is stored plain text - don't decrypt
     decryptedEmail = user.email;
-    
-    console.log('🔓 [DECRYPT DEBUG] After decryption:');
-    console.log(`  firstName: ${decryptedFirstName || 'NULL'}`);
-    console.log(`  lastName: ${decryptedLastName || 'NULL'}`);
-    console.log(`  email: ${decryptedEmail || 'NULL'}`);
     
     // Create JWT token
     const tokenPayload = {
@@ -300,11 +245,7 @@ export const login = async (req, res) => {
     };
     
     const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-    console.log('🔐 [LOGIN DEBUG] Creating token with secret (first 20 chars):', jwtSecret.substring(0, 20) + '...');
-    console.log('🔐 [LOGIN DEBUG] Token payload:', JSON.stringify(tokenPayload, null, 2));
-    
     const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '24h' });
-    console.log('✅ [LOGIN DEBUG] Token created (first 50 chars):', token.substring(0, 50) + '...');
     
     // Prepare user data for response (exclude password)
     const userData = {
@@ -349,19 +290,14 @@ export const login = async (req, res) => {
               INSERT INTO employee_session (employee_id, session_token, login_time, last_heartbeat, is_active) 
               VALUES (?, ?, ?, ?, 1)
             `, [user[userConfig.idField], token, phTime, phTime]);
-            console.log(`✅ Created employee session for ID ${user[userConfig.idField]}`);
           } catch (sessionError) {
-            console.warn('⚠️ Could not create employee session:', sessionError.message);
+            // Silence session error
           }
           break;
       }
-      console.log(`✅ Updated last_login for ${detectedUserType}: ${decryptedEmail}`);
     } catch (updateError) {
-      console.error('⚠️ Failed to update last_login:', updateError.message);
+      // Silence update error
     }
-    
-    console.log(`✅ ${detectedUserType} login successful:`, decryptedEmail);
-    console.log('📤 Sending user data:', JSON.stringify(userData, null, 2));
     
     // Log the login activity
     try {
@@ -381,7 +317,6 @@ export const login = async (req, res) => {
         status: 'success'
       });
     } catch (logError) {
-      console.warn('⚠️ Failed to log login activity:', logError.message);
     }
 
     res.status(200).json({
@@ -467,7 +402,7 @@ export const getCurrentUser = async (req, res) => {
       });
     }
     
-    console.log('🔍 getCurrentUser called with:', { userId, userType });
+    // Get current user details
     
     // Use stored procedures based on user type
     let userRows;
@@ -500,7 +435,7 @@ export const getCurrentUser = async (req, res) => {
             WHERE bm.business_manager_id = ?
           `, [userId]);
           
-          console.log(`🔍 [DEBUG] business_manager query result:`, JSON.stringify(result, null, 2));
+          // Query success
           
           // Result might be an array of objects
           if (Array.isArray(result)) {
@@ -561,7 +496,7 @@ export const getCurrentUser = async (req, res) => {
     // Ensure userType is included in the user object
     user.userType = userType;
     
-    console.log('📤 getCurrentUser - Sending data for', userType, ':', JSON.stringify(user, null, 2));
+    // Return data
     
     // Return data in the format expected by frontend based on user type
     const responseData = {
@@ -576,14 +511,12 @@ export const getCurrentUser = async (req, res) => {
       if (bId) {
         try {
           // Fetch aggregate business stats for this branch
-          console.log(`📊 [DEBUG] Stats for branch ID: ${bId}`);
           
           // 1. Managed Stalls count
           const [stallsResult] = await connection.execute(
             'SELECT COUNT(*) as count FROM stall WHERE branch_id = ?',
             [bId]
           );
-          console.log(`📊 [DEBUG] managedStalls: ${stallsResult[0]?.count}`);
           
           // 2. Total Approved Revenue (Regular + Penalty)
           const [regRevenueResult] = await connection.execute(
@@ -597,28 +530,24 @@ export const getCurrentUser = async (req, res) => {
           );
           
           const totalRevenue = (parseFloat(regRevenueResult[0]?.total) || 0) + (parseFloat(penRevenueResult[0]?.total) || 0);
-          console.log(`📊 [DEBUG] totalRevenue: ${totalRevenue} (Reg: ${regRevenueResult[0]?.total}, Pen: ${penRevenueResult[0]?.total})`);
 
           // 3. Active Personnel count
           const [employeesResult] = await connection.execute(
             'SELECT COUNT(*) as count FROM business_employee WHERE branch_id = ? AND status = "Active"',
             [bId]
           );
-          console.log(`📊 [DEBUG] activePersonnel: ${employeesResult[0]?.count}`);
 
           // 4. Active Stallholders count
           const [stallholdersResult] = await connection.execute(
             'SELECT COUNT(*) as count FROM stallholder WHERE branch_id = ? AND status = "Active"',
             [bId]
           );
-          console.log(`📊 [DEBUG] activeStallholders: ${stallholdersResult[0]?.count}`);
 
           // 5. Pending Applications count
           const [appsResult] = await connection.execute(
             'SELECT COUNT(*) as count FROM application a JOIN stall s ON a.stall_id = s.stall_id WHERE s.branch_id = ? AND a.status = "Pending"',
             [bId]
           );
-          console.log(`📊 [DEBUG] pendingApplications: ${appsResult[0]?.count}`);
 
           user.stats = {
             managedStalls: stallsResult[0]?.count || 0,
@@ -628,9 +557,7 @@ export const getCurrentUser = async (req, res) => {
             pendingApplications: appsResult[0]?.count || 0
           };
           
-          console.log(`📊 Expanded statistics fetched for branch ${bId}:`, user.stats);
         } catch (statsError) {
-          console.error('⚠️ Error fetching business statistics:', statsError.message);
           user.stats = { managedStalls: 0, totalRevenue: 0, activePersonnel: 0, activeStallholders: 0, pendingApplications: 0 };
         }
       }
@@ -705,12 +632,10 @@ export const logout = async (req, res) => {
               ]
             );
           } catch (logError) {
-            console.error('⚠️ Failed to log logout activity:', logError.message);
           }
         }
       } catch (tokenError) {
         // Token invalid or expired, continue with logout anyway
-        console.log('⚠️ Token verification failed during logout:', tokenError.message);
       }
     }
     
@@ -748,7 +673,6 @@ export const updateProfile = async (req, res) => {
     const { userId, userType } = req.user;
     const { firstName, lastName, phone, address, dob, gender } = req.body;
     
-    console.log('📝 updateProfile called with:', { userId, userType, body: req.body });
     
     // Encrypt sensitive fields (consistent with system encryption)
     const encryptedFirstName = encryptData(firstName);

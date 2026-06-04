@@ -293,7 +293,15 @@ export const useAuthStore = defineStore('auth', () => {
       SecureLogger.error('Login error', err);
       const errorMessage = err.response?.data?.message || err.message || 'Login failed';
       error.value = errorMessage;
-      return { success: false, message: errorMessage };
+      
+      const remainingAttempts = err.response?.headers?.['ratelimit-remaining'];
+      const warning = err.response?.status === 401 && remainingAttempts === '1';
+      
+      return { 
+        success: false, 
+        message: errorMessage,
+        warning: warning 
+      };
     } finally {
       isLoading.value = false;
     }
