@@ -5,11 +5,12 @@
  * All actual code is in the role folders, not here
  */
 
-// Silence verbose logs from console to secure app data
+// Silence verbose logs and warnings from console to secure app data
 if (typeof window !== 'undefined') {
   console.log = () => {};
   console.info = () => {};
   console.debug = () => {};
+  console.warn = () => {};
 }
 
 import { createApp } from 'vue'

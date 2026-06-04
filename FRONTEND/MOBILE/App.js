@@ -2,9 +2,13 @@
 console.log = () => {};
 console.info = () => {};
 console.debug = () => {};
+console.warn = () => {};
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, AppState, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, AppState, Animated, LogBox } from 'react-native';
+
+// Disable all red/yellow box overlays in the React Native UI
+LogBox.ignoreAllLogs();
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
