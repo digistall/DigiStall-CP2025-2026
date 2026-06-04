@@ -151,7 +151,6 @@
 
       <v-divider></v-divider>
       <v-card-actions class="px-6 py-4">
-        <v-btn color="grey" text @click="closeDialog">Cancel</v-btn>
         <v-spacer></v-spacer>
         <v-btn 
           color="primary" 
@@ -168,9 +167,14 @@
     <!-- Add Document Type Dialog -->
     <v-dialog v-model="showDocTypeDialog" max-width="500px">
       <v-card>
-        <v-card-title class="headline">
-          <v-icon left>mdi-file-document-plus</v-icon>
-          Add Document Requirement
+        <v-card-title class="headline d-flex justify-space-between align-center w-100">
+          <div class="d-flex align-center">
+            <v-icon left class="mr-2">mdi-file-document-plus</v-icon>
+            <span>Add Document Requirement</span>
+          </div>
+          <v-btn icon variant="text" @click="cancelDocTypeDialog" size="small" color="grey-darken-1">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
         <v-card-text>
           <v-form ref="docTypeForm" v-model="docTypeFormValid">
@@ -212,7 +216,6 @@
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-btn color="grey" text @click="cancelDocTypeDialog">Cancel</v-btn>
           <v-spacer></v-spacer>
           <v-btn 
             color="primary" 
@@ -229,16 +232,20 @@
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="showDeleteDialog" max-width="400px">
       <v-card>
-        <v-card-title class="headline error--text">
-          <v-icon left color="error">mdi-alert-circle</v-icon>
-          Confirm Delete
+        <v-card-title class="headline error--text d-flex justify-space-between align-center w-100">
+          <div class="d-flex align-center">
+            <v-icon left color="error" class="mr-2">mdi-alert-circle</v-icon>
+            <span>Confirm Delete</span>
+          </div>
+          <v-btn icon variant="text" @click="showDeleteDialog = false" size="small" color="error">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
         <v-card-text>
           Are you sure you want to remove <strong>{{ docTypeToDelete?.type_name || docTypeToDelete?.document_name }}</strong> from the requirements? 
           This action cannot be undone.
         </v-card-text>
         <v-card-actions>
-          <v-btn color="grey" text @click="showDeleteDialog = false">Cancel</v-btn>
           <v-spacer></v-spacer>
           <v-btn color="error" @click="deleteDocumentType" :loading="deleting">Delete</v-btn>
         </v-card-actions>

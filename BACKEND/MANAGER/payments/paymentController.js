@@ -126,6 +126,7 @@ const PaymentController = {
           LEFT JOIN section sec ON s.section_id = sec.section_id
           LEFT JOIN floor f ON s.floor_id = f.floor_id
           WHERE sh.branch_id = ?
+            AND LOWER(sh.status) = 'active'
           ORDER BY sh.stallholder_id
         `;
         params = [currentMonth, branchId];
@@ -168,6 +169,7 @@ const PaymentController = {
           LEFT JOIN branch b ON sh.branch_id = b.branch_id
           LEFT JOIN section sec ON s.section_id = sec.section_id
           LEFT JOIN floor f ON s.floor_id = f.floor_id
+          WHERE LOWER(sh.status) = 'active'
           ORDER BY sh.stallholder_id
         `;
         params = [currentMonth];
@@ -253,7 +255,7 @@ const PaymentController = {
         const moveInStr = sh.contract_start_date;
         const previousStatus = sh.payment_status;
 
-        const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInStr, rental, true);
+        const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInStr, rental, true, currentMonth);
         sh.payment_status = computedStatus;
 
         // Map to DB enum for self-healing

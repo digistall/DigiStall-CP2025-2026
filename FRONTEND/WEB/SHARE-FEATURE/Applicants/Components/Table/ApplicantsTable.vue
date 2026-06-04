@@ -175,9 +175,14 @@
     <!-- More Info Dialog -->
     <v-dialog v-model="showInfoDialog" max-width="900" scrollable>
       <v-card>
-        <v-card-title class="text-h5 pa-4 bg-primary text-white">
-          <v-icon class="mr-2" color="white">mdi-account-details</v-icon>
-          Applicant Details - {{ selectedApplicant?.fullName }}
+        <v-card-title class="text-h5 pa-4 bg-primary text-white d-flex align-center justify-space-between w-100">
+          <div class="d-flex align-center">
+            <v-icon class="mr-2" color="white">mdi-account-details</v-icon>
+            <span>Applicant Details - {{ selectedApplicant?.fullName }}</span>
+          </div>
+          <v-btn icon variant="text" @click="showInfoDialog = false" size="small" color="white">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
 
         <v-card-text class="pa-0">
@@ -611,10 +616,7 @@
           </v-tabs-window>
         </v-card-text>
 
-        <v-card-actions class="pa-4 border-t">
-          <v-spacer></v-spacer>
-          <v-btn variant="outlined" @click="showInfoDialog = false">Close</v-btn>
-        </v-card-actions>
+
       </v-card>
     </v-dialog>
 

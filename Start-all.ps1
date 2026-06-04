@@ -103,7 +103,7 @@ if ($startAll -or $Backend -or $BackendWeb) {
         Write-Host ''
         `$env:PORT = '5000'
         `$env:NODE_ENV = 'development'
-        node server.js
+        npx nodemon server.js
 "@
     Start-Sleep -Seconds 2
 }
@@ -124,7 +124,7 @@ if ($startAll -or $Backend -or $BackendMobile) {
         Write-Host ''
         `$env:PORT = '5001'
         `$env:NODE_ENV = 'development'
-        node server.js
+        npx nodemon server.js
 "@
     Start-Sleep -Seconds 2
 }

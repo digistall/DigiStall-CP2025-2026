@@ -3,7 +3,7 @@
  * Replicates the timeline rules of the frontend Monthly Payment Tracker 1:1.
  */
 
-export async function calculateStallholderPaymentStatus(connection, stallholderId, moveInStr, rental, returnRawStatus = false) {
+export async function calculateStallholderPaymentStatus(connection, stallholderId, moveInStr, rental, returnRawStatus = false, targetMonth = null) {
   if (!moveInStr || !rental || rental <= 0) {
     return 'pending';
   }
@@ -25,8 +25,16 @@ export async function calculateStallholderPaymentStatus(connection, stallholderI
   let year = moveIn.getFullYear();
   let month = moveIn.getMonth();
 
-  const maxYear = now.getFullYear();
-  const maxMonth = 11; // December
+  let maxYear = now.getFullYear();
+  let maxMonth = 11; // December
+
+  if (targetMonth) {
+    const [tY, tM] = targetMonth.split('-').map(Number);
+    if (tY > maxYear || (tY === maxYear && (tM - 1) > maxMonth)) {
+      maxYear = tY;
+      maxMonth = tM - 1;
+    }
+  }
 
   while (year < maxYear || (year === maxYear && month <= maxMonth)) {
     let dueDate = new Date(year, month, dueDay);
@@ -108,6 +116,29 @@ export async function calculateStallholderPaymentStatus(connection, stallholderI
     if (month > 11) {
       month = 0;
       year++;
+    }
+  }
+
+  if (targetMonth) {
+    const [tY, tM] = targetMonth.split('-').map(Number);
+    const match = tracker.find(t => t.year === tY && t.month === (tM - 1));
+    if (match) {
+      const computedStatus = match.status;
+      const hasPaid = match.hasPaid;
+
+      if (returnRawStatus) {
+        if (computedStatus === 'discount' && hasPaid) return 'paid';
+        return computedStatus;
+      }
+
+      if (computedStatus === 'paid') return 'paid';
+      if (computedStatus === 'partial') return 'partial';
+      if (computedStatus === 'overdue') return 'overdue';
+      if (computedStatus === 'discount') {
+        return hasPaid ? 'paid' : 'unpaid';
+      }
+      if (computedStatus === 'due_soon') return 'unpaid';
+      return 'unpaid';
     }
   }
 

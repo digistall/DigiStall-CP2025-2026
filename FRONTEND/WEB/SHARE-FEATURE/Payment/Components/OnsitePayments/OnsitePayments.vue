@@ -1,5 +1,8 @@
 <template>
   <div class="onsite-payments">
+    <!-- Premium Loading Overlay -->
+    <LoadingOverlay :loading="loading" text="Loading payments data..." :full-page="false" />
+
     <!-- Search & Filter Section -->
     <div class="search-filter-section mb-6">
       <div class="search-wrapper">
@@ -461,7 +464,6 @@
         </v-card-text>
         <v-card-actions class="modal-actions">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeAddModal">Cancel</v-btn>
           <v-btn
             color="#002181"
             variant="flat"

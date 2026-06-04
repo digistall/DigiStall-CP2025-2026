@@ -1,49 +1,62 @@
 <template>
-    <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showModal" max-width="450px" persistent>
-        <v-card>
-            <v-card-title class="d-flex align-center text-error">
-                <v-icon color="error" class="me-3">mdi-delete-alert</v-icon>
-                <span class="text-h6">Delete Stall</span>
-            </v-card-title>
+  <!-- Delete Confirmation Dialog -->
+  <ConfirmDialog
+    :model-value="showModal"
+    @update:model-value="$emit('update:showModal', $event)"
+    title="Delete Stall"
+    type="danger"
+    confirm-text="Delete"
+    cancel-text="Cancel"
+    note="This action cannot be undone. All data will be permanently removed."
+    note-icon="mdi-alert-circle-outline"
+    note-icon-color="error"
+    :loading="loading"
+    @confirm="handleConfirmDelete"
+    @cancel="handleCancel"
+  >
+    <template #message>
+      Are you sure you want to delete
+      <strong>{{ stallData.stallNumber || stallData.stall_number }}</strong>?
+    </template>
 
-            <v-divider></v-divider>
-
-            <v-card-text class="py-4">
-                <p class="text-body-1 mb-3">
-                    Are you sure you want to delete <strong>{{ stallData.stallNumber || stallData.stall_number
-                        }}</strong>?
-                </p>
-
-                <v-alert color="error" variant="tonal" density="compact" class="text-caption">
-                    This action cannot be undone. All associated data will be permanently removed.
-                </v-alert>
-
-                <!-- Additional stall details for confirmation -->
-                <div v-if="stallData" class="mt-3 pa-3 bg-grey-lighten-5 rounded">
-                    <p class="text-caption text-grey-darken-1 mb-1">Stall Details:</p>
-                    <p class="text-body-2"><strong>Location:</strong> {{ stallData.location }}</p>
-                    <p class="text-body-2"><strong>Floor:</strong> {{ stallData.floor }}</p>
-                    <p class="text-body-2"><strong>Section:</strong> {{ stallData.section }}</p>
-                    <p class="text-body-2"><strong>Price:</strong> {{ formatPrice(stallData.price) }}</p>
-                </div>
-            </v-card-text>
-
-            <v-divider></v-divider>
-            <v-card-actions class="pa-4">
-                <v-spacer></v-spacer>
-
-                                <v-btn variant="outlined" color="grey-darken-1" @click="handleCancel" :disabled="loading">
-                    Cancel
-                </v-btn>
-
-                <v-btn color="primary" variant="elevated" @click="handleConfirmDelete" :loading="loading" class="ml-2">
-                    Delete
-                </v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+    <!-- Stall detail mini-card inside the dialog body -->
+    <div v-if="stallData && stallData.location" class="ds-stall-details mt-3">
+      <p class="ds-detail-row"><span class="ds-detail-label">Location:</span> {{ stallData.location }}</p>
+      <p class="ds-detail-row"><span class="ds-detail-label">Floor:</span> {{ stallData.floor }}</p>
+      <p class="ds-detail-row"><span class="ds-detail-label">Section:</span> {{ stallData.section }}</p>
+      <p class="ds-detail-row"><span class="ds-detail-label">Price:</span> {{ formatPrice(stallData.price) }}</p>
+    </div>
+  </ConfirmDialog>
 </template>
 
-<script src="./DeleteStall.js"></script>
+<script>
+import ConfirmDialog from '@common/ConfirmDialog/ConfirmDialog.vue'
+import DeleteStallScript from './DeleteStall.js'
+export default {
+  ...DeleteStallScript,
+  components: {
+    ...DeleteStallScript.components,
+    ConfirmDialog
+  }
+}
+</script>
+
 <style scoped src="./DeleteStall.css"></style>
+<style scoped>
+.ds-stall-details {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: left;
+}
+.ds-detail-row {
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin: 0 0 4px;
+}
+.ds-detail-label {
+  font-weight: 600;
+  color: #1f2937;
+}
+</style>
