@@ -1,5 +1,6 @@
 import { createConnection } from '../../../config/database.js';
 import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get payment records for a stallholder
@@ -567,10 +568,10 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         `SELECT SUM(amount) as total_paid, MAX(payment_date) as last_payment_date, MAX(promise_to_pay_date) as promise_date
          FROM payments
          WHERE stallholder_id = ?
-           AND payment_for_month = ?
+           AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
            AND payment_status IN ('completed', 'paid', 'partial')
            AND payment_type IN ('rental', 'partial_payment')`,
-        [shId, currentMonth]
+        [shId, currentMonth, currentMonth]
       );
 
       // Check pending payment
@@ -578,12 +579,12 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         `SELECT payment_id, amount, payment_date, payment_status
          FROM payments
          WHERE stallholder_id = ?
-           AND payment_for_month = ?
+           AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
            AND payment_status = 'pending'
            AND payment_type IN ('rental', 'partial_payment')
          ORDER BY created_at DESC
          LIMIT 1`,
-        [shId, currentMonth]
+        [shId, currentMonth, currentMonth]
       );
 
       const totalPaid = parseFloat(paymentResult[0]?.total_paid || 0);
@@ -609,7 +610,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         moveInDate = stallInfo.contract_start_date || stallInfo.move_in_date;
       }
 
-      const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInDate, monthlyRent);
+      const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInDate, monthlyRent, false, currentMonth);
 
       if (computedStatus === 'paid' || computedStatus === 'discount') {
         status = 'paid';

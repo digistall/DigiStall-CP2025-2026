@@ -132,7 +132,9 @@
 
 .table-wrapper {
   width: 100%;
-  overflow-x: hidden; /* prevent horizontal scrolling at the wrapper level */
+  max-height: var(--table-scroll-max-height) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important; /* prevent horizontal scrolling at the wrapper level */
 }
 
 .payments-table {

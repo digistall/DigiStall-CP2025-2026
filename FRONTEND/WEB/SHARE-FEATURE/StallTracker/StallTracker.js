@@ -1,7 +1,13 @@
 import { useAvatar } from '@utils/avatarHelper.js'
+import LoadingOverlay from '@/components/Common/LoadingOverlay/LoadingOverlay.vue'
+import ConfirmDialog from '@common/ConfirmDialog/ConfirmDialog.vue'
 
 export default {
   name: 'StallTracker',
+  components: {
+    LoadingOverlay,
+    ConfirmDialog
+  },
   setup() {
     const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
     return { getAvatarUrl, handleAvatarError, getInitials };
@@ -56,7 +62,13 @@ export default {
   },
 
   watch: {
-    // No longer need to fetch on every watch change, local computed properties handle it
+    activeTab(newTab) {
+      if (newTab === 'pending') {
+        this.fetchPendingRequests();
+      } else if (newTab === 'history') {
+        this.fetchHistory();
+      }
+    }
   },
 
   computed: {
@@ -168,6 +180,7 @@ export default {
         if (json.success) {
           this.showSnackbar(`Request ${status} successfully`, status === 'Rejected' ? 'warning' : 'success');
           this.fetchPendingRequests();
+          this.fetchHistory();
         } else {
           this.showSnackbar(json.message || 'Error updating request', 'error');
         }

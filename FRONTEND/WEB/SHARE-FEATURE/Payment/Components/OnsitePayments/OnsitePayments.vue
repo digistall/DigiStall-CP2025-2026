@@ -1,5 +1,8 @@
 <template>
   <div class="onsite-payments">
+    <!-- Premium Loading Overlay -->
+    <LoadingOverlay :loading="loading" text="Loading payments data..." :full-page="false" />
+
     <!-- Search & Filter Section -->
     <div class="search-filter-section mb-6">
       <div class="search-wrapper">
@@ -461,7 +464,6 @@
         </v-card-text>
         <v-card-actions class="modal-actions">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeAddModal">Cancel</v-btn>
           <v-btn
             color="#002181"
             variant="flat"
@@ -917,3 +919,34 @@
 
 <script src="./OnsitePayments.js"></script>
 <style scoped src="./OnsitePayments.css"></style>
+
+<style>
+/* Force visible blue scrollbar on Onsite table-wrapper globally to override App.vue white scrollbars and scrollable-tables.css hidden rules */
+.onsite-payments .table-wrapper {
+  scrollbar-width: thin !important;
+  scrollbar-color: #002181 #f1f1f1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: var(--table-scroll-max-height) !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 4px !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar-thumb {
+  background: #002181 !important;
+  border-radius: 4px !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #001557 !important;
+}
+</style>

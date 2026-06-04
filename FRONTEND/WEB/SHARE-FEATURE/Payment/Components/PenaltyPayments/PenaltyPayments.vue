@@ -351,3 +351,34 @@
 
 <script src="./PenaltyPayments.js"></script>
 <style scoped src="./PenaltyPayments.css"></style>
+
+<style>
+/* Force visible blue scrollbar on Penalty table-wrapper globally to override App.vue white scrollbars and scrollable-tables.css hidden rules */
+.penalty-payments .table-wrapper {
+  scrollbar-width: thin !important;
+  scrollbar-color: #002181 #f1f1f1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: var(--table-scroll-max-height) !important;
+}
+
+.penalty-payments .table-wrapper::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.penalty-payments .table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 4px !important;
+}
+
+.penalty-payments .table-wrapper::-webkit-scrollbar-thumb {
+  background: #002181 !important;
+  border-radius: 4px !important;
+}
+
+.penalty-payments .table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #001557 !important;
+}
+</style>

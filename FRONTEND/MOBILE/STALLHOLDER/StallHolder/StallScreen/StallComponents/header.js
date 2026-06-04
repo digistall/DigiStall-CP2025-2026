@@ -17,17 +17,21 @@ const defaultTheme = {
   }
 };
 
-const Header = ({ onMenuPress, title = "DigiStall", theme = defaultTheme, isDarkMode = false }) => {
+const Header = ({ onMenuPress, title = "DigiStall", theme = defaultTheme, isDarkMode = false, hideMenu = false }) => {
   const colors = theme?.colors || defaultTheme.colors;
   
   return (
     <View style={[styles.header, { backgroundColor: colors.surface }]}>
-      <TouchableOpacity 
-        style={styles.menuButton}
-        onPress={onMenuPress}
-      >
-        <Text style={[styles.menuIcon, { color: colors.textSecondary }]}>☰</Text>
-      </TouchableOpacity>
+      {hideMenu ? (
+        <View style={styles.placeholder} />
+      ) : (
+        <TouchableOpacity 
+          style={styles.menuButton}
+          onPress={onMenuPress}
+        >
+          <Text style={[styles.menuIcon, { color: colors.textSecondary }]}>☰</Text>
+        </TouchableOpacity>
+      )}
       
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       
