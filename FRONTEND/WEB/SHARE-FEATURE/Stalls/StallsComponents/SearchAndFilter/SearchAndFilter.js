@@ -315,17 +315,17 @@ export default {
           // return
         }
 
-        console.log('🔄 Loading filter options (floors & sections)...')
-        console.log('API Base URL:', this.apiBaseUrl)
-        console.log(
-          '🔑 Token being used for API calls:',
-          token ? `${token.substring(0, 30)}...` : 'null',
-        )
-        console.log('🔑 Authentication token available')
+        // console.log('🔄 Loading filter options (floors & sections)...')
+        // console.log('API Base URL:', this.apiBaseUrl)
+        // console.log(
+        //   '🔑 Token being used for API calls:',
+        //   token ? `${token.substring(0, 30)}...` : 'null',
+        // )
+        // console.log('🔑 Authentication token available')
 
         // Load floors
         try {
-          console.log('📡 Making floors API call with Authorization header...')
+          // console.log('📡 Making floors API call with Authorization header...')
           const floorsResponse = await fetch(`${this.apiBaseUrl}/branches/floors`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -333,7 +333,7 @@ export default {
             },
           })
 
-          console.log('📡 Floors API response status:', floorsResponse.status)
+          // console.log('📡 Floors API response status:', floorsResponse.status)
           if (!floorsResponse.ok) {
             console.error('❌ Floors API failed with status:', floorsResponse.status)
             console.error('❌ Response headers:', [...floorsResponse.headers.entries()])
@@ -349,7 +349,7 @@ export default {
                 floor_name: floor.floor_name,
                 floor_number: floor.floor_number,
               }))
-              console.log('✅ Loaded floors:', this.availableFloors)
+              // console.log('✅ Loaded floors:', this.availableFloors)
             } else {
               console.warn('Floors API returned success=false or invalid data:', floorsResult)
               this.extractFloorsFromStalls()
@@ -383,7 +383,7 @@ export default {
                 section_code: section.section_code,
                 floor_id: section.floor_id,
               }))
-              console.log('✅ Loaded sections:', this.availableSections)
+              // console.log('✅ Loaded sections:', this.availableSections)
             } else {
               console.warn('Sections API returned success=false or invalid data:', sectionsResult)
               this.extractSectionsFromStalls()

@@ -71,6 +71,8 @@
 <script>
 export default {
   name: "TeamSection",
+  inheritAttrs: false,
+  emits: ["close"],
   props: {
     isVisible: {
       type: Boolean,

@@ -5,6 +5,13 @@
  * All actual code is in the role folders, not here
  */
 
+// Silence verbose logs from console to secure app data
+if (typeof window !== 'undefined') {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+}
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPersistedState from 'pinia-plugin-persistedstate'

@@ -51,10 +51,10 @@ const Sidebar = ({
     const loadUserData = async () => {
       try {
         const storedUserData = await UserStorageService.getUserData();
-        console.log('🔍 Sidebar - Retrieved user data:', JSON.stringify(storedUserData, null, 2));
+        // console.log('🔍 Sidebar - Retrieved user data:', JSON.stringify(storedUserData, null, 2));
         if (storedUserData && storedUserData.user) {
           setUserData(storedUserData.user);
-          console.log('👤 Sidebar - Set user data:', storedUserData.user);
+          // console.log('👤 Sidebar - Set user data:', storedUserData.user);
 
           // Fetch face image for profile avatar
           const stallholderId = storedUserData.stallholder?.stallholder_id || storedUserData.user?.stallholder_id;
@@ -69,7 +69,7 @@ const Sidebar = ({
             }
           }
         } else {
-          console.log('❌ Sidebar - No user data found');
+          // console.log('❌ Sidebar - No user data found');
         }
       } catch (error) {
         console.error('Error loading user data for sidebar:', error);
