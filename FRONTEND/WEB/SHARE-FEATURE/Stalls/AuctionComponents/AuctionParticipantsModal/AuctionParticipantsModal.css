@@ -404,6 +404,43 @@
   font-weight: 500;
 }
 
+/* ===== Update Price Modal ===== */
+.update-price-card {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.update-price-header {
+  background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.update-price-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.update-price-body {
+  padding: 20px;
+}
+
+.update-price-subtitle {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 16px;
+}
+
+.update-price-actions {
+  padding: 12px 20px 18px;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .info-cards-container {

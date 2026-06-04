@@ -818,4 +818,3 @@ function getDueDate(date) {
     year: 'numeric' 
   });
 }
-

@@ -656,7 +656,6 @@ export default {
             'Staff Type',
             'Staff Name',
             'Stallholder User Type',
-            'Stallholder Type',
             'Staff ID',
             'Action',
             'Description',
@@ -674,7 +673,6 @@ export default {
               this.formatStaffType(log.staff_type),
               log.staff_name || 'Unknown',
               log.stallholder_user_type || this.getStallholderUserType(log),
-              log.stallholder_type || this.getStallholderType(log),
               log.staff_id || '-',
               log.action_type || '-',
               log.action_description || '-',
@@ -695,7 +693,6 @@ export default {
             { wch: 18 },  // Staff Type
             { wch: 25 },  // Staff Name
             { wch: 20 },  // Stallholder User Type
-            { wch: 20 },  // Stallholder Type
             { wch: 12 },  // Staff ID
             { wch: 12 },  // Action
             { wch: 40 },  // Description
@@ -706,11 +703,11 @@ export default {
             { wch: 25 }   // Date & Time
           ];
           
-          // Merge title cells (now 13 columns)
+          // Merge title cells (now 12 columns)
           ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
-            { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } }
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } },
+            { s: { r: 2, c: 0 }, e: { r: 2, c: 11 } }
           ];
           
           XLSX.utils.book_append_sheet(wb, ws, 'Stallholder Activity Backup');

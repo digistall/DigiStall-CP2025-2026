@@ -29,6 +29,13 @@ export default {
       showMaxStallsDialog: false,
       maxStallsParticipantName: '',
       maxStallsExistingStalls: [],
+      // Update price modal
+      showUpdatePriceModal: false,
+      selectedWinner: null,
+      winningBidAmount: '',
+      winningBidRemarks: '',
+      winningBidError: '',
+      finalizingWinner: false,
       // Participant detail modal
       showParticipantDetail: false,
       selectedApplicantId: null
@@ -37,6 +44,9 @@ export default {
   computed: {
     hasWinner() {
       return this.participants.some(p => p.isWinner)
+    },
+    previousStallPrice() {
+      return this.stallInfo?.rentalPrice ?? this.auctionInfo?.startingBid ?? 0
     },
     sortedParticipants() {
       // Sort by highest bid (descending), then by join date
@@ -53,6 +63,9 @@ export default {
       handler(newVal) {
         if (newVal && this.stall) {
           this.fetchParticipants()
+        }
+        if (!newVal) {
+          this.closeUpdatePriceModal()
         }
       },
       immediate: true
@@ -97,6 +110,7 @@ export default {
      * Handle close button click
      */
     handleClose() {
+      this.closeUpdatePriceModal()
       this.$emit('close')
     },
 
@@ -121,37 +135,99 @@ export default {
     /**
      * Handle select winner for a specific participant
      */
-    async handleSelectWinner(participant) {
+    handleSelectWinner(participant) {
       if (!this.auctionInfo?.auctionId) {
         this.$emit('show-message', { text: 'No auction found for this stall', type: 'error' })
         return
       }
 
-      this.selectingWinner = participant.participantId
+      this.selectedWinner = participant
+      this.winningBidAmount = participant.highestBid > 0 ? String(participant.highestBid) : ''
+      this.winningBidRemarks = ''
+      this.winningBidError = ''
+      this.showUpdatePriceModal = true
+    },
+
+    clearWinningBidError() {
+      if (this.winningBidError) {
+        this.winningBidError = ''
+      }
+    },
+
+    closeUpdatePriceModal() {
+      this.showUpdatePriceModal = false
+      this.selectedWinner = null
+      this.winningBidAmount = ''
+      this.winningBidRemarks = ''
+      this.winningBidError = ''
+    },
+
+    validateWinningBid() {
+      if (this.winningBidAmount === '' || this.winningBidAmount === null || this.winningBidAmount === undefined) {
+        this.winningBidError = 'Winning bid amount is required.'
+        return null
+      }
+
+      const parsedAmount = parseFloat(this.winningBidAmount)
+      if (Number.isNaN(parsedAmount)) {
+        this.winningBidError = 'Enter a valid numeric amount.'
+        return null
+      }
+      if (parsedAmount < 0) {
+        this.winningBidError = 'Amount must not be negative.'
+        return null
+      }
+
+      this.winningBidError = ''
+      return parsedAmount
+    },
+
+    async confirmWinnerSelection() {
+      if (!this.selectedWinner) {
+        this.$emit('show-message', { text: 'No winner selected', type: 'error' })
+        return
+      }
+
+      if (!this.auctionInfo?.auctionId) {
+        this.$emit('show-message', { text: 'No auction found for this stall', type: 'error' })
+        return
+      }
+
+      const finalBidAmount = this.validateWinningBid()
+      if (finalBidAmount === null) return
+
+      this.finalizingWinner = true
+      this.selectingWinner = this.selectedWinner.participantId
+
+      const winnerName = this.selectedWinner.personalInfo?.fullName || 'Selected participant'
 
       try {
         const response = await auctionService.selectWinner(
-          this.auctionInfo.auctionId, 
-          participant.participantId,
-          participant.applicantId
+          this.auctionInfo.auctionId,
+          this.selectedWinner.participantId,
+          this.selectedWinner.applicantId,
+          finalBidAmount,
+          this.winningBidRemarks
         )
 
         if (response.success) {
           this.$emit('show-message', { 
-            text: `Winner selected: ${participant.personalInfo.fullName}`, 
+            text: `Winner selected: ${winnerName}`, 
             type: 'success', 
             operation: 'update', 
             operationType: 'auction' 
           })
           this.$emit('winner-selected', response.data)
+          this.closeUpdatePriceModal()
           // Refresh participants to show the winner
           await this.fetchParticipants()
         } else {
           // Check if this is a max stalls error
           if (response.error?.maxStalls) {
-            this.maxStallsParticipantName = participant.personalInfo.fullName
+            this.maxStallsParticipantName = winnerName
             this.maxStallsExistingStalls = response.error.existingStalls || []
             this.showMaxStallsDialog = true
+            this.closeUpdatePriceModal()
           } else {
             this.$emit('show-message', { text: response.message || 'Failed to select winner', type: 'error' })
           }
@@ -160,6 +236,7 @@ export default {
         console.error('❌ Error selecting winner:', error)
         this.$emit('show-message', { text: error.message || 'Failed to select winner', type: 'error' })
       } finally {
+        this.finalizingWinner = false
         this.selectingWinner = null
       }
     },
@@ -222,7 +299,8 @@ export default {
         'Active': 'success',
         'Closed': 'grey',
         'Cancelled': 'error',
-        'Completed': 'info'
+        'Completed': 'info',
+        'Awarded': 'success'
       }
       return statusColors[status] || 'grey'
     }

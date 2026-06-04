@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import PaymentTable from "./Components/PaymentTable/PaymentTable";
 import MonthlyPaymentIndicator from "./Components/MonthlyPaymentIndicator/MonthlyPaymentIndicator";
 import MonthlyPaymentHistory from "./Components/MonthlyPaymentHistory/MonthlyPaymentHistory";
+import ApiService from "../../../../services/ApiService";
 import { useTheme } from '../../../../components/ThemeComponents/ThemeContext';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -33,6 +34,7 @@ const PaymentScreen = ({ navigation, onBack }) => {
   const tableFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    ApiService.logStallholderAppAccess('payments');
     // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
