@@ -47,6 +47,15 @@ class ApiService {
       // console.log('🔐 Token in response:', data.token ? 'YES (' + data.token.substring(0, 20) + '...)' : 'NO TOKEN!');
 
       if (!response.ok) {
+        // Check for rate limit warning
+        const remainingAttempts = response.headers.get('ratelimit-remaining');
+        if (response.status === 401 && remainingAttempts === '1') {
+          return {
+            success: false,
+            warning: true,
+            message: 'You have 1 last attempt before you get banned for 15mins.'
+          };
+        }
         // Pass through blocked account info (e.g., overdue payment)
         if (data.blocked) {
           return {
@@ -92,6 +101,14 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        const remainingAttempts = response.headers.get('ratelimit-remaining');
+        if (response.status === 401 && remainingAttempts === '1') {
+          return {
+            success: false,
+            warning: true,
+            message: 'You have 1 last attempt before you get banned for 15mins.'
+          };
+        }
         throw new Error(data.message || 'Vendor login failed');
       }
 
@@ -128,6 +145,14 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        const remainingAttempts = response.headers.get('ratelimit-remaining');
+        if (response.status === 401 && remainingAttempts === '1') {
+          return {
+            success: false,
+            warning: true,
+            message: 'You have 1 last attempt before you get banned for 15mins.'
+          };
+        }
         throw new Error(data.message || 'Staff login failed');
       }
 

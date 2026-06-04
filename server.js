@@ -28,6 +28,7 @@ import { createConnection, testConnection } from './config/database.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
 
 // Import session cleanup service (auto-logout inactive users)
 import { startSessionCleanup } from './services/sessionCleanupService.js';
@@ -79,6 +80,9 @@ import staffActivityLogRoutes from './routes/activityLog/staffActivityLogRoutes.
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for rate limiting behind reverse proxies (DigitalOcean load balancers/Nginx)
+app.set('trust proxy', 1);
+
 // ===== MIDDLEWARE =====
 app.use(productionLogger);
 app.use(express.json({ limit: '100mb' }));
@@ -88,6 +92,14 @@ app.use(cors(corsConfig));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Health check endpoint (used by Docker healthcheck, bypasses rate limiting)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Apply global API rate limiter (excluding health check, which is registered above)
+app.use('/api', apiLimiter);
 
 console.log('\n========================================');
 console.log('  DIGISTALL - MVC ROLE-BASED SERVER');
@@ -152,11 +164,6 @@ console.log('✅ APPLICANTS routes loaded');
 
 // AUTH ROUTES
 console.log('✅ AUTH routes loaded');
-
-// Health check endpoint (used by Docker healthcheck)
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Error handler
 app.use(errorHandler);

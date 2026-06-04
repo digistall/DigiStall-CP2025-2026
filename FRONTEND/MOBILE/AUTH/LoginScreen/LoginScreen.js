@@ -192,6 +192,8 @@ const LoginScreen = ({ navigation }) => {
     switch (errorModal.type) {
       case "error":
         return "close-circle-outline";
+      case "warning":
+        return "warning-outline";
       case "info":
         return "information-circle-outline";
       case "success":
@@ -205,6 +207,8 @@ const LoginScreen = ({ navigation }) => {
     switch (errorModal.type) {
       case "error":
         return "#e74c3c";
+      case "warning":
+        return "#f39c12";
       case "info":
         return "#3498db";
       case "success":

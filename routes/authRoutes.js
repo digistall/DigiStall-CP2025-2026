@@ -1,6 +1,7 @@
 import express from 'express'
 import jwt from 'jsonwebtoken';
 import { verifyToken } from '../middleware/auth.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
 
 // Import mobile login controller with full data fetching (including spouse, business, stallholder data)
 import { mobileLogin } from '../BACKEND/AUTH/login/loginController.js'
@@ -90,10 +91,10 @@ const optionalVerifyToken = (req, res, next) => {
 };
 
 // ===== MOBILE AUTHENTICATION ROUTES =====
-router.post('/login', mobileLogin)                       // POST /mobile/auth/login - Mobile user login with full data
-router.post('/staff-login', mobileStaffLogin)            // POST /mobile/auth/staff-login - Inspector/Collector login
-router.post('/vendor-login', vendorLogin)                // POST /mobile/auth/vendor-login - Vendor login
-router.post('/register', mobileRegister)                 // POST /mobile/auth/register - Mobile user registration
+router.post('/login', authLimiter, mobileLogin)                       // POST /mobile/auth/login - Mobile user login with full data
+router.post('/staff-login', authLimiter, mobileStaffLogin)            // POST /mobile/auth/staff-login - Inspector/Collector login
+router.post('/vendor-login', authLimiter, vendorLogin)                // POST /mobile/auth/vendor-login - Vendor login
+router.post('/register', authLimiter, mobileRegister)                 // POST /mobile/auth/register - Mobile user registration
 router.get('/verify-token', mobileVerifyToken)           // GET /mobile/auth/verify-token - Verify mobile token
 
 // Logout uses optional token verification — never blocked by auth failures
@@ -104,6 +105,6 @@ router.use(verifyToken) // Apply strict auth middleware to routes below
 router.post('/staff-logout', mobileStaffLogout)          // POST /mobile/auth/staff-logout - Inspector/Collector logout
 router.post('/staff-heartbeat', mobileStaffHeartbeat)    // POST /mobile/auth/staff-heartbeat - Keep staff marked as online
 router.post('/staff-auto-logout', mobileStaffAutoLogout) // POST /mobile/auth/staff-auto-logout - Auto-logout due to inactivity
-router.post('/change-password', mobileChangePassword)    // POST /mobile/auth/change-password - Change user password
+router.post('/change-password', authLimiter, mobileChangePassword)    // POST /mobile/auth/change-password - Change user password
 
 export default router

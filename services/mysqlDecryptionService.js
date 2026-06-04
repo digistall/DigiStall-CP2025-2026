@@ -106,7 +106,7 @@ export const decryptObjectFields = (data, fieldsToDecrypt = []) => {
         if (result[field] && isAES256GCMEncrypted(result[field])) {
             const decrypted = decryptAES256GCM(result[field]);
             if (decrypted !== result[field]) {
-                console.log(`🔓 Decrypted ${field}: ${decrypted}`);
+                // console.log(`🔓 Decrypted ${field}: ${decrypted}`);
                 result[field] = decrypted;
             }
         }
@@ -159,7 +159,7 @@ export const getEncryptionKeyFromDB = async () => {
 export const decryptStaffData = async (staffData) => {
   if (!staffData) return staffData;
   
-  console.log('🔓 Decrypting staff data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting staff data (AES-256-GCM)...');
   return decryptObjectFields(staffData, ['first_name', 'last_name', 'middle_name', 'contact_no']);
 };
 
@@ -172,7 +172,7 @@ export const decryptStaffData = async (staffData) => {
 export const decryptApplicantData = async (applicantData) => {
   if (!applicantData) return applicantData;
   
-  console.log('🔓 Decrypting applicant data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting applicant data (AES-256-GCM)...');
   return decryptObjectFields(applicantData);
 };
 
@@ -185,7 +185,7 @@ export const decryptApplicantData = async (applicantData) => {
 export const decryptStallholderData = async (stallholderData) => {
   if (!stallholderData) return stallholderData;
   
-  console.log('🔓 Decrypting stallholder data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting stallholder data (AES-256-GCM)...');
   return decryptObjectFields(stallholderData);
 };
 
@@ -198,7 +198,7 @@ export const decryptStallholderData = async (stallholderData) => {
 export const decryptSpouseData = async (spouseData) => {
   if (!spouseData) return spouseData;
   
-  console.log('🔓 Decrypting spouse data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting spouse data (AES-256-GCM)...');
   return decryptObjectFields(spouseData, ['spouse_full_name', 'spouse_contact_number']);
 };
 

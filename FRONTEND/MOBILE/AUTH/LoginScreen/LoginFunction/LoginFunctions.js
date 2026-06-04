@@ -284,6 +284,13 @@ export const handleLogin = async (
           message: response.message || 'Your account has been temporarily disabled due to an overdue payment. Please settle your rental payment at the market office to regain access.',
           type: 'error'
         });
+      } else if (response.warning) {
+        setErrorModal({
+          visible: true,
+          title: 'Warning',
+          message: response.message,
+          type: 'warning'
+        });
       } else {
         // Generic login failure
         setErrorModal({
@@ -447,12 +454,21 @@ export const handleStaffLogin = async (
       console.log('❌ Staff login failed:', response.message);
       setIsLoading(false);
 
-      setErrorModal({
-        visible: true,
-        title: 'Authentication Failed',
-        message: response.message || 'Invalid staff credentials. Please check your username and password.',
-        type: 'error'
-      });
+      if (response.warning) {
+        setErrorModal({
+          visible: true,
+          title: 'Warning',
+          message: response.message,
+          type: 'warning'
+        });
+      } else {
+        setErrorModal({
+          visible: true,
+          title: 'Authentication Failed',
+          message: response.message || 'Invalid staff credentials. Please check your username and password.',
+          type: 'error'
+        });
+      }
     }
   } catch (error) {
     console.error('❌ Staff login error:', error);
