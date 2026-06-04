@@ -65,6 +65,10 @@ export const branchManagerLogin = async (req, res) => {
     }
 
     // Generate JWT token with business manager info
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('[branchManagerLogin] JWT_SECRET is not set in environment.');
+    }
     const token = sign(
       {
         userId: businessManager.business_manager_id,
@@ -80,7 +84,7 @@ export const branchManagerLogin = async (req, res) => {
         location: businessManager.location,
         fullName: `${businessManager.first_name} ${businessManager.last_name}`
       },
-      process.env.JWT_SECRET || 'fallback_secret',
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 

@@ -19,13 +19,27 @@ const KEY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let cachedAESKey = null;
 
 /**
- * Get the AES-256-GCM encryption key using scrypt derivation
- * Matches the Web backend's encryption method
+ * Get the AES-256-GCM encryption key using scrypt derivation.
+ * Reads DATA_ENCRYPTION_KEY and ENCRYPTION_SALT from environment.
+ * Throws a startup error if either variable is missing.
  */
 const getAES256GCMKey = () => {
     if (!cachedAESKey) {
-        const envKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
-        cachedAESKey = crypto.scryptSync(envKey, 'digistall-salt-v2', 32);
+        const envKey = process.env.DATA_ENCRYPTION_KEY;
+        const salt = process.env.ENCRYPTION_SALT;
+        if (!envKey) {
+            throw new Error(
+                '[mysqlDecryptionService] DATA_ENCRYPTION_KEY is not set. ' +
+                'Add it to your .env file. See .env.example for details.'
+            );
+        }
+        if (!salt) {
+            throw new Error(
+                '[mysqlDecryptionService] ENCRYPTION_SALT is not set. ' +
+                'Add it to your .env file. See .env.example for details.'
+            );
+        }
+        cachedAESKey = crypto.scryptSync(envKey, salt, 32);
     }
     return cachedAESKey;
 };

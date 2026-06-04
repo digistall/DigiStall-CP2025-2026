@@ -6,10 +6,11 @@
 
 import ApiService from '../../../services/ApiService';
 
-// EmailJS Configuration (same as web)
-const EMAILJS_SERVICE_ID = 'service_am6pozg';
-const EMAILJS_TEMPLATE_ID = 'template_3wccajf';
-const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FJatviG';
+// EmailJS Configuration — read from Expo environment variables (set in FRONTEND/MOBILE/.env)
+// Variables prefixed with EXPO_PUBLIC_ are bundled into the app by Metro.
+const EMAILJS_SERVICE_ID = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY  = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY;
 
 /**
  * Generate a 6-digit verification code

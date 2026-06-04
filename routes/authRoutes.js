@@ -39,13 +39,12 @@ const optionalVerifyToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token) {
-    // Try each known fallback secret in priority order
+    // Try each known secret in priority order (for backward compatibility with old sessions)
     const secrets = [
       process.env.JWT_SECRET,
       'digistall-mobile-secret-key-2024',
       'your-super-secret-jwt-key-change-this-in-production',
       'your-secret-key',
-      'fallback_secret'
     ].filter(Boolean);
 
     for (const secret of secrets) {

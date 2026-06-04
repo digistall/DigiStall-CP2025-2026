@@ -422,9 +422,13 @@ export async function loginEmployee(req, res) {
         }
 
         // Generate session token for the stored procedure
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            throw new Error('[employeeController] JWT_SECRET is not set in environment.');
+        }
         const sessionToken = jwt.sign(
             { employeeId: employee.business_employee_id, timestamp: Date.now() },
-            process.env.JWT_SECRET || 'fallback_secret',
+            jwtSecret,
             { expiresIn: '24h' }
         );
         
@@ -454,7 +458,7 @@ export async function loginEmployee(req, res) {
                 fullName: `${employee.first_name} ${employee.last_name}`,
                 permissions: permissions
             },
-            process.env.JWT_SECRET || 'fallback_secret',
+            jwtSecret,
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 

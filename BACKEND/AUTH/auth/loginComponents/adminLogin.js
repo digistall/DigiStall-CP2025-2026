@@ -52,6 +52,10 @@ export const adminLogin = async (req, res) => {
     }
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('[adminLogin] JWT_SECRET is not set in environment.');
+    }
     const token = sign(
       {
         userId: businessOwner.business_owner_id,
@@ -61,7 +65,7 @@ export const adminLogin = async (req, res) => {
         type: 'stall_business_owner',
         userType: 'stall_business_owner'  // Add this field for consistency
       },
-      process.env.JWT_SECRET || 'fallback_secret',
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
