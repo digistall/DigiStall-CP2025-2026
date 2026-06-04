@@ -1,7 +1,7 @@
 import { createConnection } from '../../../config/database.js';
 import { getBranchFilter } from '../../../middleware/rolePermissions.js';
 import { encryptData, decryptData, decryptEmployees } from '../../../services/encryptionService.js';
-import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js';
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js';
 import emailService from '../../../services/emailService.js';
 import jwt from 'jsonwebtoken';
 import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
