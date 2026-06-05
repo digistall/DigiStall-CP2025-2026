@@ -2,6 +2,7 @@ import { createConnection } from "../../../config/database.js";
 import { saveApplicantDocumentFromBase64, USE_BLOB_STORAGE, saveApplicantDocumentToBlob } from "../../../config/multerApplicantDocuments.js";
 import { encryptData, decryptData } from "../../../services/encryptionService.js";
 import bcrypt from 'bcrypt';
+import { sendEmail } from "../../utils/emailService.js";
 
 // Helper function to convert undefined/empty strings to null
 const toNull = (value) => {
@@ -299,9 +300,21 @@ export const applicantController = {
         // Decrypt email for response
         const decryptedEmail = decryptSafe(encryptIfNotNull(email_address)) || email_address;
 
+        // Dispatch Email from backend
+        const emailSent = await sendEmail({
+          to_name: applicant_full_name,
+          to_email: decryptedEmail,
+          user_username: generatedUsername,
+          user_password: generatedPassword,
+        });
+
+        if (!emailSent) {
+          console.warn("⚠️ Application submitted but email failed to send.");
+        }
+
         return res.status(201).json({
           success: true,
-          message: "General application submitted successfully. Your credentials have been prepared for email delivery.",
+          message: "General application submitted successfully. Your credentials have been prepared and emailed to you.",
           data: {
             applicant_id: applicantId,
             application_id: null,
@@ -310,12 +323,6 @@ export const applicantController = {
             stall_id: null,
             documents: [], // No documents for general applications
             application_status: "Approved",
-            // Return credentials so frontend can send email via EmailJS
-            credentials: {
-              username: generatedUsername,
-              password: generatedPassword, // plain-text for email only
-              email: email_address,
-            },
           },
         });
       }

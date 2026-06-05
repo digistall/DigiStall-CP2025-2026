@@ -13,6 +13,9 @@ import express from 'express';
 import { createConnection } from '../config/database.js';
 import authMiddleware from '../middleware/auth.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import { reviewDocumentSchema } from '../middleware/schemas/documentSchemas.js';
+
 const router = express.Router();
 
 // Apply authentication to all routes
@@ -217,7 +220,7 @@ router.get('/blob/:documentId', async (req, res) => {
  * @desc Approve or reject a stallholder document
  * @access Protected
  */
-router.put('/:documentId/review', async (req, res) => {
+router.put('/:documentId/review', validate(reviewDocumentSchema), async (req, res) => {
   let connection;
   try {
     const { documentId } = req.params;

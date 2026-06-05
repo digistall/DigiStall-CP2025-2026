@@ -10,6 +10,9 @@ import {
   getAssignedLocations,
 } from "../BACKEND/MANAGER/vendors/vendorController.js";
 
+import { validate } from '../middleware/validateRequest.js';
+import { createVendorSchema, updateVendorSchema } from '../middleware/schemas/vendorSchemas.js';
+
 const router = express.Router();
 
 router.use(enhancedAuthMiddleware.authenticateToken);
@@ -29,7 +32,7 @@ router.use(requireRole(["system_administrator", "stall_business_owner", "busines
  * @desc    Create a new vendor
  * @access  Protected
  */
-router.post("/", createVendor);
+router.post("/", validate(createVendorSchema), createVendor);
 
 /**
  * @route   GET /api/vendors
@@ -60,7 +63,7 @@ router.get("/:id", getVendorById);
  * @desc    Update vendor by ID
  * @access  Protected
  */
-router.put("/:id", updateVendor);
+router.put("/:id", validate(updateVendorSchema), updateVendor);
 
 /**
  * @route   DELETE /api/vendors/:id

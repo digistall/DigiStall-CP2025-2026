@@ -85,8 +85,22 @@ app.set('trust proxy', 1);
 
 // ===== MIDDLEWARE =====
 app.use(productionLogger);
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '5mb' }));
+
+// Global JSON Syntax Error Catcher
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('❌ Malformed JSON payload received:', err.message);
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid JSON payload. Please check your request body format.',
+      error: 'Malformed JSON'
+    });
+  }
+  next();
+});
+
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 app.use(cors(corsConfig));
 

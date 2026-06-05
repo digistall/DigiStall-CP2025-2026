@@ -13,6 +13,11 @@ import {
   getSystemAdminDashboardStats
 } from '../BACKEND/OWNER/subscriptions/subscriptionController.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  createOwnerSubscriptionSchema, recordSubscriptionPaymentSchema, changePlanSchema
+} from '../middleware/schemas/subscriptionSchemas.js';
+
 const router = express.Router();
 
 // Apply authentication middleware to all routes
@@ -54,7 +59,7 @@ router.get('/my-payment-history', async (req, res, next) => {
  * @desc    Change subscription plan for current user
  * @access  Business Owner
  */
-router.post('/change-plan', async (req, res) => {
+router.post('/change-plan', validate(changePlanSchema), async (req, res) => {
   try {
     const businessOwnerId = req.user?.userId || req.user?.business_owner_id || req.user?.businessOwnerId;
     const { planId } = req.body;
@@ -114,7 +119,7 @@ router.use(authMiddleware.authenticateSystemAdministrator);
  * @access  System Administrator
  * @body    { username, password, firstName, lastName, email, contactNumber, planId }
  */
-router.post('/business-owner', createBusinessOwnerWithSubscription);
+router.post('/business-owner', validate(createOwnerSubscriptionSchema), createBusinessOwnerWithSubscription);
 
 /**
  * @route   GET /api/subscriptions/business-owners
@@ -136,7 +141,7 @@ router.get('/business-owner/:businessOwnerId', getBusinessOwnerSubscription);
  * @access  System Administrator
  * @body    { subscriptionId, businessOwnerId, amount, paymentDate, paymentMethod, referenceNumber, periodStart, periodEnd, notes }
  */
-router.post('/payment', recordSubscriptionPayment);
+router.post('/payment', validate(recordSubscriptionPaymentSchema), recordSubscriptionPayment);
 
 /**
  * @route   GET /api/subscriptions/payment-history/:businessOwnerId
