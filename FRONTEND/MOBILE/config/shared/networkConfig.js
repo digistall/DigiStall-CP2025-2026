@@ -8,9 +8,9 @@
 // __DEV__ is a React Native global:
 //   true  → Expo Go / development mode  → use LOCAL backend
 //   false → APK / production build       → use DigitalOcean backend
-// Forcing IS_DEV to true to ensure it only connects to the local backend during development.
-// Remember to switch back or use the __DEV__ flag before building the production APK.
-const IS_DEV = true; // typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+// __DEV__ is automatically true in Expo Go / metro dev server, and false in production APK builds.
+// This ensures Expo Go connects to your local backend, and the APK connects to DigitalOcean.
+const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
 // ===== AUTO-DETECT LOCAL IP FROM EXPO =====
 // Expo Metro bundler knows the correct LAN IP for any WiFi network.
