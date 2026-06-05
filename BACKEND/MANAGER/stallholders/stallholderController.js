@@ -89,6 +89,7 @@ const StallholderController = {
           LEFT JOIN stall st ON s.stall_id = st.stall_id
           LEFT JOIN branch b ON s.branch_id = b.branch_id
           LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
+          WHERE s.status != 'Inactive'
           ORDER BY s.stallholder_id
         `);
         rows = result || [];
@@ -127,7 +128,7 @@ const StallholderController = {
            LEFT JOIN stall st ON s.stall_id = st.stall_id 
            LEFT JOIN branch b ON s.branch_id = b.branch_id 
            LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
-           WHERE s.branch_id IN (${placeholders})`,
+           WHERE s.branch_id IN (${placeholders}) AND s.status != 'Inactive'`,
           branchFilter
         );
         rows = result || [];
