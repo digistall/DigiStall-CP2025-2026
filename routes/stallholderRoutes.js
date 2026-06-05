@@ -65,6 +65,10 @@ import {
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import { logAppAccessSchema } from '../middleware/schemas/mobileSchemas.js';
+import { createComplaintSchema } from '../middleware/schemas/complaintSchemas.js';
+
 const router = express.Router();
 
 // Get directory path for uploads
@@ -220,7 +224,7 @@ router.get('/profile/:stallholder_id', verifyToken, getStallholderProfile);
  * @desc Submit a complaint
  * @access Protected (Stallholder only)
  */
-router.post('/complaint', verifyToken, submitComplaint);
+router.post('/complaint', verifyToken, validate(createComplaintSchema), submitComplaint);
 
 /**
  * @route GET /api/mobile/stallholder/complaints
@@ -295,7 +299,7 @@ router.get('/payments/monthly-status', verifyToken, getMonthlyPaymentStatus);
  * @body  { screen: 'notifications' | 'reports' | 'dashboard' | string }
  * @access Protected (Stallholder only)
  */
-router.post('/app-access-log', verifyToken, logAppAccessScreen);
+router.post('/app-access-log', verifyToken, validate(logAppAccessSchema), logAppAccessScreen);
 // STALLHOLDER FACE SCANNER ROUTES
 // =============================================
 

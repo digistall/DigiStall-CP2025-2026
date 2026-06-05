@@ -10,6 +10,11 @@ import {
 } from '../BACKEND/MANAGER/mobileStaff/mobileStaffController.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+    createMobileStaffSchema, terminateMobileStaffSchema, resetMobileStaffPasswordSchema
+} from '../middleware/schemas/mobileSchemas.js';
+
 const router = express.Router();
 
 /**
@@ -28,7 +33,7 @@ const router = express.Router();
  * @access  Business Manager
  * @body    { firstName, lastName, email, phoneNumber, branchId, branchManagerId }
  */
-router.post('/inspectors', createInspector);
+router.post('/inspectors', validate(createMobileStaffSchema), createInspector);
 
 /**
  * @route   GET /api/mobile-staff/inspectors
@@ -44,7 +49,7 @@ router.get('/inspectors', getInspectorsByBranch);
  * @params  id - Inspector ID
  * @body    { reason }
  */
-router.delete('/inspectors/:id', terminateInspector);
+router.delete('/inspectors/:id', validate(terminateMobileStaffSchema), terminateInspector);
 
 // ========================================
 // COLLECTOR ROUTES
@@ -56,7 +61,7 @@ router.delete('/inspectors/:id', terminateInspector);
  * @access  Business Manager
  * @body    { firstName, lastName, email, phoneNumber, branchId, branchManagerId }
  */
-router.post('/collectors', createCollector);
+router.post('/collectors', validate(createMobileStaffSchema), createCollector);
 
 /**
  * @route   GET /api/mobile-staff/collectors
@@ -72,7 +77,7 @@ router.get('/collectors', getCollectorsByBranch);
  * @params  id - Collector ID
  * @body    { reason }
  */
-router.delete('/collectors/:id', terminateCollector);
+router.delete('/collectors/:id', validate(terminateMobileStaffSchema), terminateCollector);
 
 // ========================================
 // PASSWORD MANAGEMENT
@@ -84,6 +89,6 @@ router.delete('/collectors/:id', terminateCollector);
  * @access  Business Manager / Admin
  * @body    { staffType: 'inspector' | 'collector', staffId: number, newPassword?: string }
  */
-router.post('/reset-password', authLimiter, resetStaffPassword);
+router.post('/reset-password', authLimiter, validate(resetMobileStaffPasswordSchema), resetStaffPassword);
 
 export default router;

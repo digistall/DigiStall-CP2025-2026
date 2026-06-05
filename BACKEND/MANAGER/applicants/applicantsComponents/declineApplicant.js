@@ -1,5 +1,6 @@
 import { createConnection } from '../../../../config/database.js';
 import encryptionService from '../../../../services/encryptionService.js';
+import { sendEmail } from '../../../utils/emailService.js';
 
 // Decline applicant and delete all related data
 // Uses stored procedure: sp_deleteApplicantCascade
@@ -49,16 +50,30 @@ export const declineApplicant = async (req, res) => {
 
     console.log(`✅ Applicant ${applicant.applicant_full_name} declined and all data deleted successfully`);
 
+    // Dispatch decline email securely from the backend
+    const emailSent = await sendEmail({
+      to_name: applicant.applicant_full_name,
+      to_email: applicant.email_address,
+      message: `Reason for decline: ${reason}`
+    }, process.env.EMAILJS_DECLINE_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID);
+
+    if (!emailSent) {
+      console.warn(`⚠️ Applicant declined, but failed to send decline email to ${applicant.email_address}`);
+    }
+
     res.json({
       success: true,
-      message: 'Applicant declined and all data deleted successfully',
+      message: emailSent 
+        ? 'Applicant declined, data deleted, and notification sent.' 
+        : 'Applicant declined and data deleted, but failed to send email notification.',
       data: {
         applicant_id: id,
         full_name: applicant.applicant_full_name,
         email: applicant.email_address,
         decline_reason: reason,
         declined_at: new Date().toISOString(),
-        deleted: true
+        deleted: true,
+        email_sent: emailSent
       }
     });
 

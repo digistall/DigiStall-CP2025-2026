@@ -1,6 +1,6 @@
 import { createConnection } from '../../../config/database.js';
 import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../../services/encryptionService.js';
-import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js';
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js';
 import emailService from '../../../services/emailService.js';
 
 /**

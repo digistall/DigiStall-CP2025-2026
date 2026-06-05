@@ -1,7 +1,8 @@
 import { createConnection } from '../../../../config/database.js'
 import { encryptData } from '../../../../services/encryptionService.js'
-import { generateSecurePassword } from '../../../../UTILS/passwordGenerator.js'
+import { generateSecurePassword } from '../../../../utils/passwordGenerator.js'
 import emailService from '../../../../services/emailService.js'
+import { sendEmail } from '../../../utils/emailService.js'
 
 // Create branch manager with auto-generated credentials and email notification
 export const createBranchManager = async (req, res) => {
@@ -155,27 +156,31 @@ export const createBranchManager = async (req, res) => {
     
     console.log('✅ Manager assigned to branch:', branchName)
     
-    // Send welcome email with credentials (handled by frontend using EmailJS)
-    // Backend still attempts to send for redundancy
+    // Send welcome email with credentials via EmailJS
+    let emailSent = false;
     try {
-      await emailService.sendManagerWelcomeEmail({
-        email: email,
-        firstName: finalFirstName,
-        lastName: finalLastName,
-        username: username,
-        password: generatedPassword,
-        branchName: branchName,
-        managerId: managerId
-      })
+      emailSent = await sendEmail({
+        to_name: `${finalFirstName} ${finalLastName}`,
+        to_email: email,
+        stall_username: username,
+        stall_password: generatedPassword,
+        message: `Hello ${finalFirstName} ${finalLastName},\n\nWelcome to Naga Stall Management System!\n\nYou have been assigned as the Branch Manager for: ${branchName}\n\nYour login credentials are:\nUsername (Email): ${username}\nPassword: ${generatedPassword}\n\nPlease keep these credentials secure and change your password after first login.\n\nFor any assistance, please contact the System Administrator.\n\nBest regards,\nNaga Stall Management Team`
+      }, process.env.EMAILJS_APPROVE_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID);
       
-      console.log('✅ Welcome email sent to:', email)
+      if (!emailSent) {
+        console.warn(`⚠️ Branch manager created, but failed to send welcome email to ${email}`);
+      } else {
+        console.log('✅ Welcome email sent to:', email)
+      }
     } catch (emailError) {
-      // Don't fail the request if email fails - frontend will send via EmailJS
+      console.error('❌ Failed to send welcome email via EmailJS:', emailError)
     }
     
     res.status(201).json({
       success: true,
-      message: `Branch manager created successfully!`,
+      message: emailSent 
+        ? `Branch manager created successfully! Credentials sent to email.` 
+        : `Branch manager created successfully, but email failed to send.`,
       data: {
         manager_id: managerId,
         branch_id: finalBranchId,
@@ -184,8 +189,9 @@ export const createBranchManager = async (req, res) => {
         full_name: `${finalFirstName} ${finalLastName}`,
         credentials: {
           username: username,
-          password: generatedPassword
-        }
+          // IMPORTANT: We do not return the password in the response for security reasons
+        },
+        email_sent: emailSent
       }
     });
     

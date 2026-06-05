@@ -1,5 +1,6 @@
 import { createConnection } from '../../../../config/database.js';
 import { decryptData, encryptData } from '../../../../services/encryptionService.js';
+import { sendEmail } from '../../../utils/emailService.js';
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {
@@ -294,11 +295,26 @@ export const approveApplicant = async (req, res) => {
 
     console.log(`✅ Applicant ${applicant.applicant_full_name} approved successfully`);
 
+    // Dispatch credentials email securely from the backend (if this is a new credential)
+    let emailSent = false;
+    if (!alreadyHasCredentials) {
+      emailSent = await sendEmail({
+        to_name: applicant.applicant_full_name,
+        to_email: applicant.email_address,
+        user_username: username,
+        user_password: password,
+      }, process.env.EMAILJS_APPROVE_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID);
+      
+      if (!emailSent) {
+        console.warn(`⚠️ Applicant approved, but failed to send credentials email to ${applicant.email_address}`);
+      }
+    }
+
     res.json({
       success: true,
       message: alreadyHasCredentials 
         ? 'Applicant approved successfully. Existing account used — stall assigned directly.'
-        : 'Applicant approved successfully. Stallholder record created and stall assigned.',
+        : (emailSent ? 'Applicant approved successfully. Credentials sent to email and stall assigned.' : 'Applicant approved successfully, but email failed to send.'),
       data: {
         applicant_id: applicant.applicant_id,
         stallholder_id: stallholderId,
@@ -309,9 +325,11 @@ export const approveApplicant = async (req, res) => {
         branch_id: application.branch_id,
         move_in_date: new Date().toISOString().split('T')[0],
         approved_at: new Date().toISOString(),
-        credentials_already_existed: alreadyHasCredentials
+        credentials_already_existed: alreadyHasCredentials,
+        email_sent: emailSent
       }
     });
+
 
   } catch (error) {
     if (connection) {

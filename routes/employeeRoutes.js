@@ -15,6 +15,13 @@ import {
   getActiveSessions
 } from '../BACKEND/MANAGER/employees/employeeController.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  createEmployeeSchema, employeeLoginSchema, updateEmployeeSchema,
+  updatePermissionsSchema, resetEmployeePasswordSchema,
+  deleteEmployeeSchema, employeeLogoutSchema
+} from '../middleware/schemas/employeeSchemas.js';
+
 const router = express.Router();
 
 /**
@@ -32,7 +39,7 @@ const router = express.Router();
  * @access  Public
  * @body    { username, password }
  */
-router.post('/login', loginEmployee);
+router.post('/login', validate(employeeLoginSchema), loginEmployee);
 
 // ========================================
 // PROTECTED ROUTES (Authentication required)
@@ -51,7 +58,7 @@ router.use(authMiddleware.authenticateToken);
  * @access  Business Manager and Business Owner
  * @body    { firstName, lastName, email, phoneNumber, branchId, permissions, createdByManager }
  */
-router.post('/', createEmployee);
+router.post('/', validate(createEmployeeSchema), createEmployee);
 
 /**
  * @route   GET /api/employees
@@ -83,7 +90,7 @@ router.get('/:id', getEmployeeById);
  * @params  id - Employee ID
  * @body    { firstName, lastName, email, phoneNumber, permissions, status, updatedBy }
  */
-router.put('/:id', updateEmployee);
+router.put('/:id', validate(updateEmployeeSchema), updateEmployee);
 
 /**
  * @route   PUT /api/employees/:id/permissions
@@ -92,7 +99,7 @@ router.put('/:id', updateEmployee);
  * @params  id - Employee ID
  * @body    { permissions }
  */
-router.put('/:id/permissions', updateEmployeePermissions);
+router.put('/:id/permissions', validate(updatePermissionsSchema), updateEmployeePermissions);
 
 /**
  * @route   DELETE /api/employees/:id
@@ -101,7 +108,7 @@ router.put('/:id/permissions', updateEmployeePermissions);
  * @params  id - Employee ID
  * @body    { deletedBy }
  */
-router.delete('/:id', deleteEmployee);
+router.delete('/:id', validate(deleteEmployeeSchema), deleteEmployee);
 
 // ========================================
 // BRANCH-SPECIFIC OPERATIONS
@@ -127,7 +134,7 @@ router.get('/branch/:branchId', getEmployeesByBranch);
  * @params  id - Employee ID
  * @body    { newPassword, resetBy }
  */
-router.post('/:id/reset-password', resetEmployeePassword);
+router.post('/:id/reset-password', validate(resetEmployeePasswordSchema), resetEmployeePassword);
 
 /**
  * @route   POST /api/employees/logout
@@ -135,6 +142,6 @@ router.post('/:id/reset-password', resetEmployeePassword);
  * @access  Employee  
  * @body    { sessionToken }
  */
-router.post('/logout', logoutEmployee);
+router.post('/logout', validate(employeeLogoutSchema), logoutEmployee);
 
 export default router;

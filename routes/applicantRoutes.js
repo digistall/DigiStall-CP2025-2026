@@ -40,6 +40,12 @@ import {
   getApplicantDocumentByType
 } from '../BACKEND/MANAGER/applicants/applicantDocumentBlobController.js'
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  updateApplicantStatusSchema, approveApplicantSchema, declineApplicantSchema,
+  uploadApplicantDocumentBlobSchema, verifyDocumentSchema
+} from '../middleware/schemas/applicantSchemas.js';
+
 const router = express.Router()
 
 // Protected routes (authentication required)
@@ -63,13 +69,13 @@ router.get('/my-stall-applicants', getApplicantsByBranchManager)
 router.get('/:id', getApplicantById)
 
 // Update applicant status (for Vue.js management system)
-router.put('/:id/status', updateApplicantStatus)
+router.put('/:id/status', validate(updateApplicantStatusSchema), updateApplicantStatus)
 
 // Approval route - this creates credentials in the credential table for mobile app
-router.put('/:id/approve', approveApplicant)
+router.put('/:id/approve', validate(approveApplicantSchema), approveApplicant)
 
 // Decline applicant
-router.put('/:id/decline', declineApplicant)
+router.put('/:id/decline', validate(declineApplicantSchema), declineApplicant)
 
 // Delete applicant (for auto-cleanup of expired rejected applicants)
 router.delete('/:id', deleteApplicant)
@@ -103,7 +109,7 @@ router.delete('/:applicant_id/documents', deleteAllDocuments)
 // =============================================
 // Upload document as BLOB (base64)
 // POST /api/applicants/documents/blob/upload
-router.post('/documents/blob/upload', uploadApplicantDocumentBlob)
+router.post('/documents/blob/upload', validate(uploadApplicantDocumentBlobSchema), uploadApplicantDocumentBlob)
 
 // Get document by document ID (returns binary) - MUST be before :applicant_id/:document_type_id
 // GET /api/applicants/documents/blob/id/:document_id
@@ -127,6 +133,6 @@ router.delete('/documents/blob/:document_id', deleteApplicantDocumentBlob)
 
 // Update document verification status
 // PUT /api/applicants/documents/blob/:document_id/verify
-router.put('/documents/blob/:document_id/verify', updateDocumentVerificationStatus)
+router.put('/documents/blob/:document_id/verify', validate(verifyDocumentSchema), updateDocumentVerificationStatus)
 
 export default router

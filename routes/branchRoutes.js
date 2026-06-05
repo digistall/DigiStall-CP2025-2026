@@ -28,6 +28,13 @@ import {
   getLocationsByCity
 } from '../BACKEND/OWNER/branch/branchController.js'
 
+import { validate } from '../middleware/validateRequest.js'
+import {
+  createBranchSchema, createBranchManagerSchema, updateBranchManagerSchema,
+  assignManagerSchema, createFloorSchema, updateFloorSchema,
+  createSectionSchema, updateSectionSchema
+} from '../middleware/schemas/branchSchemas.js'
+
 const router = express.Router()
 
 // Apply authentication middleware to all branch routes
@@ -35,7 +42,7 @@ const router = express.Router()
 router.use(authMiddleware.authenticateToken)
 
 // Branch routes (admin/business_owner for creation/deletion, all roles for reading)
-router.post('/', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), createBranch)    // POST /api/branches - Create new branch
+router.post('/', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), validate(createBranchSchema), createBranch)    // POST /api/branches - Create new branch
 router.get('/', getAllBranches)                     // GET /api/branches - Get all branches (admin + branch manager)
 router.delete('/:id', authMiddleware.authorizeRole('admin', 'business_owner', 'stall_business_owner'), deleteBranch)   // DELETE /api/branches/:id - Delete branch
 router.get('/areas', getAreas)                      // GET /api/branches/areas - Get all areas
@@ -43,23 +50,23 @@ router.get('/area/:area', getBranchesByArea)        // GET /api/branches/area/:a
 
 // Branch manager routes (admin and business_owner)
 router.get('/managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), getAllBranchManagers)       // GET /api/branches/managers - Get all branch managers
-router.post('/managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), createBranchManager)       // POST /api/branches/managers - Create branch manager
+router.post('/managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), validate(createBranchManagerSchema), createBranchManager)       // POST /api/branches/managers - Create branch manager
 router.get('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), getBranchManagerById)  // GET /api/branches/managers/:managerId - Get branch manager by ID
-router.put('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), updateBranchManager)   // PUT /api/branches/managers/:managerId - Update branch manager
+router.put('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), validate(updateBranchManagerSchema), updateBranchManager)   // PUT /api/branches/managers/:managerId - Update branch manager
 router.delete('/managers/:managerId', authMiddleware.authorizeRole('admin', 'stall_business_owner'), deleteBranchManager) // DELETE /api/branches/managers/:managerId - Delete branch manager
-router.post('/assign-manager', authMiddleware.authorizeRole('admin', 'stall_business_owner'), assignManager)
-router.post('/branch-managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), assignManager)       // POST /api/branches/branch-managers - Assign manager to branch
+router.post('/assign-manager', authMiddleware.authorizeRole('admin', 'stall_business_owner'), validate(assignManagerSchema), assignManager)
+router.post('/branch-managers', authMiddleware.authorizeRole('admin', 'stall_business_owner'), validate(assignManagerSchema), assignManager)       // POST /api/branches/branch-managers - Assign manager to branch
 
 // Floor routes
 router.get('/floors', getFloors)                    // GET /api/branches/floors - Get floors for branch manager
-router.post('/floors', createFloor)                 // POST /api/branches/floors - Create new floor
-router.put('/floors/:floorId', updateFloor)         // PUT /api/branches/floors/:floorId - Update floor
+router.post('/floors', validate(createFloorSchema), createFloor)                 // POST /api/branches/floors - Create new floor
+router.put('/floors/:floorId', validate(updateFloorSchema), updateFloor)         // PUT /api/branches/floors/:floorId - Update floor
 router.delete('/floors/:floorId', deleteFloor)      // DELETE /api/branches/floors/:floorId - Delete floor
 
 // Section routes  
 router.get('/sections', getSections)                // GET /api/branches/sections - Get sections for branch manager
-router.post('/sections', createSection)             // POST /api/branches/sections - Create new section
-router.put('/sections/:sectionId', updateSection)   // PUT /api/branches/sections/:sectionId - Update section
+router.post('/sections', validate(createSectionSchema), createSection)             // POST /api/branches/sections - Create new section
+router.put('/sections/:sectionId', validate(updateSectionSchema), updateSection)   // PUT /api/branches/sections/:sectionId - Update section
 router.delete('/sections/:sectionId', deleteSection) // DELETE /api/branches/sections/:sectionId - Delete section
 
 // Floor-Section combined routes

@@ -5,9 +5,6 @@ import rateLimit from 'express-rate-limit';
 export const authLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_AUTH_MAX) || 3,
-  keyGenerator: (req) => {
-    return req.ip + '_' + req.originalUrl;
-  },
   skip: (req) => req.method === 'OPTIONS', // Don't count preflight requests
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers

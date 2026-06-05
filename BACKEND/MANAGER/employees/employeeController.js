@@ -1,8 +1,9 @@
 import { createConnection } from '../../../config/database.js';
 import { getBranchFilter } from '../../../middleware/rolePermissions.js';
 import { encryptData, decryptData, decryptEmployees } from '../../../services/encryptionService.js';
-import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js';
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js';
 import emailService from '../../../services/emailService.js';
+import { sendEmail } from '../../utils/emailService.js';
 import jwt from 'jsonwebtoken';
 import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 import bcrypt from 'bcrypt';
@@ -67,16 +68,32 @@ export async function createEmployee(req, res) {
             [encryptedPassword, encryptedFirstName, encryptedLastName, email, encryptedPhone, finalBranchId, finalCreatedBy, permissionsJson]
         );
 
+        // Dispatch employee credentials email securely from the backend
+        const emailSent = await sendEmail({
+            to_name: `${firstName} ${lastName}`,
+            to_email: email,
+            stall_username: email,
+            stall_password: password,
+            message: `Dear ${firstName} ${lastName},\n\nWelcome to the Naga Stall Management System! Your employee account has been successfully created.\n\n🔐 YOUR LOGIN CREDENTIALS:\nUsername: ${email}\nPassword: ${password}\n\n📋 IMPORTANT INSTRUCTIONS:\n✅ Please change your password after your first login\n✅ Keep your credentials secure and confidential`
+        }, process.env.EMAILJS_APPROVE_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID);
+
+        if (!emailSent) {
+            console.warn(`⚠️ Employee created, but failed to send credentials email to ${email}`);
+        }
+
         res.status(201).json({
             success: true,
-            message: 'Employee created successfully',
+            message: emailSent 
+                ? 'Employee created successfully. Credentials sent to email.'
+                : 'Employee created successfully, but email failed to send.',
             data: {
                 employeeId: result.business_employee_id,
                 credentials: {
                     email: email, // User logs in with email
-                    password: password // Plain password to send to user
+                    // IMPORTANT: We do not return the password in the response for security reasons
                 },
-                branchId: finalBranchId
+                branchId: finalBranchId,
+                email_sent: emailSent
             }
         });
 

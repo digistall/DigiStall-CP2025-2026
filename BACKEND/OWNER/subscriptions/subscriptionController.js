@@ -3,7 +3,7 @@
 
 import { createConnection } from '../../../config/database.js';
 import { encryptData } from '../../../services/encryptionService.js';
-import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js';
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js';
 
 // Get all subscription plans
 export const getAllSubscriptionPlans = async (req, res) => {
