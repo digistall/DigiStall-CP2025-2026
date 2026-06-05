@@ -24,7 +24,8 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
