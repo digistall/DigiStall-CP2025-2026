@@ -46,7 +46,8 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       FROM stallholder sh
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
-      WHERE sh.mobile_user_id = ? OR sh.applicant_id = ?`,
+      WHERE (sh.mobile_user_id = ? OR sh.applicant_id = ?)
+      AND sh.status = 'active' AND sh.stall_id IS NOT NULL`,
       [applicantId, applicantId]
     );
 
