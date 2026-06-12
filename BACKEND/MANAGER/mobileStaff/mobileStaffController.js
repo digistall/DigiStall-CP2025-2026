@@ -1,6 +1,6 @@
 import { createConnection } from '../../../config/database.js';
 import { encryptData, decryptData, decryptInspectors, decryptCollectors } from '../../../services/encryptionService.js';
-import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js';
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js';
 import emailService from '../../../services/emailService.js';
 
 /**
@@ -18,7 +18,6 @@ const encryptIfNotNull = (value) => {
     try {
         return encryptData(value);
     } catch (error) {
-        console.error('⚠️ Encryption failed:', error.message);
         return value;
     }
 };
@@ -72,8 +71,6 @@ export async function createInspector(req, res) {
         const encryptedLastName = encryptIfNotNull(lastName);
         const encryptedPhone = encryptIfNotNull(phoneNumber);
 
-        console.log(`📱 Creating inspector: ${firstName} ${lastName}`);
-        console.log('🔐 Encrypting inspector data (email stays plain for login)...');
 
         // Create inspector using stored procedure (email stored plain for login)
         const [insertResult] = await connection.execute(
@@ -98,7 +95,6 @@ export async function createInspector(req, res) {
                 [inspectorId, branchId, branchManagerId, 'New Hire', `Inspector ${firstName} ${lastName} was hired`]
             );
         } catch (logError) {
-            console.log('⚠️ Could not log action:', logError.message);
         }
 
         return res.status(201).json({
@@ -231,8 +227,6 @@ export async function createCollector(req, res) {
         const encryptedLastName = encryptIfNotNull(lastName);
         const encryptedPhone = encryptIfNotNull(phoneNumber);
 
-        console.log(`📱 Creating collector: ${firstName} ${lastName}`);
-        console.log('🔐 Encrypting collector data (email stays plain for login)...');
 
         // Create collector using stored procedure (email stored plain for login)
         const [insertResult] = await connection.execute(

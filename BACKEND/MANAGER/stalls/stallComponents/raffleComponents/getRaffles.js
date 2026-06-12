@@ -7,12 +7,7 @@ export const getActiveRaffles = async (req, res) => {
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
 
-    console.log("🔍 getActiveRaffles - User details:", {
-      userType,
-      userId,
-      branchId: req.user?.branchId,
-      permissions: req.user?.permissions,
-    });
+
 
     if (!userId) {
       return res.status(400).json({
@@ -72,11 +67,7 @@ export const getActiveRaffles = async (req, res) => {
         hasStallsPermission = permissions.stalls || false;
       }
 
-      console.log("🔍 Employee permission check:", {
-        permissions,
-        isArray: Array.isArray(permissions),
-        hasStallsPermission,
-      });
+
 
       if (!hasStallsPermission) {
         return res.status(403).json({
@@ -164,7 +155,6 @@ export const getActiveRaffles = async (req, res) => {
       });
     }
 
-    console.log(`📋 Found ${raffles.length} raffle stalls for ${userType} ${userId}`);
 
     res.json({
       success: true,

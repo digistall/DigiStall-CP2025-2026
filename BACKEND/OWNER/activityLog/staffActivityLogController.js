@@ -85,7 +85,6 @@ export async function logStaffActivity(activityData) {
             ]
         );
 
-        console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType}`);
         return true;
     } catch (error) {
         console.error('❌ Error logging activity:', error);
@@ -110,14 +109,7 @@ export async function getAllStaffActivities(req, res) {
         const limit = parseInt(req.query.limit) || 100;
         const offset = parseInt(req.query.offset) || 0;
 
-        // Debug: Log the request details
-        console.log('📋 Activity log request:', {
-            userType: req.user?.userType,
-            userBranchId: req.user?.branchId,
-            queryBranchId: req.query.branchId,
-            filterUserType: userType,
-            filterUserId: userId
-        });
+
 
         // If branchId is not explicitly provided in query, use user's branch
         // For system_administrator and business_owner, we pass null so they can see all branches + null branches.
@@ -162,7 +154,6 @@ export async function getAllStaffActivities(req, res) {
                      });
                      activity.staff_name = decryptedParts.join(' ').trim();
                  } catch (e) {
-                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
                  }
             }
             return activity;
@@ -252,7 +243,6 @@ export async function getStaffActivityById(req, res) {
                          activity.staff_name = decryptedParts.join(' ').trim();
                      }
                  } catch (e) {
-                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
                  }
             }
             return activity;
@@ -362,7 +352,6 @@ export async function clearAllActivityLogs(req, res) {
         const [rows] = await connection.execute('CALL sp_clearAllActivityLogs()');
         const affectedRows = rows[0][0].affected_rows;
 
-        console.log(`🗑️ Cleared ${affectedRows} activity log records`);
 
         // Log this action
         await logStaffActivity({
@@ -420,7 +409,6 @@ export async function clearStallholderActivityLogs(req, res) {
         const [rows] = await connection.execute('CALL sp_clearStallholderActivityLogs(?)', [stallholderId]);
         const affectedRows = rows[0]?.[0]?.affected_rows || 0;
 
-        console.log(`🗑️ Cleared ${affectedRows} activity log records for stallholder ${stallholderId}`);
 
         // Log this action
         await logStaffActivity({
@@ -469,7 +457,6 @@ export async function clearAllStallholderActivityLogs(req, res) {
         const [rows] = await connection.execute('CALL sp_clearAllStallholderActivityLogs()');
         const affectedRows = rows[0]?.[0]?.affected_rows || 0;
 
-        console.log(`🗑️ Cleared ${affectedRows} activity log records for all stallholders`);
 
         // Log this action
         await logStaffActivity({

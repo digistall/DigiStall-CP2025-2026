@@ -1,5 +1,14 @@
+// Silence verbose logs from console to secure app data
+console.log = () => {};
+console.info = () => {};
+console.debug = () => {};
+console.warn = () => {};
+
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, AppState, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, AppState, Animated, LogBox } from 'react-native';
+
+// Disable all red/yellow box overlays in the React Native UI
+LogBox.ignoreAllLogs();
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -80,12 +89,12 @@ export default function App() {
         appState.current.match(/active/) &&
         nextAppState.match(/inactive|background/)
       ) {
-        console.log('App has gone to the background - initiating auto-logout');
+        // console.log('App has gone to the background - initiating auto-logout');
 
         // Skip auto-logout if a file picker is currently open (camera/gallery/document picker).
         // Opening any native picker temporarily backgrounds the app; we must not log out in that case.
         if (PickerActiveFlag.isActive()) {
-          console.log('⏭️ Skipping auto-logout — file picker is active');
+          // console.log('⏭️ Skipping auto-logout — file picker is active');
           appState.current = nextAppState;
           return;
         }
@@ -153,26 +162,26 @@ export default function App() {
 
   const checkAuthStatus = async () => {
     try {
-      console.log('Checking authentication status...');
+      // console.log('Checking authentication status...');
       const storedUserData = await UserStorageService.getUserData();
       const token = await UserStorageService.getAuthToken();
 
       if (storedUserData && (storedUserData.token || token)) {
         // Check if it's a staff user (inspector/collector)
         if (storedUserData.staffType === 'inspector') {
-          console.log('User is authenticated as Inspector, navigating to InspectorHome');
+          // console.log('User is authenticated as Inspector, navigating to InspectorHome');
           setUserData(storedUserData);
           setInitialRoute('InspectorHome');
         } else if (storedUserData.staffType === 'collector') {
-          console.log('User is authenticated as Collector, navigating to CollectorHome');
+          // console.log('User is authenticated as Collector, navigating to CollectorHome');
           setUserData(storedUserData);
           setInitialRoute('CollectorHome');
         } else if (storedUserData.userType === 'vendor' || storedUserData.vendor) {
-          console.log('User is authenticated as Vendor, navigating to VendorHome');
+          // console.log('User is authenticated as Vendor, navigating to VendorHome');
           setUserData(storedUserData);
           setInitialRoute('VendorHome');
         } else {
-          console.log('User is authenticated as Stallholder, navigating to StallHome or FaceScanner');
+          // console.log('User is authenticated as Stallholder, navigating to StallHome or FaceScanner');
           setUserData(storedUserData);
           
           let nextRoute = 'StallHome';
@@ -185,7 +194,7 @@ export default function App() {
               await new Promise(resolve => setTimeout(resolve, 500));
               const faceResult = await ApiService.checkFaceVerification(actualStallholderId);
               if (faceResult && !faceResult.hasVerifiedFace) {
-                console.log('🚨 No verified face found on startup. Redirecting to FaceScanner.');
+                // console.log('🚨 No verified face found on startup. Redirecting to FaceScanner.');
                 nextRoute = 'FaceScannerScreen';
               } else {
                 // Face is verified, check if they have uploaded a Valid ID
@@ -207,20 +216,20 @@ export default function App() {
                   }
                   
                   if (!hasUploadedValidId) {
-                    console.log('🚨 No valid ID uploaded yet on startup. Redirecting to IdScannerScreen.');
+                    // console.log('🚨 No valid ID uploaded yet on startup. Redirecting to IdScannerScreen.');
                     nextRoute = 'IdScannerScreen';
                   }
                 }
               }
             } catch (err) {
-              console.log('⚠️ Could not verify face on startup, proceeding to StallHome', err);
+              // console.log('⚠️ Could not verify face on startup, proceeding to StallHome', err);
             }
           }
           
           setInitialRoute(nextRoute);
         }
       } else {
-        console.log('User is not authenticated, navigating to LoginScreen');
+        // console.log('User is not authenticated, navigating to LoginScreen');
         setInitialRoute('LoginScreen');
       }
     } catch (error) {

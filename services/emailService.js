@@ -77,7 +77,7 @@ Note: You may need to enable "Install from unknown sources" in your Android devi
             };
         }
 
-        console.log(`📧 Email service: Real SMTP is ACTIVE using ${process.env.SMTP_USER} (emails will be sent to recipients)`);
+
         // Configure with real SMTP (Gmail on port 465 requires secure: true)
         return nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.gmail.com',

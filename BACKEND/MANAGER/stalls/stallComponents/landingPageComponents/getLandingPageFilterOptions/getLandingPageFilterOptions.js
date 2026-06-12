@@ -22,7 +22,6 @@ export const getLandingPageFilterOptions = async (req, res) => {
     const statuses = results[1] || [];
     const priceTypes = results[2] || [];
     
-    console.log('📊 Landing page filter options fetched');
     
     res.status(200).json({
       success: true,

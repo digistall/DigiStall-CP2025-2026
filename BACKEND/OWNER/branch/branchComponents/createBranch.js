@@ -48,7 +48,6 @@ export const createBranch = async (req, res) => {
       // Business owner creating their own branch
       const businessOwnerId = currentUser.id || currentUser.business_owner_id || currentUser.userId;
       
-      console.log('📌 Business Owner creating branch:', { businessOwnerId, branch_name, userRole });
       
       // Use createBranchForOwner stored procedure
       const [results] = await connection.execute(

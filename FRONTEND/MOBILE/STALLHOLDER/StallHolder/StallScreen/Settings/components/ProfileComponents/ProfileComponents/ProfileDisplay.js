@@ -326,7 +326,7 @@ const ProfileDisplay = ({ user, onGoBack, onUpdateUser, navigation }) => {
                 }
               }}
             >
-              <Text style={styles.retakePhotoButtonText}>📷 Retake Profile Photo</Text>
+              <Text style={styles.retakePhotoButtonText}>Retake Profile Photo</Text>
             </TouchableOpacity>
           </View>
         </LinearGradient>

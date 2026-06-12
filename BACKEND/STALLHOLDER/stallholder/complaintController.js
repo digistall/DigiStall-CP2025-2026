@@ -10,14 +10,10 @@ export const submitComplaint = async (req, res) => {
   let connection;
   
   try {
-    console.log('🚀 === COMPLAINT SUBMISSION START ===');
-    console.log('📥 Full request body:', JSON.stringify(req.body, null, 2));
-    console.log('👤 User from token:', JSON.stringify(req.user, null, 2));
     
     const userData = req.user; // From auth middleware
     const userId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
-    console.log('🆔 Resolved user/applicant ID:', userId);
     
     const {
       complaint_type,
@@ -45,7 +41,6 @@ export const submitComplaint = async (req, res) => {
       });
     }
     
-    console.log('📡 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connected');
     
@@ -61,21 +56,13 @@ export const submitComplaint = async (req, res) => {
         stallholderId = shRows[0].stallholder_id;
         console.log('✅ Resolved actual stallholder_id:', stallholderId, 'from userId:', userId);
       } else {
-        console.log('⚠️ No stallholder record found for userId:', userId, '- using userId as fallback');
       }
     } catch (lookupErr) {
-      console.log('⚠️ Stallholder lookup error:', lookupErr.message, '- using userId as fallback');
     }
     
-    console.log('📝 Stallholder submitting complaint:', {
-      stallholderId,
-      complaint_type,
-      subject,
-      branch_id
-    });
+
     
     // Ensure complaint table exists using stored procedure
-    console.log('🔧 Ensuring complaint table exists...');
     await connection.execute('CALL sp_ensureComplaintTableExists()');
     console.log('✅ Complaint table ready');
     
@@ -83,15 +70,7 @@ export const submitComplaint = async (req, res) => {
     const finalBranchId = branch_id || null;
     const finalStallId = stall_id || null;
     
-    console.log('💾 Calling sp_submitComplaint with params:', {
-      complaint_type,
-      stallholder_id: stallholderId,
-      stall_id: finalStallId,
-      branch_id: finalBranchId,
-      subject,
-      description: description.substring(0, 50) + '...',
-      evidence: evidence ? 'provided' : 'null'
-    });
+
     
     // Submit complaint using stored procedure (it fetches stallholder details automatically)
     const [insertResult] = await connection.execute(
@@ -179,7 +158,6 @@ export const getMyComplaints = async (req, res) => {
     const userData = req.user;
     const userId = userData.stallholderId || userData.stallholder_id || userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
-    console.log('📋 Getting complaints for user:', userId);
     
     connection = await createConnection();
     
@@ -196,10 +174,8 @@ export const getMyComplaints = async (req, res) => {
         console.log('✅ Resolved stallholder_id:', stallholderId, 'from userId:', userId);
       }
     } catch (lookupErr) {
-      console.log('⚠️ Stallholder lookup failed:', lookupErr.message);
     }
     
-    console.log('📋 Getting complaints for stallholder:', stallholderId);
     
     // Get complaints using decrypted stored procedure for proper display
     const [complaintsResult] = await connection.execute(

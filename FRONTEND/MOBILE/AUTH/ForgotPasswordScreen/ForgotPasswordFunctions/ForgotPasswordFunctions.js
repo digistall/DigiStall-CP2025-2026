@@ -1,66 +1,10 @@
 // ===== FORGOT PASSWORD FUNCTIONS =====
 // Handles the 3-step forgot password flow for mobile stallholders:
-//   Step 1 – Enter email → verify email exists → send OTP via EmailJS (client-side)
+//   Step 1 – Enter email → verify email exists & backend sends OTP
 //   Step 2 – Enter OTP  → verify code on backend
 //   Step 3 – Enter new password → reset password on backend
 
 import ApiService from '../../../services/ApiService';
-
-// EmailJS Configuration (same as web)
-const EMAILJS_SERVICE_ID = 'service_am6pozg';
-const EMAILJS_TEMPLATE_ID = 'template_3wccajf';
-const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FJatviG';
-
-/**
- * Generate a 6-digit verification code
- */
-const generateVerificationCode = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-/**
- * Send email via EmailJS (client-side)
- * Uses the "Approve Account" template which expects:
- *   {{to_email}} – recipient email address
- *   {{name}}     – sender / system name
- *   {{message}}  – the email body content
- */
-const sendEmailViaEmailJS = async (email, userName, verificationCode) => {
-  try {
-    const templateParams = {
-      to_email: email,
-      name: userName || 'DigiStall',
-      message: `Your password reset code is: ${verificationCode}\n\nThis code will expire in 10 minutes. If you did not request a password reset, please ignore this message.`,
-    };
-
-    console.log('📧 Sending EmailJS with params:', { to_email: email, name: templateParams.name });
-
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'origin': 'http://localhost', // Required for EmailJS from non-browser environments
-      },
-      body: JSON.stringify({
-        service_id: EMAILJS_SERVICE_ID,
-        template_id: EMAILJS_TEMPLATE_ID,
-        user_id: EMAILJS_PUBLIC_KEY,
-        template_params: templateParams
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`EmailJS error: ${response.status} ${errorText}`);
-    }
-
-    console.log('✅ EmailJS sent successfully');
-    return { success: true };
-  } catch (error) {
-    console.error('❌ EmailJS send failed:', error);
-    throw error;
-  }
-};
 
 // ─────────────────────────────────────────────────────────────
 //  STEP 1  ·  Verify email & send OTP
@@ -108,29 +52,7 @@ export const handleSendOtp = async (email, setLoading, setError, setSuccess, onS
     }
 
     const userName = verifyResult.userName || 'User';
-    console.log('✅ Email verified. User:', userName);
-
-    // Step 2: Generate 6-digit code on client-side
-    const verificationCode = generateVerificationCode();
-    console.log('🔢 Generated verification code');
-
-    // Step 3: Send email via EmailJS (client-side)
-    console.log('📧 Sending email via EmailJS to:', email.trim());
-    await sendEmailViaEmailJS(email.trim().toLowerCase(), userName, verificationCode);
-    console.log('✅ Email sent via EmailJS');
-
-    // Step 4: Store the code on backend
-    console.log('💾 Storing verification code on backend');
-    const storeResult = await ApiService.forgotPasswordStoreCode(
-      email.trim().toLowerCase(),
-      verificationCode
-    );
-
-    if (!storeResult.success) {
-      setError('Email sent, but failed to store verification code. Please try again.');
-      setLoading(false);
-      return;
-    }
+    console.log('✅ Email verified. Backend has dispatched OTP for:', userName);
 
     console.log('✅ OTP process completed');
     setSuccess('A 6-digit verification code has been sent to your email.');
@@ -138,11 +60,7 @@ export const handleSendOtp = async (email, setLoading, setError, setSuccess, onS
 
   } catch (error) {
     console.error('❌ handleSendOtp error:', error);
-    if (error.message.includes('EmailJS')) {
-      setError('Failed to send email. Please check your internet connection and try again.');
-    } else {
-      setError('Something went wrong. Please check your connection and try again.');
-    }
+    setError('Something went wrong. Please check your connection and try again.');
   } finally {
     setLoading(false);
   }
@@ -160,44 +78,23 @@ export const handleResendOtp = async (email, setLoading, setError, setSuccess, s
   try {
     console.log('🔄 Resending OTP to:', email);
     
-    // Step 1: Verify email exists and get userName
+    // Backend endpoint handles code generation, dispatch, and storage
+    // Since resend uses a different endpoint usually, we can either call resend API or verifyEmail API
+    // Mobile ApiService doesn't seem to have a resend API wrapper, so we can re-use verifyEmail
     const verifyResult = await ApiService.forgotPasswordVerifyEmail(email.trim().toLowerCase());
+    
     if (!verifyResult.success) {
       setError('Email not found.');
       setLoading(false);
       return;
     }
-    
-    const userName = verifyResult.userName || 'User';
-    
-    // Step 2: Generate new code
-    const verificationCode = generateVerificationCode();
-    
-    // Step 3: Send email via EmailJS
-    await sendEmailViaEmailJS(email.trim().toLowerCase(), userName, verificationCode);
-    
-    // Step 4: Store the code on backend
-    const storeResult = await ApiService.forgotPasswordStoreCode(
-      email.trim().toLowerCase(),
-      verificationCode
-    );
 
-    if (!storeResult.success) {
-      setError('Email sent, but failed to store verification code. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    console.log('✅ OTP resent successfully');
+    console.log('✅ OTP resent successfully via backend');
     setSuccess('A new verification code has been sent to your email.');
     startCooldown();
   } catch (error) {
     console.error('❌ handleResendOtp error:', error);
-    if (error.message.includes('EmailJS')) {
-      setError('Failed to send email. Please check your internet connection.');
-    } else {
-      setError('Something went wrong. Please try again.');
-    }
+    setError('Something went wrong. Please try again.');
   } finally {
     setLoading(false);
   }

@@ -13,7 +13,6 @@ export const adminLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    console.log('🔐 Stall Business Owner login attempt for username:', username);
 
     // Validation
     if (!username || !password) {
@@ -32,7 +31,6 @@ export const adminLogin = async (req, res) => {
       [username]
     );  
 
-    console.log('🔍 Found business owners:', businessOwner ? 1 : 0);
 
     if (!businessOwner) {
       console.log('❌ No business owner found with username:', username);
@@ -54,6 +52,10 @@ export const adminLogin = async (req, res) => {
     }
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('[adminLogin] JWT_SECRET is not set in environment.');
+    }
     const token = sign(
       {
         userId: businessOwner.business_owner_id,
@@ -63,17 +65,12 @@ export const adminLogin = async (req, res) => {
         type: 'stall_business_owner',
         userType: 'stall_business_owner'  // Add this field for consistency
       },
-      process.env.JWT_SECRET || 'fallback_secret',
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
     console.log('✅ Stall Business Owner login successful for:', username);
-    console.log('🎯 Token payload:', { 
-      userId: businessOwner.business_owner_id, 
-      role: 'stall_business_owner', 
-      type: 'stall_business_owner',
-      userType: 'stall_business_owner' 
-    });
+
 
     res.json({
       success: true,

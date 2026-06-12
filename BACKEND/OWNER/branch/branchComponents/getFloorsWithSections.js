@@ -5,11 +5,6 @@ import { getBranchFilter } from '../../../../middleware/rolePermissions.js'
 export const getFloorsWithSections = async (req, res) => {
   const userType = req.user?.userType || req.user?.role;
   const userId = req.user?.userId;
-
-  console.log("🏢 GET FLOORS WITH SECTIONS DEBUG:");
-  console.log("- User Type:", userType);
-  console.log("- User ID:", userId);
-
   if (!userId) {
     return res.status(400).json({
       success: false,
@@ -84,9 +79,6 @@ export const getFloorsWithSections = async (req, res) => {
         };
       })
     );
-
-    console.log(`✅ Found ${floorsWithSections.length} floors with sections for ${userType} (ID: ${userId})`);
-
     res.json({
       success: true,
       message: "Floors with sections retrieved successfully",

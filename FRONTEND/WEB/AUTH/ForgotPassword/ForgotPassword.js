@@ -1,34 +1,6 @@
 // ===== FORGOT PASSWORD PAGE =====
-// Uses EmailJS to send verification codes (same as credential emails)
+// Uses Backend API to securely send verification codes
 import axios from 'axios'
-import emailjs from '@emailjs/browser'
-
-// EmailJS Configuration - reusing the same service as credentials
-const EMAILJS_SERVICE_ID = 'service_am6pozg'
-const EMAILJS_TEMPLATE_ID = 'template_3wccajf'
-const EMAILJS_PUBLIC_KEY = 'F2fUGiyhf-FjatviG'
-const SENDER_EMAIL = 'digistall@unc.edu.ph'
-const SENDER_NAME = 'Naga-Stall'
-
-let isEmailJSInitialized = false
-
-// Initialize EmailJS
-const initializeEmailJS = () => {
-  if (!isEmailJSInitialized) {
-    try {
-      emailjs.init({
-        publicKey: EMAILJS_PUBLIC_KEY,
-        blockHeadless: false,
-      })
-      isEmailJSInitialized = true
-      console.log('✅ EmailJS initialized for password reset')
-    } catch (error) {
-      console.error('❌ EmailJS initialization failed:', error)
-      emailjs.init(EMAILJS_PUBLIC_KEY)
-      isEmailJSInitialized = true
-    }
-  }
-}
 
 export default {
   name: 'ForgotPassword',
@@ -162,47 +134,9 @@ export default {
       return `${maskedName}@${domain}`
     },
     
-    // Generate 6-digit verification code
-    generateVerificationCode() {
-      return Math.floor(100000 + Math.random() * 900000).toString()
-    },
+    // Generate 6-digit verification code - Now handled by backend
     
-    // Send verification code via EmailJS
-    async sendCodeViaEmailJS(email, userName, code) {
-      initializeEmailJS()
-      
-      const templateParams = {
-        from_name: SENDER_NAME,
-        from_email: SENDER_EMAIL,
-        to_email: email,
-        to_name: userName || 'User',
-        subject: 'Password Reset Code',
-        message: `Hello ${userName || 'User'},
-
-You have requested to reset your password for DigiStall - Naga City Stall Management.
-
-🔐 YOUR VERIFICATION CODE: ${code}
-
-⏱️ This code will expire in 10 minutes.
-
-If you did not request this password reset, please ignore this email.
-
-Best regards,
-Stall Management Admin Team`
-      }
-      
-      console.log('📧 Sending password reset code via EmailJS...')
-      
-      const response = await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams,
-        EMAILJS_PUBLIC_KEY
-      )
-      
-      console.log('✅ EmailJS response:', response)
-      return response
-    },
+    // Send verification code via EmailJS - Now handled by backend
     
     async handleSendCode() {
       this.clearMessages()
@@ -227,21 +161,7 @@ Stall Management Admin Team`
           this.verifiedUserType = response.data.userType
           this.verifiedUserName = response.data.userName
           
-          // Generate verification code
-          this.generatedCode = this.generateVerificationCode()
-          
-          // Send code via EmailJS
-          await this.sendCodeViaEmailJS(
-            this.email.trim(),
-            this.verifiedUserName,
-            this.generatedCode
-          )
-          
-          // Store code on backend for verification
-          await axios.post('/api/auth/store-reset-code', {
-            email: this.email.trim(),
-            code: this.generatedCode
-          })
+          // Code generation and email dispatch is now securely handled by the backend during verify-email-exists
           
           this.successMessage = 'Verification code sent to your email!'
           this.currentStep = 2
@@ -287,20 +207,9 @@ Stall Management Admin Team`
       this.loading = true
       
       try {
-        // Generate new code
-        this.generatedCode = this.generateVerificationCode()
-        
-        // Send new code via EmailJS
-        await this.sendCodeViaEmailJS(
-          this.email.trim(),
-          this.verifiedUserName,
-          this.generatedCode
-        )
-        
-        // Store new code on backend
-        await axios.post('/api/auth/store-reset-code', {
-          email: this.email.trim(),
-          code: this.generatedCode
+        // Resend code is handled entirely by backend
+        await axios.post('/api/auth/resend-reset-code', {
+          email: this.email.trim()
         })
         
         this.successMessage = 'New verification code sent to your email!'

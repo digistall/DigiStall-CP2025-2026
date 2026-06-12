@@ -22,7 +22,6 @@ export const getJoinedStalls = async (req, res) => {
       });
     }
 
-    console.log('🎟️ Fetching joined stalls for applicant:', applicantId);
 
     connection = await createConnection();
 
@@ -111,7 +110,6 @@ export const getJoinedStalls = async (req, res) => {
             }
           }
         } catch (imgError) {
-          console.log('📷 Could not fetch stall image for stall_id:', stall.stall_id);
         }
       }
 

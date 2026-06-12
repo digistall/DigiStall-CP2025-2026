@@ -6,14 +6,8 @@ import { createConnection } from '../../config/database.js'
 export const submitMobileApplication = async (req, res) => {
   let connection;
   
-  console.log('📱 ====== SUBMIT MOBILE APPLICATION START ======');
-  console.log('📱 Request method:', req.method);
-  console.log('📱 Request URL:', req.url);
-  console.log('📱 Request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('📱 Request body (raw):', JSON.stringify(req.body, null, 2));
   
   try {
-    console.log('🔌 Establishing database connection...');
     connection = await createConnection();
     console.log('✅ Database connection established');
     
@@ -26,14 +20,7 @@ export const submitMobileApplication = async (req, res) => {
       documentUrls 
     } = req.body;
 
-    console.log('📱 Extracted request data:', {
-      applicantId,
-      applicantIdType: typeof applicantId,
-      stallId,
-      stallIdType: typeof stallId,
-      businessName,
-      businessType
-    });
+
 
     // Validation: Check if all required fields are provided
     if (!applicantId || !stallId) {
@@ -62,7 +49,6 @@ export const submitMobileApplication = async (req, res) => {
       [stallId]
     );
     
-    console.log('📊 Stall query result count:', stallRows?.length || 0);
 
     if (!stallRows || stallRows.length === 0) {
       console.error('❌ Stall not found for stallId:', stallId);
@@ -75,18 +61,8 @@ export const submitMobileApplication = async (req, res) => {
     const stall = stallRows[0];
     const isRaffleStall = stall.price_type === 'Raffle';
     
-    console.log('📊 Stall found:', JSON.stringify(stall, null, 2));
-    console.log('📊 Is Raffle stall:', isRaffleStall);
 
-    console.log('📊 Stall details:', {
-      stallId: stall.stall_id,
-      stallNumber: stall.stall_number,
-      priceType: stall.price_type,
-      isRaffle: isRaffleStall,
-      branchId: stall.branch_id,
-      isAvailable: stall.is_available,
-      status: stall.status
-    });
+
 
     // Check if stall is available
     if (stall.status !== 'Available') {
@@ -163,7 +139,6 @@ export const submitMobileApplication = async (req, res) => {
 
       // If no raffle exists for this stall, create one
       if (!raffleRows || raffleRows.length === 0) {
-        console.log('🆕 Creating new raffle entry for stall:', stallId);
         
         const [newRaffleResult] = await connection.execute(
           `INSERT INTO raffle (stall_id, branch_id, raffle_name, start_date, end_date, status, created_at)
@@ -176,11 +151,7 @@ export const submitMobileApplication = async (req, res) => {
         raffleId = raffleRows[0].raffle_id;
       }
 
-      console.log('🎰 Adding to raffle_participants:', {
-        raffleId,
-        applicantId,
-        applicationId
-      });
+
 
       // Add participant to raffle_participants table (using correct columns)
       const [participantResult] = await connection.execute(
@@ -229,7 +200,6 @@ export const submitMobileApplication = async (req, res) => {
         status: 'Pending'
       }
     });
-    console.log('📱 ====== SUBMIT MOBILE APPLICATION SUCCESS ======');
     
   } catch (error) {
     console.error('❌ ====== SUBMIT MOBILE APPLICATION ERROR ======');
@@ -250,7 +220,6 @@ export const submitMobileApplication = async (req, res) => {
       }
     });
   } finally {
-    console.log('🔚 Closing database connection...');
     if (connection) {
       await connection.end();
       console.log('✅ Database connection closed');
@@ -389,11 +358,6 @@ export const updateMobileApplication = async (req, res) => {
 export const joinRaffle = async (req, res) => {
   let connection;
   
-  console.log('🎰 ====== BACKEND: JOIN RAFFLE START ======');
-  console.log('🎰 Request method:', req.method);
-  console.log('🎰 Request URL:', req.url);
-  console.log('🎰 Request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('🎰 Request body (raw):', JSON.stringify(req.body, null, 2));
   
   try {
     connection = await createConnection();
@@ -406,7 +370,6 @@ export const joinRaffle = async (req, res) => {
       ? (rawStallId.id || rawStallId.stall_id || rawStallId.stallId)
       : rawStallId;
 
-    console.log('🎰 Extracted values:');
     console.log('   - applicantId:', applicantId, '(type:', typeof applicantId, ')');
     console.log('   - rawStallId:', rawStallId, '(type:', typeof rawStallId, ')');
     console.log('   - stallId (normalized):', stallId, '(type:', typeof stallId, ')');
@@ -438,7 +401,6 @@ export const joinRaffle = async (req, res) => {
       [stallId]
     );
 
-    console.log('📊 Stall query result count:', stallRows?.length || 0);
 
     if (!stallRows || stallRows.length === 0) {
       console.error('❌ Stall not found for stallId:', stallId);
@@ -449,7 +411,6 @@ export const joinRaffle = async (req, res) => {
     }
 
     const stall = stallRows[0];
-    console.log('📊 Stall found:', JSON.stringify(stall, null, 2));
 
     // Verify it's a raffle stall
     if (stall.price_type !== 'Raffle') {
@@ -461,7 +422,6 @@ export const joinRaffle = async (req, res) => {
     }
 
     // Check if user is a stallholder (has been approved and owns stalls)
-    console.log('🔍 Checking if user is a stallholder...');
     const [stallholderRows] = await connection.execute(
       `SELECT stallholder_id, full_name, stall_id
        FROM stallholder 
@@ -473,7 +433,6 @@ export const joinRaffle = async (req, res) => {
     const isStallholder = stallholderRows && stallholderRows.length > 0;
     const stallholderId = isStallholder ? stallholderRows[0].stallholder_id : null;
     
-    console.log('📊 Is stallholder:', isStallholder, stallholderId ? `(ID: ${stallholderId})` : '');
 
     // Check 2-stall limit per branch if user is a stallholder
     if (isStallholder) {
@@ -496,14 +455,9 @@ export const joinRaffle = async (req, res) => {
       }
     }
 
-    console.log('📊 Raffle Stall:', {
-      stallId: stall.stall_id,
-      stallNumber: stall.stall_number,
-      branchName: stall.branch_name
-    });
+
 
     // Check if user already joined this raffle (by applicant_id or stallholder_id)
-    console.log('🔍 Checking if user already joined raffle...');
     const [existingParticipant] = await connection.execute(
       `SELECT participant_id FROM raffle_participants rp
        JOIN raffle r ON rp.raffle_id = r.raffle_id
@@ -511,7 +465,6 @@ export const joinRaffle = async (req, res) => {
       [stallId, applicantId, stallholderId]
     );
     
-    console.log('🔍 Existing participant check result:', existingParticipant?.length || 0, 'records found');
 
     if (existingParticipant && existingParticipant.length > 0) {
       console.error('❌ User already joined this raffle - participant_id:', existingParticipant[0].participant_id);
@@ -522,7 +475,6 @@ export const joinRaffle = async (req, res) => {
     }
 
     // Get or create raffle for this stall
-    console.log('🔍 Looking for existing raffle for stall:', stallId);
     let [raffleRows] = await connection.execute(
       `SELECT raffle_id, status, 
        (SELECT COUNT(*) FROM raffle_participants WHERE raffle_id = raffle.raffle_id) as total_participants
@@ -531,17 +483,14 @@ export const joinRaffle = async (req, res) => {
       [stallId]
     );
     
-    console.log('🔍 Raffle query result:', raffleRows?.length || 0, 'records found');
 
     let raffleId;
 
     // If no raffle exists, create one
     if (!raffleRows || raffleRows.length === 0) {
-      console.log('🆕 Creating new raffle for stall:', stallId);
       
       // Get the business manager for this branch (required for raffle creation)
       const branchId = stall.branch_id;
-      console.log('🔍 Looking for business manager for branch:', branchId);
       
       const [managerRows] = await connection.execute(
         `SELECT business_manager_id FROM business_manager 
@@ -554,7 +503,6 @@ export const joinRaffle = async (req, res) => {
       const businessManagerId = managerRows && managerRows.length > 0 
         ? managerRows[0].business_manager_id 
         : 1;
-      console.log('📊 Using business_manager_id:', businessManagerId);
       
       try {
         const [newRaffleResult] = await connection.execute(
@@ -575,7 +523,6 @@ export const joinRaffle = async (req, res) => {
 
     // Insert into raffle_participants table
     // Uses stallholder_id if user is a stallholder, otherwise uses applicant_id
-    console.log('📝 Inserting participant into raffle_participants...');
     console.log('   - raffleId:', raffleId);
     console.log('   - applicantId:', applicantId);
     console.log('   - stallholderId:', stallholderId);
@@ -593,7 +540,6 @@ export const joinRaffle = async (req, res) => {
       console.log('✅ Raffle participant added:', { participantId, raffleId, applicantId });
 
       // Update raffle status to Open if not already (total_participants is calculated via subquery, not stored)
-      console.log('📝 Updating raffle status...');
       await connection.execute(
         `UPDATE raffle SET 
           status = 'Open'
@@ -603,7 +549,6 @@ export const joinRaffle = async (req, res) => {
       console.log('✅ Raffle status checked/updated');
 
       // Update stall's raffle_auction_status
-      console.log('📝 Updating stall raffle_auction_status...');
       await connection.execute(
         `UPDATE stall SET 
           raffle_auction_status = 'Active',
@@ -613,7 +558,6 @@ export const joinRaffle = async (req, res) => {
       );
       console.log('✅ Stall status updated');
 
-      console.log('🎰 ====== BACKEND: JOIN RAFFLE SUCCESS ======');
       res.status(201).json({
         success: true,
         message: 'Successfully joined the raffle!',
@@ -651,7 +595,6 @@ export const joinRaffle = async (req, res) => {
       }
     });
   } finally {
-    console.log('🔚 Closing database connection...');
     if (connection) {
       await connection.end();
       console.log('✅ Database connection closed');
@@ -665,11 +608,6 @@ export const joinRaffle = async (req, res) => {
 export const joinAuction = async (req, res) => {
   let connection;
   
-  console.log('🔨 ====== BACKEND: JOIN AUCTION START ======');
-  console.log('🔨 Request method:', req.method);
-  console.log('🔨 Request URL:', req.url);
-  console.log('🔨 Request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('🔨 Request body (raw):', JSON.stringify(req.body, null, 2));
   
   try {
     connection = await createConnection();
@@ -682,7 +620,6 @@ export const joinAuction = async (req, res) => {
       ? (rawStallId.id || rawStallId.stall_id || rawStallId.stallId)
       : rawStallId;
 
-    console.log('🔨 Extracted values:');
     console.log('   - applicantId:', applicantId, '(type:', typeof applicantId, ')');
     console.log('   - rawStallId:', rawStallId, '(type:', typeof rawStallId, ')');
     console.log('   - stallId (normalized):', stallId, '(type:', typeof stallId, ')');
@@ -707,11 +644,7 @@ export const joinAuction = async (req, res) => {
     const isStallholder = stallholderRows && stallholderRows.length > 0;
     const stallholderId = isStallholder ? stallholderRows[0].stallholder_id : null;
     
-    console.log('📊 Stallholder check:', {
-      isStallholder,
-      stallholderId,
-      stallholderName: isStallholder ? stallholderRows[0].full_name : null
-    });
+
 
     console.log('✅ Validation passed, querying stall details...');
 
@@ -732,7 +665,6 @@ export const joinAuction = async (req, res) => {
       [stallId]
     );
 
-    console.log('📊 Stall query result count:', stallRows?.length || 0);
 
     if (!stallRows || stallRows.length === 0) {
       console.error('❌ Stall not found for stallId:', stallId);
@@ -743,7 +675,6 @@ export const joinAuction = async (req, res) => {
     }
 
     const stall = stallRows[0];
-    console.log('📊 Stall found:', JSON.stringify(stall, null, 2));
 
     // Verify it's an auction stall
     if (stall.price_type !== 'Auction') {
@@ -770,7 +701,6 @@ export const joinAuction = async (req, res) => {
       );
       
       const currentStallCount = stallCountRows[0]?.stall_count || 0;
-      console.log(`📊 Stallholder has ${currentStallCount} stalls in branch ${stall.branch_id}`);
       
       if (currentStallCount >= 2) {
         console.error('❌ Stallholder already owns 2 stalls in this branch');
@@ -781,14 +711,9 @@ export const joinAuction = async (req, res) => {
       }
     }
 
-    console.log('📊 Auction Stall:', {
-      stallId: stall.stall_id,
-      stallNumber: stall.stall_number,
-      branchName: stall.branch_name
-    });
+
 
     // Check if user already joined this auction (check both applicant_id and stallholder_id)
-    console.log('🔍 Checking if user already joined auction...');
     let existingParticipantQuery = `
       SELECT participant_id FROM auction_participants ap
       JOIN auction a ON ap.auction_id = a.auction_id
@@ -804,7 +729,6 @@ export const joinAuction = async (req, res) => {
     
     const [existingParticipant] = await connection.execute(existingParticipantQuery, existingParams);
     
-    console.log('🔍 Existing participant check result:', existingParticipant?.length || 0, 'records found');
 
     if (existingParticipant && existingParticipant.length > 0) {
       console.error('❌ User already joined this auction - participant_id:', existingParticipant[0].participant_id);
@@ -815,7 +739,6 @@ export const joinAuction = async (req, res) => {
     }
 
     // Get or create auction for this stall
-    console.log('🔍 Looking for existing auction for stall:', stallId);
     let [auctionRows] = await connection.execute(
       `SELECT auction_id, status 
        FROM auction WHERE stall_id = ? 
@@ -823,17 +746,14 @@ export const joinAuction = async (req, res) => {
       [stallId]
     );
     
-    console.log('🔍 Auction query result:', auctionRows?.length || 0, 'records found');
 
     let auctionId;
 
     // If no auction exists, create one
     if (!auctionRows || auctionRows.length === 0) {
-      console.log('🆕 Creating new auction for stall:', stallId);
       
       // Get the business manager for this branch
       const branchId = stall.branch_id;
-      console.log('🔍 Looking for business manager for branch:', branchId);
       
       const [managerRows] = await connection.execute(
         `SELECT business_manager_id FROM business_manager 
@@ -845,7 +765,6 @@ export const joinAuction = async (req, res) => {
       const businessManagerId = managerRows && managerRows.length > 0 
         ? managerRows[0].business_manager_id 
         : 1;
-      console.log('📊 Using business_manager_id:', businessManagerId);
       
       try {
         const [newAuctionResult] = await connection.execute(
@@ -865,7 +784,6 @@ export const joinAuction = async (req, res) => {
     }
 
     // Insert into auction_participants table (includes stallholder_id if user is a stallholder)
-    console.log('📝 Inserting participant into auction_participants...');
     console.log('   - auctionId:', auctionId);
     console.log('   - applicantId:', applicantId);
     console.log('   - stallholderId:', stallholderId);
@@ -882,7 +800,6 @@ export const joinAuction = async (req, res) => {
       console.log('✅ Auction participant added:', { participantId, auctionId, applicantId, stallholderId });
 
       // Update auction status to Open if scheduled
-      console.log('📝 Updating auction status...');
       await connection.execute(
         `UPDATE auction SET 
           status = 'Open'
@@ -892,7 +809,6 @@ export const joinAuction = async (req, res) => {
       console.log('✅ Auction status checked/updated');
 
       // Update stall's raffle_auction_status
-      console.log('📝 Updating stall raffle_auction_status...');
       await connection.execute(
         `UPDATE stall SET 
           raffle_auction_status = 'Active',
@@ -902,7 +818,6 @@ export const joinAuction = async (req, res) => {
       );
       console.log('✅ Stall status updated');
 
-      console.log('🔨 ====== BACKEND: JOIN AUCTION SUCCESS ======');
       res.status(201).json({
         success: true,
         message: 'Successfully joined the auction!',
@@ -941,7 +856,6 @@ export const joinAuction = async (req, res) => {
       }
     });
   } finally {
-    console.log('🔚 Closing database connection...');
     if (connection) {
       await connection.end();
       console.log('✅ Database connection closed');

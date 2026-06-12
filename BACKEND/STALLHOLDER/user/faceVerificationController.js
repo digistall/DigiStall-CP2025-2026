@@ -40,12 +40,17 @@ export async function uploadFaceVerification(req, res) {
 
     // 2. Use rotated buffer if face detection corrected orientation
     if (validation.rotatedBuffer) {
-      console.log('🔄 Saving rotated upright face verification image');
       imageBuffer = validation.rotatedBuffer;
     }
 
     // 3. Encrypt and save to DB
-    const encryptionKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
+    const encryptionKey = process.env.DATA_ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      throw new Error(
+        '[faceVerificationController] DATA_ENCRYPTION_KEY is not set. ' +
+        'Add it to your .env file.'
+      );
+    }
     connection = await createConnection();
 
     // Delete existing face verification records for this stallholder first
@@ -113,7 +118,13 @@ export async function getFaceImageBinary(req, res) {
     const { stallholder_id } = req.params;
     connection = await createConnection();
 
-    const encryptionKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
+    const encryptionKey = process.env.DATA_ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      throw new Error(
+        '[faceVerificationController] DATA_ENCRYPTION_KEY is not set. ' +
+        'Add it to your .env file.'
+      );
+    }
     
     // 1. Try to get image for the exact stallholder_id requested
     const [rows] = await connection.execute(

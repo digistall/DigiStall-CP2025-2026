@@ -8,6 +8,11 @@ import { authorizePermission } from '../middleware/enhancedAuth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import complianceController from '../BACKEND/MANAGER/compliances/complianceController.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  createComplianceRecordSchema, updateComplianceRecordSchema
+} from '../middleware/schemas/complianceSchemas.js';
+
 const router = express.Router();
 
 /**
@@ -65,7 +70,7 @@ router.get('/:id', complianceController.getComplianceRecordById);
  *            penalty_id: number (optional)
  *          }
  */
-router.post('/', viewOnlyForOwners, complianceController.createComplianceRecord);
+router.post('/', viewOnlyForOwners, validate(createComplianceRecordSchema), complianceController.createComplianceRecord);
 
 /**
  * @route   PUT /api/compliances/:id
@@ -76,7 +81,7 @@ router.post('/', viewOnlyForOwners, complianceController.createComplianceRecord)
  *            remarks: string (optional)
  *          }
  */
-router.put('/:id', viewOnlyForOwners, complianceController.updateComplianceRecord);
+router.put('/:id', viewOnlyForOwners, validate(updateComplianceRecordSchema), complianceController.updateComplianceRecord);
 
 /**
  * @route   DELETE /api/compliances/:id

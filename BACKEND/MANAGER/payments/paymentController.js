@@ -49,8 +49,6 @@ const PaymentController = {
     try {
       connection = await createConnection();
       
-      console.log('🔍 getStallholdersByBranch started');
-      console.log('🔍 User from middleware:', req.user);
       
       // Use validated user data from auth middleware instead of re-parsing token
       const userInfo = req.user;
@@ -62,10 +60,8 @@ const PaymentController = {
         });
       }
       
-      console.log('🔍 User info from middleware:', userInfo);
       
       const branchId = userInfo.branchId;
-      console.log('🔍 Branch ID extracted:', branchId);
       
       // Security check: Ensure user has branchId
       if (!branchId && userInfo.userType !== 'system_administrator' && userInfo.userType !== 'stall_business_owner') {
@@ -76,10 +72,8 @@ const PaymentController = {
         });
       }
       
-      console.log('🔍 getStallholdersByBranch called for branch:', branchId);
       
       // Use direct query instead of stored procedure for compatibility
-      console.log('🔍 Executing query with branchId:', branchId);
       let query;
       let params;
       
@@ -179,11 +173,9 @@ const PaymentController = {
       
       // Extract stallholders from query result
       const stallholders = result || [];
-      console.log('📊 Stallholders found for branch', branchId + ':', stallholders.length);
       
       // Debug: Log first stallholder BEFORE decryption
       if (stallholders.length > 0) {
-        console.log('🔍 Sample stallholder BEFORE decryption:', JSON.stringify(stallholders[0], null, 2));
       }
       
       // Backend-level decryption for stallholder data
@@ -272,7 +264,6 @@ const PaymentController = {
             );
             console.log(`⚡ Self-healed database payment_status to '${dbStatus}' for stallholder ID ${shId}`);
           } catch (dbErr) {
-            console.error(`⚠️ Failed to self-heal database status for stallholder ID ${shId}:`, dbErr.message);
           }
         }
       }
@@ -322,7 +313,6 @@ const PaymentController = {
         });
       }
       
-      console.log('🔍 getStallholderDetails called for stallholderId:', stallholderId);
       
       // Use direct query instead of stored procedure for compatibility
       const [result] = await connection.execute(`
@@ -367,7 +357,6 @@ const PaymentController = {
         });
       }
       
-      console.log('📊 Stallholder details found:', result[0]);
       
       // Backend-level decryption for stallholder details
       const stallholder = result[0];
@@ -444,7 +433,6 @@ const PaymentController = {
     try {
       connection = await createConnection();
       
-      console.log('🔢 Generating receipt number');
       
       const [result] = await connection.execute('CALL sp_generate_receipt_number()');
       
@@ -453,7 +441,6 @@ const PaymentController = {
       }
       
       const receiptNumber = result[0][0].receiptNumber;
-      console.log('📋 Receipt number generated:', receiptNumber);
       
       res.status(200).json({
         success: true,
@@ -500,7 +487,6 @@ const PaymentController = {
         });
       }
       
-      console.log('💳 Adding onsite payment:', { stallholderId, amount, paymentDate, referenceNumber });
       
       // Get stallholder's branch_id if not provided
       let branchId = userInfo.branchId;
@@ -1203,7 +1189,6 @@ const PaymentController = {
         });
       }
       
-      console.log('🔍 getUnpaidViolations called for stallholderId:', stallholderId);
       
       const [result] = await connection.execute(
         'CALL getUnpaidViolationsByStallholder(?)',
@@ -1211,7 +1196,6 @@ const PaymentController = {
       );
       
       const violations = result[0] || [];
-      console.log('📊 Unpaid violations found:', violations.length);
       
       res.status(200).json({
         success: true,
@@ -1269,13 +1253,7 @@ const PaymentController = {
       const userInfo = req.user;
       const collectedBy = userInfo ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 'System' : 'System';
       
-      console.log('💳 Processing violation payment:', {
-        violationId,
-        paymentReference,
-        paidAmount,
-        collectedBy,
-        notes
-      });
+
       
       const [result] = await connection.execute(
         'CALL processViolationPayment(?, ?, ?, ?, ?)',

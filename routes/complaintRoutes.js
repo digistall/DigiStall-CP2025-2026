@@ -8,6 +8,11 @@ import { authorizePermission } from '../middleware/enhancedAuth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 import complaintController from '../BACKEND/MANAGER/complaints/complaintController.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  createComplaintSchema, updateComplaintSchema, resolveComplaintSchema
+} from '../middleware/schemas/complaintSchemas.js';
+
 const router = express.Router();
 
 /**
@@ -52,7 +57,7 @@ router.get('/:id', complaintController.getComplaintById);
  *            priority: enum ['low', 'medium', 'high', 'urgent'] (default: 'medium')
  *          }
  */
-router.post('/', complaintController.createComplaint);
+router.post('/', validate(createComplaintSchema), complaintController.createComplaint);
 
 /**
  * @route   PUT /api/complaints/:id
@@ -66,7 +71,7 @@ router.post('/', complaintController.createComplaint);
  *            status: enum ['pending', 'in-progress', 'resolved', 'rejected'] (optional)
  *          }
  */
-router.put('/:id', viewOnlyForOwners, complaintController.updateComplaint);
+router.put('/:id', viewOnlyForOwners, validate(updateComplaintSchema), complaintController.updateComplaint);
 
 /**
  * @route   PUT /api/complaints/:id/resolve
@@ -77,7 +82,7 @@ router.put('/:id', viewOnlyForOwners, complaintController.updateComplaint);
  *            status: enum ['resolved', 'rejected'] (default: 'resolved')
  *          }
  */
-router.put('/:id/resolve', viewOnlyForOwners, complaintController.resolveComplaint);
+router.put('/:id/resolve', viewOnlyForOwners, validate(resolveComplaintSchema), complaintController.resolveComplaint);
 
 /**
  * @route   DELETE /api/complaints/:id

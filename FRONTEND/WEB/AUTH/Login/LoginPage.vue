@@ -159,6 +159,16 @@
       :operationType="errorPopup.operationType"
       @close="errorPopup.show = false"
     />
+
+    <!-- Warning Notification Popup -->
+    <UniversalPopup
+      :show="warningPopup.show"
+      :message="warningPopup.message"
+      :type="warningPopup.type"
+      :operation="warningPopup.operation"
+      :operationType="warningPopup.operationType"
+      @close="warningPopup.show = false"
+    />
   </v-container>
 </template>
 

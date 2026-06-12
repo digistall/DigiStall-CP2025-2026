@@ -19,13 +19,27 @@ const KEY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let cachedAESKey = null;
 
 /**
- * Get the AES-256-GCM encryption key using scrypt derivation
- * Matches the Web backend's encryption method
+ * Get the AES-256-GCM encryption key using scrypt derivation.
+ * Reads DATA_ENCRYPTION_KEY and ENCRYPTION_SALT from environment.
+ * Throws a startup error if either variable is missing.
  */
 const getAES256GCMKey = () => {
     if (!cachedAESKey) {
-        const envKey = process.env.DATA_ENCRYPTION_KEY || 'DigiStall2025SecureKeyForEncryption123';
-        cachedAESKey = crypto.scryptSync(envKey, 'digistall-salt-v2', 32);
+        const envKey = process.env.DATA_ENCRYPTION_KEY;
+        const salt = process.env.ENCRYPTION_SALT;
+        if (!envKey) {
+            throw new Error(
+                '[mysqlDecryptionService] DATA_ENCRYPTION_KEY is not set. ' +
+                'Add it to your .env file. See .env.example for details.'
+            );
+        }
+        if (!salt) {
+            throw new Error(
+                '[mysqlDecryptionService] ENCRYPTION_SALT is not set. ' +
+                'Add it to your .env file. See .env.example for details.'
+            );
+        }
+        cachedAESKey = crypto.scryptSync(envKey, salt, 32);
     }
     return cachedAESKey;
 };
@@ -106,7 +120,7 @@ export const decryptObjectFields = (data, fieldsToDecrypt = []) => {
         if (result[field] && isAES256GCMEncrypted(result[field])) {
             const decrypted = decryptAES256GCM(result[field]);
             if (decrypted !== result[field]) {
-                console.log(`🔓 Decrypted ${field}: ${decrypted}`);
+                // console.log(`🔓 Decrypted ${field}: ${decrypted}`);
                 result[field] = decrypted;
             }
         }
@@ -159,7 +173,7 @@ export const getEncryptionKeyFromDB = async () => {
 export const decryptStaffData = async (staffData) => {
   if (!staffData) return staffData;
   
-  console.log('🔓 Decrypting staff data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting staff data (AES-256-GCM)...');
   return decryptObjectFields(staffData, ['first_name', 'last_name', 'middle_name', 'contact_no']);
 };
 
@@ -172,7 +186,7 @@ export const decryptStaffData = async (staffData) => {
 export const decryptApplicantData = async (applicantData) => {
   if (!applicantData) return applicantData;
   
-  console.log('🔓 Decrypting applicant data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting applicant data (AES-256-GCM)...');
   return decryptObjectFields(applicantData);
 };
 
@@ -185,7 +199,7 @@ export const decryptApplicantData = async (applicantData) => {
 export const decryptStallholderData = async (stallholderData) => {
   if (!stallholderData) return stallholderData;
   
-  console.log('🔓 Decrypting stallholder data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting stallholder data (AES-256-GCM)...');
   return decryptObjectFields(stallholderData);
 };
 
@@ -198,7 +212,7 @@ export const decryptStallholderData = async (stallholderData) => {
 export const decryptSpouseData = async (spouseData) => {
   if (!spouseData) return spouseData;
   
-  console.log('🔓 Decrypting spouse data (AES-256-GCM)...');
+  // console.log('🔓 Decrypting spouse data (AES-256-GCM)...');
   return decryptObjectFields(spouseData, ['spouse_full_name', 'spouse_contact_number']);
 };
 

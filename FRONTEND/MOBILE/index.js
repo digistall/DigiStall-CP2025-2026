@@ -1,3 +1,8 @@
+// Silence verbose logs from console to secure app data
+console.log = () => {};
+console.info = () => {};
+console.debug = () => {};
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

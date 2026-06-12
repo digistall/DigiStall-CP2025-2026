@@ -9,7 +9,11 @@ export const getStallholderProfile = async (req, res) => {
   let connection;
   
   try {
-    const stallholderId = req.params.stallholder_id || req.user?.stallholderId || req.user?.stallholder_id;
+    const requestedStallholderId = req.params.stallholder_id;
+    const authenticatedStallholderId = req.user?.stallholderId || req.user?.stallholder_id;
+    
+    // Default to the authenticated user's ID if no parameter is provided
+    const stallholderId = requestedStallholderId || authenticatedStallholderId;
     
     if (!stallholderId) {
       return res.status(400).json({
@@ -17,9 +21,18 @@ export const getStallholderProfile = async (req, res) => {
         message: 'Stallholder ID is required'
       });
     }
-    
-    console.log('📋 Getting stallholder profile for ID:', stallholderId);
-    
+
+    // ENFORCE OWNERSHIP (BOLA Fix)
+    // If a specific ID is requested, it must match the authenticated user's ID
+    if (requestedStallholderId && authenticatedStallholderId && 
+        String(requestedStallholderId) !== String(authenticatedStallholderId)) {
+      console.warn(`[SECURITY] Unauthorized profile access attempt. User ${authenticatedStallholderId} tried to access profile ${requestedStallholderId}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: You are not authorized to view this profile'
+      });
+    }
+
     connection = await createConnection();
     
     // Use the same stored procedure as complaint submission to get stall info

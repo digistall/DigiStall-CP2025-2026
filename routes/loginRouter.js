@@ -3,17 +3,22 @@ import jwt from 'jsonwebtoken'
 import { mobileLogin, submitApplication } from '../BACKEND/AUTH/login/loginController.js'
 import { mobileStaffLogin, mobileStaffLogout, mobileStaffHeartbeat, mobileStaffAutoLogout } from '../BACKEND/AUTH/mobileStaffAuthController.js'
 import { verifyToken } from '../middleware/auth.js'
+import { authLimiter } from '../middleware/rateLimiter.js'
+
+import { validate } from '../middleware/validateRequest.js';
+import { mobileLoginSchema, mobileStaffLoginSchema } from '../middleware/schemas/authSchemas.js';
+import { createStallApplicationSchema } from '../middleware/schemas/applicantSchemas.js';
 
 const router = express.Router()
 
 // Mobile login route - POST /login (matches mobile app expectation)
-router.post('/login', mobileLogin)
+router.post('/login', authLimiter, validate(mobileLoginSchema), mobileLogin)
 
 // Mobile staff login route - POST /staff-login (Inspector/Collector login)
-router.post('/staff-login', mobileStaffLogin)
+router.post('/staff-login', authLimiter, validate(mobileStaffLoginSchema), mobileStaffLogin)
 
 // Mobile application submission route - POST /submit-application (legacy endpoint)
-router.post('/submit-application', submitApplication)
+router.post('/submit-application', validate(createStallApplicationSchema), submitApplication)
 
 // ===== MOBILE VERIFY TOKEN =====
 // GET /api/mobile/auth/verify-token - Verify if JWT token is still valid

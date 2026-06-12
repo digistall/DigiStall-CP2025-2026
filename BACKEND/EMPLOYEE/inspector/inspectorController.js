@@ -13,13 +13,9 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
     const staffData = req.user; // From auth middleware
     
     // Debug logging
-    console.log('🔍 DEBUG req.user:', JSON.stringify(staffData, null, 2));
-    console.log('🔍 DEBUG staffData.branchId:', staffData?.branchId);
-    console.log('🔍 DEBUG staffData.branch_id:', staffData?.branch_id);
     
     const branchId = staffData.branchId || staffData.branch_id;
     
-    console.log('📋 Inspector fetching stallholders for branch:', branchId);
     
     if (!branchId) {
       return res.status(400).json({
@@ -49,7 +45,6 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
           address: sh.address ? decryptAES256GCM(sh.address) : null,
         };
       } catch (decryptError) {
-        console.error('⚠️  Decryption error for stallholder', sh.stallholder_id, ':', decryptError.message);
         return {
           ...sh,
           full_name: 'Decryption Error',
@@ -105,14 +100,7 @@ export const reportStallholder = async (req, res) => {
       receipt_number
     } = req.body;
     
-    console.log('📝 Inspector submitting violation report:', {
-      inspectorId,
-      stallholder_id,
-      violation_id,
-      branch_id,
-      stall_id,
-      receipt_number
-    });
+
     
     // Validation
     if (!inspectorId) {
@@ -268,15 +256,7 @@ export const reportStallholderWithPhotos = async (req, res) => {
     // Get uploaded files
     const uploadedFiles = req.files || [];
     
-    console.log('📝 Inspector submitting violation report with photos:', {
-      inspectorId,
-      stallholder_id,
-      violation_id,
-      branch_id,
-      stall_id,
-      receipt_number,
-      photosCount: uploadedFiles.length
-    });
+
     
     // Validation
     if (!stallholder_id || !violation_id || !branch_id) {
@@ -332,7 +312,6 @@ export const reportStallholderWithPhotos = async (req, res) => {
     );
     
     console.log('✅ Violation report with photos submitted successfully');
-    console.log('📷 Uploaded photos:', photoPaths);
     
     return res.status(201).json({
       success: true,
@@ -390,7 +369,6 @@ export const getStallholderById = async (req, res) => {
     const staffData = req.user;
     const branchId = staffData.branchId || staffData.branch_id;
     
-    console.log('🔍 Inspector fetching stallholder details:', id);
     
     connection = await createConnection();
     
@@ -442,8 +420,6 @@ export const getInspectorSentReports = async (req, res) => {
     const staffData = req.user;
     const inspectorId = staffData.staffId || staffData.staff_id || staffData.userId || staffData.id;
     
-    console.log('📋 Fetching sent reports for inspector:', inspectorId);
-    console.log('📋 Staff data:', staffData);
     
     if (!inspectorId) {
       return res.status(400).json({
@@ -462,7 +438,6 @@ export const getInspectorSentReports = async (req, res) => {
     
     const reports = results[0] || [];
     
-    console.log('📦 Raw reports count:', reports.length);
     
     // Decrypt stallholder names
     const decryptedReports = reports.map(report => {
@@ -474,7 +449,6 @@ export const getInspectorSentReports = async (req, res) => {
             `Stallholder #${report.stallholder_id}`
         };
       } catch (decryptError) {
-        console.error('⚠️ Decryption error for report', report.report_id, ':', decryptError.message);
         return {
           ...report,
           stallholder_name: `Stallholder #${report.stallholder_id}`

@@ -16,7 +16,6 @@ export const createRaffle = async (req, res) => {
       });
     }
 
-    console.log(`🎯 Creating raffle for stall ${stallId} with ${durationHours} hours duration`);
 
     connection = await createConnection();
 

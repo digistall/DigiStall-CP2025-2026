@@ -138,7 +138,7 @@ const findApplicantByEmail = async (connection, plainEmail) => {
 };
 
 /**
- * Verify if an email exists in the system (no email sending - frontend uses EmailJS)
+ * Verify if an email exists in the system and automatically dispatch the reset code.
  * POST /api/auth/verify-email-exists
  */
 export const verifyEmailExists = async (req, res) => {
@@ -154,14 +154,12 @@ export const verifyEmailExists = async (req, res) => {
       });
     }
     
-    console.log('🔍 Verifying email exists:', email);
     
     connection = await createConnection();
     
     // Try each user type to find the email
     for (const config of userTypes) {
       try {
-        console.log(`🔍 Checking ${config.type}...`);
 
         let users = [];
 
@@ -189,11 +187,40 @@ export const verifyEmailExists = async (req, res) => {
           }
           
           console.log(`✅ Found user as ${config.type}: ${userName}`);
+
+          // Generate reset code
+          const verificationCode = generateVerificationCode();
+          const expiresAt = Date.now() + (10 * 60 * 1000);
           
-          // Return success - frontend will send email via EmailJS
+          // Store reset code
+          resetCodes.set(email.toLowerCase(), {
+            code: verificationCode,
+            expiresAt: expiresAt,
+            verified: false,
+            attempts: 0
+          });
+
+          // Dispatch email securely from backend
+          try {
+            await emailService.sendPasswordResetCodeEmail({
+              email: email,
+              userName: userName,
+              verificationCode: verificationCode,
+              expiryMinutes: 10
+            });
+            console.log('✅ Reset code dispatched securely from backend to:', email);
+          } catch (emailError) {
+            console.error('❌ Failed to send reset code email:', emailError);
+            return res.status(500).json({
+              success: false,
+              message: 'Failed to send verification email. Please try again.'
+            });
+          }
+          
+          // Return success - frontend will NO LONGER send email via EmailJS
           return res.status(200).json({
             success: true,
-            message: 'Email verified',
+            message: 'Email verified and reset code sent',
             userType: config.type,
             userName: userName,
             userId: user[config.idField]
@@ -243,7 +270,6 @@ export const storeResetCode = async (req, res) => {
       });
     }
     
-    console.log('📝 Storing reset code for:', email);
     
     const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
     
@@ -295,7 +321,6 @@ export const resendResetCode = async (req, res) => {
       });
     }
     
-    console.log('🔄 Resending reset code for:', email);
     
     connection = await createConnection();
     
@@ -402,7 +427,6 @@ export const verifyResetCode = async (req, res) => {
       });
     }
     
-    console.log('🔐 Verifying reset code for:', email);
     
     const storedData = resetCodes.get(email.toLowerCase());
     
@@ -476,7 +500,6 @@ export const resetPassword = async (req, res) => {
       });
     }
     
-    console.log('🔐 Resetting password for:', email);
     
     // Verify the code is valid and verified
     const storedData = resetCodes.get(email.toLowerCase());
@@ -597,13 +620,11 @@ export const resetPassword = async (req, res) => {
       finalPassword = await bcrypt.hash(newPassword, 10);
       updateQuery = `UPDATE credential SET password_hash = ? WHERE credential_id = ?`;
       updateId = credRows[0].credential_id;
-      console.log('🔐 Password bcrypt-hashed, updating credential table...');
     } else {
       // Web users use AES-256-GCM encryption in their own table
       finalPassword = encryptData(newPassword);
       updateQuery = `UPDATE ${foundConfig.updateTable} SET ${foundConfig.passwordField} = ? WHERE ${foundConfig.updateIdField} = ?`;
       updateId = foundUser[foundConfig.idField];
-      console.log('🔐 Password AES-encrypted, updating database...');
     }
 
     await connection.execute(updateQuery, [finalPassword, updateId]);

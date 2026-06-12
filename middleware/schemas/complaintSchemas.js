@@ -1,0 +1,33 @@
+// ===== COMPLAINT VALIDATION SCHEMAS =====
+import Joi from 'joi';
+import { id, name, email, phone, shortText, mediumText, longText, priorityEnum } from './commonSchemas.js';
+
+// POST /api/complaints
+export const createComplaintSchema = Joi.object({
+  complaint_type: Joi.string().max(100).trim().required(),
+  sender_name: Joi.string().max(200).trim().required(),
+  sender_contact: phone.allow('', null),
+  sender_email: email.allow('', null),
+  stallholder_id: id.allow(null),
+  stall_id: id.allow(null),
+  branch_id: id.allow(null),
+  subject: Joi.string().max(300).trim().required(),
+  description: longText.required(),
+  evidence: mediumText.allow('', null),
+  priority: priorityEnum.allow('', null)
+});
+
+// PUT /api/complaints/:id
+export const updateComplaintSchema = Joi.object({
+  complaint_type: Joi.string().max(100).trim().allow('', null),
+  subject: Joi.string().max(300).trim().allow('', null),
+  description: longText.allow('', null),
+  priority: priorityEnum.allow('', null),
+  status: Joi.string().valid('pending', 'in-progress', 'resolved', 'rejected').allow('', null)
+});
+
+// PUT /api/complaints/:id/resolve
+export const resolveComplaintSchema = Joi.object({
+  resolution_notes: longText.required(),
+  status: Joi.string().valid('resolved', 'rejected').allow('', null)
+});

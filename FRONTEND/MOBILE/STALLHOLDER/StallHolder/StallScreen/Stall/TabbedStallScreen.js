@@ -145,20 +145,20 @@ const TabbedStallScreen = () => {
       // Get user data from storage
       const userData = await UserStorageService.getUserData();
       
-      console.log('🔍 Retrieved user data from storage:', JSON.stringify(userData, null, 2));
+      // console.log('🔍 Retrieved user data from storage:', JSON.stringify(userData, null, 2));
       
       if (!userData || !userData.user) {
-        console.log('❌ No user data found or missing user object');
+        // console.log('❌ No user data found or missing user object');
         showAlert('error', 'Error', 'User not logged in. Please login again.');
         return;
       }
       
       setUserData(userData);
-      console.log('👤 User data loaded:', {
-        fullName: getSafeUserName(userData.user, 'User'),
-        applicantId: userData.user.applicant_id,
-        username: userData.user.username
-      });
+      // console.log('👤 User data loaded:', {
+      //   fullName: getSafeUserName(userData.user, 'User'),
+      //   applicantId: userData.user.applicant_id,
+      //   username: userData.user.username
+      // });
       
       // Get user applications
       const applications = userData.applications?.my_applications || [];
@@ -172,7 +172,7 @@ const TabbedStallScreen = () => {
       }
       
       // Fetch stalls by type from backend API
-      console.log(`🔄 Loading ${activeTab} stalls...`);
+      // console.log(`🔄 Loading ${activeTab} stalls...`);
       const response = await ApiService.getStallsByType(activeTab, applicantId);
       
       if (response.success && response.data.stalls && response.data.stalls.length > 0) {
@@ -207,15 +207,15 @@ const TabbedStallScreen = () => {
         const uniqueLocations = [...new Set(transformedStalls.map(stall => stall.location))];
         setAvailableFilters(['ALL', ...uniqueLocations]);
         
-        console.log(`✅ Loaded ${transformedStalls.length} ${activeTab} stalls`);
+        // console.log(`✅ Loaded ${transformedStalls.length} ${activeTab} stalls`);
         
         // Show info message about area restriction
         if (response.data.restriction_info) {
           const areas = response.data.restriction_info.areas_with_access?.join(', ') || 'your applied areas';
-          console.log(`ℹ️ Showing ${activeTab} stalls from: ${areas}`);
+          // console.log(`ℹ️ Showing ${activeTab} stalls from: ${areas}`);
         }
       } else {
-        console.log(`No ${activeTab} stalls available:`, response.message);
+        // console.log(`No ${activeTab} stalls available:`, response.message);
         setStallsData([]);
         setAvailableFilters(['ALL']);
         
