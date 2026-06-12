@@ -4,7 +4,6 @@ import { createConnection } from '../../../../config/database.js'
 export const getCurrentUser = async (req, res) => {
   let connection;
   try {
-    console.log('🔍 getCurrentUser called - checking authentication');
     const user = req.user; // From auth middleware
 
     if (!user) {
@@ -25,7 +24,6 @@ export const getCurrentUser = async (req, res) => {
     connection = await createConnection();
 
     if (user.role === 'admin') {
-      console.log('🔍 Fetching admin data for ID:', user.userId);
       const [adminResult] = await connection.execute(
         'CALL sp_getAdminById(?)',
         [user.userId]
@@ -70,7 +68,6 @@ export const getCurrentUser = async (req, res) => {
       });
 
     } else if (user.role === 'branch_manager') {
-      console.log('🔍 Fetching branch manager data for ID:', user.branchManagerId || user.userId);
       const [managerResult] = await connection.execute(
         'CALL sp_getBranchManagerForCurrentUser(?)',
         [user.branchManagerId || user.userId]

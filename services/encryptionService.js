@@ -19,18 +19,27 @@ const AUTH_TAG_LENGTH = 16;  // 16 bytes authentication tag
 const KEY_LENGTH = 32;       // 32 bytes = 256 bits
 
 /**
- * Get the encryption key from environment or generate a consistent one
- * IMPORTANT: Store DATA_ENCRYPTION_KEY in .env file
+ * Get the encryption key from environment variables.
+ * Throws a descriptive error at startup if DATA_ENCRYPTION_KEY or ENCRYPTION_SALT is missing,
+ * so misconfigured deployments fail immediately rather than silently using a known fallback.
  */
 const getEncryptionKey = () => {
   const key = process.env.DATA_ENCRYPTION_KEY;
+  const salt = process.env.ENCRYPTION_SALT;
   if (!key) {
-    console.warn('⚠️ DATA_ENCRYPTION_KEY not set in environment! Using default key.');
-    // Default key for development - CHANGE IN PRODUCTION!
-    return crypto.scryptSync('DigiStall2025SecureKeyForEncryption123', 'digistall-salt-v2', KEY_LENGTH);
+    throw new Error(
+      '[encryptionService] DATA_ENCRYPTION_KEY is not set. ' +
+      'Add it to your .env file. See .env.example for details.'
+    );
   }
-  // Derive a proper 256-bit key from the environment key
-  return crypto.scryptSync(key, 'digistall-salt-v2', KEY_LENGTH);
+  if (!salt) {
+    throw new Error(
+      '[encryptionService] ENCRYPTION_SALT is not set. ' +
+      'Add it to your .env file. See .env.example for details.'
+    );
+  }
+  // Derive a proper 256-bit key from the environment key + salt
+  return crypto.scryptSync(key, salt, KEY_LENGTH);
 };
 
 // Cache the key to avoid repeated derivation

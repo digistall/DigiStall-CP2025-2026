@@ -14,7 +14,6 @@ export const placeBid = async (req, res) => {
       });
     }
 
-    console.log(`💰 Applicant ${applicantId} placing bid ₱${bidAmount} for stall ${stallId}`);
 
     connection = await createConnection();
 
@@ -109,7 +108,6 @@ export const placeBid = async (req, res) => {
       startTime = new Date();
       endTime = new Date(startTime.getTime() + (auction.duration_hours * 60 * 60 * 1000));
 
-      console.log(`🚀 First bid! Starting timer: ${auction.duration_hours} hours`);
       console.log(`⏰ Start: ${startTime}, End: ${endTime}`);
 
       // Update auction with timer

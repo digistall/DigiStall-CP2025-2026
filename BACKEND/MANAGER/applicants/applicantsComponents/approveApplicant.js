@@ -1,5 +1,6 @@
 import { createConnection } from '../../../../config/database.js';
 import { decryptData, encryptData } from '../../../../services/encryptionService.js';
+import { sendEmail } from '../../../utils/emailService.js';
 
 // Helper function to decrypt data safely (handles both encrypted and plain text)
 const decryptSafe = (value) => {
@@ -40,13 +41,10 @@ export const approveApplicant = async (req, res) => {
     // Password is optional — if applicant already has credentials, we skip credential creation
     const { password } = req.body;
 
-    console.log(`🎯 Attempting to approve applicant ID: ${id}`);
-    console.log(`📝 Received password:`, password ? '***' : 'undefined/skipped');
 
     connection = await createConnection();
     await connection.beginTransaction();
 
-    console.log(`🔍 Checking if applicant ID ${id} exists...`);
 
     // Check if applicant exists with full details for stallholder creation
     const [applicantRows] = await connection.execute(
@@ -65,7 +63,6 @@ export const approveApplicant = async (req, res) => {
       [id]
     );
 
-    console.log(`📊 Query result: Found ${applicantRows.length} applicant(s) for ID ${id}`);
 
     if (applicantRows.length === 0) {
       console.log(`❌ Applicant ID ${id} not found in database`);
@@ -73,7 +70,6 @@ export const approveApplicant = async (req, res) => {
       const [allApplicants] = await connection.execute(
         'SELECT applicant_id, applicant_full_name FROM applicant ORDER BY applicant_id'
       );
-      console.log(`📋 Available applicants:`, allApplicants.map(a => `ID: ${a.applicant_id}, Name: ${a.applicant_full_name}`));
       
       return res.status(404).json({
         success: false,
@@ -103,7 +99,6 @@ export const approveApplicant = async (req, res) => {
       encrypted_email: ensureEncrypted(applicantRaw.email_address)
     };
     
-    console.log(`📋 Decrypted applicant:`, { name: applicant.applicant_full_name, email: applicant.email_address });
 
     // Use email as username
     const username = applicant.email_address;
@@ -122,7 +117,6 @@ export const approveApplicant = async (req, res) => {
     );
 
     const alreadyHasCredentials = existingCredential.length > 0;
-    console.log(`🔑 Applicant ${applicant.applicant_id} already has credentials: ${alreadyHasCredentials}`);
 
     // If no existing credentials, password is required
     if (!alreadyHasCredentials && !password) {
@@ -160,7 +154,6 @@ export const approveApplicant = async (req, res) => {
         [id]
       );
       console.log(`❌ No pending application found for applicant ID ${id}`);
-      console.log(`🔍 DEBUG - All applications for this applicant:`, debugRows);
       
       await connection.rollback();
       return res.status(400).json({
@@ -171,7 +164,6 @@ export const approveApplicant = async (req, res) => {
     }
 
     const application = applicationRows[0];
-    console.log(`📋 Found pending application:`, application);
 
     // Only create credentials if the applicant doesn't already have them
     if (!alreadyHasCredentials) {
@@ -213,7 +205,6 @@ export const approveApplicant = async (req, res) => {
     console.log(`✅ Application ${application.application_id} status updated to Approved`);
 
     // 3. Create stallholder record with ENCRYPTED data
-    console.log(`🔐 Inserting stallholder with encrypted data...`);
 
     // Check if stallholder already exists
     const [existingStallholder] = await connection.execute(
@@ -225,7 +216,6 @@ export const approveApplicant = async (req, res) => {
 
     if (existingStallholder.length > 0) {
       stallholderId = existingStallholder[0].stallholder_id;
-      console.log('⚠️ Stallholder already exists, updating...');
       await connection.execute(
         `UPDATE stallholder SET 
           mobile_user_id = ?,
@@ -305,11 +295,26 @@ export const approveApplicant = async (req, res) => {
 
     console.log(`✅ Applicant ${applicant.applicant_full_name} approved successfully`);
 
+    // Dispatch credentials email securely from the backend (if this is a new credential)
+    let emailSent = false;
+    if (!alreadyHasCredentials) {
+      emailSent = await sendEmail({
+        to_name: applicant.applicant_full_name,
+        to_email: applicant.email_address,
+        user_username: username,
+        user_password: password,
+      }, process.env.EMAILJS_APPROVE_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID);
+      
+      if (!emailSent) {
+        console.warn(`⚠️ Applicant approved, but failed to send credentials email to ${applicant.email_address}`);
+      }
+    }
+
     res.json({
       success: true,
       message: alreadyHasCredentials 
         ? 'Applicant approved successfully. Existing account used — stall assigned directly.'
-        : 'Applicant approved successfully. Stallholder record created and stall assigned.',
+        : (emailSent ? 'Applicant approved successfully. Credentials sent to email and stall assigned.' : 'Applicant approved successfully, but email failed to send.'),
       data: {
         applicant_id: applicant.applicant_id,
         stallholder_id: stallholderId,
@@ -320,9 +325,11 @@ export const approveApplicant = async (req, res) => {
         branch_id: application.branch_id,
         move_in_date: new Date().toISOString().split('T')[0],
         approved_at: new Date().toISOString(),
-        credentials_already_existed: alreadyHasCredentials
+        credentials_already_existed: alreadyHasCredentials,
+        email_sent: emailSent
       }
     });
+
 
   } catch (error) {
     if (connection) {

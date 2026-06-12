@@ -1,4 +1,6 @@
 import { createConnection } from '../../../config/database.js';
+import { calculateStallholderPaymentStatus } from '../../config/paymentStatusHelper.js';
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
  * Get payment records for a stallholder
@@ -10,7 +12,6 @@ export const getPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token:', JSON.stringify(userData, null, 2));
     
     const { page = 1, limit = 10 } = req.query;
     const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 10)); // Sanitize limit (1-100)
@@ -24,7 +25,6 @@ export const getPaymentRecords = async (req, res) => {
     let stallholderIds = [];
     
     if (lookupId) {
-      console.log('🔍 Looking up stallholder_ids for applicant/user ID:', lookupId);
       const [stallholderResult] = await connection.execute(
         'CALL sp_getStallholderIdByApplicant(?)',
         [lookupId]
@@ -43,7 +43,6 @@ export const getPaymentRecords = async (req, res) => {
       });
     }
     
-    console.log('📋 Fetching payment records for stallholders:', stallholderIds, 'page:', pageInt, 'limit:', limitInt);
     
     // Build placeholders for IN clause
     const placeholders = stallholderIds.map(() => '?').join(',');
@@ -152,7 +151,6 @@ export const getAllPaymentRecords = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token (getAllPaymentRecords):', JSON.stringify(userData, null, 2));
     
     connection = await createConnection();
     
@@ -167,7 +165,6 @@ export const getAllPaymentRecords = async (req, res) => {
       });
     }
     
-    console.log('🔍 Looking up ALL stallholder_ids for applicant/user ID:', lookupId);
     const [stallholderResult] = await connection.execute(
       'CALL sp_getStallholderIdByApplicant(?)',
       [lookupId]
@@ -183,18 +180,41 @@ export const getAllPaymentRecords = async (req, res) => {
     }
     
     console.log('✅ Found stallholder_ids:', stallholderIds);
-    console.log('📋 Fetching ALL payment records for all stallholders...');
     
     // Fetch payments for ALL stallholders (regular + penalty)
     let allPayments = [];
     for (const shId of stallholderIds) {
-      // Get regular payments via stored procedure
-      const [paymentResult] = await connection.execute(
-        'CALL sp_getAllPaymentsByStallholder(?)',
+      // Get regular payments via direct query to include promise_to_pay_date
+      const [payments] = await connection.execute(
+        `SELECT 
+          p.payment_id,
+          p.stallholder_id,
+          p.payment_method,
+          p.amount,
+          p.payment_date,
+          p.payment_time,
+          p.payment_for_month,
+          p.payment_type,
+          p.reference_number,
+          p.collected_by,
+          p.payment_status,
+          p.notes,
+          p.branch_id,
+          p.created_at,
+          p.promise_to_pay_date,
+          b.branch_name,
+          s.stall_number,
+          s.stall_type
+        FROM payments p
+        LEFT JOIN branch b ON p.branch_id = b.branch_id
+        LEFT JOIN stallholder sh ON p.stallholder_id = sh.stallholder_id
+        LEFT JOIN stall s ON sh.stall_id = s.stall_id
+        WHERE p.stallholder_id = ?
+        ORDER BY p.payment_date DESC, p.created_at DESC`,
         [shId]
       );
-      const payments = (paymentResult[0] || []).map(p => ({ ...p, source: 'regular' }));
-      allPayments = allPayments.concat(payments);
+      const regularPayments = (payments || []).map(p => ({ ...p, source: 'regular' }));
+      allPayments = allPayments.concat(regularPayments);
       
       // Get penalty payments
       const [penaltyResult] = await connection.query(
@@ -240,13 +260,35 @@ export const getAllPaymentRecords = async (req, res) => {
       createdAt: payment.created_at,
       // NEW: Include stall information
       stallNumber: payment.stall_number || 'N/A',
-      stallType: payment.stall_type || 'N/A'
+      stallType: payment.stall_type || 'N/A',
+      promiseToPayDate: payment.promise_to_pay_date ? formatDate(payment.promise_to_pay_date) : null
     }));
     
     // Sort by date descending (latest first)
     formattedPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     console.log(`✅ Found ${allPayments.length} total payment records for ${stallholderIds.length} stall(s)`);
+
+    // Log view receipt / payment history activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: lookupId,
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed payment receipt / history (${formattedPayments.length} record(s))`,
+        module: 'Payments',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view receipt activity:', logErr);
+    }
     
     return res.status(200).json({
       success: true,
@@ -282,7 +324,6 @@ export const getPaymentSummary = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token (getPaymentSummary):', JSON.stringify(userData, null, 2));
     
     connection = await createConnection();
     
@@ -291,7 +332,6 @@ export const getPaymentSummary = async (req, res) => {
     const lookupId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
     if (lookupId) {
-      console.log('🔍 Looking up stallholder_id for applicant/user ID:', lookupId);
       const [stallholderResult] = await connection.execute(
         'CALL sp_getStallholderIdByApplicant(?)',
         [lookupId]
@@ -309,7 +349,6 @@ export const getPaymentSummary = async (req, res) => {
       });
     }
     
-    console.log('📊 Fetching payment summary for stallholder:', stallholderId);
     
     // Get payment summary statistics using stored procedure
     const [summaryResult] = await connection.execute(
@@ -329,6 +368,27 @@ export const getPaymentSummary = async (req, res) => {
     
     const summaryData = summary[0];
     const stallholder = stallholderInfo[0] || {};
+    
+    // Log view payment summary activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: lookupId,
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: 'Viewed payment summary',
+        module: 'Payments',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging view payment summary activity:', logErr);
+    }
     
     return res.status(200).json({
       success: true,
@@ -371,7 +431,11 @@ export const getPaymentSummary = async (req, res) => {
 function formatDate(date) {
   if (!date) return 'N/A';
   const d = new Date(date);
-  return d.toISOString().split('T')[0]; // YYYY-MM-DD format
+  if (isNaN(d.getTime())) return 'N/A';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatCurrency(amount) {
@@ -433,7 +497,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
   
   try {
     const userData = req.user; // From auth middleware
-    console.log('🔐 User data from token (getMonthlyPaymentStatus):', JSON.stringify(userData, null, 2));
     
     const applicantId = userData.applicantId || userData.applicant_id || userData.userId || userData.id;
     
@@ -444,7 +507,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       });
     }
     
-    console.log('📅 Fetching monthly payment status for applicant:', applicantId);
     
     connection = await createConnection();
     
@@ -454,7 +516,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       [applicantId]
     );
     const allStalls = spResult[0] || [];
-    console.log('📅 Found stalls:', allStalls.length);
     
     if (allStalls.length === 0) {
       await connection.end();
@@ -482,7 +543,6 @@ export const getMonthlyPaymentStatus = async (req, res) => {
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const currentMonthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
-    console.log('📅 Checking payment for month:', currentMonth);
 
     // Build payment status for EACH stall
     const stallStatuses = [];
@@ -490,17 +550,15 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       const shId = stallInfo.stallholder_id;
       const monthlyRent = parseFloat(stallInfo.monthly_rent) || 0;
 
-      // Check completed payment
+      // Check completed/paid payments (sum them up in case of multiple partials)
       const [paymentResult] = await connection.execute(
-        `SELECT payment_id, amount, payment_date, payment_status, payment_for_month, payment_type
+        `SELECT SUM(amount) as total_paid, MAX(payment_date) as last_payment_date, MAX(promise_to_pay_date) as promise_date
          FROM payments
          WHERE stallholder_id = ?
-           AND payment_for_month = ?
-           AND payment_status IN ('completed', 'paid')
-           AND payment_type = 'rental'
-         ORDER BY payment_date DESC
-         LIMIT 1`,
-        [shId, currentMonth]
+           AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
+           AND payment_status IN ('completed', 'paid', 'partial')
+           AND payment_type IN ('rental', 'partial_payment')`,
+        [shId, currentMonth, currentMonth]
       );
 
       // Check pending payment
@@ -508,31 +566,59 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         `SELECT payment_id, amount, payment_date, payment_status
          FROM payments
          WHERE stallholder_id = ?
-           AND payment_for_month = ?
+           AND (payment_for_month = ? OR (payment_for_month IS NULL AND DATE_FORMAT(payment_date, '%Y-%m') = ?))
            AND payment_status = 'pending'
-           AND payment_type = 'rental'
+           AND payment_type IN ('rental', 'partial_payment')
          ORDER BY created_at DESC
          LIMIT 1`,
-        [shId, currentMonth]
+        [shId, currentMonth, currentMonth]
       );
 
-      const currentPayment = paymentResult[0];
+      const totalPaid = parseFloat(paymentResult[0]?.total_paid || 0);
+      const lastPaymentDate = paymentResult[0]?.last_payment_date;
+      const promiseDateRaw = paymentResult[0]?.promise_date;
       const pendingPayment = pendingResult[0];
 
       let status = 'unpaid';
       let statusMessage = '';
       let amountDue = monthlyRent;
       let paymentDate = null;
+      let promiseDate = null;
 
-      if (currentPayment) {
+      // Query move_in_date for dynamic calculation
+      let moveInDate = null;
+      try {
+        const [shData] = await connection.execute(
+          'SELECT move_in_date FROM stallholder WHERE stallholder_id = ?',
+          [shId]
+        );
+        moveInDate = shData[0]?.move_in_date || stallInfo.contract_start_date || stallInfo.move_in_date;
+      } catch (err) {
+        moveInDate = stallInfo.contract_start_date || stallInfo.move_in_date;
+      }
+
+      const computedStatus = await calculateStallholderPaymentStatus(connection, shId, moveInDate, monthlyRent, false, currentMonth);
+
+      if (computedStatus === 'paid' || computedStatus === 'discount') {
         status = 'paid';
         statusMessage = `Payment completed for ${currentMonthName}`;
         amountDue = 0;
-        paymentDate = formatDate(currentPayment.payment_date);
-      } else if (pendingPayment) {
+        paymentDate = formatDate(lastPaymentDate);
+      } else if (computedStatus === 'partial') {
+        status = 'partial';
+        statusMessage = `Partial payment recorded for ${currentMonthName}`;
+        amountDue = Math.max(0, monthlyRent - totalPaid);
+        paymentDate = formatDate(lastPaymentDate);
+        promiseDate = promiseDateRaw ? formatDate(promiseDateRaw) : null;
+      } else if (computedStatus === 'pending') {
         status = 'pending';
         statusMessage = `Payment pending verification for ${currentMonthName}`;
         amountDue = monthlyRent;
+      } else if (computedStatus === 'overdue') {
+        status = 'overdue';
+        statusMessage = `Payment overdue! Please settle immediately.`;
+        amountDue = Math.max(0, monthlyRent - totalPaid);
+        paymentDate = formatDate(lastPaymentDate);
       } else {
         status = 'unpaid';
         statusMessage = `Payment due for ${currentMonthName}`;
@@ -549,11 +635,13 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         isPaid: status === 'paid',
         isPending: status === 'pending',
         isUnpaid: status === 'unpaid',
+        isPartial: status === 'partial',
         amountDue: formatCurrency(amountDue),
         amountDueRaw: amountDue,
         monthlyRent: formatCurrency(monthlyRent),
         monthlyRentRaw: monthlyRent,
         paymentDate,
+        promiseDate,
         dueDate: getDueDate(now)
       });
     }
@@ -573,9 +661,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         allStallholderIds
       );
       totalUnpaidViolations = violationRows[0]?.violation_count || 0;
-      console.log('⚠️ Unpaid violations across all stalls:', totalUnpaidViolations);
     } catch (violationErr) {
-      console.error('⚠️ Error checking violations (non-fatal):', violationErr.message);
     }
 
     // Attach violation info to ALL stall statuses
@@ -585,10 +671,95 @@ export const getMonthlyPaymentStatus = async (req, res) => {
       stallStatus.unpaidViolationsCount = totalUnpaidViolations;
     }
 
+    // Check for active partial payments (show reminder 2 days before promised date)
+    let activePartialPayments = [];
+    try {
+      const [partialRows] = await connection.query(
+        `SELECT payment_id, amount, payment_for_month, promise_to_pay_date, stallholder_id 
+         FROM payments 
+         WHERE stallholder_id IN (${violationPlaceholders}) 
+           AND payment_status = 'partial' 
+           AND promise_to_pay_date IS NOT NULL`,
+        allStallholderIds
+      );
+      
+      const today = new Date();
+      const validPartials = [];
+      
+      for (const p of partialRows) {
+        // Check total paid for this specific month
+        const [totalPaidResult] = await connection.query(
+          `SELECT SUM(amount) as total_paid
+           FROM payments
+           WHERE stallholder_id = ?
+             AND payment_for_month = ?
+             AND payment_status IN ('completed', 'paid', 'partial')
+             AND payment_type IN ('rental', 'partial_payment')`,
+          [p.stallholder_id, p.payment_for_month]
+        );
+        const totalPaid = parseFloat(totalPaidResult[0]?.total_paid || 0);
+        
+        // Get the rent for this stallholder
+        const stallInfo = allStalls.find(s => s.stallholder_id === p.stallholder_id);
+        const monthlyRent = parseFloat(stallInfo?.monthly_rent) || 0;
+        
+        // Only keep if NOT fully paid (using 99% threshold for floating point safety)
+        if (totalPaid < monthlyRent * 0.99) {
+          validPartials.push(p);
+        }
+      }
+
+      // Format and filter by days remaining
+      const formattedPartials = validPartials.map(p => {
+        const promiseDate = new Date(p.promise_to_pay_date);
+        const diffTime = promiseDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return {
+          paymentId: p.payment_id,
+          amount: parseFloat(p.amount),
+          paymentForMonth: p.payment_for_month,
+          promiseDate: formatDate(p.promise_to_pay_date),
+          daysRemaining: diffDays
+        };
+      }).filter(p => p.daysRemaining <= 2);
+
+      // Remove duplicates for the same month
+      const seenMonths = new Set();
+      for (const p of formattedPartials) {
+        if (!seenMonths.has(p.paymentForMonth)) {
+          seenMonths.add(p.paymentForMonth);
+          activePartialPayments.push(p);
+        }
+      }
+    } catch (err) {
+    }
+
     await connection.end();
 
     // Use the first stall for backward-compatible single-stall fields
     const primary = stallStatuses[0];
+
+    // Log initiate payment / view payment status activity
+    try {
+      const ipAddress = req.headers?.['x-forwarded-for'] || req.ip || req.connection?.remoteAddress;
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: applicantId,
+        staffName: userData.fullName || userData.full_name || userData.username || 'Stallholder',
+        branchId: null,
+        actionType: 'VIEW',
+        actionDescription: `Viewed monthly payment status / initiated payment screen (${currentMonthName})`,
+        module: 'Payments',
+        ipAddress,
+        userAgent: req.get('User-Agent'),
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      });
+    } catch (logErr) {
+      console.error('❌ Error logging initiate payment activity:', logErr);
+    }
 
     return res.status(200).json({
       success: true,
@@ -596,6 +767,7 @@ export const getMonthlyPaymentStatus = async (req, res) => {
         stalls: stallStatuses,
         currentMonth,
         currentMonthName,
+        activePartialPayments,
         // Legacy single-stall fields for backward compatibility
         ...primary
       }
@@ -630,4 +802,3 @@ function getDueDate(date) {
     year: 'numeric' 
   });
 }
-

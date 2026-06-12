@@ -5,7 +5,7 @@ export const selectAuctionWinner = async (req, res) => {
   let connection;
   try {
     const { auctionId } = req.params;
-    const { participantId, applicantId } = req.body; // Optional: for manual winner selection
+    const { participantId, applicantId, winningBidAmount, remarks } = req.body; // Optional: for manual winner selection
     const branchManagerId = req.user?.branchManagerId || req.user?.userId;
 
     if (!branchManagerId) {
@@ -15,7 +15,6 @@ export const selectAuctionWinner = async (req, res) => {
       });
     }
 
-    console.log(`🎯 Confirming auction winner for auction ${auctionId}`);
 
     connection = await createConnection();
 
@@ -104,7 +103,6 @@ export const selectAuctionWinner = async (req, res) => {
 
       winner = manualWinner[0];
       winnerBidId = winner.bid_id || null;
-      console.log(`👑 Manually selected winner: ${winner.applicant_full_name}`);
     } else {
       // Auto-selection: Get winner info (highest bidder)
       const [winnerInfo] = await connection.execute(
@@ -127,7 +125,30 @@ export const selectAuctionWinner = async (req, res) => {
 
       winner = winnerInfo[0];
       winnerBidId = winner.bid_id;
-      console.log(`👑 Auto-selected highest bidder: ${winner.applicant_full_name} with bid ₱${winner.bid_amount}`);
+    }
+
+    const hasExplicitWinningBid = winningBidAmount !== undefined && winningBidAmount !== null && winningBidAmount !== '';
+    let finalBidAmount = null;
+
+    if (hasExplicitWinningBid) {
+      finalBidAmount = parseFloat(winningBidAmount);
+      if (Number.isNaN(finalBidAmount) || finalBidAmount < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Winning bid amount must be a non-negative number'
+        });
+      }
+    } else if (winner.bid_amount !== undefined && winner.bid_amount !== null) {
+      finalBidAmount = parseFloat(winner.bid_amount);
+    } else if (auction.rental_price !== undefined && auction.rental_price !== null) {
+      finalBidAmount = parseFloat(auction.rental_price);
+    }
+
+    if (finalBidAmount === null || Number.isNaN(finalBidAmount)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to determine winning bid amount'
+      });
     }
 
     // Look up the application for this winner + stall
@@ -178,6 +199,12 @@ export const selectAuctionWinner = async (req, res) => {
     // Begin transaction (use query() not execute() for transaction commands)
     await connection.query('START TRANSACTION');
 
+    const previousPrice = parseFloat(auction.rental_price || 0);
+    await connection.execute(
+      `UPDATE stall SET rental_price = ?, updated_at = NOW() WHERE stall_id = ?`,
+      [finalBidAmount, auction.stall_id]
+    );
+
     // Call stored procedure to finalize auction winner — handles all DB operations atomically
     const app = applicantDetails.length > 0 ? applicantDetails[0] : {};
     const [spResult] = await connection.execute(
@@ -189,7 +216,7 @@ export const selectAuctionWinner = async (req, res) => {
         auction.stall_id,
         branchId,
         branchManagerId,
-        winner.bid_amount || auction.rental_price,
+        finalBidAmount,
         app.applicant_full_name || '',
         app.email_address || '',
         app.applicant_contact_number || '',
@@ -201,8 +228,47 @@ export const selectAuctionWinner = async (req, res) => {
     // Check if auto-removed from other auctions/raffles
     const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
     if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
-      console.log(`🚫 Applicant ${winner.applicant_id} now has ${resultSet[0].new_stall_count} stalls — auto-removed from other auctions/raffles`);
     }
+
+    const formattedPreviousPrice = Number.isFinite(previousPrice) ? previousPrice.toFixed(2) : '0.00';
+    const formattedFinalBid = Number.isFinite(finalBidAmount) ? finalBidAmount.toFixed(2) : '0.00';
+    const notesDetail = remarks ? ` Notes: ${remarks}` : '';
+
+    await connection.execute(
+      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        'Auction',
+        auctionId,
+        'Stall Price Updated',
+        branchManagerId,
+        `Old Price: PHP ${formattedPreviousPrice} | New Price: PHP ${formattedFinalBid}.${notesDetail}`
+      ]
+    );
+
+    await connection.execute(
+      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        'Auction',
+        auctionId,
+        'Ownership Transferred',
+        branchManagerId,
+        `New Owner: ${app.applicant_full_name || winner.applicant_full_name} (Applicant ID: ${winner.applicant_id})`
+      ]
+    );
+
+    await connection.execute(
+      `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        'Auction',
+        auctionId,
+        'Auction Finalized',
+        branchManagerId,
+        `Final bid: PHP ${formattedFinalBid} awarded to ${app.applicant_full_name || winner.applicant_full_name}.${notesDetail}`
+      ]
+    );
 
     // Commit transaction
     await connection.query('COMMIT');
@@ -213,11 +279,11 @@ export const selectAuctionWinner = async (req, res) => {
       [auctionId]
     );
 
-    console.log(`✅ Winner confirmed for auction ${auctionId}: ${winner.applicant_full_name} with bid ₱${winner.bid_amount || 'N/A'}`);
+    console.log(`✅ Winner confirmed for auction ${auctionId}: ${winner.applicant_full_name} with bid ₱${finalBidAmount}`);
 
     res.json({
       success: true,
-      message: `Winner confirmed! ${winner.applicant_full_name} won stall ${auction.stall_number}${winner.bid_amount ? ' with bid ₱' + winner.bid_amount : ''}`,
+      message: `Winner confirmed! ${winner.applicant_full_name} won stall ${auction.stall_number} with bid ₱${finalBidAmount}`,
       data: {
         auctionId: auctionId,
         stallNumber: auction.stall_number,
@@ -226,11 +292,11 @@ export const selectAuctionWinner = async (req, res) => {
           name: winner.applicant_full_name,
           contact: winner.applicant_contact_number,
           applicationId: applicationId,
-          winningBid: winner.bid_amount ? parseFloat(winner.bid_amount) : null
+          winningBid: finalBidAmount
         },
         totalBids: auction.total_bids,
         totalBidders: bidCount[0].bidders,
-        rentalPrice: auction.rental_price
+        rentalPrice: finalBidAmount
       }
     });
 
@@ -253,7 +319,6 @@ export const selectAuctionWinner = async (req, res) => {
 export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
   let connection;
   try {
-    console.log('🔄 Checking for expired auctions...');
 
     connection = await createConnection();
 
@@ -294,7 +359,6 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
             status: 'ended_no_bids'
           });
 
-          console.log(`📝 Auction ${auction.auction_id} closed - no bids`);
           continue;
         }
 
@@ -316,6 +380,12 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
         }
 
         const winner = winnerInfo[0];
+
+        const finalBidAmount = parseFloat(winner.bid_amount);
+        if (Number.isNaN(finalBidAmount) || finalBidAmount < 0) {
+          console.error(`❌ Invalid winning bid amount for auction ${auction.auction_id}`);
+          continue;
+        }
 
         // Look up application
         const [appInfo] = await connection.execute(
@@ -357,6 +427,19 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
           continue;
         }
 
+        await connection.query('START TRANSACTION');
+
+        const [stallPriceInfo] = await connection.execute(
+          `SELECT rental_price FROM stall WHERE stall_id = ?`,
+          [auction.stall_id]
+        );
+        const previousPrice = parseFloat(stallPriceInfo[0]?.rental_price || 0);
+
+        await connection.execute(
+          `UPDATE stall SET rental_price = ?, updated_at = NOW() WHERE stall_id = ?`,
+          [finalBidAmount, auction.stall_id]
+        );
+
         // Use stored procedure to finalize auction winner — handles all DB operations atomically
         const app = applicantDetails.length > 0 ? applicantDetails[0] : {};
         const [spResult] = await connection.execute(
@@ -368,7 +451,7 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
             auction.stall_id,
             branchId,
             auction.created_by,
-            winner.bid_amount,
+            finalBidAmount,
             app.applicant_full_name || '',
             app.email_address || '',
             app.applicant_contact_number || '',
@@ -380,8 +463,48 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
         // Check if auto-removed from other auctions/raffles
         const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
         if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
-          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has ${resultSet[0].new_stall_count} stalls)`);
         }
+
+        const formattedPreviousPrice = Number.isFinite(previousPrice) ? previousPrice.toFixed(2) : '0.00';
+        const formattedFinalBid = Number.isFinite(finalBidAmount) ? finalBidAmount.toFixed(2) : '0.00';
+
+        await connection.execute(
+          `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            'Auction',
+            auction.auction_id,
+            'Stall Price Updated',
+            auction.created_by,
+            `Old Price: PHP ${formattedPreviousPrice} | New Price: PHP ${formattedFinalBid}.`
+          ]
+        );
+
+        await connection.execute(
+          `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            'Auction',
+            auction.auction_id,
+            'Ownership Transferred',
+            auction.created_by,
+            `New Owner: ${app.applicant_full_name || winner.applicant_full_name} (Applicant ID: ${winner.applicant_id})`
+          ]
+        );
+
+        await connection.execute(
+          `INSERT INTO raffle_auction_log (event_type, event_id, action, performed_by, details)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            'Auction',
+            auction.auction_id,
+            'Auction Finalized',
+            auction.created_by,
+            `Final bid: PHP ${formattedFinalBid} awarded to ${app.applicant_full_name || winner.applicant_full_name}.`
+          ]
+        );
+
+        await connection.query('COMMIT');
 
         // Count bidders
         const [bidCount] = await connection.execute(
@@ -393,15 +516,17 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
           auctionId: auction.auction_id,
           stallNumber: auction.stall_number,
           winner: winner.applicant_full_name,
-          winningBid: parseFloat(winner.bid_amount),
+          winningBid: finalBidAmount,
           totalBids: auction.total_bids,
           totalBidders: bidCount[0].bidders,
           status: 'winner_selected'
         });
 
-        console.log(`👑 Auto-confirmed winner for auction ${auction.auction_id}: ${winner.applicant_full_name} (₱${winner.bid_amount})`);
 
       } catch (error) {
+        if (connection) {
+          try { await connection.query('ROLLBACK'); } catch (e) { /* ignore rollback error */ }
+        }
         console.error(`❌ Error processing auction ${auction.auction_id}:`, error);
         results.push({
           auctionId: auction.auction_id,
@@ -429,4 +554,3 @@ export const autoSelectWinnerForExpiredAuctions = async (req, res) => {
     if (connection) await connection.end();
   }
 };
-

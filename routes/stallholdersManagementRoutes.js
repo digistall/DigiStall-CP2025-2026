@@ -17,6 +17,14 @@ import {
 import authMiddleware from '../middleware/auth.js';
 import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  createStallholderSchema, updateStallholderSchema, importStallholdersSchema
+} from '../middleware/schemas/stallholderSchemas.js';
+import {
+  createDocumentRequirementSchema, updateDocumentRequirementSchema
+} from '../middleware/schemas/documentSchemas.js';
+
 const router = express.Router();
 
 // Apply authentication to all routes
@@ -28,6 +36,20 @@ router.use(authMiddleware.authenticateToken);
  * @access Protected (Admin, Manager, Owner)
  */
 router.get('/', StallholderController.getAllStallholders);
+
+/**
+ * @route GET /api/stallholders-management/template
+ * @desc Download Excel template
+ * @access Protected
+ */
+router.get('/template', StallholderController.downloadExcelTemplate);
+
+/**
+ * @route GET /api/stallholders-management/available-stalls
+ * @desc Get available stalls for assignment
+ * @access Protected
+ */
+router.get('/available-stalls', StallholderController.getAvailableStalls);
 
 /**
  * @route GET /api/stallholders-management/:id
@@ -48,14 +70,14 @@ router.get('/:id/violations', StallholderController.getViolationHistory);
  * @desc Create a new stallholder
  * @access Protected (Admin, Manager)
  */
-router.post('/', viewOnlyForOwners, StallholderController.createStallholder);
+router.post('/', viewOnlyForOwners, validate(createStallholderSchema), StallholderController.createStallholder);
 
 /**
  * @route PUT /api/stallholders-management/:id
  * @desc Update a stallholder
  * @access Protected (Admin, Manager)
  */
-router.put('/:id', viewOnlyForOwners, StallholderController.updateStallholder);
+router.put('/:id', viewOnlyForOwners, validate(updateStallholderSchema), StallholderController.updateStallholder);
 
 /**
  * @route DELETE /api/stallholders-management/:id
@@ -72,13 +94,6 @@ router.delete('/:id', viewOnlyForOwners, StallholderController.deleteStallholder
 router.post('/import', viewOnlyForOwners, StallholderController.importFromExcel);
 
 /**
- * @route GET /api/stallholders-management/template
- * @desc Download Excel template
- * @access Protected
- */
-router.get('/template', StallholderController.downloadExcelTemplate);
-
-/**
  * @route POST /api/stallholders-management/preview
  * @desc Preview Excel data before import
  * @access Protected (Admin, Manager)
@@ -90,14 +105,7 @@ router.post('/preview', viewOnlyForOwners, StallholderController.previewExcelDat
  * @desc Import Excel data (after preview)
  * @access Protected (Admin, Manager)
  */
-router.post('/import-data', viewOnlyForOwners, StallholderController.importExcelData);
-
-/**
- * @route GET /api/stallholders-management/available-stalls
- * @desc Get available stalls for assignment
- * @access Protected
- */
-router.get('/available-stalls', StallholderController.getAvailableStalls);
+router.post('/import-data', viewOnlyForOwners, validate(importStallholdersSchema), StallholderController.importExcelData);
 
 // ============================================================
 // DOCUMENT REQUIREMENT ROUTES
@@ -122,14 +130,14 @@ router.get('/documents/requirements', getBranchDocumentRequirements);
  * @desc Create a new document requirement for a branch
  * @access Protected (Owner, Manager)
  */
-router.post('/documents/requirements', viewOnlyForOwners, createBranchDocumentRequirement);
+router.post('/documents/requirements', viewOnlyForOwners, validate(createDocumentRequirementSchema), createBranchDocumentRequirement);
 
 /**
  * @route PUT /api/stallholders/documents/requirements/:documentTypeId
  * @desc Update a document requirement (is_required, instructions)
  * @access Protected (Owner, Manager)
  */
-router.put('/documents/requirements/:documentTypeId', viewOnlyForOwners, setBranchDocumentRequirement);
+router.put('/documents/requirements/:documentTypeId', viewOnlyForOwners, validate(updateDocumentRequirementSchema), setBranchDocumentRequirement);
 
 /**
  * @route DELETE /api/stallholders/documents/requirements/:documentTypeId

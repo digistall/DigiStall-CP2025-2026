@@ -22,7 +22,6 @@ export const mobileChangePassword = async (req, res) => {
     const userId = req.user?.id || req.user?.userId || req.user?.registrationId;
     const userType = req.user?.userType || req.user?.type || 'stallholder';
     
-    console.log('🔐 Password change request for user:', userId, 'type:', userType);
     
     // Validate input
     if (!currentPassword || !newPassword) {
@@ -96,7 +95,6 @@ export const mobileChangePassword = async (req, res) => {
         } else {
           // Legacy plain text password (temporary support)
           isValidPassword = currentPassword === credential.password_hash;
-          console.log('⚠️ User has legacy plain text password, will be upgraded to bcrypt');
         }
       } catch (error) {
         console.error('❌ Password verification error:', error);
@@ -159,7 +157,6 @@ export const mobileChangePassword = async (req, res) => {
           isValidPassword = await bcrypt.compare(currentPassword, staff.password);
         } else {
           isValidPassword = currentPassword === staff.password;
-          console.log('⚠️ Staff has legacy plain text password, will be upgraded to bcrypt');
         }
       } catch (error) {
         console.error('❌ Staff password verification error:', error);

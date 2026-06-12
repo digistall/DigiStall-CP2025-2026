@@ -40,6 +40,13 @@ export default {
         operation: 'login',
         operationType: 'user',
       },
+      warningPopup: {
+        show: false,
+        message: 'You have 1 last attempt before you get banned for 15mins.',
+        type: 'warning',
+        operation: 'login',
+        operationType: 'user',
+      },
       emailRules: [
         (v) => !!v || 'Email is required',
         (v) => /.+@.+\..+/.test(v) || 'Email must be valid',
@@ -175,9 +182,14 @@ export default {
           this.currentLoadingStep = 0
           this.currentProgress = 0
           
-          const errorMessage = result.message || 'Login failed. Please check your credentials and try again.'
-          this.showErrorMessage(errorMessage)
-          console.error('❌ Login failed:', errorMessage)
+          if (result.warning) {
+            this.warningPopup.show = true
+            console.warn('⚠️ Login warning:', this.warningPopup.message)
+          } else {
+            const errorMessage = result.message || 'Login failed. Please check your credentials and try again.'
+            this.showErrorMessage(errorMessage)
+            console.error('❌ Login failed:', errorMessage)
+          }
         }
       } catch (error) {
         this.loading = false

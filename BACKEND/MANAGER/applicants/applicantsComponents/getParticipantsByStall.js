@@ -15,7 +15,6 @@ export const getParticipantsByStall = async (req, res) => {
       });
     }
 
-    console.log(`🔍 Fetching participants for stall ID: ${stall_id}`);
 
     // First, let's get basic participant data without potentially missing tables
     const [participants] = await connection.execute(

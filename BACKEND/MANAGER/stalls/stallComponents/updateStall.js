@@ -52,7 +52,6 @@ export const updateStall = async (req, res) => {
       if (areaSqm > 0) {
         ratePerSqm = Math.round((rentalPrice / areaSqm) * 100) / 100;
       }
-      console.log(`?? RENTAL RATE 2010: ${baseRate} | Monthly Rent (�2): ${rentalPrice} | Rate/sqm: ${ratePerSqm}`);
     } else {
       rentalPrice = parseFloat(updateData.rental_price || updateData.price || 0) || null;
     }
@@ -67,10 +66,7 @@ export const updateStall = async (req, res) => {
     const deadline = updateData.raffle_auction_deadline || updateData.deadline;
     const parsedDeadline = deadline ? new Date(deadline) : null;
 
-    console.log('?? Update stall params:', {
-      id, stallNo, stallLocation, size, floorId, sectionId, 
-      rentalPrice, baseRate, areaSqm, ratePerSqm, priceType, status, description, isAvailable
-    });
+
 
     // Get the branch the stall belongs to
     const [stallBranch] = await connection.execute(
@@ -245,7 +241,6 @@ export const updateStall = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("? Update stall error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update stall",

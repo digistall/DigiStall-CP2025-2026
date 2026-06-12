@@ -21,7 +21,6 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       });
     }
 
-    console.log('📄 Fetching stallholder stalls with documents for applicant:', applicantId);
 
     // Get stallholder info and their stalls using direct query
     // Check both mobile_user_id AND applicant_id since new stallholders may only have applicant_id set
@@ -47,12 +46,11 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       FROM stallholder sh
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
-      WHERE sh.mobile_user_id = ? OR sh.applicant_id = ?`,
+      WHERE (sh.mobile_user_id = ? OR sh.applicant_id = ?)
+      AND sh.status = 'active' AND sh.stall_id IS NOT NULL`,
       [applicantId, applicantId]
     );
 
-    console.log('📊 Query result - stallholderStalls:', stallholderStalls.length, 'found');
-    console.log('📊 Stalls data:', JSON.stringify(stallholderStalls, null, 2));
 
     if (stallholderStalls.length === 0) {
       return res.status(200).json({
@@ -95,6 +93,13 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       }
     });
 
+    // Fetch applicant's valid_id from other_information as a backup fallback
+    const [otherInfoRows] = await connection.execute(
+      'SELECT valid_id FROM other_information WHERE applicant_id = ?',
+      [applicantId]
+    );
+    const profileValidId = otherInfoRows[0]?.valid_id;
+
     // Group stalls by branch with their document requirements
     const groupedByBranch = [];
     const branchMap = new Map();
@@ -131,34 +136,75 @@ export const getStallholderStallsWithDocuments = async (req, res) => {
       });
 
       // Add document requirements with upload status
-      if (branchDocRequirements[stall.branch_id] && branch.document_requirements.length === 0) {
-        branch.document_requirements = branchDocRequirements[stall.branch_id].map(req => {
+      if (branch.document_requirements.length === 0) {
+        const rawRequirements = branchDocRequirements[stall.branch_id] || [];
+        
+        // Ensure Valid ID (document_type_id = 3) is always in the requirements list
+        const hasValidIdReq = rawRequirements.some(req => req.document_type_id === 3);
+        let finalRequirements = [...rawRequirements];
+        
+        if (!hasValidIdReq) {
+          finalRequirements.unshift({
+            requirement_id: 0,
+            document_type_id: 3,
+            document_name: 'Valid ID',
+            document_description: 'Government-issued Valid ID (e.g. Passport, UMID, Driver\'s License, National ID)',
+            is_required: 1,
+            instructions: 'Upload a clear scan or photo of your government-issued ID.'
+          });
+        }
+
+        branch.document_requirements = finalRequirements.map(req => {
           const uploadKey = `${stall.stallholder_id}_${req.document_type_id}`;
           const uploadedDoc = uploadedDocsMap[uploadKey];
           
+          let status = uploadedDoc ? uploadedDoc.verification_status : 'not_uploaded';
+          let documentId = uploadedDoc?.document_id || null;
+          let uploadDate = uploadedDoc?.upload_date || null;
+          let filePath = uploadedDoc?.file_path || null;
+          let originalFilename = uploadedDoc?.original_filename || null;
+          let fileName = uploadedDoc?.original_filename || null;
+          let mimeType = uploadedDoc?.mime_type || null;
+          let fileSize = uploadedDoc?.file_size || null;
+          let expiryDate = uploadedDoc?.expiry_date || null;
+          let daysUntilExpiry = uploadedDoc?.days_until_expiry || null;
+          let rejectionReason = uploadedDoc?.rejection_reason || null;
+          let verifiedAt = uploadedDoc?.verified_at || null;
+          
+          // Fallback to profile Valid ID if not uploaded as stallholder doc
+          if (req.document_type_id === 3 && status === 'not_uploaded' && profileValidId) {
+            status = 'verified';
+            documentId = 'profile_id';
+            filePath = profileValidId;
+            fileName = 'Profile Valid ID';
+            originalFilename = 'Profile Valid ID';
+            mimeType = 'image/png';
+            uploadDate = new Date().toISOString();
+          }
+          
           return {
-            requirement_id: req.requirement_id,
+            requirement_id: req.requirement_id || 0,
             document_type_id: req.document_type_id,
             document_name: req.document_name,
-            description: req.document_description,
+            description: req.description || req.document_description,
             is_required: req.is_required,
             instructions: req.instructions,
-            // Upload status and document details
-            status: uploadedDoc ? uploadedDoc.verification_status : 'not_uploaded',
-            document_id: uploadedDoc?.document_id || null,
-            upload_date: uploadedDoc?.upload_date || null,
-            file_path: uploadedDoc?.file_path || null,
-            original_filename: uploadedDoc?.original_filename || null,
-            file_name: uploadedDoc?.original_filename || null,
-            mime_type: uploadedDoc?.mime_type || null,
-            file_size: uploadedDoc?.file_size || null,
-            expiry_date: uploadedDoc?.expiry_date || null,
-            days_until_expiry: uploadedDoc?.days_until_expiry || null,
-            rejection_reason: uploadedDoc?.rejection_reason || null,
-            verified_at: uploadedDoc?.verified_at || null,
-            // Add blob_url for image preview
-            blob_url: uploadedDoc?.document_id 
-              ? `http://68.183.154.125:5001/api/mobile/stallholder/documents/blob/id/${uploadedDoc.document_id}`
+            status,
+            document_id: documentId,
+            upload_date: uploadDate,
+            file_path: filePath,
+            original_filename: originalFilename,
+            file_name: fileName,
+            mime_type: mimeType,
+            file_size: fileSize,
+            expiry_date: expiryDate,
+            days_until_expiry: daysUntilExpiry,
+            rejection_reason: rejectionReason,
+            verified_at: verifiedAt,
+            blob_url: documentId 
+              ? (documentId === 'profile_id' 
+                  ? profileValidId 
+                  : `http://68.183.154.125:5001/api/mobile/stallholder/documents/blob/id/${documentId}`)
               : null
           };
         });
@@ -215,7 +261,6 @@ export const getBranchDocumentRequirements = async (req, res) => {
       });
     }
 
-    console.log('📄 Fetching document requirements for branch:', branchId);
 
     // Get document requirements for the branch using stored procedure
     const [reqRows] = await connection.execute(
@@ -301,7 +346,6 @@ export const uploadStallholderDocument = async (req, res) => {
       });
     }
 
-    console.log('📤 Uploading document for stallholder:', stallholder_id, 'type:', document_type_id);
 
     // Upload/update document using stored procedure
     const [uploadRows] = await connection.execute(

@@ -52,6 +52,10 @@ import {
   getJoinedStalls
 } from '../BACKEND/STALLHOLDER/stallholder/joinedStallController.js';
 
+// Import app access log controller
+import {
+  logAppAccessScreen
+} from '../BACKEND/STALLHOLDER/stallholder/appAccessController.js';
 // Import face scanner controller
 import {
   checkFaceVerification,
@@ -60,6 +64,10 @@ import {
 
 // Import auth middleware
 import { verifyToken } from '../middleware/auth.js';
+
+import { validate } from '../middleware/validateRequest.js';
+import { logAppAccessSchema } from '../middleware/schemas/mobileSchemas.js';
+import { createComplaintSchema } from '../middleware/schemas/complaintSchemas.js';
 
 const router = express.Router();
 
@@ -216,7 +224,7 @@ router.get('/profile/:stallholder_id', verifyToken, getStallholderProfile);
  * @desc Submit a complaint
  * @access Protected (Stallholder only)
  */
-router.post('/complaint', verifyToken, submitComplaint);
+router.post('/complaint', verifyToken, validate(createComplaintSchema), submitComplaint);
 
 /**
  * @route GET /api/mobile/stallholder/complaints
@@ -282,6 +290,16 @@ router.get('/payments/summary', verifyToken, getPaymentSummary);
 router.get('/payments/monthly-status', verifyToken, getMonthlyPaymentStatus);
 
 // =============================================
+// APP ACCESS LOGGING ROUTE
+// =============================================
+
+/**
+ * @route POST /api/mobile/stallholder/app-access-log
+ * @desc Log a screen view from the mobile app (e.g., Notifications, Reports)
+ * @body  { screen: 'notifications' | 'reports' | 'dashboard' | string }
+ * @access Protected (Stallholder only)
+ */
+router.post('/app-access-log', verifyToken, validate(logAppAccessSchema), logAppAccessScreen);
 // STALLHOLDER FACE SCANNER ROUTES
 // =============================================
 

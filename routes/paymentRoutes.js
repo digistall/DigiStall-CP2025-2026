@@ -5,6 +5,12 @@ import authMiddleware from "../middleware/auth.js";
 import { viewOnlyForOwners } from "../middleware/rolePermissions.js";
 import { authorizePermission } from "../middleware/enhancedAuth.js";
 
+import { validate } from '../middleware/validateRequest.js';
+import {
+  addOnsitePaymentSchema, processViolationPaymentSchema,
+  addDailyPaymentSchema, updateDailyPaymentSchema
+} from '../middleware/schemas/paymentSchemas.js';
+
 const router = express.Router();
 
 /**
@@ -98,6 +104,7 @@ router.post(
   "/onsite",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
+  validate(addOnsitePaymentSchema),
   PaymentController.addOnsitePayment
 );
 
@@ -123,6 +130,7 @@ router.post(
   "/violations/pay",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
+  validate(processViolationPaymentSchema),
   PaymentController.processViolationPayment
 );
 
@@ -188,6 +196,7 @@ router.post(
   "/daily",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
+  validate(addDailyPaymentSchema),
   DailyPaymentController.addDailyPayment
 );
 
@@ -199,6 +208,7 @@ router.put(
   "/daily/:receiptId",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
+  validate(updateDailyPaymentSchema),
   DailyPaymentController.updateDailyPayment
 );
 

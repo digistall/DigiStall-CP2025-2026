@@ -7,6 +7,10 @@
           <v-icon left>mdi-pencil</v-icon>
           Edit Vendor
         </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="$emit('close')" :disabled="loading" color="white" variant="text" size="small">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
       </v-toolbar>
 
       <!-- Tabbed Content -->
@@ -326,7 +330,7 @@
                         outlined
                         density="compact"
                         prepend-inner-icon="mdi-map-marker"
-                        :search-input.sync="locationSearch"
+                        v-model:search-input="locationSearch"
                       ></v-autocomplete>
                     </v-col>
                     <v-col cols="12" md="6">
@@ -445,9 +449,6 @@
 
       <v-card-actions class="px-6 py-4">
         <v-spacer></v-spacer>
-        <v-btn variant="text" @click="$emit('close')" :disabled="loading">
-          Cancel
-        </v-btn>
         <v-btn
           color="primary"
           variant="elevated"

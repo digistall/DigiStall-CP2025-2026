@@ -20,25 +20,6 @@ export default {
   },
   mounted() {
     this.initializePayment()
-    // Opt-in: use table scrolling inside page instead of page scrollbar
-    try {
-      document.body.classList.add('no-page-scroll')
-      // also add to html element to cover cases where CSS targets html/no-page-scroll
-      document.documentElement.classList.add('no-page-scroll')
-      // force inline overflow hidden as a stronger fallback and save previous values
-      try {
-        const prevHtmlOverflow = document.documentElement.style.overflow
-        const prevBodyOverflow = document.body.style.overflow
-        document.documentElement.dataset._prevOverflow = prevHtmlOverflow || ''
-        document.body.dataset._prevOverflow = prevBodyOverflow || ''
-        document.documentElement.style.overflow = 'hidden'
-        document.body.style.overflow = 'hidden'
-      } catch (e) {
-        /* ignore style set errors */
-      }
-    } catch (e) {
-      /* ignore in non-browser environments */
-    }
   },
   beforeUnmount() {
     try {
@@ -52,10 +33,8 @@ export default {
         document.body.style.overflow = prevBody
         delete document.documentElement.dataset._prevOverflow
         delete document.body.dataset._prevOverflow
-      } catch (e) {}
-    } catch (e) {
-      /* ignore */
-    }
+      } catch { /* empty */ }
+    } catch { /* empty */ }
   },
   methods: {
     // Initialize payment page

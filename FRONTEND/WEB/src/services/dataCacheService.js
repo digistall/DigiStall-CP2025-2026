@@ -83,7 +83,7 @@ class DataCacheService {
     this.cacheTimers.set(key, timer);
     
     this.saveToStorage();
-    console.log(`📦 Cached data for: ${key} (expires in ${timeout/1000}s)`);
+    // console.log(`📦 Cached data for: ${key} (expires in ${timeout/1000}s)`);
   }
 
   /**
@@ -104,7 +104,7 @@ class DataCacheService {
       return null;
     }
 
-    console.log(`📦 Cache hit for: ${key}`);
+    // console.log(`📦 Cache hit for: ${key}`);
     return cached.data;
   }
 
@@ -120,7 +120,7 @@ class DataCacheService {
     const deleted = this.cache.delete(key);
     if (deleted) {
       this.saveToStorage();
-      console.log(`📦 Cache cleared for: ${key}`);
+      // console.log(`📦 Cache cleared for: ${key}`);
     }
     return deleted;
   }
@@ -137,7 +137,7 @@ class DataCacheService {
     this.cache.clear();
     this.cacheTimers.clear();
     this.saveToStorage();
-    console.log('📦 All cache cleared');
+    // console.log('📦 All cache cleared');
   }
 
   /**
@@ -184,7 +184,7 @@ class DataCacheService {
     }
 
     // Fetch data if not cached
-    console.log(`🌐 Fetching fresh data for: ${url}`);
+    // console.log(`🌐 Fetching fresh data for: ${url}`);
     
     try {
       const response = await fetch(url, {
@@ -235,7 +235,7 @@ class DataCacheService {
     }
     
     keysToDelete.forEach(key => this.delete(key));
-    console.log(`📦 Invalidated ${keysToDelete.length} cache entries matching: ${pattern}`);
+    // console.log(`📦 Invalidated ${keysToDelete.length} cache entries matching: ${pattern}`);
   }
 }
 

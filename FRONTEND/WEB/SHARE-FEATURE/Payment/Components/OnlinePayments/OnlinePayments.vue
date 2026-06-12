@@ -220,9 +220,14 @@
     <v-dialog v-model="showAcceptDialog" max-width="500px" persistent>
       <v-card>
         <v-card-title class="bg-success text-white">
-          <div class="d-flex align-center">
-            <v-icon class="mr-2" color="white">mdi-check-circle</v-icon>
-            <span>Accept Payment</span>
+          <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2" color="white">mdi-check-circle</v-icon>
+              <span>Accept Payment</span>
+            </div>
+            <v-btn icon variant="text" @click="cancelAcceptDialog" size="small" color="white">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
           </div>
         </v-card-title>
         <v-card-text class="pt-4">
@@ -258,7 +263,6 @@
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="cancelAcceptDialog"> Cancel </v-btn>
           <v-btn color="success" variant="flat" @click="confirmAcceptPayment">
             <v-icon class="mr-2">mdi-check</v-icon>
             Accept Payment
@@ -271,9 +275,14 @@
     <v-dialog v-model="showDeclineDialog" max-width="500px" persistent>
       <v-card>
         <v-card-title class="bg-error text-white">
-          <div class="d-flex align-center">
-            <v-icon class="mr-2" color="white">mdi-close-circle</v-icon>
-            <span>Decline Payment</span>
+          <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2" color="white">mdi-close-circle</v-icon>
+              <span>Decline Payment</span>
+            </div>
+            <v-btn icon variant="text" @click="cancelDeclineDialog" size="small" color="white">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
           </div>
         </v-card-title>
         <v-card-text class="pt-4">
@@ -312,7 +321,6 @@
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="cancelDeclineDialog"> Cancel </v-btn>
           <v-btn color="error" variant="flat" @click="confirmDeclinePayment">
             <v-icon class="mr-2">mdi-close</v-icon>
             Decline Payment

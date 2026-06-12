@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/DigiStall-Icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "plugins": [
       "expo-image-picker",
       "expo-document-picker",
@@ -25,7 +24,8 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",

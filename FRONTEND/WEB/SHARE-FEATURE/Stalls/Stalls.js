@@ -420,9 +420,9 @@ export default {
         const hasFloors = floorsData.success && floorsData.data && floorsData.data.length > 0
         const hasSections = sectionsData.success && sectionsData.data && sectionsData.data.length > 0
 
-        console.log('Floors/Sections check:', { hasFloors, hasSections })
-        console.log('Floors data:', floorsData.data?.length || 0, 'items')
-        console.log('Sections data:', sectionsData.data?.length || 0, 'items')
+        // console.log('Floors/Sections check:', { hasFloors, hasSections })
+        // console.log('Floors data:', floorsData.data?.length || 0, 'items')
+        // console.log('Sections data:', sectionsData.data?.length || 0, 'items')
 
         return hasFloors && hasSections
       } catch (error) {

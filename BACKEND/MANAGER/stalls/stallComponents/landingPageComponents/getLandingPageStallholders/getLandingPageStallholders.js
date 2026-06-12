@@ -29,7 +29,6 @@ export const getLandingPageStallholders = async (req, res) => {
     const branchFilter = branch ? parseInt(branch) : null;
     const businessTypeFilter = businessType || null;
     
-    console.log('📊 Executing stallholders SP with params:', { searchTerm, branchFilter, businessTypeFilter, limitNum, offset });
     
     // Use stored procedure for landing page stallholders
     const [rows] = await connection.execute(
@@ -38,13 +37,11 @@ export const getLandingPageStallholders = async (req, res) => {
     );
     const stallholders = rows[0];
     
-    console.log(`📊 Landing page stallholders fetched: ${stallholders.length} records`);
     
     // Decrypt and transform data to match frontend expectations
     // Frontend expects: stallholder_name, business_name, business_type, stall_no, branch_name
     const decryptedStallholders = stallholders.map(sh => {
       const decryptedName = decryptData(sh.full_name);
-      console.log(`📊 Decrypting name: ${sh.full_name?.substring(0, 30)}... => ${decryptedName}`);
       
       return {
         stallholder_id: sh.stallholder_id,

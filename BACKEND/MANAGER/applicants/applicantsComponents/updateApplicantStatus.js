@@ -39,7 +39,6 @@ const generateUsername = () => {
   const randomDigits = Math.floor(10000 + Math.random() * 90000).toString(); // Ensures 5 digits
 
   const username = `${year}-${randomDigits}`;
-  console.log('🔑 Generated username:', username);
   return username;
 };
 
@@ -60,7 +59,6 @@ const generatePassword = () => {
     password += numbers.charAt(Math.floor(Math.random() * numbers.length));
   }
 
-  console.log('🔑 Generated password:', password);
   return password;
 };
 
@@ -71,8 +69,6 @@ export const updateApplicantStatus = async (req, res) => {
     const { id } = req.params; // This is applicant_id
     const { status, decline_reason, declined_at, username, password } = req.body;
 
-    console.log('📊 Updating applicant status:', { id, status, decline_reason, declined_at, username, password });
-    console.log('🔍 DEBUG - Received ID type:', typeof id, 'Value:', id);
 
     // Validate status - matches database enum values
     const validStatuses = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Cancelled'];
@@ -89,7 +85,6 @@ export const updateApplicantStatus = async (req, res) => {
     const [existingApplicants] = await connection.execute(
       `SELECT applicant_id, applicant_full_name FROM applicant ORDER BY applicant_id LIMIT 20`
     );
-    console.log('🔍 DEBUG - Existing applicants in DB:', existingApplicants.map(a => ({ id: a.applicant_id, name: a.applicant_full_name })));
 
     // First, get the applicant information and their application WITH stall info
     const [applicantData] = await connection.execute(
@@ -122,7 +117,6 @@ export const updateApplicantStatus = async (req, res) => {
       [id]
     );
 
-    console.log('🔍 DEBUG - Query result for ID', id, ':', applicantData);
 
     if (applicantData.length === 0) {
       console.log('❌ DEBUG - Applicant not found with ID:', id);
@@ -166,12 +160,9 @@ export const updateApplicantStatus = async (req, res) => {
         WHERE application_id = ?
       `;
 
-      console.log('🔍 Executing query:', updateQuery.replace(/\s+/g, ' ').trim());
-      console.log('🔍 With parameters:', [status, applicant.application_id]);
 
       const [result] = await connection.execute(updateQuery, [status, applicant.application_id]);
 
-      console.log('📊 Update result:', result);
 
       if (result.affectedRows === 0) {
         await connection.rollback();
@@ -188,7 +179,6 @@ export const updateApplicantStatus = async (req, res) => {
       // Check if this is final approval (Under Review -> Approved or Pending -> Approved)
       const shouldCreateCredentials = status === 'Approved';
       
-      console.log(`🔍 Approval check: Current status: ${applicant.application_status}, New status: ${status}, Should create credentials: ${shouldCreateCredentials}`);
 
       // If this is final approval, create credentials for mobile app (only if they don't already exist)
       if (shouldCreateCredentials) {
@@ -199,7 +189,6 @@ export const updateApplicantStatus = async (req, res) => {
         );
 
         const alreadyHasCredentials = existingCredentialCheck.length > 0;
-        console.log(`🔑 Applicant ${applicant.applicant_id} already has credentials: ${alreadyHasCredentials}`);
 
         if (alreadyHasCredentials) {
           // Skip credential creation — applicant already has an account
@@ -209,18 +198,15 @@ export const updateApplicantStatus = async (req, res) => {
           finalPassword = '(existing account)';
         } else {
         try {
-          console.log('🔑 Creating credentials for final approval...');
           
           // Use credentials from frontend if provided, otherwise generate new ones
           if (username && password) {
             finalUsername = username;
             finalPassword = password;
-            console.log('🔑 Using frontend-provided credentials:', finalUsername, '/', finalPassword);
           } else {
             // Generate credentials using same logic as frontend
             finalUsername = generateUsername();
             finalPassword = generatePassword();
-            console.log('🔑 Generated new credentials:', finalUsername, '/', finalPassword);
           }
 
           // Check if credentials already exist for this applicant
@@ -230,7 +216,6 @@ export const updateApplicantStatus = async (req, res) => {
           );
 
           if (existingCredential.length > 0) {
-            console.log('⚠️ Credentials already exist for this applicant, updating...');
             
             // Hash the password
             const bcrypt = await import('bcrypt');
@@ -279,7 +264,6 @@ export const updateApplicantStatus = async (req, res) => {
         // CREATE STALLHOLDER RECORD
         // ============================================
         try {
-          console.log('🏪 Creating stallholder record...');
 
           // Check if stallholder already exists for this applicant
           const [existingStallholder] = await connection.execute(
@@ -298,7 +282,6 @@ export const updateApplicantStatus = async (req, res) => {
 
           if (existingStallholder.length > 0) {
             stallholderId = existingStallholder[0].stallholder_id;
-            console.log('⚠️ Stallholder already exists, updating with encrypted data...');
             
             // Update existing stallholder with new stall assignment (using ENCRYPTED values)
             await connection.execute(
@@ -329,7 +312,6 @@ export const updateApplicantStatus = async (req, res) => {
             );
             console.log('✅ Stallholder record updated with encrypted data');
           } else {
-            console.log('🔐 Creating new stallholder record with encrypted data...');
             
             // Create new stallholder record (using ENCRYPTED values)
             const [stallholderResult] = await connection.execute(

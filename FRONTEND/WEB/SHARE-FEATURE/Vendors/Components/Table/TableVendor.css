@@ -9,14 +9,15 @@
 
 /* Scrollable table wrapper for fixed header */
 .scrollable-table-wrapper {
-  max-height: calc(100vh - 350px);
-  overflow-y: auto;
+  max-height: var(--table-scroll-max-height) !important;
+  overflow-y: auto !important;
   overflow-x: hidden;
   position: relative;
 }
 
 .scrollable-table-wrapper::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 .scrollable-table-wrapper::-webkit-scrollbar-track {

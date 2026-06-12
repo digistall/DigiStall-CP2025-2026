@@ -1,8 +1,9 @@
 import { createConnection } from '../../../config/database.js';
 import { getBranchFilter } from '../../../middleware/rolePermissions.js';
 import { encryptData, decryptData, decryptEmployees } from '../../../services/encryptionService.js';
-import { generateSecurePassword } from '../../../UTILS/passwordGenerator.js';
+import { generateSecurePassword } from '../../../utils/passwordGenerator.js';
 import emailService from '../../../services/emailService.js';
+import { sendEmail } from '../../utils/emailService.js';
 import jwt from 'jsonwebtoken';
 import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 import bcrypt from 'bcrypt';
@@ -16,7 +17,6 @@ const encryptIfNotNull = (value) => {
     try {
         return encryptData(value);
     } catch (error) {
-        console.error('⚠️ Encryption failed, storing as plain text:', error.message);
         return value;
     }
 };
@@ -60,7 +60,6 @@ export async function createEmployee(req, res) {
         const encryptedLastName = encryptIfNotNull(lastName);
         const encryptedPhone = encryptIfNotNull(phoneNumber);
 
-        console.log('🔐 Encrypting employee data before storage (email stays plain for login)...');
 
         // Call stored procedure with encrypted data (email is now login - stored plain, password is encrypted)
         // 8 parameters: password, first_name, last_name, email, phone_number, branch_id, created_by, permissions
@@ -69,16 +68,32 @@ export async function createEmployee(req, res) {
             [encryptedPassword, encryptedFirstName, encryptedLastName, email, encryptedPhone, finalBranchId, finalCreatedBy, permissionsJson]
         );
 
+        // Dispatch employee credentials email securely from the backend
+        const emailSent = await sendEmail({
+            to_name: `${firstName} ${lastName}`,
+            to_email: email,
+            stall_username: email,
+            stall_password: password,
+            message: `Dear ${firstName} ${lastName},\n\nWelcome to the Naga Stall Management System! Your employee account has been successfully created.\n\n🔐 YOUR LOGIN CREDENTIALS:\nUsername: ${email}\nPassword: ${password}\n\n📋 IMPORTANT INSTRUCTIONS:\n✅ Please change your password after your first login\n✅ Keep your credentials secure and confidential`
+        }, process.env.EMAILJS_APPROVE_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID);
+
+        if (!emailSent) {
+            console.warn(`⚠️ Employee created, but failed to send credentials email to ${email}`);
+        }
+
         res.status(201).json({
             success: true,
-            message: 'Employee created successfully',
+            message: emailSent 
+                ? 'Employee created successfully. Credentials sent to email.'
+                : 'Employee created successfully, but email failed to send.',
             data: {
                 employeeId: result.business_employee_id,
                 credentials: {
                     email: email, // User logs in with email
-                    password: password // Plain password to send to user
+                    // IMPORTANT: We do not return the password in the response for security reasons
                 },
-                branchId: finalBranchId
+                branchId: finalBranchId,
+                email_sent: emailSent
             }
         });
 
@@ -424,9 +439,13 @@ export async function loginEmployee(req, res) {
         }
 
         // Generate session token for the stored procedure
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            throw new Error('[employeeController] JWT_SECRET is not set in environment.');
+        }
         const sessionToken = jwt.sign(
             { employeeId: employee.business_employee_id, timestamp: Date.now() },
-            process.env.JWT_SECRET || 'fallback_secret',
+            jwtSecret,
             { expiresIn: '24h' }
         );
         
@@ -456,7 +475,7 @@ export async function loginEmployee(req, res) {
                 fullName: `${employee.first_name} ${employee.last_name}`,
                 permissions: permissions
             },
-            process.env.JWT_SECRET || 'fallback_secret',
+            jwtSecret,
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
@@ -477,7 +496,6 @@ export async function loginEmployee(req, res) {
                 status: 'success'
             });
         } catch (logError) {
-            console.warn('⚠️ Failed to log employee login activity:', logError.message);
         }
 
         res.json({
@@ -569,7 +587,6 @@ export async function logoutEmployee(req, res) {
                     status: 'success'
                 });
             } catch (logError) {
-                console.warn('⚠️ Failed to log employee logout activity:', logError.message);
             }
         }
 
@@ -766,7 +783,6 @@ export async function getActiveSessions(req, res) {
                 user_type: 'employee'
             }));
         } catch (empError) {
-            console.warn('⚠️ Could not fetch employee sessions:', empError.message);
         }
         
         // Get staff sessions (inspector/collector from mobile)
@@ -791,12 +807,9 @@ export async function getActiveSessions(req, res) {
                 ORDER BY ss.last_activity DESC
             `);
             staffSessions = staffRows;
-            console.log(`📊 Found ${staffSessions.length} staff sessions, active: ${staffSessions.filter(s => s.is_active).length}`);
             if (staffSessions.length > 0) {
-                console.log('📊 Staff session sample:', JSON.stringify(staffSessions[0]));
             }
         } catch (staffError) {
-            console.warn('⚠️ Could not fetch staff sessions:', staffError.message);
         }
         
         const allSessions = [...employeeSessions, ...staffSessions];

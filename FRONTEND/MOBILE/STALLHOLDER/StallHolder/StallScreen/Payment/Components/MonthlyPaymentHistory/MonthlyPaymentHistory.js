@@ -223,7 +223,11 @@ const MonthlyPaymentHistory = ({ visible, onClose, theme, isDark }) => {
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
               Total Paid
             </Text>
-            <Text style={[styles.summaryValue, { color: '#10B981' }]}>
+            <Text 
+              style={[styles.summaryValue, { color: '#10B981' }]}
+              adjustsFontSizeToFit
+              numberOfLines={1}
+            >
               {formatCurrency(monthData.totalPaid)}
             </Text>
           </View>
@@ -232,42 +236,61 @@ const MonthlyPaymentHistory = ({ visible, onClose, theme, isDark }) => {
         {/* Individual Payments */}
         {monthData.payments.map((payment, index) => (
           <View 
-            key={payment.id || index} 
+            key={`payment_${payment.id || index}_${index}`} 
             style={[
               styles.paymentItem,
-              { borderTopColor: colors.border }
+              { borderTopColor: colors.border, flexDirection: 'column', alignItems: 'stretch', paddingVertical: 12 }
             ]}
           >
-            <View style={styles.paymentInfo}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[styles.paymentDescription, { color: colors.text }]}>
-                  {payment.description || 'Payment'}
-                </Text>
-                {payment.stallNumber && payment.stallNumber !== 'N/A' && (
-                  <View style={{ 
-                    backgroundColor: isDark ? 'rgba(48, 92, 222, 0.2)' : 'rgba(48, 92, 222, 0.1)', 
-                    paddingHorizontal: 6, 
-                    paddingVertical: 2, 
-                    borderRadius: 4 
-                  }}>
-                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.primary }}>
-                      Stall {payment.stallNumber}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.paymentDate, { color: colors.textSecondary }]}>
-                {payment.date} • {payment.method || 'N/A'}
+            {/* Description Row */}
+            <View style={{ marginBottom: 4 }}>
+              <Text style={[styles.paymentDescription, { color: colors.text, marginBottom: 2 }]}>
+                {payment.description || 'Payment'}
               </Text>
             </View>
-            <View style={styles.paymentAmountContainer}>
-              <Text style={[styles.paymentAmount, { color: colors.text }]}>
-                {payment.amount}
+
+            {/* Badges Row */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {payment.stallNumber && payment.stallNumber !== 'N/A' && (
+                <View style={{ 
+                  backgroundColor: isDark ? 'rgba(48, 92, 222, 0.2)' : 'rgba(48, 92, 222, 0.1)', 
+                  paddingHorizontal: 6, 
+                  paddingVertical: 2, 
+                  borderRadius: 4 
+                }}>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: colors.primary }}>
+                    Stall {payment.stallNumber}
+                  </Text>
+                </View>
+              )}
+              {payment.status?.toLowerCase() === 'partial' && payment.promiseToPayDate && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Ionicons name="time-outline" size={10} color="#EF4444" />
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#EF4444' }}>
+                    Promise Date: {payment.promiseToPayDate}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Bottom Row: Date & Method on Left, Amount on Right */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.paymentDate, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
+                {payment.date} • {payment.method || 'N/A'}
               </Text>
-              <View style={[
-                styles.paymentStatusDot,
-                { backgroundColor: getPaymentStatusColor(payment.status) }
-              ]} />
+              <View style={[styles.paymentAmountContainer, { gap: 6, justifyContent: 'flex-end', minWidth: 100 }]}>
+                <Text 
+                  style={[styles.paymentAmount, { color: colors.text, fontSize: 14 }]}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                >
+                  {payment.amount}
+                </Text>
+                <View style={[
+                  styles.paymentStatusDot,
+                  { backgroundColor: getPaymentStatusColor(payment.status) }
+                ]} />
+              </View>
             </View>
           </View>
         ))}
@@ -381,8 +404,13 @@ const MonthlyPaymentHistory = ({ visible, onClose, theme, isDark }) => {
                 </Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: '#10B981' }]}>
+              <View style={[styles.statItem, { flex: 2.2 }]}>
+                <Text 
+                  style={[styles.statValue, { color: '#10B981', fontSize: 15 }]}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
+                  numberOfLines={1}
+                >
                   {formatCurrency(
                     paymentRecords.reduce((sum, p) => sum + (p.rawAmount || 0), 0)
                   )}

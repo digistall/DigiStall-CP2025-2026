@@ -5,6 +5,14 @@
  * All actual code is in the role folders, not here
  */
 
+// Silence verbose logs and warnings from console to secure app data
+if (typeof window !== 'undefined') {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  console.warn = () => {};
+}
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPersistedState from 'pinia-plugin-persistedstate'
@@ -12,6 +20,7 @@ import vuetify from './plugins/vuetify'
 import router from './router'
 import App from './App.vue'
 import './services/fetchInterceptor'
+import startTableAutoHeight from './services/tableAutoHeight'
 
 // Create Pinia store
 const pinia = createPinia()
@@ -23,3 +32,4 @@ app.use(pinia)
 app.use(router)
 app.use(vuetify)
 app.mount('#app')
+startTableAutoHeight()

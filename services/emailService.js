@@ -61,10 +61,9 @@ Note: You may need to enable "Install from unknown sources" in your Android devi
      * Configure this based on your email service (Gmail, SendGrid, etc.)
      */
     createTransporter() {
-        // For development - Log emails to console
-        // Also use this mode if SMTP credentials are not configured
-        if (process.env.NODE_ENV === 'development' || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            console.log('📧 Email service in DEVELOPMENT MODE - emails will be logged to console');
+        // Fallback to simulation mode only if SMTP credentials are not configured
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.log('📧 Email service in DEVELOPMENT MODE (No SMTP credentials configured) - emails will be logged to console');
             return {
                 sendMail: async (mailOptions) => {
                     console.log('\n=== EMAIL SIMULATION ===');
@@ -78,11 +77,12 @@ Note: You may need to enable "Install from unknown sources" in your Android devi
             };
         }
 
-        // For production - Configure with real SMTP
+
+        // Configure with real SMTP (Gmail on port 465 requires secure: true)
         return nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: process.env.SMTP_PORT || 587,
-            secure: false,
+            port: parseInt(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
@@ -576,7 +576,7 @@ Your stallholder account has been created automatically. You can now access the 
 
 === YOUR LOGIN CREDENTIALS ===
 Username: ${username}
-Password: ${password}
+Password: (For security, your password is not sent via email. Please download the mobile app and use the "Forgot Password" option on the login screen to set your secure password before your first login.)
 
 === STALL DETAILS ===
 Stall Number: ${stallNo}
@@ -584,7 +584,7 @@ ${businessName ? `Business Name: ${businessName}` : ''}
 ${branchName ? `Branch: ${branchName}` : ''}
 
 IMPORTANT: 
-- Please change your password after your first login for security purposes.
+- Use the "Forgot Password" feature inside the mobile app to set your secure password.
 - Download the Naga Stall Management mobile app to access your account.
 - Keep your credentials safe and do not share them with anyone.
 
@@ -612,9 +612,9 @@ Naga Stall Management Team`,
                             
                             <div style="background: #f8f9fa; border: 2px dashed #002181; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0 0 15px 0; font-weight: bold; color: #002181; font-size: 18px;">🔐 Your Login Credentials</p>
-                                <div style="background: white; padding: 15px; border-radius: 6px; display: inline-block;">
+                                <div style="background: white; padding: 15px; border-radius: 6px; display: inline-block; text-align: left;">
                                     <p style="margin: 0 0 10px 0;"><strong>Username:</strong> <span style="color: #002181; font-family: monospace; font-size: 16px;">${username}</span></p>
-                                    <p style="margin: 0;"><strong>Password:</strong> <span style="color: #002181; font-family: monospace; font-size: 16px;">${password}</span></p>
+                                    <p style="margin: 0; color: #555; font-size: 14px;"><strong>Password:</strong> <span style="color: #d32f2f; font-style: italic;">For security, your password is not sent via email. Please use the 'Forgot Password' feature in the mobile app to set your password.</span></p>
                                 </div>
                             </div>
                             
@@ -630,9 +630,9 @@ Naga Stall Management Team`,
                             <div style="background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; margin: 20px 0; border-radius: 8px;">
                                 <p style="margin: 0; color: #e65100; font-weight: bold;">⚠️ Important Security Notice</p>
                                 <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #bf360c;">
-                                    <li>Please change your password after your first login</li>
-                                    <li>Keep your credentials safe and confidential</li>
-                                    <li>Download the mobile app to access your account</li>
+                                    <li>Please use the "Forgot Password" option on the mobile login screen to set your password securely.</li>
+                                    <li>Keep your credentials safe and confidential.</li>
+                                    <li>Download the mobile app to access your account.</li>
                                 </ul>
                             </div>
                             

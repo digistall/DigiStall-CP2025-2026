@@ -72,6 +72,12 @@ export const corsConfig = {
     'Access-Control-Request-Method',
     'Access-Control-Request-Headers'
   ],
+  exposedHeaders: [
+    'RateLimit-Limit',
+    'RateLimit-Remaining',
+    'RateLimit-Reset',
+    'Retry-After'
+  ],
   credentials: true,
   optionsSuccessStatus: 200
 };

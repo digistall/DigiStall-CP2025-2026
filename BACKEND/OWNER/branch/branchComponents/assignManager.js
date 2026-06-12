@@ -5,7 +5,6 @@ import bcrypt from 'bcrypt';
 export const assignManager = async (req, res) => {
   let connection;
   try {
-    console.log('📋 Received request body:', req.body);
     
     const { 
       branch_id, 
@@ -27,12 +26,10 @@ export const assignManager = async (req, res) => {
       });
     }
     
-    console.log('🔌 Creating database connection...');
     connection = await createConnection();
     console.log('✅ Database connection established');
     
     // Check if branch exists
-    console.log('🔍 Checking if branch exists:', branch_id);
     const [branchExists] = await connection.execute(
       'SELECT branch_id, branch_name FROM branch WHERE branch_id = ?',
       [branch_id]
@@ -48,7 +45,6 @@ export const assignManager = async (req, res) => {
     console.log('✅ Branch found:', branchExists[0]);
     
     // Check if username already exists (excluding current branch's manager for updates)
-    console.log('🔍 Checking username availability:', manager_username);
     const [usernameExists] = await connection.execute(
       'SELECT branch_manager_id, branch_id FROM branch_manager WHERE manager_username = ? AND branch_id != ?',
       [manager_username, branch_id]
@@ -64,20 +60,17 @@ export const assignManager = async (req, res) => {
     console.log('✅ Username is available');
     
     // Check if branch already has a manager
-    console.log('🔍 Checking for existing manager for branch:', branch_id);
     const [currentManager] = await connection.execute(
       'SELECT branch_manager_id, first_name, last_name FROM branch_manager WHERE branch_id = ?',
       [branch_id]
     );
     
     // Hash password
-    console.log('🔐 Hashing password...');
     const hashedPassword = await bcrypt.hash(manager_password, 10); // Use manager_password from request
     console.log('✅ Password hashed successfully');
     
     if (currentManager.length > 0) {
       // Update existing manager
-      console.log('🔄 Updating existing manager:', currentManager[0]);
       
       const [updateResult] = await connection.execute(
         `UPDATE branch_manager 
@@ -153,7 +146,6 @@ export const assignManager = async (req, res) => {
     });
   } finally {
     if (connection) {
-      console.log('🔌 Closing database connection...');
       await connection.end();
       console.log('✅ Database connection closed');
     }

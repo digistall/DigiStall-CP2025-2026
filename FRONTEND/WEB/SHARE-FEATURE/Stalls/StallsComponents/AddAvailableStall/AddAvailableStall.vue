@@ -262,7 +262,6 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn text class="cancel-btn" @click="closeModal" :disabled="loading"> Cancel </v-btn>
           <v-btn class="add-btn" @click="submitForm" :loading="loading" :disabled="!valid || !isFormValid">
             <v-icon left>mdi-content-save</v-icon>
             Add Stall

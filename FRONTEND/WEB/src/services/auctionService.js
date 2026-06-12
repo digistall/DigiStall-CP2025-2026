@@ -76,15 +76,19 @@ class AuctionService {
    * @param {number|string} auctionId - ID of the auction
    * @param {number|string} participantId - ID of the winning participant
    * @param {number|string} applicantId - Applicant ID of the winner
+   * @param {number|string} winningBidAmount - Final winning bid amount to set as stall price
+   * @param {string} remarks - Optional notes or remarks
    * @returns {Promise} API response with winner details
    */
-  async selectWinner(auctionId, participantId, applicantId) {
+  async selectWinner(auctionId, participantId, applicantId, winningBidAmount, remarks) {
     try {
       console.log(`🏆 Selecting winner for auction ID: ${auctionId}`)
       
       const response = await this.apiClient.post(`/auctions/${auctionId}/select-winner`, {
         participantId,
-        applicantId
+        applicantId,
+        winningBidAmount,
+        remarks
       })
       
       console.log('✅ Auction winner selection response:', response.data)

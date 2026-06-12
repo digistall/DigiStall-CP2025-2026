@@ -62,7 +62,7 @@
                 :color="getPaymentStatusColor(item.raw?.stallholderData?.paymentStatus)"
                 variant="flat"
               >
-                {{ item.raw?.stallholderData?.paymentStatus || 'current' }}
+                {{ formatStatusLabel(item.raw?.stallholderData?.paymentStatus) }}
               </v-chip>
             </div>
             <!-- Violation Warning -->
@@ -277,7 +277,7 @@ export default {
               monthlyRental: stallholder.monthlyRental || stallholder.rental_price || stallholder.monthly_rental,
               branchName: stallholder.branchName || stallholder.branch_name,
               contractStatus: stallholder.contractStatus || stallholder.contract_status,
-              paymentStatus: stallholder.totalPayments > 0 ? 'paid' : 'pending',
+              paymentStatus: stallholder.payment_status || 'unpaid',
               totalPayments: stallholder.totalPayments || 0,
               lastPaymentDate: stallholder.lastPaymentDate,
               hasViolation: parseInt(stallholder.unpaid_violations_count) > 0,
@@ -346,11 +346,27 @@ export default {
 
     getPaymentStatusColor(status) {
       const statusColors = {
-        'current': 'success',
-        'overdue': 'error',
-        'grace_period': 'warning'
+        'paid': '#10b981',
+        'discount': '#1e88e5',
+        'partial': '#3b82f6',
+        'overdue': '#ef4444',
+        'due_soon': '#f59e0b',
+        'pending': '#9ca3af'
       }
-      return statusColors[status] || 'grey'
+      return statusColors[status?.toLowerCase()] || '#9ca3af'
+    },
+
+    formatStatusLabel(status) {
+      if (!status) return 'Pending';
+      const labels = {
+        'paid': 'Paid',
+        'discount': 'Discount',
+        'partial': 'Partial',
+        'overdue': 'Overdue',
+        'due_soon': 'Due Soon',
+        'pending': 'Pending'
+      };
+      return labels[status.toLowerCase()] || status.charAt(0).toUpperCase() + status.slice(1);
     },
 
     loadFallbackStallholders() {

@@ -14,8 +14,6 @@ export const getAuctionParticipantsByStall = async (req, res) => {
     const userType = req.user?.userType || req.user?.role;
     const userId = req.user?.userId;
 
-    console.log('🔨 Getting auction participants for stall:', stallId);
-    console.log('👤 Requested by:', { userType, userId });
 
     if (!stallId) {
       return res.status(400).json({

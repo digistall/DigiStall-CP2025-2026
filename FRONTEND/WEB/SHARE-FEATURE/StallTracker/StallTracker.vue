@@ -1,5 +1,6 @@
 <template>
   <div class="stall-tracker-container">
+    <LoadingOverlay :loading="loading" text="Loading stall tracker data..." :full-page="false" />
     <div class="stall-tracker-main-content">
       <!-- Stall Tracker Header -->
       <v-card elevation="2" class="rounded-lg mb-4 d-inline-flex">
@@ -123,7 +124,7 @@
               </div>
             </template>
             <template v-slot:item.status="{ item }">
-              <v-chip color="warning" text-color="white" size="small">{{ item.status }}</v-chip>
+              <v-chip color="primary" text-color="white" size="small">{{ item.status }}</v-chip>
             </template>
           </v-data-table>
         </v-window-item>
@@ -214,39 +215,17 @@
       </v-window>
 
       <!-- Confirmation Dialog -->
-      <v-dialog v-model="confirmDialog.show" max-width="450">
-        <v-card class="rounded-lg">
-          <v-card-title class="pa-4 flex-nowrap d-flex align-center bg-grey-lighten-4">
-            <v-icon :color="confirmDialog.color" class="mr-3">
-              {{ confirmDialog.action === 'Approved' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
-            </v-icon>
-            <span class="text-h6 font-weight-bold">{{ confirmDialog.title }}</span>
-          </v-card-title>
-
-          <v-card-text class="pa-6 text-body-1">
-            {{ confirmDialog.message }}
-          </v-card-text>
-
-          <v-divider></v-divider>
-
-          <v-card-actions class="pa-4">
-            <v-spacer></v-spacer>
-            <v-btn variant="text" rounded="pill" class="px-6" @click="confirmDialog.show = false">
-              Cancel
-            </v-btn>
-            <v-btn
-              :color="confirmDialog.color"
-              variant="flat"
-              rounded="pill"
-              class="px-6 ml-2"
-              @click="executeConfirmAction"
-              :loading="loading"
-            >
-              Confirm
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <ConfirmDialog
+        v-model="confirmDialog.show"
+        :title="confirmDialog.title"
+        :message="confirmDialog.message"
+        :type="confirmDialog.action === 'Approved' ? 'primary' : 'danger'"
+        :confirm-text="confirmDialog.action === 'Approved' ? 'Approve' : 'Reject'"
+        cancel-text="Cancel"
+        :loading="loading"
+        @confirm="executeConfirmAction"
+        @cancel="confirmDialog.show = false"
+      />
 
       <!-- Snackbar for Notifications -->
       <v-snackbar

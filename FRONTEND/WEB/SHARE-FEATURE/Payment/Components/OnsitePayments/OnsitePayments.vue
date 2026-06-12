@@ -1,5 +1,8 @@
 <template>
   <div class="onsite-payments">
+    <!-- Premium Loading Overlay -->
+    <LoadingOverlay :loading="loading" text="Loading payments data..." :full-page="false" />
+
     <!-- Search & Filter Section -->
     <div class="search-filter-section mb-6">
       <div class="search-wrapper">
@@ -238,7 +241,22 @@
                   variant="outlined"
                   density="comfortable"
                   type="number"
-                  :rules="[(v) => !!v || 'Required', (v) => v > 0 || 'Must be greater than 0']"
+                  :rules="[
+                    (v) => !!v || 'Required', 
+                    (v) => v > 0 || 'Must be greater than 0',
+                    (v) => {
+                      if (form.paymentType === 'partial_payment') {
+                        const selectedMonth = unpaidMonthsOptions.find(m => m.value === form.paymentForMonth);
+                        if (selectedMonth && selectedMonth.monthlyRental) {
+                          const minAmount = selectedMonth.monthlyRental * 0.3;
+                          if (parseFloat(v) < minAmount) {
+                            return `Must pay at least 30% (\u20B1${minAmount.toFixed(2)})`;
+                          }
+                        }
+                      }
+                      return true;
+                    }
+                  ]"
                   prepend-inner-icon="mdi-currency-php"
                 ></v-text-field>
               </v-col>
@@ -265,8 +283,25 @@
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
-                <v-text-field
+                <v-select
+                  v-if="unpaidMonthsOptions.length > 0"
                   v-model="form.paymentForMonth"
+                  :items="unpaidMonthsOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Select Unpaid Month(s)"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-calendar-month"
+                  :loading="loadingUnpaidMonths"
+                  multiple
+                  chips
+                  closable-chips
+                ></v-select>
+                <v-text-field
+                  v-else
+                  :model-value="Array.isArray(form.paymentForMonth) ? form.paymentForMonth[0] : form.paymentForMonth"
+                  @update:model-value="val => form.paymentForMonth = val ? [val] : []"
                   label="Payment For Month"
                   variant="outlined"
                   density="comfortable"
@@ -277,12 +312,25 @@
               <v-col cols="12" md="6">
                 <v-select
                   v-model="form.paymentType"
-                  :items="['rental', 'utilities', 'maintenance', 'penalty', 'other']"
+                  :items="['rental', 'partial_payment', 'utilities', 'maintenance', 'penalty', 'other']"
                   label="Payment Type"
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-tag-outline"
                 ></v-select>
+              </v-col>
+
+              <!-- Promise to Pay Date - Only shown for partial payment -->
+              <v-col cols="12" md="6" v-if="isPartialPayment">
+                <v-text-field
+                  v-model="form.promiseToPayDate"
+                  label="Promise to Pay Date"
+                  variant="outlined"
+                  density="comfortable"
+                  type="date"
+                  :rules="[(v) => !!v || 'Promise to Pay Date is required']"
+                  prepend-inner-icon="mdi-calendar-clock"
+                ></v-text-field>
               </v-col>
 
               <!-- Violation Dropdown - Only shown when penalty is selected -->
@@ -416,11 +464,11 @@
         </v-card-text>
         <v-card-actions class="modal-actions">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeAddModal">Cancel</v-btn>
           <v-btn
             color="#002181"
             variant="flat"
             :disabled="!formValid || (isPenaltyPayment && !form.selectedViolation)"
+            :loading="loading"
             @click="addPayment"
           >
             <v-icon class="mr-1">mdi-check</v-icon>
@@ -563,6 +611,11 @@
                         {{ entry.status }}
                       </v-chip>
                     </div>
+                    <!-- Promise to Pay Date Row -->
+                    <div v-if="entry.status === 'Partial' && entry.promiseDate" class="tracker-promise-date-row" style="font-size: 11px; color: #ef4444; font-weight: 600; margin-top: 6px; border-top: 1px dashed rgba(239, 68, 68, 0.2); padding-top: 4px; display: flex; align-items: center; gap: 4px;">
+                      <v-icon size="12" color="#ef4444">mdi-calendar-clock</v-icon>
+                      Promise: {{ entry.promiseDate }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -596,8 +649,8 @@
         </v-card-title>
 
         <v-card-text class="entry-detail-body">
-          <!-- Payment Info (if paid/advance) -->
-          <div v-if="selectedEntry.hasPaid" class="entry-info-section">
+          <!-- Payment Info (if paid/advance/partial with receipt) -->
+          <div v-if="selectedEntry.hasPaid || (selectedEntry.status === 'Partial' && selectedEntry.receiptNo)" class="entry-info-section">
             <div class="entry-info-title">
               <v-icon size="16" color="#002181" class="mr-1">mdi-receipt-text</v-icon>
               Transaction Details
@@ -624,8 +677,8 @@
             </div>
           </div>
 
-          <!-- Unpaid Info (overdue/pending) -->
-          <div v-else class="entry-info-section">
+          <!-- Payment Information (for partial/overdue/pending/etc.) -->
+          <div v-if="!selectedEntry.hasPaid || selectedEntry.status === 'Partial'" class="entry-info-section">
             <div class="entry-info-title">
               <v-icon size="16" color="#002181" class="mr-1">mdi-information-outline</v-icon>
               Payment Information
@@ -634,6 +687,10 @@
               <div class="entry-info-item">
                 <span class="entry-info-label">Due Date</span>
                 <span class="entry-info-value">{{ selectedEntry.dueDateFormatted }}</span>
+              </div>
+              <div v-if="selectedEntry.status === 'Partial'" class="entry-info-item">
+                <span class="entry-info-label">Promise Date</span>
+                <span class="entry-info-value">{{ selectedEntry.promiseDate || '—' }}</span>
               </div>
               <div class="entry-info-item">
                 <span class="entry-info-label">Status</span>
@@ -862,3 +919,34 @@
 
 <script src="./OnsitePayments.js"></script>
 <style scoped src="./OnsitePayments.css"></style>
+
+<style>
+/* Force visible blue scrollbar on Onsite table-wrapper globally to override App.vue white scrollbars and scrollable-tables.css hidden rules */
+.onsite-payments .table-wrapper {
+  scrollbar-width: thin !important;
+  scrollbar-color: #002181 #f1f1f1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: var(--table-scroll-max-height) !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 4px !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar-thumb {
+  background: #002181 !important;
+  border-radius: 4px !important;
+}
+
+.onsite-payments .table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #001557 !important;
+}
+</style>

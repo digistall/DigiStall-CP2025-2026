@@ -8,6 +8,8 @@
 // __DEV__ is a React Native global:
 //   true  → Expo Go / development mode  → use LOCAL backend
 //   false → APK / production build       → use DigitalOcean backend
+// __DEV__ is automatically true in Expo Go / metro dev server, and false in production APK builds.
+// This ensures Expo Go connects to your local backend, and the APK connects to DigitalOcean.
 const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
 // ===== AUTO-DETECT LOCAL IP FROM EXPO =====
@@ -24,12 +26,12 @@ const getDevHostIP = () => {
     if (hostUri) {
       const ip = hostUri.split(':')[0]; // strip the port
       if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-        console.log(`🔍 Auto-detected dev machine IP: ${ip}`);
+        // console.log(`🔍 Auto-detected dev machine IP: ${ip}`);
         return ip;
       }
     }
   } catch (e) {
-    console.log('⚠️ Could not auto-detect IP from Expo:', e.message);
+    // console.log('⚠️ Could not auto-detect IP from Expo:', e.message);
   }
   return null;
 };
@@ -50,20 +52,24 @@ const DEVELOPMENT_SERVERS = detectedIP
       `http://${detectedIP}:5001`,   // Local Backend-Mobile API (primary)
       `http://${detectedIP}:5000`,   // Local Backend-Web API (fallback)
       `http://${detectedIP}:3001`,   // Local single-server fallback
+      'http://192.168.1.100:5001',   // User hardcoded fallback
+      'http://192.168.1.100:5000',
       'http://localhost:3001',       // Only works on emulator
     ]
   : [
-      'http://178.16.100.6:5001',   // Hardcoded fallback if auto-detect fails
-      'http://178.16.100.6:5000',
-      'http://178.16.100.6:3001',
+      'http://192.168.1.100:5001',   // User hardcoded fallback (Primary)
+      'http://192.168.1.100:5000',
+      'http://192.168.1.100:5001',   // Hardcoded fallback if auto-detect fails
+      'http://192.168.1.100:5000',
+      'http://192.168.1.100:3001',
       'http://localhost:3001',
     ];
 
 export const API_CONFIG = {
   // Server endpoints are ordered automatically based on environment
-  // Expo Go (dev) → local servers first, APK (prod) → DigitalOcean first
+  // Expo Go (dev) → ONLY local servers, APK (prod) → DigitalOcean first
   SERVERS: IS_DEV
-    ? [...DEVELOPMENT_SERVERS, ...PRODUCTION_SERVERS]   // Dev: try local first, fallback to production
+    ? DEVELOPMENT_SERVERS   // Dev: ONLY try local, do NOT fallback to production
     : [...PRODUCTION_SERVERS, ...DEVELOPMENT_SERVERS],  // Prod: try DigitalOcean first, fallback to local
   
   // Static file server for images (Apache on port 80)
@@ -140,6 +146,9 @@ export const API_CONFIG = {
     GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
     GET_MONTHLY_PAYMENT_STATUS: '/api/mobile/stallholder/payments/monthly-status',
     
+    // Stallholder app access logging
+    APP_ACCESS_LOG: '/api/mobile/stallholder/app-access-log',
+    
     // Face Scanner endpoints
     CHECK_FACE_VERIFICATION: '/api/mobile/stallholder/face-verify/status',
     UPLOAD_FACE_VERIFICATION: '/api/mobile/stallholder/face-verify/upload',
@@ -163,7 +172,7 @@ export const NetworkUtils = {
   // Test if a server is reachable (quick check)
   async testConnection(serverUrl, quickCheck = false) {
     try {
-      console.log(`🔌 Testing connection to: ${serverUrl}`);
+      // console.log(`🔌 Testing connection to: ${serverUrl}`);
       
       const controller = new AbortController();
       const timeout = quickCheck ? 3000 : API_CONFIG.TIMEOUT; // 3s for quick, 5s for full
@@ -179,7 +188,7 @@ export const NetworkUtils = {
         });
       } catch (healthError) {
         // If health endpoint fails, try root endpoint
-        console.log(`🔄 Health endpoint failed, trying root...`);
+        // console.log(`🔄 Health endpoint failed, trying root...`);
         response = await fetch(`${serverUrl}/`, {
           method: 'GET',
           signal: controller.signal
@@ -189,21 +198,21 @@ export const NetworkUtils = {
       clearTimeout(timeoutId);
       
       if (response.ok || response.status < 500) {
-        console.log(`✅ Connection successful to: ${serverUrl}`);
+        // console.log(`✅ Connection successful to: ${serverUrl}`);
         return true;
       } else {
-        console.log(`❌ Server responded with error: ${response.status}`);
+        // console.log(`❌ Server responded with error: ${response.status}`);
         return false;
       }
     } catch (error) {
-      console.log(`❌ Connection failed to ${serverUrl}:`, error.message);
+      // console.log(`❌ Connection failed to ${serverUrl}:`, error.message);
       return false;
     }
   },
 
   // Find the first working server
   async findWorkingServer() {
-    console.log('🔍 Discovering available servers...');
+    // console.log('🔍 Discovering available servers...');
     
     // Test servers sequentially (more reliable than parallel for mobile)
     for (const server of API_CONFIG.SERVERS) {
@@ -216,12 +225,12 @@ export const NetworkUtils = {
         } catch (e) {
           API_CONFIG.STATIC_FILE_SERVER = server;
         }
-        console.log(`🎯 Active server set to: ${server}`);
+        // console.log(`🎯 Active server set to: ${server}`);
         return server;
       }
     }
     
-    console.error('❌ No working servers found');
+    // console.error('❌ No working servers found');
     throw new Error('Unable to connect to any server. Please check:\n\n• Backend-Mobile server is running (port 5001)\n• Device has internet connection\n• Your IP is in the server list');
   },
 
@@ -283,7 +292,7 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
     
     return await response.json();
   } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error);
+    // console.error(`API call failed for ${endpoint}:`, error);
     throw error;
   }
 };
@@ -297,12 +306,12 @@ export const apiCall = async (endpoint, method = 'GET', data = null) => {
 //   password: 'your_password'
 // });
 
-console.log('📱 Mobile Network Config Loaded');
-console.log(`🔧 Environment: ${IS_DEV ? 'DEVELOPMENT (Expo Go → Local Backend)' : 'PRODUCTION (APK → DigitalOcean)'}`);
+// console.log('📱 Mobile Network Config Loaded');
+// console.log(`🔧 Environment: ${IS_DEV ? 'DEVELOPMENT (Expo Go → Local Backend)' : 'PRODUCTION (APK → DigitalOcean)'}`);
 if (IS_DEV && detectedIP) {
-  console.log(`🔍 Auto-detected LAN IP: ${detectedIP} (works on any WiFi)`);
+  // console.log(`🔍 Auto-detected LAN IP: ${detectedIP} (works on any WiFi)`);
 } else if (IS_DEV) {
-  console.log('⚠️ Could not auto-detect IP, using hardcoded fallback');
+  // console.log('⚠️ Could not auto-detect IP, using hardcoded fallback');
 }
-console.log('🌐 Server priority:', API_CONFIG.SERVERS.map(s => s.replace('http://', '')).join(' → '));
-console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);
+// console.log('🌐 Server priority:', API_CONFIG.SERVERS.map(s => s.replace('http://', '')).join(' → '));
+// console.log('🌐 Backend URL:', API_CONFIG.BASE_URL);

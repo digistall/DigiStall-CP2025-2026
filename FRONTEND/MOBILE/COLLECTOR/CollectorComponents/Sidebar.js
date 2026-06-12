@@ -45,16 +45,16 @@ const Sidebar = ({
     const loadUserData = async () => {
       try {
         const storedUserData = await UserStorageService.getUserData();
-        console.log(
-          "🔌 Collector Sidebar - Retrieved user data:",
-          JSON.stringify(storedUserData, null, 2)
-        );
+        // console.log(
+        //   "🔌 Collector Sidebar - Retrieved user data:",
+        //   JSON.stringify(storedUserData, null, 2)
+        // );
         if (storedUserData && (storedUserData.staff || storedUserData.user)) {
           const userData = storedUserData.staff || storedUserData.user;
           setUserData(userData);
-          console.log("👤 Collector Sidebar - Set user data:", userData);
+          // console.log("👤 Collector Sidebar - Set user data:", userData);
         } else {
-          console.log("⚠ Collector Sidebar - No user data found");
+          // console.log("⚠ Collector Sidebar - No user data found");
         }
       } catch (error) {
         console.error("Error loading user data for collector sidebar:", error);

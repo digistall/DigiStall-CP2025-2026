@@ -46,30 +46,14 @@ else
 fi
 
 # Create .env file for production
-echo "⚙️ Creating environment configuration..."
-cat > .env << 'EOF'
-# Production Environment Variables
-NODE_ENV=production
-
-# Database (DigitalOcean Managed MySQL)
-DB_HOST=dbaas-db-2078449-do-user-29954926-0.f.db.ondigitalocean.com
-DB_PORT=25060
-DB_USER=doadmin
-DB_PASSWORD=AVNS_hxkemfGwzsOdj4pbu35
-DB_NAME=naga_stall
-DB_SSL=true
-
-# JWT Secrets (CHANGE THESE!)
-JWT_SECRET=your_super_secure_jwt_secret_change_this_in_production
-JWT_REFRESH_SECRET=your_super_secure_refresh_secret_change_this_in_production
-
-# CORS
-CORS_ORIGIN=http://digi-stall.com
-ALLOWED_ORIGINS=http://digi-stall.com,http://68.183.154.125,http://localhost
-
-# Upload path (Docker volume)
-UPLOAD_PATH=/opt/digistall/uploads
-EOF
+echo "⚙️ Checking environment configuration..."
+if [ ! -f .env ]; then
+    echo "⚠️  No .env file found! Copying .env.example to .env."
+    echo "⚠️  IMPORTANT: You must edit .env and add your real database password and keys before starting!"
+    cp .env.example .env
+else
+    echo "✅ .env file exists."
+fi
 
 # Create uploads directory
 mkdir -p /opt/digistall/uploads/stalls

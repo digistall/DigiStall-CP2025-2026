@@ -131,7 +131,6 @@ export const login = async (req, res) => {
     
     const { email, password, userType } = req.body;
     
-    console.log('🔐 Login Attempt:', { email, userType, timestamp: new Date().toISOString() });
     
     // Validate required fields
     if (!email || !password || !userType) {
@@ -521,24 +520,16 @@ export const logout = async (req, res) => {
     }
     
     console.log('='.repeat(60));
-    console.log('📤 WEB LOGOUT REQUEST RECEIVED');
-    console.log('📤 Timestamp:', new Date().toISOString());
-    console.log('📤 req.body:', JSON.stringify(req.body, null, 2));
-    console.log('📤 req.user:', JSON.stringify(req.user, null, 2));
-    console.log('📤 req.cookies:', JSON.stringify(req.cookies, null, 2));
-    console.log('📤 Extracted values:');
     console.log('   - userId:', userId, '(type:', typeof userId, ')');
     console.log('   - userType:', userType);
     console.log('   - hasRefreshToken:', !!refreshToken);
     console.log('='.repeat(60));
     
     const philippineTime = getPhilippineTime();
-    console.log('📤 Philippine time for logout:', philippineTime);
     
     // Update last_logout for the user based on their type using stored procedures
     if (userId && userType) {
       const normalizedUserType = userType.toLowerCase().trim();
-      console.log('📤 Normalized userType:', normalizedUserType);
       
       try {
         let checkRows = [];
@@ -568,7 +559,6 @@ export const logout = async (req, res) => {
                   `, [philippineTime, philippineTime, userId]);
                   console.log(`✅ Employee session deactivated for ID ${userId}`);
                 } catch (sessionError) {
-                  console.error('⚠️ Failed to deactivate employee session:', sessionError.message);
                 }
               }
             }
@@ -623,16 +613,13 @@ export const logout = async (req, res) => {
             break;
         }
         
-        console.log(`📤 User check: found ${checkRows.length} row(s)`);
         
         if (checkRows.length === 0) {
-          console.warn(`⚠️ User ${userId} not found`);
         } else {
           const affectedRows = result?.[0]?.[0]?.affected_rows || 0;
           console.log(`✅ UPDATE RESULT: affectedRows: ${affectedRows}`);
           
           if (affectedRows === 0) {
-            console.warn(`⚠️ No rows affected! User ${userId} may not exist or last_logout column missing`);
           } else {
             console.log(`✅ Successfully updated last_logout for ${userType} ID ${userId} to ${philippineTime}`);
             
@@ -710,9 +697,7 @@ export const logout = async (req, res) => {
                 'CALL sp_logStaffActivityLogout(?, ?, ?, ?, ?, ?, ?)',
                 [normalizedUserType, userId, staffName, null, `${staffName} logged out via web`, ipAddress, userAgent]
               );
-              console.log(`📝 Logout activity logged for ${normalizedUserType} ${staffName}`);
             } catch (logError) {
-              console.warn('⚠️ Failed to log logout activity:', logError.message);
             }
           }
         }
@@ -724,7 +709,6 @@ export const logout = async (req, res) => {
         console.error('   - Full error:', updateError);
       }
     } else {
-      console.warn('⚠️ Missing required data for logout:');
       console.warn('   - userId:', userId || '(missing)');
       console.warn('   - userType:', userType || '(missing)');
     }
@@ -1121,7 +1105,6 @@ export const autoLogout = async (req, res) => {
           break;
           
         default:
-          console.warn(`⚠️ Unknown userType for auto-logout: ${normalizedUserType}`);
       }
     } catch (dbError) {
       console.error('❌ Database error during auto-logout:', dbError.message);

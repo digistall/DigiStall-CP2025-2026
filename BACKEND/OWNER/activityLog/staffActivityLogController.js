@@ -40,12 +40,33 @@ export async function logStaffActivity(activityData) {
             userAgent,
             requestMethod,
             requestPath,
-            status = 'success'
+            status = 'success',
+            // New stallholder-specific fields (optional, NULL for non-stallholder logs)
+            stallholderUserType = null,
+            stallholderType = null
         } = activityData;
+
+        // Derive stallholder type from module if not explicitly provided
+        const resolvedStallholderUserType = stallholderUserType ||
+          (staffType === 'stallholder' ? 'Mobile User' : null);
+
+        const resolvedStallholderType = stallholderType || (() => {
+          if (staffType !== 'stallholder') return null;
+          const moduleMap = {
+            'Documents': 'Document Action',
+            'Payments': 'Payment Action',
+            'Complaints': 'Complaint Action',
+            'Dashboard': 'App Access',
+            'Notifications': 'App Access',
+            'Reports': 'App Access',
+            'mobile_app': 'Authentication'
+          };
+          return moduleMap[module] || 'General';
+        })();
 
         // Use stored procedure for inserting activity log
         await connection.execute(
-            'CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'CALL sp_insertStaffActivityLog(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 staffType,
                 staffId,
@@ -58,11 +79,12 @@ export async function logStaffActivity(activityData) {
                 userAgent || null,
                 requestMethod || null,
                 requestPath || null,
-                status
+                status,
+                resolvedStallholderUserType,
+                resolvedStallholderType
             ]
         );
 
-        console.log(`📝 Activity logged: ${staffType} - ${staffName} - ${actionType}`);
         return true;
     } catch (error) {
         console.error('❌ Error logging activity:', error);
@@ -87,14 +109,7 @@ export async function getAllStaffActivities(req, res) {
         const limit = parseInt(req.query.limit) || 100;
         const offset = parseInt(req.query.offset) || 0;
 
-        // Debug: Log the request details
-        console.log('📋 Activity log request:', {
-            userType: req.user?.userType,
-            userBranchId: req.user?.branchId,
-            queryBranchId: req.query.branchId,
-            filterUserType: userType,
-            filterUserId: userId
-        });
+
 
         // If branchId is not explicitly provided in query, use user's branch
         // For system_administrator and business_owner, we pass null so they can see all branches + null branches.
@@ -139,7 +154,6 @@ export async function getAllStaffActivities(req, res) {
                      });
                      activity.staff_name = decryptedParts.join(' ').trim();
                  } catch (e) {
-                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
                  }
             }
             return activity;
@@ -229,7 +243,6 @@ export async function getStaffActivityById(req, res) {
                          activity.staff_name = decryptedParts.join(' ').trim();
                      }
                  } catch (e) {
-                     console.error('🔓 Decryption failed for staff_name:', activity.staff_name);
                  }
             }
             return activity;
@@ -339,7 +352,6 @@ export async function clearAllActivityLogs(req, res) {
         const [rows] = await connection.execute('CALL sp_clearAllActivityLogs()');
         const affectedRows = rows[0][0].affected_rows;
 
-        console.log(`🗑️ Cleared ${affectedRows} activity log records`);
 
         // Log this action
         await logStaffActivity({
@@ -369,6 +381,111 @@ export async function clearAllActivityLogs(req, res) {
         res.status(500).json({
             success: false,
             message: 'Failed to clear activity logs',
+            error: error.message
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+
+/**
+ * Clear activity logs for a specific stallholder
+ * DELETE /api/activity-logs/stallholder/:stallholderId/clear
+ */
+export async function clearStallholderActivityLogs(req, res) {
+    let connection;
+    try {
+        const stallholderId = parseInt(req.params.stallholderId);
+
+        if (!stallholderId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid stallholder ID'
+            });
+        }
+
+        connection = await createConnection();
+        
+        const [rows] = await connection.execute('CALL sp_clearStallholderActivityLogs(?)', [stallholderId]);
+        const affectedRows = rows[0]?.[0]?.affected_rows || 0;
+
+
+        // Log this action
+        await logStaffActivity({
+            staffType: req.user.userType || 'system_administrator',
+            staffId: req.user.userId,
+            staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}`,
+            branchId: req.user.branchId,
+            actionType: 'DELETE',
+            actionDescription: `Cleared stallholder activity log history (Stallholder ID: ${stallholderId}, ${affectedRows} records)`,
+            module: 'Activity Logs',
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            requestMethod: req.method,
+            requestPath: req.originalUrl,
+            status: 'success'
+        });
+
+        res.json({
+            success: true,
+            message: 'Stallholder activity log history cleared successfully',
+            data: {
+                recordsCleared: affectedRows
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error clearing stallholder activity logs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to clear stallholder activity logs',
+            error: error.message
+        });
+    } finally {
+        if (connection) await connection.end();
+    }
+}
+
+/**
+ * Clear activity logs for all stallholders
+ * DELETE /api/activity-logs/stallholder/clear-all
+ */
+export async function clearAllStallholderActivityLogs(req, res) {
+    let connection;
+    try {
+        connection = await createConnection();
+        
+        const [rows] = await connection.execute('CALL sp_clearAllStallholderActivityLogs()');
+        const affectedRows = rows[0]?.[0]?.affected_rows || 0;
+
+
+        // Log this action
+        await logStaffActivity({
+            staffType: req.user.userType || 'system_administrator',
+            staffId: req.user.userId,
+            staffName: req.user.username || `${req.user.firstName} ${req.user.lastName}`,
+            branchId: req.user.branchId,
+            actionType: 'DELETE',
+            actionDescription: `Cleared all stallholder activity log history (${affectedRows} records)`,
+            module: 'Activity Logs',
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            requestMethod: req.method,
+            requestPath: req.originalUrl,
+            status: 'success'
+        });
+
+        res.json({
+            success: true,
+            message: 'Stallholder activity log history cleared successfully',
+            data: {
+                recordsCleared: affectedRows
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error clearing stallholder activity logs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to clear stallholder activity logs',
             error: error.message
         });
     } finally {
@@ -418,6 +535,7 @@ export default {
     getStaffActivityById,
     getActivitySummary,
     clearAllActivityLogs,
+    clearStallholderActivityLogs,
+    clearAllStallholderActivityLogs,
     activityLogMiddleware
 };
-

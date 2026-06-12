@@ -29,7 +29,7 @@ export const vendorLogin = async (req, res) => {
         va.vendor_account_id,
         v.vendor_id,
         va.vendor_email AS email,
-        va.vendor_password AS password_hash,
+        va.vendor_password_hash AS password_hash,
         v.status,
         v.first_name,
         v.middle_name,
@@ -126,11 +126,9 @@ export const vendorLogin = async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('❌ Vendor login error:', error)
     return res.status(500).json({
       success: false,
       message: 'Vendor login failed.',
-      error: error.message,
     })
   } finally {
     if (connection) await connection.end()

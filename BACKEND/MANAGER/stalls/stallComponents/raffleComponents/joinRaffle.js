@@ -7,7 +7,6 @@ export const joinRaffle = async (req, res) => {
     const { stallId } = req.params;
     const { applicantId, applicationId } = req.body;
 
-    console.log(`🎯 Applicant ${applicantId} joining raffle for stall ${stallId}`);
 
     connection = await createConnection();
 
@@ -89,7 +88,6 @@ export const joinRaffle = async (req, res) => {
       startTime = new Date();
       endTime = new Date(startTime.getTime() + (raffle.duration_hours * 60 * 60 * 1000));
 
-      console.log(`🚀 First participant! Starting timer: ${raffle.duration_hours} hours`);
       console.log(`⏰ Start: ${startTime}, End: ${endTime}`);
 
       // Update raffle with timer

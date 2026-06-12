@@ -15,7 +15,6 @@ export const selectRaffleWinner = async (req, res) => {
       });
     }
 
-    console.log(`🎯 Selecting winner for raffle ${raffleId} using ${method} method`);
 
     connection = await createConnection();
 
@@ -96,16 +95,13 @@ export const selectRaffleWinner = async (req, res) => {
         });
       }
       winner = manualWinner;
-      console.log(`👑 Manually selected winner: ${winner.applicant_full_name}`);
     } else if (participants.length === 1) {
       // Automatic winner if only one participant
       winner = participants[0];
-      console.log(`👑 Automatic winner (only participant): ${winner.applicant_full_name}`);
     } else {
       // Random selection
       const randomIndex = Math.floor(Math.random() * participants.length);
       winner = participants[randomIndex];
-      console.log(`👑 Random winner selected: ${winner.applicant_full_name} (${randomIndex + 1}/${participants.length})`);
     }
 
     // Look up the application for this winner + stall
@@ -179,7 +175,6 @@ export const selectRaffleWinner = async (req, res) => {
     // Check if auto-removed from other auctions/raffles
     const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
     if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
-      console.log(`🚫 Applicant ${winner.applicant_id} now has ${resultSet[0].new_stall_count} stalls — auto-removed from other auctions/raffles`);
     }
 
     // Commit transaction
@@ -225,7 +220,6 @@ export const selectRaffleWinner = async (req, res) => {
 export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
   let connection;
   try {
-    console.log('🔄 Checking for expired raffles...');
 
     connection = await createConnection();
 
@@ -266,7 +260,6 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
             status: 'ended_no_participants'
           });
 
-          console.log(`📝 Raffle ${raffle.raffle_id} closed - no participants`);
           continue;
         }
 
@@ -356,7 +349,6 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
         // Check if auto-removed from other auctions/raffles
         const resultSet = Array.isArray(spResult) ? spResult[0] : spResult;
         if (resultSet && resultSet[0] && resultSet[0].new_stall_count >= 2) {
-          console.log(`🚫 Auto-removed applicant ${winner.applicant_id} from other auctions/raffles (has ${resultSet[0].new_stall_count} stalls)`);
         }
 
         results.push({
@@ -367,7 +359,6 @@ export const autoSelectWinnerForExpiredRaffles = async (req, res) => {
           status: 'winner_selected'
         });
 
-        console.log(`👑 Auto-selected winner for raffle ${raffle.raffle_id}: ${winner.applicant_full_name}`);
 
       } catch (error) {
         console.error(`❌ Error processing raffle ${raffle.raffle_id}:`, error);

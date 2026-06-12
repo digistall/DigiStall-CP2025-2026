@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { createConnection } from '../../../config/database.js'
 import { decryptApplicantData, decryptStallholderData, decryptSpouseData, getEncryptionKeyFromDB, decryptAES256GCM, decryptObjectFields } from '../../../services/mysqlDecryptionService.js'
+import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js'
 
 // Mobile login for React.js app - fetch stalls by applicant's applied area
 export const mobileLogin = async (req, res) => {
@@ -9,7 +10,6 @@ export const mobileLogin = async (req, res) => {
   
   try {
     const { username, password } = req.body
-    console.log('📱 Mobile Login Request:', { username, passwordLength: password?.length })
 
     if (!username || !password) {
       console.log('❌ Missing credentials')
@@ -20,7 +20,6 @@ export const mobileLogin = async (req, res) => {
     }
 
     // Step 1: Get applicant credentials and basic info using stored procedure
-    console.log('🔍 Looking up user:', username)
     
     const [credentialResultRows] = await connection.execute(
       'CALL sp_getCredentialWithApplicant(?)',
@@ -28,8 +27,6 @@ export const mobileLogin = async (req, res) => {
     );
     const credentialRows = credentialResultRows[0] || [];
 
-    console.log('📋 Credential rows found:', credentialRows.length)
-    console.log('🔍 Raw credential data:', JSON.stringify(credentialRows, null, 2))
 
     if (credentialRows.length === 0) {
       console.log('❌ User not found or inactive')
@@ -46,18 +43,9 @@ export const mobileLogin = async (req, res) => {
     
     const applicantFullName = decryptedCredentials.applicant_full_name || 'User'
     
-    console.log('👤 Found user:', applicantFullName)
-    console.log('🔍 User credentials structure:', {
-      applicant_id: decryptedCredentials.applicant_id,
-      username: decryptedCredentials.username,
-      has_password_hash: !!decryptedCredentials.password_hash,
-      password_hash_preview: decryptedCredentials.password_hash?.substring(0, 15) + '...',
-      applicant_full_name: applicantFullName
-    })
+
 
     // Verify password
-    console.log('🔐 Verifying password...')
-    console.log('🔍 Password hash format:', decryptedCredentials.password_hash?.substring(0, 10) + '...')
     
     let isPasswordValid = false
     
@@ -65,12 +53,9 @@ export const mobileLogin = async (req, res) => {
       // First try bcrypt comparison (for properly hashed passwords)
       if (decryptedCredentials.password_hash?.startsWith('$2b$') || decryptedCredentials.password_hash?.startsWith('$2a$')) {
         isPasswordValid = await bcrypt.compare(password, decryptedCredentials.password_hash)
-        console.log('🔑 BCrypt comparison result:', isPasswordValid)
       } else {
         // Fallback for legacy plain text passwords (temporary fix)
         isPasswordValid = password === decryptedCredentials.password_hash
-        console.log('⚠️ Using plain text password comparison for user:', username)
-        console.log('🔑 Plain text comparison result:', isPasswordValid)
       }
     } catch (error) {
       console.error('❌ Password verification error:', error)
@@ -151,7 +136,6 @@ export const mobileLogin = async (req, res) => {
     
     // Decrypt additional info fields (spouse, email, etc.)
     additionalInfo = decryptObjectFields(additionalInfo, ['email_address', 'spouse_full_name', 'spouse_contact_number'])
-    console.log('📋 Additional info result:', JSON.stringify(additionalInfo, null, 2))
 
     // Step 7b: Get stallholder information if user is a stallholder using stored procedure
     const [stallholderRows] = await connection.execute(
@@ -163,9 +147,7 @@ export const mobileLogin = async (req, res) => {
     // Decrypt stallholder data if present (full_name is now a single column)
     if (stallholderInfo) {
       stallholderInfo = decryptObjectFields(stallholderInfo, ['stallholder_name', 'contact_number', 'email', 'address'])
-      console.log('🔓 Decrypted stallholder_name:', stallholderInfo.stallholder_name)
     }
-    console.log('🏪 Stallholder info:', stallholderInfo ? 'Found' : 'Not found')
 
     // Step 7c: Get application status using stored procedure
     const [applicationRows] = await connection.execute(
@@ -174,7 +156,6 @@ export const mobileLogin = async (req, res) => {
     )
     
     const applicationInfo = applicationRows[0]?.length > 0 ? applicationRows[0][0] : null
-    console.log('📄 Application info:', applicationInfo ? applicationInfo.status : 'No application')
 
     // Step 8: Update last login using stored procedure
     await connection.execute(
@@ -334,7 +315,26 @@ export const mobileLogin = async (req, res) => {
       { expiresIn: '7d' } // Token valid for 7 days
     );
     
-    console.log('🔐 JWT token generated for user:', fullName);
+
+    // Log stallholder login activity (mobile app)
+    if (stallholderInfo?.stallholder_id) {
+      const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress
+      const userAgent = req.get('User-Agent')
+      await logStaffActivity({
+        staffType: 'stallholder',
+        staffId: stallholderInfo.stallholder_id,
+        staffName: stallholderInfo.stallholder_name || fullName || 'Unknown',
+        branchId: stallholderInfo.branch_id || null,
+        actionType: 'LOGIN',
+        actionDescription: 'Stallholder logged in via mobile app',
+        module: 'mobile_app',
+        ipAddress,
+        userAgent,
+        requestMethod: req.method,
+        requestPath: req.originalUrl,
+        status: 'success'
+      })
+    }
 
     res.json({
       success: true,
@@ -344,14 +344,7 @@ export const mobileLogin = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('🚨 DETAILED Mobile login error:', {
-      message: error.message,
-      code: error.code,
-      sqlState: error.sqlState,
-      sqlMessage: error.sqlMessage,
-      stack: error.stack,
-      username: req.body.username
-    })
+
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
@@ -454,4 +447,3 @@ export const submitApplication = async (req, res) => {
     await connection.end()
   }
 }
-
