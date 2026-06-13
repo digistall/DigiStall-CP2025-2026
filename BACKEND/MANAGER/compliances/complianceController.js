@@ -32,50 +32,102 @@ export const getAllComplianceRecords = async (req, res) => {
   let connection;
   try {
     const { status, search } = req.query;
-    const userType = req.user?.userType;
-
 
     connection = await createConnection();
 
     // Get branch filter based on user role and business_owner_managers table
     const branchFilter = await getBranchFilter(req, connection);
 
-    // Prepare status and search parameters
-    const statusParam = status || 'all';
-    const searchParam = search || null;
+    let query = `
+      SELECT 
+        vr.report_id,
+        vr.report_id as compliance_id,
+        vr.stallholder_id,
+        vr.violation_id,
+        vr.reported_by,
+        vr.reported_by as inspector_id,
+        vr.report_date,
+        vr.report_date as date,
+        vr.report_date as inspection_date,
+        vr.offense_count,
+        vr.offense_count as offense_no,
+        vr.penalty_amount,
+        vr.payment_status,
+        vr.paid_date,
+        vr.paid_date as payment_date,
+        vr.remarks,
+        vr.status,
+        vr.created_at,
+        v.violation_type,
+        v.violation_type as type,
+        v.description as violation_description,
+        v.description as violation_details,
+        v.default_penalty,
+        sh.full_name as stallholder_name,
+        sh.full_name as stallholder,
+        sh.email as stallholder_email,
+        sh.contact_number as stallholder_contact,
+        s.stall_number,
+        s.stall_number as stall_no,
+        s.stall_id,
+        s.stall_location,
+        sh.branch_id,
+        b.branch_name,
+        b.area as branch_area,
+        i.first_name as inspector_first_name,
+        i.last_name as inspector_last_name,
+        (SELECT CASE 
+           WHEN EXISTS (SELECT 1 FROM violation_report vr2 WHERE vr2.stallholder_id = sh.stallholder_id AND vr2.status = 'Open') 
+           THEN 'Non-Compliant' 
+           ELSE 'Compliant' 
+         END) as stallholder_compliance_status
+      FROM violation_report vr
+      LEFT JOIN violation v ON vr.violation_id = v.violation_id
+      LEFT JOIN stallholder sh ON vr.stallholder_id = sh.stallholder_id
+      LEFT JOIN stall s ON sh.stall_id = s.stall_id
+      LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      LEFT JOIN inspector i ON vr.reported_by = i.inspector_id
+      WHERE 1=1
+    `;
 
-    let complianceRecords;
+    const queryParams = [];
 
-    if (branchFilter === null) {
-      // System administrator - see all compliance records
-      const [records] = await connection.execute(
-        'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
-        [null, statusParam, searchParam]
-      );
-      complianceRecords = records[0];
-    } else if (branchFilter.length === 0) {
-      // Business owner with no accessible branches
-      complianceRecords = [];
-    } else if (branchFilter.length === 1) {
-      // Single branch (business manager or owner with one branch)
-      const [records] = await connection.execute(
-        'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
-        [branchFilter[0], statusParam, searchParam]
-      );
-      complianceRecords = records[0];
-    } else {
-      // Multiple branches (business owner with multiple branches)
-      // Query each branch and combine results
-      const allRecords = [];
-      for (const branchId of branchFilter) {
-        const [records] = await connection.execute(
-          'CALL getAllComplianceRecordsDecrypted(?, ?, ?)',
-          [branchId, statusParam, searchParam]
-        );
-        allRecords.push(...records[0]);
+    // Add branch filter
+    if (branchFilter !== null) {
+      if (branchFilter.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: 'Compliance records retrieved successfully',
+          data: [],
+          count: 0
+        });
       }
-      complianceRecords = allRecords;
+      const placeholders = branchFilter.map(() => '?').join(',');
+      query += ` AND sh.branch_id IN (${placeholders})`;
+      queryParams.push(...branchFilter);
     }
+
+    // Add status filter
+    if (status && status !== 'all') {
+      query += ` AND vr.status = ?`;
+      queryParams.push(status);
+    }
+
+    // Add search filter
+    if (search && search.trim() !== '') {
+      query += ` AND (
+        v.violation_type LIKE ? OR 
+        v.description LIKE ? OR 
+        vr.remarks LIKE ? OR 
+        b.branch_name LIKE ?
+      )`;
+      const searchWildcard = `%${search}%`;
+      queryParams.push(searchWildcard, searchWildcard, searchWildcard, searchWildcard);
+    }
+
+    query += ` ORDER BY vr.report_date DESC`;
+
+    const [complianceRecords] = await connection.execute(query, queryParams);
 
     console.log(`✅ Found ${complianceRecords.length} compliance records`);
 
@@ -137,15 +189,62 @@ export const getComplianceRecordById = async (req, res) => {
   try {
     const { id } = req.params;
 
-
     connection = await createConnection();
 
-    const [records] = await connection.execute(
-      'CALL getComplianceRecordByIdDecrypted(?)',
-      [id]
-    );
+    const [records] = await connection.execute(`
+      SELECT 
+        vr.report_id,
+        vr.report_id as compliance_id,
+        vr.stallholder_id,
+        vr.violation_id,
+        vr.reported_by,
+        vr.reported_by as inspector_id,
+        vr.report_date,
+        vr.report_date as date,
+        vr.report_date as inspection_date,
+        vr.offense_count,
+        vr.offense_count as offense_no,
+        vr.penalty_amount,
+        vr.payment_status,
+        vr.paid_date,
+        vr.paid_date as payment_date,
+        vr.remarks,
+        vr.status,
+        vr.created_at,
+        vr.evidence,
+        v.violation_type,
+        v.violation_type as type,
+        v.description as violation_description,
+        v.description as violation_details,
+        v.default_penalty,
+        sh.full_name as stallholder_name,
+        sh.full_name as stallholder,
+        sh.email as stallholder_email,
+        sh.contact_number as stallholder_contact,
+        s.stall_number,
+        s.stall_number as stall_no,
+        s.stall_id,
+        s.stall_location,
+        sh.branch_id,
+        b.branch_name,
+        b.area as branch_area,
+        i.first_name as inspector_first_name,
+        i.last_name as inspector_last_name,
+        (SELECT CASE 
+           WHEN EXISTS (SELECT 1 FROM violation_report vr2 WHERE vr2.stallholder_id = sh.stallholder_id AND vr2.status = 'Open') 
+           THEN 'Non-Compliant' 
+           ELSE 'Compliant' 
+         END) as stallholder_compliance_status
+      FROM violation_report vr
+      LEFT JOIN violation v ON vr.violation_id = v.violation_id
+      LEFT JOIN stallholder sh ON vr.stallholder_id = sh.stallholder_id
+      LEFT JOIN stall s ON sh.stall_id = s.stall_id
+      LEFT JOIN branch b ON sh.branch_id = b.branch_id
+      LEFT JOIN inspector i ON vr.reported_by = i.inspector_id
+      WHERE vr.report_id = ?
+    `, [id]);
 
-    const record = records[0][0];
+    const record = records[0];
 
     if (!record) {
       return res.status(404).json({
@@ -272,6 +371,18 @@ export const createComplianceRecord = async (req, res) => {
     const newRecordId = result[0][0]?.report_id;
 
     console.log(`✅ Compliance record created with ID: ${newRecordId}`);
+
+    // Update stallholder's compliance_status to 'Non-Compliant'
+    // This ensures the status is reflected immediately in all views
+    try {
+      await connection.execute(
+        `UPDATE stallholder SET compliance_status = 'Non-Compliant' WHERE stallholder_id = ?`,
+        [stallholder_id]
+      );
+      console.log(`✅ Stallholder ${stallholder_id} compliance_status updated to Non-Compliant`);
+    } catch (updateErr) {
+      console.warn(`⚠️ Could not update stallholder compliance_status:`, updateErr.message);
+    }
 
     // Fetch the newly created record
     const [newRecord] = await connection.execute(

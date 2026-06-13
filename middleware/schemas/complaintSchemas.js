@@ -2,7 +2,7 @@
 import Joi from 'joi';
 import { id, name, email, phone, shortText, mediumText, longText, priorityEnum } from './commonSchemas.js';
 
-// POST /api/complaints
+// POST /api/complaints (Web admin/public)
 export const createComplaintSchema = Joi.object({
   complaint_type: Joi.string().max(100).trim().required(),
   sender_name: Joi.string().max(200).trim().required(),
@@ -13,8 +13,18 @@ export const createComplaintSchema = Joi.object({
   branch_id: id.allow(null),
   subject: Joi.string().max(300).trim().required(),
   description: longText.required(),
-  evidence: mediumText.allow('', null),
+  evidence: Joi.string().max(5000000).allow('', null), // Changed from mediumText to support base64 images
   priority: priorityEnum.allow('', null)
+});
+
+// POST /api/mobile/stallholder/complaint (Mobile App)
+export const createMobileComplaintSchema = Joi.object({
+  complaint_type: Joi.string().max(100).trim().required(),
+  stall_id: id.allow(null),
+  branch_id: id.allow(null),
+  subject: Joi.string().max(300).trim().required(),
+  description: longText.required(),
+  evidence: Joi.string().max(5000000).allow('', null) // Base64 string up to ~5MB (~3.7MB image)
 });
 
 // PUT /api/complaints/:id
@@ -31,3 +41,4 @@ export const resolveComplaintSchema = Joi.object({
   resolution_notes: longText.required(),
   status: Joi.string().valid('resolved', 'rejected').allow('', null)
 });
+
