@@ -28,6 +28,149 @@ async function loadModels() {
 }
 
 /**
+ * Passive anti-spoofing check using pixel-level heuristics.
+ * Detects presentation attacks: photos shown on screens or printed photos
+ * held up to the camera.
+ *
+ * Uses three independent signals and requires at least 2 to fire before
+ * rejecting, keeping the false-positive rate low for real users.
+ *
+ * @param {CanvasRenderingContext2D} ctx  - Canvas context of the (possibly rotated) face image
+ * @param {Object} bbox                  - Face bounding box { x, y, width, height }
+ * @param {{ width: number, height: number }} img - Image dimensions
+ * @returns {{ isLive: boolean, reason: string, scores: Object }}
+ */
+function checkPresentationAttack(ctx, bbox, img) {
+  // Work on the inner 76% of the face box to avoid boundary noise
+  const margin = 0.12;
+  const x  = Math.max(0, Math.floor(bbox.x + bbox.width  * margin));
+  const y  = Math.max(0, Math.floor(bbox.y + bbox.height * margin));
+  const w  = Math.min(img.width  - x, Math.ceil(bbox.width  * (1 - 2 * margin)));
+  const h  = Math.min(img.height - y, Math.ceil(bbox.height * (1 - 2 * margin)));
+
+  if (w < 20 || h < 20) {
+    // Face region too small to perform analysis — skip without blocking
+    return { isLive: true, reason: 'face_too_small_for_liveness', scores: {} };
+  }
+
+  const imgData = ctx.getImageData(x, y, w, h);
+  const data    = imgData.data;
+  const n       = w * h;
+
+  // ── Grayscale array ─────────────────────────────────────────────────────────
+  const gray = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    gray[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+  }
+
+  // ── Signal 1: Laplacian Energy (micro-texture measure) ───────────────────────
+  // Real skin captured by a camera has natural micro-texture (pores, fine hairs,
+  // camera sensor noise). A photo displayed on a screen or printed on paper has
+  // much lower micro-texture because the screen/print averaging smooths it out.
+  // The 8-neighbour Laplacian kernel measures the second spatial derivative;
+  // its mean absolute value (energy) reflects texture richness.
+  let lapSum = 0;
+  let lapCount = 0;
+  for (let row = 1; row < h - 1; row++) {
+    for (let col = 1; col < w - 1; col++) {
+      const idx = row * w + col;
+      const lap = Math.abs(
+        - gray[idx - w - 1] - gray[idx - w] - gray[idx - w + 1]
+        - gray[idx - 1]     + 8 * gray[idx] - gray[idx + 1]
+        - gray[idx + w - 1] - gray[idx + w] - gray[idx + w + 1]
+      );
+      lapSum += lap;
+      lapCount++;
+    }
+  }
+  const laplacianEnergy = lapCount > 0 ? lapSum / lapCount : 0;
+
+  // ── Signal 2: Local Block Variance (uniform-patch detector) ──────────────────
+  // Divide the face crop into 6×6 pixel blocks and compute per-block brightness
+  // variance. A flat/printed image tends to have very small within-block variance
+  // because all pixels in a small patch are nearly the same value.
+  const BLOCK = 6;
+  let blockVarSum = 0;
+  let blockCount  = 0;
+  for (let by = 0; by + BLOCK <= h; by += BLOCK) {
+    for (let bx = 0; bx + BLOCK <= w; bx += BLOCK) {
+      let s = 0, sq = 0;
+      for (let r = by; r < by + BLOCK; r++) {
+        for (let c = bx; c < bx + BLOCK; c++) {
+          const v = gray[r * w + c];
+          s  += v;
+          sq += v * v;
+        }
+      }
+      const cnt  = BLOCK * BLOCK;
+      const mean = s / cnt;
+      blockVarSum += (sq / cnt) - (mean * mean);
+      blockCount++;
+    }
+  }
+  const meanBlockVar = blockCount > 0 ? blockVarSum / blockCount : 0;
+
+  // ── Signal 3: Color Channel Analysis ────────────────────────────────────────
+  // LCD/OLED screens emit strong blue light, making photos-of-screens noticeably
+  // bluer than a real face under normal room lighting (where R > G > B for most
+  // skin tones). Additionally, screen rendering uses the sRGB colour space with
+  // precise per-channel values, causing an unusual variance imbalance across
+  // channels compared with natural skin.
+  let rSum = 0, gSum = 0, bSum = 0;
+  let rSq  = 0, gSq  = 0, bSq  = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    rSum += r;  gSum += g;  bSum += b;
+    rSq  += r * r;  gSq += g * g;  bSq += b * b;
+  }
+  const rMean = rSum / n;
+  const gMean = gSum / n;
+  const bMean = bSum / n;
+  const rVar  = (rSq / n) - (rMean * rMean);
+  const gVar  = (gSq / n) - (gMean * gMean);
+  const bVar  = (bSq / n) - (bMean * bMean);
+
+  // How "blue" is the face region relative to red?
+  const blueToRedRatio = rMean > 5 ? bMean / rMean : 1.0;
+  // How unequal are the channel variances? (extreme imbalance = screen sRGB)
+  const maxVar          = Math.max(rVar, gVar, bVar);
+  const minVar          = Math.min(rVar, gVar, bVar);
+  const channelVarRatio = minVar > 0 ? maxVar / minVar : 10;
+
+  const scores = {
+    laplacianEnergy:  +laplacianEnergy.toFixed(3),
+    meanBlockVar:     +meanBlockVar.toFixed(3),
+    blueToRedRatio:   +blueToRedRatio.toFixed(3),
+    channelVarRatio:  +channelVarRatio.toFixed(3),
+  };
+
+  console.log(`🔍 Anti-spoofing scores: ${JSON.stringify(scores)}`);
+
+  // ── Decision ─────────────────────────────────────────────────────────────────
+  // Each threshold was chosen to sit well inside the "obvious spoof" zone and
+  // well away from real-user values, so borderline cases are not punished.
+  // We require at least 2 of 4 signals to fire before rejecting, reducing the
+  // chance of wrongly blocking a legitimate user with unusual lighting or skin tone.
+  const lowTexture      = laplacianEnergy  < 2.5;   // Very flat micro-texture → screen/print
+  const lowVariance     = meanBlockVar     < 12.0;   // Highly uniform patches → flat image
+  const highBlue        = blueToRedRatio   > 0.88;   // Screen blue-light elevation
+  const unevenChannels  = channelVarRatio  > 10.0;   // sRGB channel imbalance → rendered image
+
+  const flagCount = [lowTexture, lowVariance, highBlue, unevenChannels].filter(Boolean).length;
+
+  if (flagCount >= 2) {
+    const reasons = [];
+    if (lowTexture)     reasons.push(`low_texture(lap=${laplacianEnergy.toFixed(2)})`);
+    if (lowVariance)    reasons.push(`low_variance(bv=${meanBlockVar.toFixed(2)})`);
+    if (highBlue)       reasons.push(`screen_blue(b/r=${blueToRedRatio.toFixed(2)})`);
+    if (unevenChannels) reasons.push(`channel_imbalance(ratio=${channelVarRatio.toFixed(1)})`);
+    return { isLive: false, reason: reasons.join(', '), scores };
+  }
+
+  return { isLive: true, reason: 'passed', scores };
+}
+
+/**
  * Validates a face image for quality and visibility
  * @param {Buffer} imageBuffer - The image buffer to analyze
  * @param {boolean} isRealTime - Whether this is a real-time check loop (strict verification, no bypass on error)
@@ -75,6 +218,7 @@ export async function validateFaceImage(imageBuffer, isRealTime = false) {
     let detections = await faceapi.detectAllFaces(img, detectionOptions).withFaceLandmarks();
     let rotatedBuffer = null;
     let finalImg = img;
+    let finalCtx = ctx;
     
     if (detections.length === 0) {
       console.log('🔍 No faces detected in original orientation, trying rotations...');
@@ -91,6 +235,12 @@ export async function validateFaceImage(imageBuffer, isRealTime = false) {
             console.log(`✅ Face detected successfully after rotating ${degrees}° (confidence score: ${tempDetections[0].detection.score.toFixed(2)})`);
             detections = tempDetections;
             finalImg = tempImg;
+
+            // Build a new canvas for the rotated image so anti-spoofing runs on correct pixels
+            const rotCanvas = new Canvas(tempImg.width, tempImg.height);
+            const rotCtx = rotCanvas.getContext('2d');
+            rotCtx.drawImage(tempImg, 0, 0);
+            finalCtx = rotCtx;
             
             // Apply the rotation to the ORIGINAL high-resolution buffer to save to the DB
             rotatedBuffer = await sharp(imageBuffer).rotate(degrees).toBuffer();
@@ -149,8 +299,8 @@ export async function validateFaceImage(imageBuffer, isRealTime = false) {
       
       // Create canvas for the final (possibly rotated) image to compute eye region stats
       const finalCanvas = new Canvas(finalImg.width, finalImg.height);
-      const finalCtx = finalCanvas.getContext('2d');
-      finalCtx.drawImage(finalImg, 0, 0);
+      const finalCtxEye = finalCanvas.getContext('2d');
+      finalCtxEye.drawImage(finalImg, 0, 0);
       
       // Function to calculate average brightness and standard deviation of a region
       function getRegionStats(points, expandRatio = 0.2, isCheek = false) {
@@ -184,7 +334,7 @@ export async function validateFaceImage(imageBuffer, isRealTime = false) {
         
         if (width <= 0 || height <= 0) return { mean: 0, stdDev: 0 };
         
-        const imgData = finalCtx.getImageData(sampleMinX, sampleMinY, width, height);
+        const imgData = finalCtxEye.getImageData(sampleMinX, sampleMinY, width, height);
         const data = imgData.data;
         
         let sum = 0;
@@ -203,7 +353,7 @@ export async function validateFaceImage(imageBuffer, isRealTime = false) {
       }
       
       const bbox = face.detection.box;
-      const faceImgData = finalCtx.getImageData(
+      const faceImgData = finalCtxEye.getImageData(
         Math.max(0, Math.floor(bbox.x)),
         Math.max(0, Math.floor(bbox.y)),
         Math.min(finalImg.width - Math.max(0, Math.floor(bbox.x)), Math.ceil(bbox.width)),
@@ -250,6 +400,26 @@ export async function validateFaceImage(imageBuffer, isRealTime = false) {
     } catch (eyeErr) {
       console.error('Error during eye/sunglasses validation heuristic:', eyeErr);
       // Bypassed if calculation fails, so we do not block legitimate users
+    }
+
+    // ── Anti-Spoofing / Liveness Check ──────────────────────────────────────────
+    // Detects presentation attacks: a photo displayed on a screen or a printed photo.
+    // This runs after all other checks pass to avoid redundant processing.
+    try {
+      const livenessResult = checkPresentationAttack(finalCtx, face.detection.box, finalImg);
+
+      if (!livenessResult.isLive) {
+        console.log(`❌ Anti-spoofing check failed — reason: ${livenessResult.reason}`);
+        return {
+          isValid: false,
+          message: 'Live face required. Please take the photo directly with your front camera. Using a photo from a screen or printed image is not allowed.',
+        };
+      }
+
+      console.log(`✅ Anti-spoofing check passed`);
+    } catch (spoofErr) {
+      // Do not block users if the liveness check itself errors (e.g. edge-case image geometry)
+      console.error('Error during anti-spoofing check:', spoofErr);
     }
     
     // Return success along with the rotated buffer (if any correction was applied)
