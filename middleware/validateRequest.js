@@ -17,7 +17,6 @@ export const validate = (schema, source = 'body') => {
 
     const { error, value } = schema.validate(dataToValidate, {
       abortEarly: false,        // Report ALL errors, not just the first
-      stripUnknown: true,       // Silently remove unknown fields
       convert: true,            // Allow type coercion (string "123" → number 123)
       errors: {
         wrap: { label: false }  // Don't wrap field names in quotes in error messages
