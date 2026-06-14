@@ -3,9 +3,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Image,
   Dimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 
@@ -32,20 +32,20 @@ const Navbar = ({
   const navItems = [
     {
       id: "Dashboard",
-      icon: require("../../assets/dashboard-icon.png"),
+      icon: "grid",
       label: "Dashboard",
       onPress: onDashboardPress,
     },
     {
       id: "Payment",
-      icon: require("../../assets/payment-icon.png"),
+      icon: "wallet",
       label: "Payment",
       onPress: onPaymentPress,
     },
     {
       id: "Vendor",
-      icon: require("../../assets/Home-Image/StallIcon.png"),
-      label: "Vendor",
+      icon: "storefront",
+      label: "Vendors",
       onPress: onVendorPress,
     },
   ];
@@ -61,7 +61,6 @@ const Navbar = ({
       ]}
     >
       {navItems.map((item) => {
-        // Only show active state if activeTab matches the item id
         const isActive = activeTab === item.id;
 
         return (
@@ -71,14 +70,12 @@ const Navbar = ({
             onPress={item.onPress}
             activeOpacity={0.7}
           >
-            <Image
-              source={item.icon}
-              style={[
-                styles.navIcon,
-                { tintColor: isActive ? colors.primary : colors.textSecondary },
-                isActive && styles.activeNavIcon,
-              ]}
-              resizeMode="contain"
+            {isActive && <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />}
+            <Ionicons
+              name={isActive ? item.icon : `${item.icon}-outline`}
+              size={24}
+              color={isActive ? colors.primary : colors.textSecondary}
+              style={isActive && styles.activeNavIcon}
             />
             <Text
               style={[
@@ -100,10 +97,9 @@ const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: "row",
     borderTopWidth: 1,
-    paddingVertical: height * 0.015,
-    paddingHorizontal: width * 0.04,
+    paddingVertical: height * 0.012,
+    paddingHorizontal: width * 0.02,
     minHeight: 70,
-    // Add shadow for better visual separation
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -119,26 +115,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: height * 0.005,
     minHeight: 50,
-    position: "relative", // For positioning the active indicator
+    position: "relative",
   },
-  navIcon: {
-    width: width * 0.07,
-    height: width * 0.07,
-    maxWidth: 30,
-    maxHeight: 30,
-    minWidth: 20,
-    minHeight: 20,
-    marginBottom: 4,
+  activeIndicator: {
+    position: "absolute",
+    top: -2,
+    width: 24,
+    height: 3,
+    borderRadius: 2,
   },
   navText: {
-    fontSize: width * 0.03,
-    maxFontSize: 14,
-    minFontSize: 10,
+    fontSize: width * 0.028,
     textAlign: "center",
     fontWeight: "400",
+    marginTop: 4,
   },
   activeNavIcon: {
-    // Add slight scale effect for active state
     transform: [{ scale: 1.1 }],
   },
   activeNavText: {

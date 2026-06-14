@@ -30,30 +30,45 @@ const QRScannerModal = ({ visible, onClose, onScanned }) => {
     setScanned(true);
 
     try {
-      // Try parsing as JSON first: {"vendorId": "V-123", "stallId": "S-456"}
+      // Try parsing as JSON first
+      // Supported formats:
+      //   {"vendorIdentifier": "VND-000123", "version": 1}  (new standard QR)
+      //   {"vendorId": "V-123", "stallId": "S-456"}          (legacy format)
       const parsed = JSON.parse(data);
-      if (parsed.vendorId) {
+      
+      if (parsed.vendorIdentifier) {
+        // New standard QR format
         onScanned({
+          vendorIdentifier: parsed.vendorIdentifier,
+          vendorId: null,
+          stallId: null,
+          raw: data,
+        });
+      } else if (parsed.vendorId) {
+        // Legacy format
+        onScanned({
+          vendorIdentifier: parsed.vendorId,
           vendorId: parsed.vendorId,
           stallId: parsed.stallId || null,
           raw: data,
         });
       } else {
-        // JSON but no vendorId field
-        onScanned({ vendorId: null, stallId: null, raw: data, error: "Invalid QR format: missing vendorId" });
+        // JSON but no recognized field
+        onScanned({ vendorIdentifier: null, vendorId: null, stallId: null, raw: data, error: "Invalid QR format: missing vendorIdentifier" });
       }
     } catch {
-      // Not JSON — try URL format: digistall://V-123/S-456 or plain ID
+      // Not JSON — try URL format: digistall://VND-000123 or plain ID
       if (data.startsWith("digistall://")) {
         const parts = data.replace("digistall://", "").split("/");
         onScanned({
+          vendorIdentifier: parts[0] || null,
           vendorId: parts[0] || null,
           stallId: parts[1] || null,
           raw: data,
         });
       } else {
-        // Treat as plain vendor ID
-        onScanned({ vendorId: data.trim(), stallId: null, raw: data });
+        // Treat as plain vendor identifier
+        onScanned({ vendorIdentifier: data.trim(), vendorId: data.trim(), stallId: null, raw: data });
       }
     }
   };
