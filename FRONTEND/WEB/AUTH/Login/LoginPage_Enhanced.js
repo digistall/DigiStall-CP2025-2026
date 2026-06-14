@@ -91,8 +91,6 @@ export default {
 
     showErrorMessage(message) {
       this.errorMessage = message
-      this.errorPopup.message = message
-      this.errorPopup.show = true
     },
 
     async handleLogin() {

@@ -34,7 +34,7 @@ router.get('/verify-token', (req, res) => {
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     res.status(200).json({
       success: true,
       message: 'Token is valid',
