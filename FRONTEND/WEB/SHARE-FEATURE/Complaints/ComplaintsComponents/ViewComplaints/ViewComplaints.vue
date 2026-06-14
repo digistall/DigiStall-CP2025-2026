@@ -104,8 +104,8 @@
               </svg>
               <p>No evidence attached</p>
             </div>
-            <div v-else class="evidence-placeholder">
-              <p>Evidence files will be displayed here</p>
+            <div v-else class="evidence-image-container">
+              <img :src="'data:image/jpeg;base64,' + complaints.evidence" alt="Complaint Evidence" class="evidence-image" />
             </div>
           </div>
         </div>

@@ -1,10 +1,10 @@
 import rateLimit from 'express-rate-limit';
 
 // Strict rate limiter for authentication and sensitive endpoints
-// Default: 3 attempts per 15 minutes
+// Default: 5 attempts per 15 minutes
 export const authLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_AUTH_MAX) || 3,
+  max: parseInt(process.env.RATE_LIMIT_AUTH_MAX) || 5,
   skip: (req) => req.method === 'OPTIONS', // Don't count preflight requests
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers

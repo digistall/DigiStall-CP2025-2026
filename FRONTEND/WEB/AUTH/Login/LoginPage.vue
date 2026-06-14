@@ -150,25 +150,29 @@
       @close="showSuccessPopup = false"
     />
 
-    <!-- Error Notification Popup -->
-    <UniversalPopup
-      :show="errorPopup.show"
-      :message="errorPopup.message"
-      :type="errorPopup.type"
-      :operation="errorPopup.operation"
-      :operationType="errorPopup.operationType"
-      @close="errorPopup.show = false"
-    />
-
-    <!-- Warning Notification Popup -->
-    <UniversalPopup
-      :show="warningPopup.show"
-      :message="warningPopup.message"
-      :type="warningPopup.type"
-      :operation="warningPopup.operation"
-      :operationType="warningPopup.operationType"
-      @close="warningPopup.show = false"
-    />
+    <!-- Warning Notification Popup (Snackbar) -->
+    <v-snackbar
+      v-model="warningPopup.show"
+      location="bottom left"
+      color="warning"
+      variant="elevated"
+      timeout="5000"
+    >
+      <div class="d-flex align-center">
+        <v-icon left class="mr-2">mdi-alert</v-icon>
+        <span class="text-subtitle-2">{{ warningPopup.message }}</span>
+      </div>
+      <template v-slot:actions>
+        <v-btn
+          color="white"
+          variant="text"
+          size="small"
+          @click="warningPopup.show = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 

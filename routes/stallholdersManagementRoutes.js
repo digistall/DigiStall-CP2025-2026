@@ -15,7 +15,7 @@ import {
   removeBranchDocumentRequirement
 } from '../BACKEND/MANAGER/stallholders/documentController.js';
 import authMiddleware from '../middleware/auth.js';
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
+import { viewOnlyForOwners, checkBranchAccess } from '../middleware/rolePermissions.js';
 
 import { validate } from '../middleware/validateRequest.js';
 import {
@@ -56,14 +56,14 @@ router.get('/available-stalls', StallholderController.getAvailableStalls);
  * @desc Get stallholder by ID
  * @access Protected
  */
-router.get('/:id', StallholderController.getStallholderById);
+router.get('/:id', checkBranchAccess('stallholder', 'stallholder_id'), StallholderController.getStallholderById);
 
 /**
  * @route GET /api/stallholders-management/:id/violations
  * @desc Get violation history for a specific stallholder
  * @access Protected
  */
-router.get('/:id/violations', StallholderController.getViolationHistory);
+router.get('/:id/violations', checkBranchAccess('stallholder', 'stallholder_id'), StallholderController.getViolationHistory);
 
 /**
  * @route POST /api/stallholders-management
@@ -77,14 +77,14 @@ router.post('/', viewOnlyForOwners, validate(createStallholderSchema), Stallhold
  * @desc Update a stallholder
  * @access Protected (Admin, Manager)
  */
-router.put('/:id', viewOnlyForOwners, validate(updateStallholderSchema), StallholderController.updateStallholder);
+router.put('/:id', viewOnlyForOwners, checkBranchAccess('stallholder', 'stallholder_id'), validate(updateStallholderSchema), StallholderController.updateStallholder);
 
 /**
  * @route DELETE /api/stallholders-management/:id
  * @desc Delete a stallholder
  * @access Protected (Admin, Manager)
  */
-router.delete('/:id', viewOnlyForOwners, StallholderController.deleteStallholder);
+router.delete('/:id', viewOnlyForOwners, checkBranchAccess('stallholder', 'stallholder_id'), StallholderController.deleteStallholder);
 
 /**
  * @route POST /api/stallholders-management/import

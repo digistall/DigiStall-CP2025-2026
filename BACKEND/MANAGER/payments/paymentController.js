@@ -1189,13 +1189,36 @@ const PaymentController = {
         });
       }
       
+      // Query violation_report for all unpaid/open statuses
+      // Covers both legacy 'Open' status and compliance module statuses ('pending', 'in-progress')
+      const [result] = await connection.execute(`
+        SELECT 
+          vr.report_id           AS violation_id,
+          vr.stallholder_id,
+          vr.report_date         AS date_reported,
+          COALESCE(v.violation_type, 'Violation') AS violation_type,
+          NULL                   AS ordinance_no,
+          vr.offense_count       AS offense_no,
+          COALESCE(v.default_penalty, 'moderate') AS severity,
+          vr.status,
+          NULL                   AS receipt_number,
+          COALESCE(vr.penalty_amount, 0) AS penalty_amount,
+          vr.remarks             AS penalty_remarks,
+          CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.last_name, '')) AS inspector_name,
+          b.branch_name,
+          st.stall_number        AS stall_no
+        FROM violation_report vr
+        LEFT JOIN violation v        ON vr.violation_id = v.violation_id
+        LEFT JOIN inspector e        ON vr.reported_by = e.inspector_id
+        LEFT JOIN stallholder sh     ON vr.stallholder_id = sh.stallholder_id
+        LEFT JOIN stall st           ON sh.stall_id = st.stall_id
+        LEFT JOIN branch b           ON sh.branch_id = b.branch_id
+        WHERE vr.stallholder_id = ?
+          AND vr.status IN ('Open', 'pending', 'in-progress')
+        ORDER BY vr.report_date DESC
+      `, [parseInt(stallholderId)]);
       
-      const [result] = await connection.execute(
-        'CALL getUnpaidViolationsByStallholder(?)',
-        [parseInt(stallholderId)]
-      );
-      
-      const violations = result[0] || [];
+      const violations = result || [];
       
       res.status(200).json({
         success: true,
@@ -1211,7 +1234,7 @@ const PaymentController = {
           receiptNumber: v.receipt_number,
           penaltyAmount: parseFloat(v.penalty_amount) || 0,
           penaltyRemarks: v.penalty_remarks,
-          inspectorName: v.inspector_name,
+          inspectorName: v.inspector_name ? v.inspector_name.trim() : null,
           branchName: v.branch_name,
           stallNo: v.stall_no,
           stallholderId: v.stallholder_id
@@ -1229,6 +1252,7 @@ const PaymentController = {
       if (connection) await connection.end();
     }
   },
+
 
   /**
    * Process violation payment

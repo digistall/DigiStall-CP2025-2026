@@ -46,17 +46,9 @@ const optionalVerifyToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token) {
-    // Try each known secret in priority order (for backward compatibility with old sessions)
-    const secrets = [
-      process.env.JWT_SECRET,
-      'digistall-mobile-secret-key-2024',
-      'your-super-secret-jwt-key-change-this-in-production',
-      'your-secret-key',
-    ].filter(Boolean);
-
-    for (const secret of secrets) {
+    if (process.env.JWT_SECRET) {
       try {
-        const decoded = jwt.verify(token, secret);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = {
           userId:    decoded.userId    || decoded.applicantId || decoded.id,
           username:  decoded.username  || decoded.email || 'Unknown',
@@ -65,9 +57,8 @@ const optionalVerifyToken = (req, res, next) => {
           stallholderId: decoded.stallholderId || null,
           branchId:  decoded.branchId  || null
         };
-        break; // stop at first successful decode
       } catch (_) {
-        // try next secret
+        // try fallback decode below
       }
     }
 

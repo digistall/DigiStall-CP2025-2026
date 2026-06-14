@@ -67,7 +67,8 @@ import { verifyToken } from '../middleware/auth.js';
 
 import { validate } from '../middleware/validateRequest.js';
 import { logAppAccessSchema } from '../middleware/schemas/mobileSchemas.js';
-import { createComplaintSchema } from '../middleware/schemas/complaintSchemas.js';
+import { createMobileComplaintSchema } from '../middleware/schemas/complaintSchemas.js';
+
 
 const router = express.Router();
 
@@ -224,7 +225,7 @@ router.get('/profile/:stallholder_id', verifyToken, getStallholderProfile);
  * @desc Submit a complaint
  * @access Protected (Stallholder only)
  */
-router.post('/complaint', verifyToken, validate(createComplaintSchema), submitComplaint);
+router.post('/complaint', verifyToken, validate(createMobileComplaintSchema), submitComplaint);
 
 /**
  * @route GET /api/mobile/stallholder/complaints

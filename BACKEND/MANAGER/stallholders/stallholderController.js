@@ -74,7 +74,7 @@ const StallholderController = {
             st.rental_price as lease_amount,
             (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = s.stallholder_id AND p.payment_status = 'completed') as last_payment_date,
             CASE 
-              WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status = 'Open') 
+              WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status IN ('Open', 'pending', 'in-progress')) 
               THEN 'Non-Compliant' 
               ELSE 'Compliant' 
             END as compliance_status,
@@ -89,7 +89,6 @@ const StallholderController = {
           LEFT JOIN stall st ON s.stall_id = st.stall_id
           LEFT JOIN branch b ON s.branch_id = b.branch_id
           LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
-          WHERE s.status != 'Inactive'
           ORDER BY s.stallholder_id
         `);
         rows = result || [];
@@ -115,7 +114,7 @@ const StallholderController = {
                   st.rental_price as lease_amount,
                   (SELECT MAX(p.payment_date) FROM payments p WHERE p.stallholder_id = s.stallholder_id AND p.payment_status = 'completed') as last_payment_date,
                   CASE 
-                    WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status = 'Open') 
+                    WHEN EXISTS (SELECT 1 FROM violation_report vr WHERE vr.stallholder_id = s.stallholder_id AND vr.status IN ('Open', 'pending', 'in-progress')) 
                     THEN 'Non-Compliant' 
                     ELSE 'Compliant' 
                   END as compliance_status,
@@ -128,7 +127,7 @@ const StallholderController = {
            LEFT JOIN stall st ON s.stall_id = st.stall_id 
            LEFT JOIN branch b ON s.branch_id = b.branch_id 
            LEFT JOIN business_information bi ON s.mobile_user_id = bi.applicant_id
-           WHERE s.branch_id IN (${placeholders}) AND s.status != 'Inactive'`,
+           WHERE s.branch_id IN (${placeholders})`,
           branchFilter
         );
         rows = result || [];
@@ -2061,40 +2060,78 @@ const StallholderController = {
     try {
       const { id } = req.params;
 
-
       connection = await createConnection();
 
-      // Use direct query instead of stored procedure for compatibility
+      // Use a direct SQL query to bypass the database's broken getViolationHistoryByStallholder stored procedure (which has a typo referencing vr.date_reported)
       const [records] = await connection.execute(`
         SELECT 
-          vr.report_id AS violation_id,
+          vr.report_id           AS violation_id,
           vr.stallholder_id,
-          vr.violation_id AS violation_type_id,
-          v.violation_type AS violation_name,
-          v.description AS violation_description,
-          v.default_penalty AS severity,
-          vr.report_date AS date_reported,
-          vr.offense_count,
+          vr.violation_id        AS violation_type_id,
+          COALESCE(v.violation_type, 'Violation') AS violation_type,
+          NULL                   AS ordinance_no,
+          COALESCE(v.default_penalty, 'moderate') AS severity,
+          vr.report_date         AS date_reported,
+          vr.offense_count       AS offense_no,
           vr.penalty_amount,
-          vr.payment_status,
-          vr.paid_date,
-          vr.remarks,
+          NULL                   AS receipt_number,
           vr.status,
+          vr.remarks,
+          e.first_name           AS inspector_first_name,
+          e.last_name            AS inspector_last_name,
+          b.branch_name,
+          vr.paid_date           AS resolved_date,
           vr.created_at
         FROM violation_report vr
-        LEFT JOIN violation v ON vr.violation_id = v.violation_id
+        LEFT JOIN violation v        ON vr.violation_id = v.violation_id
+        LEFT JOIN inspector e        ON vr.reported_by = e.inspector_id
+        LEFT JOIN stallholder sh     ON vr.stallholder_id = sh.stallholder_id
+        LEFT JOIN branch b           ON sh.branch_id = b.branch_id
         WHERE vr.stallholder_id = ?
         ORDER BY vr.report_date DESC
-      `, [id]);
+      `, [parseInt(id)]);
 
       const violations = records || [];
 
-      console.log(`✅ Found ${violations.length} violations for stallholder ${id}`);
+      // Normalize fields just in case and map empty strings to null for clean UI
+      const mappedViolations = violations.map(vr => {
+        let inspector_name = null;
+        if (vr.inspector_first_name || vr.inspector_last_name) {
+          try {
+            const first = vr.inspector_first_name ? decryptData(vr.inspector_first_name) : '';
+            const last = vr.inspector_last_name ? decryptData(vr.inspector_last_name) : '';
+            inspector_name = `${first} ${last}`.trim();
+          } catch (e) {
+            inspector_name = 'Inspector';
+          }
+        }
+
+        return {
+          violation_id:       vr.violation_id,
+          stallholder_id:     vr.stallholder_id,
+          violation_type_id:  vr.violation_type_id,
+          violation_type:     vr.violation_type,
+          ordinance_no:       vr.ordinance_no  || null,
+          severity:           vr.severity      || 'moderate',
+          date_reported:      vr.date_reported,
+          offense_no:         vr.offense_no    || 1,
+          penalty_amount:     parseFloat(vr.penalty_amount) || 0,
+          receipt_number:     vr.receipt_number || null,
+          status:             vr.status,
+          remarks:            vr.remarks       || null,
+          inspector_name:     inspector_name || null,
+          branch_name:        vr.branch_name   || null,
+          resolved_date:      vr.resolved_date || null,
+          created_at:         vr.created_at
+        };
+      });
+
+      console.log(`✅ Found ${mappedViolations.length} violations for stallholder ${id}`);
 
       res.json({
         success: true,
-        data: violations,
-        count: violations.length
+        data: mappedViolations,
+        count: mappedViolations.length
       });
 
     } catch (error) {

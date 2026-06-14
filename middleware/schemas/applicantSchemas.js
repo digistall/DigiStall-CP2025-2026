@@ -42,7 +42,7 @@ export const createStallApplicationSchema = Joi.object({
   // Application Information
   stall_id: id.required(),
   application_date: Joi.alternatives().try(isoDate, Joi.string().max(30)).allow('', null)
-}).options({ allowUnknown: true }); // Allow additional document fields
+});
 
 // POST /api/landing-applicants (createApplicant — simpler form)
 export const createApplicantSchema = Joi.object({
@@ -55,7 +55,7 @@ export const createApplicantSchema = Joi.object({
   email_address: email.allow('', null),
   branch_id: id.allow(null),
   stall_id: id.allow(null)
-}).options({ allowUnknown: true });
+});
 
 // PUT /api/applicants/:id/status
 export const updateApplicantStatusSchema = Joi.object({
@@ -66,13 +66,13 @@ export const updateApplicantStatusSchema = Joi.object({
 export const approveApplicantSchema = Joi.object({
   approved_by: id.allow(null),
   notes: longText.allow('', null)
-}).options({ allowUnknown: true }).allow({});
+});
 
 // PUT /api/applicants/:id/decline
 export const declineApplicantSchema = Joi.object({
   reason: Joi.string().max(1000).trim().allow('', null),
   declined_by: id.allow(null)
-}).options({ allowUnknown: true }).allow({});
+});
 
 // POST /api/applicants/documents/blob/upload
 export const uploadApplicantDocumentBlobSchema = Joi.object({

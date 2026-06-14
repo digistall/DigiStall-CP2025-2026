@@ -241,4 +241,65 @@ export const blockOwnerWrites = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware to enforce strict BOLA (Broken Object Level Authorization) checks.
+ * Queries the given table to find the branch_id associated with the resource,
+ * and verifies if the current user has access to that branch.
+ * 
+ * @param {string} tableName - The database table to query (e.g., 'applicants', 'complaints')
+ * @param {string} idColumn - The primary key column name (e.g., 'applicant_id', 'complaint_id')
+ * @param {string} paramName - The parameter name in the route (default 'id')
+ */
+export const checkBranchAccess = (tableName, idColumn, branchIdColumn = 'branch_id', paramName = 'id') => {
+  return async (req, res, next) => {
+    const resourceId = req.params[paramName];
+    if (!resourceId) {
+      return next(); // Skip if no ID is provided in params
+    }
 
+    let connection;
+    try {
+      connection = await createConnection();
+      
+      // We must construct the query safely. 
+      // Since tableName, idColumn, and branchIdColumn are hardcoded in the route setup,
+      // string interpolation here is safe, but we still parameterize the resourceId.
+      const query = `SELECT ${branchIdColumn} FROM ${tableName} WHERE ${idColumn} = ?`;
+      const [rows] = await connection.execute(query, [resourceId]);
+      
+      if (rows.length === 0) {
+        // Let the controller handle the 404
+        return next();
+      }
+
+      const resourceBranchId = rows[0][branchIdColumn];
+      
+      // System administrators or records with no branch_id bypass this check
+      if (resourceBranchId === null || req.user?.userType === 'system_administrator') {
+         return next();
+      }
+
+      const hasAccess = await hasAccessToBranch(req, resourceBranchId, connection);
+      
+      if (!hasAccess) {
+        // Log the BOLA attempt securely
+        console.warn(`[SECURITY ALERT] BOLA Attempt Detected: User ${req.user?.userId} (${req.user?.userType}) attempted to access ${tableName}.${idColumn}=${resourceId} belonging to branch_id=${resourceBranchId}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Access Denied: You do not have permission to view or modify resources outside of your assigned branch.',
+          errorCode: 'BOLA_AUTHORIZATION_FAILED'
+        });
+      }
+      
+      next();
+    } catch (error) {
+      console.error(`❌ BOLA check failed for ${tableName}:`, error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error during authorization check.'
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
+  };
+};

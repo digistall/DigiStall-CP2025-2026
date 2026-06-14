@@ -28,6 +28,7 @@ import { createConnection, testConnection } from './config/database.js';
 import authMiddleware from './middleware/auth.js';
 import enhancedAuthMiddleware from './middleware/enhancedAuth.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { honeypotTripwire } from './middleware/tripwire.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
 // Import session cleanup service (auto-logout inactive users)
@@ -84,6 +85,7 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // ===== MIDDLEWARE =====
+app.use(honeypotTripwire); // Tripwire must be first!
 app.use(productionLogger);
 app.use(express.json({ limit: '5mb' }));
 

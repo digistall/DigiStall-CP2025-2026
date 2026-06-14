@@ -34,6 +34,13 @@ const FaceScannerScreen = ({ route, navigation }) => {
   const [maskColor, setMaskColor] = useState('#FFFFFF');
   const [maskOpacity, setMaskOpacity] = useState(0.5); // Start at 50% opacity
   const [statusMessage, setStatusMessage] = useState('Tap the button below to take your photo');
+
+  // ── Liveness tap-challenge state ─────────────────────────────────────────────
+  // During the color sequence the user must tap an on-screen button to confirm
+  // they are a real person watching the camera. A static image shown on another
+  // device cannot tap this button.
+  const [livenessPromptVisible, setLivenessPromptVisible] = useState(false);
+  const livenessConfirmed = useRef(false); // useRef so setTimeout closures always read fresh value
   
   const cameraRef = useRef(null);
   const countdownActive = useRef(false);
@@ -42,6 +49,10 @@ const FaceScannerScreen = ({ route, navigation }) => {
   const startCaptureSequence = useCallback(() => {
     if (countdownActive.current || isProcessing) return;
     countdownActive.current = true;
+
+    // Reset liveness state for every new attempt
+    livenessConfirmed.current = false;
+    setLivenessPromptVisible(false);
 
     // Phase 1: Go to 100% white opacity and start countdown
     setMaskOpacity(1.0);
@@ -63,16 +74,48 @@ const FaceScannerScreen = ({ route, navigation }) => {
 
   const runColorSequence = () => {
     let delay = 0;
-    LIGHT_COLORS.forEach((step, index) => {
+    LIGHT_COLORS.forEach((step) => {
       setTimeout(() => {
         setMaskColor(step.color);
       }, delay);
       delay += step.duration;
     });
 
-    // After all colors have cycled, take the photo
+    // ── Liveness tap challenge ────────────────────────────────────────────────
+    // Show the "I'm Live!" button 700 ms into the color sequence and keep it
+    // visible for 1 500 ms, giving the user a comfortable window to tap.
+    const CHALLENGE_SHOW_AT   = 700;
+    const CHALLENGE_VISIBLE_FOR = 1500;
+
+    setTimeout(() => {
+      setLivenessPromptVisible(true);
+      setStatusMessage("TAP 'I'm Live!' to confirm you're real!");
+    }, CHALLENGE_SHOW_AT);
+
+    setTimeout(() => {
+      setLivenessPromptVisible(false);
+    }, CHALLENGE_SHOW_AT + CHALLENGE_VISIBLE_FOR);
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // After all colors have cycled, verify liveness then take the photo
     setTimeout(() => {
       setMaskColor('#FFFFFF');
+      setLivenessPromptVisible(false);
+
+      if (!livenessConfirmed.current) {
+        // User did not tap the liveness button — abort
+        setIsProcessing(false);
+        resetToIdle();
+        setAlertConfig({
+          visible: true,
+          type: 'error',
+          title: 'Liveness Check Failed',
+          message: "Please tap the \"I'm Live!\" button when it appears during the scan. This confirms you are a real person, not a photo.",
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        });
+        return;
+      }
+
       takePicture();
     }, delay);
   };
@@ -135,6 +178,8 @@ const FaceScannerScreen = ({ route, navigation }) => {
     setMaskOpacity(0.5);
     setMaskColor('#FFFFFF');
     setCountdown(null);
+    setLivenessPromptVisible(false);
+    livenessConfirmed.current = false;
     setStatusMessage('Tap the button below to take your photo');
     countdownActive.current = false;
   };
@@ -313,12 +358,30 @@ const FaceScannerScreen = ({ route, navigation }) => {
             )}
 
             {/* Color cycling phase indicator */}
-            {isColorPhase && (
+            {isColorPhase && !livenessPromptVisible && (
               <View style={styles.countdownContainer}>
                 <Ionicons name="sunny" size={48} color="#FFF" />
                 <Text style={styles.colorPhaseText}>Optimizing light...</Text>
               </View>
             )}
+
+            {/* ── Liveness tap challenge button ─────────────────────────────── */}
+            {/* Appears mid-color-sequence; user must tap to prove they are live. */}
+            {isColorPhase && livenessPromptVisible && (
+              <TouchableOpacity
+                style={styles.livenessButton}
+                activeOpacity={0.75}
+                onPress={() => {
+                  livenessConfirmed.current = true;
+                  setLivenessPromptVisible(false);
+                  setStatusMessage('Great! Hold still...');
+                }}
+              >
+                <Ionicons name="hand-left" size={26} color="#FFF" style={{ marginRight: 10 }} />
+                <Text style={styles.livenessButtonText}>I'm Live! 👋</Text>
+              </TouchableOpacity>
+            )}
+            {/* ──────────────────────────────────────────────────────────────── */}
 
             {/* Status tip */}
             <View style={styles.statusContainer} pointerEvents="none">

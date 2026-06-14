@@ -2,7 +2,7 @@ import express from "express";
 import PaymentController from "../BACKEND/MANAGER/payments/paymentController.js";
 import DailyPaymentController from "../BACKEND/MANAGER/payments/dailyPaymentController.js";
 import authMiddleware from "../middleware/auth.js";
-import { viewOnlyForOwners } from "../middleware/rolePermissions.js";
+import { viewOnlyForOwners, checkBranchAccess } from "../middleware/rolePermissions.js";
 import { authorizePermission } from "../middleware/enhancedAuth.js";
 
 import { validate } from '../middleware/validateRequest.js';
@@ -185,6 +185,7 @@ router.get(
 router.get(
   "/daily/:receiptId",
   authMiddleware.authenticateToken,
+  checkBranchAccess('daily_payments', 'receipt_id', 'branch_id', 'receiptId'),
   DailyPaymentController.getDailyPaymentById
 );
 
@@ -208,6 +209,7 @@ router.put(
   "/daily/:receiptId",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
+  checkBranchAccess('daily_payments', 'receipt_id', 'branch_id', 'receiptId'),
   validate(updateDailyPaymentSchema),
   DailyPaymentController.updateDailyPayment
 );
@@ -220,6 +222,7 @@ router.delete(
   "/daily/:receiptId",
   authMiddleware.authenticateToken,
   viewOnlyForOwners,
+  checkBranchAccess('daily_payments', 'receipt_id', 'branch_id', 'receiptId'),
   DailyPaymentController.deleteDailyPayment
 );
 
@@ -234,6 +237,7 @@ router.delete(
 router.get(
   "/tracker/:stallholderId",
   authMiddleware.authenticateToken,
+  checkBranchAccess('stallholder', 'stallholder_id', 'branch_id', 'stallholderId'),
   PaymentController.getPaymentTracker
 );
 

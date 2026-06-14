@@ -91,7 +91,7 @@ export const vendorLogin = async (req, res) => {
         fullName,
         userType: 'vendor',
       },
-      process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' },
     )
 
