@@ -2,6 +2,7 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import { mobileLogin, submitApplication } from '../BACKEND/AUTH/login/loginController.js'
 import { mobileStaffLogin, mobileStaffLogout, mobileStaffHeartbeat, mobileStaffAutoLogout } from '../BACKEND/AUTH/mobileStaffAuthController.js'
+import { refreshToken } from '../BACKEND/AUTH/refreshTokenController.js'
 import { verifyToken } from '../middleware/auth.js'
 import { authLimiter } from '../middleware/rateLimiter.js'
 
@@ -16,6 +17,9 @@ router.post('/login', authLimiter, validate(mobileLoginSchema), mobileLogin)
 
 // Mobile staff login route - POST /staff-login (Inspector/Collector login)
 router.post('/staff-login', authLimiter, validate(mobileStaffLoginSchema), mobileStaffLogin)
+
+// Refresh token route - POST /refresh
+router.post('/refresh', refreshToken)
 
 // Mobile application submission route - POST /submit-application (legacy endpoint)
 router.post('/submit-application', validate(createStallApplicationSchema), submitApplication)

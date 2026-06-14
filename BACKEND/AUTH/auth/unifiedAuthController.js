@@ -245,7 +245,23 @@ export const login = async (req, res) => {
     };
     
     const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '24h' });
+    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '15m' });
+    
+    const refreshToken = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '7d' });
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+    
+    await connection.query(
+      'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+      [user[userConfig.idField], refreshToken, expiresAt]
+    );
+
+    res.cookie('jwt', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
     
     // Prepare user data for response (exclude password)
     const userData = {
