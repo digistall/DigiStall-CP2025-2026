@@ -1,7 +1,7 @@
 import express from 'express'
 import authMiddleware from '../middleware/auth.js'
 import activityLogger from '../middleware/activityLogger.js'
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js'
+import { viewOnlyForOwners, checkBranchAccess } from '../middleware/rolePermissions.js'
 import {
   // Core stall management (Admin)
   addStall,
@@ -158,9 +158,9 @@ router.get('/', getAllStalls)                 // GET /api/stalls - Get all stall
 router.get('/available', getAvailableStalls)  // GET /api/stalls/available - Get available stalls
 router.get('/filter', getStallsByFilter)     // GET /api/stalls/filter - Get stalls by filter
 router.get('/participants/:applicantId/detail', getParticipantDetail)  // GET /api/stalls/participants/:applicantId/detail - Get full participant info
-router.get('/:id', getStallById)             // GET /api/stalls/:id - Get stall by ID
-router.put('/:id', viewOnlyForOwners, validate(updateStallSchema), updateStall)              // PUT /api/stalls/:id - Update stall
-router.delete('/:id', viewOnlyForOwners, deleteStall)           // DELETE /api/stalls/:id - Delete stall
+router.get('/:id', checkBranchAccess('stall', 'stall_id'), getStallById)             // GET /api/stalls/:id - Get stall by ID
+router.put('/:id', viewOnlyForOwners, checkBranchAccess('stall', 'stall_id'), validate(updateStallSchema), updateStall)              // PUT /api/stalls/:id - Update stall
+router.delete('/:id', viewOnlyForOwners, checkBranchAccess('stall', 'stall_id'), deleteStall)           // DELETE /api/stalls/:id - Delete stall
 
 // ===== RAFFLE MANAGEMENT ROUTES =====
 router.get('/raffles/active', getActiveRaffles)                    // GET /api/stalls/raffles/active - Get all active raffles

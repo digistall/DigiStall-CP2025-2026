@@ -5,7 +5,7 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import { authorizePermission } from '../middleware/enhancedAuth.js';
-import { viewOnlyForOwners } from '../middleware/rolePermissions.js';
+import { viewOnlyForOwners, checkBranchAccess } from '../middleware/rolePermissions.js';
 import complaintController from '../BACKEND/MANAGER/complaints/complaintController.js';
 
 import { validate } from '../middleware/validateRequest.js';
@@ -37,7 +37,7 @@ router.get('/', complaintController.getAllComplaints);
  * @desc    Get single complaint by ID
  * @access  Protected - Requires authentication
  */
-router.get('/:id', complaintController.getComplaintById);
+router.get('/:id', checkBranchAccess('complaints', 'complaint_id'), complaintController.getComplaintById);
 
 /**
  * @route   POST /api/complaints
@@ -71,7 +71,7 @@ router.post('/', validate(createComplaintSchema), complaintController.createComp
  *            status: enum ['pending', 'in-progress', 'resolved', 'rejected'] (optional)
  *          }
  */
-router.put('/:id', viewOnlyForOwners, validate(updateComplaintSchema), complaintController.updateComplaint);
+router.put('/:id', viewOnlyForOwners, checkBranchAccess('complaints', 'complaint_id'), validate(updateComplaintSchema), complaintController.updateComplaint);
 
 /**
  * @route   PUT /api/complaints/:id/resolve
@@ -82,13 +82,13 @@ router.put('/:id', viewOnlyForOwners, validate(updateComplaintSchema), complaint
  *            status: enum ['resolved', 'rejected'] (default: 'resolved')
  *          }
  */
-router.put('/:id/resolve', viewOnlyForOwners, validate(resolveComplaintSchema), complaintController.resolveComplaint);
+router.put('/:id/resolve', viewOnlyForOwners, checkBranchAccess('complaints', 'complaint_id'), validate(resolveComplaintSchema), complaintController.resolveComplaint);
 
 /**
  * @route   DELETE /api/complaints/:id
  * @desc    Delete complaint
  * @access  Protected - Admin, Business Owner, and Branch Manager only
  */
-router.delete('/:id', viewOnlyForOwners, complaintController.deleteComplaint);
+router.delete('/:id', viewOnlyForOwners, checkBranchAccess('complaints', 'complaint_id'), complaintController.deleteComplaint);
 
 export default router;
