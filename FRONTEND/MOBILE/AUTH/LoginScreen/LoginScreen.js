@@ -15,13 +15,14 @@ import {
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import styles from "./LogInCSS/LoginCSS";
-import { handleLogin } from "./LoginFunction/LoginFunctions";
+import { handleLogin, handleStaffLogin } from "./LoginFunction/LoginFunctions";
 
 const LoginScreen = ({ navigation }) => {
   // State management
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isStaffLogin, setIsStaffLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Authenticating...");
   const [loadingSubtext, setLoadingSubtext] = useState(
@@ -168,16 +169,26 @@ const LoginScreen = ({ navigation }) => {
     setLoadingMessage("Connecting to server...");
     setLoadingSubtext("Establishing secure connection");
 
-    // Unified login - automatically detects staff or user
-    // Progress updates will come from LoginFunctions via setLoadingState callback
-    handleLogin(
-      username,
-      password,
-      setIsLoading,
-      navigation,
-      setErrorModal,
-      setLoadingState,
-    );
+    // Call staff login if in staff mode, otherwise unified login
+    if (isStaffLogin) {
+      handleStaffLogin(
+        username,
+        password,
+        setIsLoading,
+        navigation,
+        setErrorModal,
+        setLoadingState,
+      );
+    } else {
+      handleLogin(
+        username,
+        password,
+        setIsLoading,
+        navigation,
+        setErrorModal,
+        setLoadingState,
+      );
+    }
   };
 
   const handleForgotPasswordPress = () => {
@@ -252,7 +263,17 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.formContainer}>
-              <Text style={styles.formTitle}>Sign In</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={styles.formTitle}>Sign In</Text>
+                <TouchableOpacity 
+                  onPress={() => setIsStaffLogin(!isStaffLogin)}
+                  style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: isStaffLogin ? '#4472C4' : '#f0f0f0', borderRadius: 5 }}
+                >
+                  <Text style={{ color: isStaffLogin ? 'white' : '#333', fontSize: 12, fontWeight: '600' }}>
+                    {isStaffLogin ? '👮 Staff' : '👤 User'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.inputContainer}>
                 <Ionicons

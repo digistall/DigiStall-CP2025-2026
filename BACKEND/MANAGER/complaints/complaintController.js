@@ -20,6 +20,21 @@ const decryptSafe = (value) => {
 };
 
 /**
+ * Convert evidence BLOB Buffer to base64 string for frontend consumption
+ */
+const convertEvidenceToBase64 = (record) => {
+  if (record && record.evidence) {
+    if (Buffer.isBuffer(record.evidence)) {
+      record.evidence = record.evidence.toString('base64');
+    } else if (record.evidence.type === 'Buffer' && Array.isArray(record.evidence.data)) {
+      record.evidence = Buffer.from(record.evidence.data).toString('base64');
+    }
+  }
+  return record;
+};
+
+
+/**
  * Get all complaints with optional filters
  * @route GET /api/complaints
  * @access Protected (requires authentication)
@@ -76,16 +91,19 @@ export const getAllComplaints = async (req, res) => {
     console.log(`✅ Found ${complaints.length} complaints`);
 
     // Decrypt sensitive fields in complaints
-    const decryptedComplaints = complaints.map(complaint => ({
-      ...complaint,
-      sender_name: decryptSafe(complaint.sender_name),
-      sender_contact: decryptSafe(complaint.sender_contact),
-      sender_email: decryptSafe(complaint.sender_email),
-      stallholder_name: decryptSafe(complaint.stallholder_name),
-      subject: decryptSafe(complaint.subject),
-      description: decryptSafe(complaint.description),
-      resolution_notes: decryptSafe(complaint.resolution_notes)
-    }));
+    const decryptedComplaints = complaints.map(complaint => {
+      const withEvidence = convertEvidenceToBase64(complaint);
+      return {
+        ...withEvidence,
+        sender_name: decryptSafe(withEvidence.sender_name),
+        sender_contact: decryptSafe(withEvidence.sender_contact),
+        sender_email: decryptSafe(withEvidence.sender_email),
+        stallholder_name: decryptSafe(withEvidence.stallholder_name),
+        subject: decryptSafe(withEvidence.subject),
+        description: decryptSafe(withEvidence.description),
+        resolution_notes: decryptSafe(withEvidence.resolution_notes)
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -135,10 +153,22 @@ export const getComplaintById = async (req, res) => {
 
     console.log('✅ Complaint found');
 
+    const withEvidence = convertEvidenceToBase64(complaint);
+    const decryptedComplaint = {
+      ...withEvidence,
+      sender_name: decryptSafe(withEvidence.sender_name),
+      sender_contact: decryptSafe(withEvidence.sender_contact),
+      sender_email: decryptSafe(withEvidence.sender_email),
+      stallholder_name: decryptSafe(withEvidence.stallholder_name),
+      subject: decryptSafe(withEvidence.subject),
+      description: decryptSafe(withEvidence.description),
+      resolution_notes: decryptSafe(withEvidence.resolution_notes)
+    };
+
     res.status(200).json({
       success: true,
       message: 'Complaint retrieved successfully',
-      data: complaint
+      data: decryptedComplaint
     });
 
   } catch (error) {
@@ -221,16 +251,26 @@ export const createComplaint = async (req, res) => {
 
     console.log(`✅ Complaint created with ID: ${newComplaintId}`);
 
-    // Fetch the newly created complaint
-    const [newComplaint] = await connection.execute(
-      'CALL getComplaintById(?)',
-      [newComplaintId]
-    );
+    const complaintData = newComplaint[0][0];
+    let decryptedComplaint = null;
+    if (complaintData) {
+      const withEvidence = convertEvidenceToBase64(complaintData);
+      decryptedComplaint = {
+        ...withEvidence,
+        sender_name: decryptSafe(withEvidence.sender_name),
+        sender_contact: decryptSafe(withEvidence.sender_contact),
+        sender_email: decryptSafe(withEvidence.sender_email),
+        stallholder_name: decryptSafe(withEvidence.stallholder_name),
+        subject: decryptSafe(withEvidence.subject),
+        description: decryptSafe(withEvidence.description),
+        resolution_notes: decryptSafe(withEvidence.resolution_notes)
+      };
+    }
 
     res.status(201).json({
       success: true,
       message: 'Complaint created successfully',
-      data: newComplaint[0][0]
+      data: decryptedComplaint
     });
 
   } catch (error) {
@@ -319,10 +359,26 @@ export const updateComplaint = async (req, res) => {
       [id]
     );
 
+    const complaintData = updatedComplaint[0][0];
+    let decryptedComplaint = null;
+    if (complaintData) {
+      const withEvidence = convertEvidenceToBase64(complaintData);
+      decryptedComplaint = {
+        ...withEvidence,
+        sender_name: decryptSafe(withEvidence.sender_name),
+        sender_contact: decryptSafe(withEvidence.sender_contact),
+        sender_email: decryptSafe(withEvidence.sender_email),
+        stallholder_name: decryptSafe(withEvidence.stallholder_name),
+        subject: decryptSafe(withEvidence.subject),
+        description: decryptSafe(withEvidence.description),
+        resolution_notes: decryptSafe(withEvidence.resolution_notes)
+      };
+    }
+
     res.status(200).json({
       success: true,
       message: 'Complaint updated successfully',
-      data: updatedComplaint[0][0]
+      data: decryptedComplaint
     });
 
   } catch (error) {
@@ -395,10 +451,26 @@ export const resolveComplaint = async (req, res) => {
       [id]
     );
 
+    const complaintData = resolvedComplaint[0][0];
+    let decryptedComplaint = null;
+    if (complaintData) {
+      const withEvidence = convertEvidenceToBase64(complaintData);
+      decryptedComplaint = {
+        ...withEvidence,
+        sender_name: decryptSafe(withEvidence.sender_name),
+        sender_contact: decryptSafe(withEvidence.sender_contact),
+        sender_email: decryptSafe(withEvidence.sender_email),
+        stallholder_name: decryptSafe(withEvidence.stallholder_name),
+        subject: decryptSafe(withEvidence.subject),
+        description: decryptSafe(withEvidence.description),
+        resolution_notes: decryptSafe(withEvidence.resolution_notes)
+      };
+    }
+
     res.status(200).json({
       success: true,
       message: 'Complaint resolved successfully',
-      data: resolvedComplaint[0][0]
+      data: decryptedComplaint
     });
 
   } catch (error) {

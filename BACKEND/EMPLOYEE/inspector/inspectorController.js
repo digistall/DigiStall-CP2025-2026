@@ -34,28 +34,30 @@ export const getStallholdersByInspectorBranch = async (req, res) => {
     
     const stallholders = results[0]; // First result set from stored procedure
     
-    // Decrypt sensitive fields
-    const decryptedStallholders = stallholders.map(sh => {
-      try {
-        return {
-          ...sh,
-          full_name: sh.full_name ? decryptAES256GCM(sh.full_name) : null,
-          email: sh.email ? decryptAES256GCM(sh.email) : null,
-          contact_number: sh.contact_number ? decryptAES256GCM(sh.contact_number) : null,
-          address: sh.address ? decryptAES256GCM(sh.address) : null,
-        };
-      } catch (decryptError) {
-        return {
-          ...sh,
-          full_name: 'Decryption Error',
-          email: null,
-          contact_number: null,
-          address: null,
-        };
-      }
-    });
+    // Decrypt sensitive fields and filter out inactive ones
+    const decryptedStallholders = stallholders
+      .map(sh => {
+        try {
+          return {
+            ...sh,
+            full_name: sh.full_name ? decryptAES256GCM(sh.full_name) : null,
+            email: sh.email ? decryptAES256GCM(sh.email) : null,
+            contact_number: sh.contact_number ? decryptAES256GCM(sh.contact_number) : null,
+            address: sh.address ? decryptAES256GCM(sh.address) : null,
+          };
+        } catch (decryptError) {
+          return {
+            ...sh,
+            full_name: 'Decryption Error',
+            email: null,
+            contact_number: null,
+            address: null,
+          };
+        }
+      })
+      .filter(sh => (sh.status || '').toLowerCase() !== 'inactive');
     
-    console.log(`✅ Found ${decryptedStallholders.length} stallholders for branch ${branchId}`);
+    console.log(`✅ Found ${decryptedStallholders.length} active/reportable stallholders for branch ${branchId}`);
     
     return res.status(200).json({
       success: true,
@@ -305,9 +307,9 @@ export const reportStallholderWithPhotos = async (req, res) => {
         parseInt(violation_id),
         parseInt(branch_id),
         stall_id ? parseInt(stall_id) : null,
+        String(receipt_number),
         enhancedEvidence,
-        remarks || null,
-        parseInt(receipt_number)
+        remarks || null
       ]
     );
     
