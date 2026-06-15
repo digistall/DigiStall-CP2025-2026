@@ -228,13 +228,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-if="loading">
-                <td colspan="8" class="loading-cell">
-                  <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
-                  <span class="ml-3">Loading activities...</span>
-                </td>
-              </tr>
-              <tr v-else-if="filteredLogs.length === 0">
+              <tr v-if="!loading && filteredLogs.length === 0">
                 <td colspan="8" class="empty-cell">
                   <v-icon size="48" color="grey-lighten-1">mdi-history</v-icon>
                   <p class="empty-title">No Activity Logs Found</p>

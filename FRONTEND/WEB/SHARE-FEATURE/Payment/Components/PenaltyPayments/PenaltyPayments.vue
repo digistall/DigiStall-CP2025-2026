@@ -35,13 +35,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-if="loading">
-                <td colspan="8" class="empty-state">
-                  <v-progress-circular indeterminate color="primary" size="48" />
-                  <p>Loading penalty payments...</p>
-                </td>
-              </tr>
-              <tr v-else-if="error">
+              <tr v-if="error">
                 <td colspan="8" class="empty-state">
                   <v-icon size="48" color="error">mdi-alert-circle-outline</v-icon>
                   <p>{{ error }}</p>
@@ -50,7 +44,7 @@
                   >
                 </td>
               </tr>
-              <tr v-else-if="filteredPayments.length === 0">
+              <tr v-else-if="filteredPayments.length === 0 && !loading">
                 <td colspan="8" class="empty-state">
                   <v-icon size="48" color="grey">mdi-cash-remove</v-icon>
                   <p>No penalty payments recorded</p>
@@ -76,9 +70,6 @@
                     </div>
                     <div class="name-details">
                       <span class="clickable-name name" @click.stop="showStallholderDetails(payment.stallholderId)">{{ payment.stallholderName || 'N/A' }}</span>
-                      <span v-if="payment.branchName" class="branch-name">{{
-                        payment.branchName
-                      }}</span>
                     </div>
                   </div>
                 </td>
