@@ -219,33 +219,29 @@ export const handleLogin = async (
           if (actualStallholderId) {
             console.log('🔍 Checking face verification for ID:', actualStallholderId);
             const faceResult = await ApiService.checkFaceVerification(actualStallholderId);
-            if (faceResult && !faceResult.hasVerifiedFace) {
-              console.log('🚨 No verified face found. Redirecting to scanner.');
-              finalNextScreen = 'FaceScannerScreen';
-            } else {
-              // Face is verified, check if they have uploaded a Valid ID
-              const applicantId = userData.user?.applicant_id || userData.user?.id;
-              if (applicantId) {
-                const docsResult = await ApiService.getStallholderStallsWithDocuments(applicantId);
-                
-                // Check profile valid_id field as primary verification
-                const otherInfo = userData.other_info || userData.profile?.other_info || {};
-                let hasUploadedValidId = otherInfo.valid_id != null && otherInfo.valid_id !== '';
-                
-                // Or check if they have uploaded it as a branch document
-                if (!hasUploadedValidId && docsResult.success && docsResult.data) {
-                  hasUploadedValidId = docsResult.data.grouped_by_branch.some(branch => 
-                    branch.document_requirements.some(doc => 
-                      doc.document_type_id === 3 && doc.status !== 'not_uploaded'
-                    )
-                  );
-                }
-                
-                if (!hasUploadedValidId) {
-                  console.log('🚨 No valid ID uploaded yet on login. Redirecting to IdScannerScreen.');
-                  finalNextScreen = 'IdScannerScreen';
-                  additionalParams = {};
-                }
+            
+            // Always check Valid ID, face scanner is optional now
+            const applicantId = userData.user?.applicant_id || userData.user?.id;
+            if (applicantId) {
+              const docsResult = await ApiService.getStallholderStallsWithDocuments(applicantId);
+              
+              // Check profile valid_id field as primary verification
+              const otherInfo = userData.other_info || userData.profile?.other_info || {};
+              let hasUploadedValidId = otherInfo.valid_id != null && otherInfo.valid_id !== '';
+              
+              // Or check if they have uploaded it as a branch document
+              if (!hasUploadedValidId && docsResult.success && docsResult.data) {
+                hasUploadedValidId = docsResult.data.grouped_by_branch.some(branch => 
+                  branch.document_requirements.some(doc => 
+                    doc.document_type_id === 3 && doc.status !== 'not_uploaded'
+                  )
+                );
+              }
+              
+              if (!hasUploadedValidId) {
+                console.log('🚨 No valid ID uploaded yet on login. Redirecting to IdScannerScreen.');
+                finalNextScreen = 'IdScannerScreen';
+                additionalParams = {};
               }
             }
           }

@@ -6,7 +6,11 @@
  */
 
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
 import StallholderController from '../BACKEND/MANAGER/stallholders/stallholderController.js';
+
+const upload = multer({ dest: 'uploads/temp/' });
 import {
   getAllDocumentTypes,
   getBranchDocumentRequirements,
@@ -38,11 +42,11 @@ router.use(authMiddleware.authenticateToken);
 router.get('/', StallholderController.getAllStallholders);
 
 /**
- * @route GET /api/stallholders-management/template
+ * @route GET /api/stallholders-management/excel/template
  * @desc Download Excel template
  * @access Protected
  */
-router.get('/template', StallholderController.downloadExcelTemplate);
+router.get('/excel/template', StallholderController.downloadExcelTemplate);
 
 /**
  * @route GET /api/stallholders-management/available-stalls
@@ -87,25 +91,25 @@ router.put('/:id', viewOnlyForOwners, checkBranchAccess('stallholder', 'stallhol
 router.delete('/:id', viewOnlyForOwners, checkBranchAccess('stallholder', 'stallholder_id'), StallholderController.deleteStallholder);
 
 /**
- * @route POST /api/stallholders-management/import
+ * @route POST /api/stallholders-management/excel/import-direct
  * @desc Import stallholders from Excel
  * @access Protected (Admin, Manager)
  */
-router.post('/import', viewOnlyForOwners, StallholderController.importFromExcel);
+router.post('/excel/import-direct', viewOnlyForOwners, upload.single('file'), StallholderController.importFromExcel);
 
 /**
- * @route POST /api/stallholders-management/preview
+ * @route POST /api/stallholders-management/excel/preview
  * @desc Preview Excel data before import
  * @access Protected (Admin, Manager)
  */
-router.post('/preview', viewOnlyForOwners, StallholderController.previewExcelData);
+router.post('/excel/preview', viewOnlyForOwners, upload.single('file'), StallholderController.previewExcelData);
 
 /**
- * @route POST /api/stallholders-management/import-data
+ * @route POST /api/stallholders-management/excel/import
  * @desc Import Excel data (after preview)
  * @access Protected (Admin, Manager)
  */
-router.post('/import-data', viewOnlyForOwners, validate(importStallholdersSchema), StallholderController.importExcelData);
+router.post('/excel/import', viewOnlyForOwners, validate(importStallholdersSchema), StallholderController.importExcelData);
 
 // ============================================================
 // DOCUMENT REQUIREMENT ROUTES
