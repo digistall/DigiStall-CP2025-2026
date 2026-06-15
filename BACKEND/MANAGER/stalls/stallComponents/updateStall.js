@@ -224,7 +224,7 @@ export const updateStall = async (req, res) => {
           ELSE 'Unavailable'
         END as availability_status,
         sh.stallholder_id,
-        CONCAT(sh.first_name, ' ', sh.last_name) as stallholder_name
+        sh.full_name as stallholder_name
       FROM stall s
       INNER JOIN section sec ON s.section_id = sec.section_id
       INNER JOIN floor f ON sec.floor_id = f.floor_id
