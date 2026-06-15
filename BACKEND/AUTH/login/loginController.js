@@ -311,7 +311,7 @@ export const mobileLogin = async (req, res) => {
         stallholderId: stallholderInfo?.stallholder_id || null,
         isStallholder: !!stallholderInfo
       },
-      process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' } // Token valid for 7 days
     );
     

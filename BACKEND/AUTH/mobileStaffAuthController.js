@@ -217,7 +217,7 @@ export const mobileStaffLogin = async (req, res) => {
         
         // Verify password
         let isValidPassword = false;
-        const storedPassword = staffData.password_hash;
+        const storedPassword = staffData.password || staffData.password_hash;
         
         console.log('   - Stored password hash (first 20 chars):', storedPassword ? storedPassword.substring(0, 20) + '...' : 'NULL');
         console.log('   - Password length entered:', password.length);

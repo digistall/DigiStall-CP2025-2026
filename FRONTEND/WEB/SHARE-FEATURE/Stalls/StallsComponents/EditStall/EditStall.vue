@@ -382,7 +382,6 @@
               <v-data-table
                 :headers="historyHeaders"
                 :items="historyLogs"
-                :loading="loadingHistory"
                 class="elevation-0 mt-4"
                 hover
               >

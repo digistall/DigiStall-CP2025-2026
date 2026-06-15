@@ -44,8 +44,7 @@ services:
       # Upload directories
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
-    ports:
-      - "5000:3001"
+
     volumes:
       - ./uploads:/app/uploads
     networks:
@@ -96,8 +95,7 @@ services:
       # Upload directories
       UPLOAD_DIR_STALLS: /app/uploads/stalls
       UPLOAD_DIR_APPLICANTS: /app/uploads/applicants
-    ports:
-      - "5001:3001"
+
     volumes:
       - ./uploads:/app/uploads
     networks:
@@ -121,6 +119,9 @@ services:
       VITE_API_URL: /api
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - digistall-network
     healthcheck:

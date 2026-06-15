@@ -2,6 +2,21 @@ import { createConnection } from '../../../config/database.js';
 import { logStaffActivity } from '../../OWNER/activityLog/staffActivityLogController.js';
 
 /**
+ * Convert evidence BLOB Buffer to base64 string for consumption
+ */
+const convertEvidenceToBase64 = (record) => {
+  if (record && record.evidence) {
+    if (Buffer.isBuffer(record.evidence)) {
+      record.evidence = record.evidence.toString('base64');
+    } else if (record.evidence.type === 'Buffer' && Array.isArray(record.evidence.data)) {
+      record.evidence = Buffer.from(record.evidence.data).toString('base64');
+    }
+  }
+  return record;
+};
+
+
+/**
  * Submit a complaint from stallholder
  * @route POST /api/mobile/stallholder/complaint
  * @access Protected (Stallholder only)
@@ -72,6 +87,12 @@ export const submitComplaint = async (req, res) => {
     
 
     
+    // Clean base64 prefix if present (e.g. data:image/jpeg;base64,...)
+    let cleanEvidence = evidence || null;
+    if (cleanEvidence && cleanEvidence.includes(';base64,')) {
+      cleanEvidence = cleanEvidence.split(';base64,')[1];
+    }
+    
     // Submit complaint using stored procedure (it fetches stallholder details automatically)
     const [insertResult] = await connection.execute(
       'CALL sp_submitComplaint(?, ?, ?, ?, ?, ?, ?)',
@@ -82,7 +103,7 @@ export const submitComplaint = async (req, res) => {
         finalBranchId,
         subject,
         description,
-        evidence || null
+        cleanEvidence
       ]
     );
     
@@ -182,7 +203,10 @@ export const getMyComplaints = async (req, res) => {
       'CALL sp_getComplaintsByStallholderDecrypted(?)',
       [stallholderId]
     );
-    const complaints = complaintsResult[0] || [];
+    const rawComplaints = complaintsResult[0] || [];
+    
+    // Convert evidence blob to base64
+    const complaints = rawComplaints.map(c => convertEvidenceToBase64(c));
     
     console.log(`✅ Found ${complaints.length} complaints`);
     

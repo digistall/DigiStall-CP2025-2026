@@ -1,6 +1,6 @@
 import express from "express";
 import enhancedAuthMiddleware from "../middleware/enhancedAuth.js";
-import { requireRole } from "../middleware/rolePermissions.js";
+import { requireRole, checkBranchAccess } from "../middleware/rolePermissions.js";
 import {
   createVendor,
   getAllVendors,
@@ -56,20 +56,20 @@ router.get(
  * @desc    Get vendor by ID
  * @access  Protected
  */
-router.get("/:id", getVendorById);
+router.get("/:id", checkBranchAccess('users', 'user_id'), getVendorById);
 
 /**
  * @route   PUT /api/vendors/:id
  * @desc    Update vendor by ID
  * @access  Protected
  */
-router.put("/:id", validate(updateVendorSchema), updateVendor);
+router.put("/:id", checkBranchAccess('users', 'user_id'), validate(updateVendorSchema), updateVendor);
 
 /**
  * @route   DELETE /api/vendors/:id
  * @desc    Delete vendor by ID
  * @access  Protected
  */
-router.delete("/:id", deleteVendor);
+router.delete("/:id", checkBranchAccess('users', 'user_id'), deleteVendor);
 
 export default router;

@@ -41,6 +41,7 @@ import {
 } from '../BACKEND/MANAGER/applicants/applicantDocumentBlobController.js'
 
 import { validate } from '../middleware/validateRequest.js';
+import { checkBranchAccess } from '../middleware/rolePermissions.js';
 import {
   updateApplicantStatusSchema, approveApplicantSchema, declineApplicantSchema,
   uploadApplicantDocumentBlobSchema, verifyDocumentSchema
@@ -66,19 +67,19 @@ router.get('/participants/stall/:stall_id', getParticipantsByStall)       // GET
 router.get('/my-stall-applicants', getApplicantsByBranchManager)
 
 // Get individual applicant by ID (MUST be after specific routes)
-router.get('/:id', getApplicantById)
+router.get('/:id', checkBranchAccess('applicants', 'applicant_id'), getApplicantById)
 
 // Update applicant status (for Vue.js management system)
-router.put('/:id/status', validate(updateApplicantStatusSchema), updateApplicantStatus)
+router.put('/:id/status', checkBranchAccess('applicants', 'applicant_id'), validate(updateApplicantStatusSchema), updateApplicantStatus)
 
 // Approval route - this creates credentials in the credential table for mobile app
-router.put('/:id/approve', validate(approveApplicantSchema), approveApplicant)
+router.put('/:id/approve', checkBranchAccess('applicants', 'applicant_id'), validate(approveApplicantSchema), approveApplicant)
 
 // Decline applicant
-router.put('/:id/decline', validate(declineApplicantSchema), declineApplicant)
+router.put('/:id/decline', checkBranchAccess('applicants', 'applicant_id'), validate(declineApplicantSchema), declineApplicant)
 
 // Delete applicant (for auto-cleanup of expired rejected applicants)
-router.delete('/:id', deleteApplicant)
+router.delete('/:id', checkBranchAccess('applicants', 'applicant_id'), deleteApplicant)
 
 // Auto-cleanup routes
 router.post('/cleanup/auto', autoCleanupApplicants)    // Automatic cleanup of rejected applicants older than 30 days

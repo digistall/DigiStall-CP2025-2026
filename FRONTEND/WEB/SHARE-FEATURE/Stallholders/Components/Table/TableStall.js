@@ -100,21 +100,25 @@ export default {
 
       // Apply status filter
       if (this.activeFilter && this.activeFilter !== 'all') {
-        switch (this.activeFilter) {
+        const filterVal = this.activeFilter.toLowerCase();
+        switch (filterVal) {
           case 'active':
-            filtered = filtered.filter(s => s.status === 'Active')
+            filtered = filtered.filter(s => (s.status || '').toLowerCase() === 'active')
+            break
+          case 'inactive':
+            filtered = filtered.filter(s => (s.status || '').toLowerCase() === 'inactive')
             break
           case 'pending':
-            filtered = filtered.filter(s => s.status === 'Pending')
+            filtered = filtered.filter(s => (s.status || '').toLowerCase() === 'pending')
             break
           case 'suspended':
-            filtered = filtered.filter(s => s.status === 'Suspended')
+            filtered = filtered.filter(s => (s.status || '').toLowerCase() === 'suspended')
             break
           case 'compliant':
-            filtered = filtered.filter(s => s.compliance_status === 'Compliant')
+            filtered = filtered.filter(s => (s.compliance_status || '').toLowerCase() === 'compliant')
             break
           case 'non-compliant':
-            filtered = filtered.filter(s => s.compliance_status === 'Non-Compliant')
+            filtered = filtered.filter(s => (s.compliance_status || '').toLowerCase() === 'non-compliant')
             break
         }
       }

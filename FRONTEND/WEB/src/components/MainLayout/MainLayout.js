@@ -119,6 +119,10 @@ export default {
       handler(to, from) {
         if (!from || to.path !== from.path) {
           this.resetPageScrollLock()
+          if (to.meta && to.meta.hasTable) {
+            document.body.classList.add('no-page-scroll')
+            document.documentElement.classList.add('no-page-scroll')
+          }
         }
         this.pageTitle = to.meta?.title || to.name || 'Dashboard'
         // Also check if user type has changed and update menu items

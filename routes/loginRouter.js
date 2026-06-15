@@ -2,6 +2,7 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import { mobileLogin, submitApplication } from '../BACKEND/AUTH/login/loginController.js'
 import { mobileStaffLogin, mobileStaffLogout, mobileStaffHeartbeat, mobileStaffAutoLogout } from '../BACKEND/AUTH/mobileStaffAuthController.js'
+import { refreshToken } from '../BACKEND/AUTH/refreshTokenController.js'
 import { verifyToken } from '../middleware/auth.js'
 import { authLimiter } from '../middleware/rateLimiter.js'
 
@@ -16,6 +17,9 @@ router.post('/login', authLimiter, validate(mobileLoginSchema), mobileLogin)
 
 // Mobile staff login route - POST /staff-login (Inspector/Collector login)
 router.post('/staff-login', authLimiter, validate(mobileStaffLoginSchema), mobileStaffLogin)
+
+// Refresh token route - POST /refresh
+router.post('/refresh', refreshToken)
 
 // Mobile application submission route - POST /submit-application (legacy endpoint)
 router.post('/submit-application', validate(createStallApplicationSchema), submitApplication)
@@ -34,7 +38,7 @@ router.get('/verify-token', (req, res) => {
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'digistall-mobile-secret-key-2024');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     res.status(200).json({
       success: true,
       message: 'Token is valid',

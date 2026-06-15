@@ -604,15 +604,15 @@ export default {
 
         this.calculatedMonthlyRent = monthlyRent.toFixed(2)
 
-        // Auto-update price field for Fixed Price type (use full monthly rent)
-        if (this.newStall.priceType === 'Fixed Price') {
+        // Auto-update price field for Fixed Price and Raffle type (use full monthly rent)
+        if (this.newStall.priceType === 'Fixed Price' || this.newStall.priceType === 'Raffle') {
           this.newStall.price = monthlyRent.toString()
         }
 
         console.log(`📊 RENTAL RATE 2010: ${rentalRate2010} | Monthly Rent (×2): ${monthlyRent} | Discounted: ${discountedRate}`)
       } else {
         this.calculatedMonthlyRent = ''
-        if (this.newStall.priceType === 'Fixed Price') {
+        if (this.newStall.priceType === 'Fixed Price' || this.newStall.priceType === 'Raffle') {
           this.newStall.price = ''
         }
       }
@@ -752,10 +752,9 @@ export default {
     // NEW: Dynamic price field label based on price type
     priceFieldLabel() {
       switch (this.newStall.priceType) {
-        case 'Raffle':
-          return 'Entry Fee (₱)'
         case 'Auction':
           return 'Starting Bid (₱)'
+        case 'Raffle':
         case 'Fixed Price':
         default:
           return 'Monthly Rent (₱)'
@@ -791,9 +790,14 @@ export default {
       this.newStall.sectionId = ''
     },
 
-    // NEW: Watch for price type changes to debug
+    // NEW: Watch for price type changes to debug and recalculate
     'newStall.priceType'(newValue, oldValue) {
       console.log('Price type changed from', oldValue, 'to', newValue)
+      
+      // If switching back to Fixed Price or Raffle, ensure the price is populated
+      if ((newValue === 'Fixed Price' || newValue === 'Raffle') && this.newStall.baseRate) {
+        this.calculateRentalPrice()
+      }
     },
 
     // Location is now a free text field, so no need for automatic price type setting

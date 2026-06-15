@@ -289,4 +289,32 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+
+  // ── Liveness tap-challenge button ──────────────────────────────────────────
+  // Appears mid-color-sequence; user must tap to prove they are a live person.
+  livenessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E74C3C',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 40,
+    borderWidth: 2.5,
+    borderColor: '#FF8A80',
+    shadowColor: '#E74C3C',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 18,
+    elevation: 12,
+    // Positioned in the overlay center (above the guide circle text area)
+    position: 'absolute',
+    zIndex: 20,
+  },
+  livenessButtonText: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
 });

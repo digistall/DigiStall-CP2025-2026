@@ -8,7 +8,6 @@
       <v-data-table
         :headers="headers"
         :items="expiringSubscriptions"
-        :loading="loading"
         class="professional-table"
         :items-per-page="10"
       >

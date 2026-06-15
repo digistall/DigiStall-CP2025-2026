@@ -733,27 +733,13 @@ export default {
       }
     },
 
-    // Wheel listener to close modal on scroll
+    // Wheel listener to close modal on scroll (disabled by user request)
     setupWheelListener() {
-      this.wheelScrollAccumulator = 0
-      this.wheelListener = (e) => {
-        // Accumulate scroll delta
-        this.wheelScrollAccumulator += Math.abs(e.deltaY)
-        
-        // If accumulated scroll exceeds threshold, close modal
-        if (this.wheelScrollAccumulator > this.wheelScrollThreshold) {
-          this.closeStallDetails()
-        }
-      }
-      window.addEventListener('wheel', this.wheelListener, { passive: true })
+      // Disabled to prevent the modal from closing when the user scrolls it
     },
 
     removeWheelListener() {
-      if (this.wheelListener) {
-        window.removeEventListener('wheel', this.wheelListener)
-        this.wheelListener = null
-      }
-      this.wheelScrollAccumulator = 0
+      // Disabled
     },
 
     closeStallDetails() {

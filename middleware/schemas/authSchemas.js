@@ -100,7 +100,7 @@ export const mobileChangePasswordSchema = Joi.object({
 
 // Mobile staff login: POST /api/mobile/auth/staff-login
 export const mobileStaffLoginSchema = Joi.object({
-  email: email.required(),
+  username: Joi.string().max(255).trim().required(),
   password: Joi.string().max(128).required()
 });
 

@@ -8,7 +8,6 @@
       <v-data-table
         :headers="headers"
         :items="recentOwners"
-        :loading="loading"
         class="professional-table"
         :items-per-page="10"
       >

@@ -21,6 +21,7 @@ import ApiService from "../../../../services/ApiService";
 import UserStorageService from "../../../../services/UserStorageService";
 import CrudLoadingOverlay from "../../../../components/Common/CrudLoadingOverlay";
 import useLoading from "../../../../hooks/useLoading";
+import DocumentUploadHelper from "../../../../services/DocumentUploadHelper";
 
 const { width, height } = Dimensions.get("window");
 const MAX_PHOTOS = 1; // Only 1 photo since stored as blob
@@ -152,6 +153,22 @@ const ComplaintScreen = () => {
     }
   };
 
+  // Helper to validate photo size (max 2MB)
+  const validateAndSetPhoto = async (uri) => {
+    try {
+      const size = await DocumentUploadHelper.getFileSize(uri);
+      const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+      if (size > MAX_SIZE) {
+        showAlert('error', 'File Too Large', `The selected image is ${(size / 1024 / 1024).toFixed(2)}MB, which exceeds the 2MB limit. Please choose a smaller or compressed image.`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Error validating photo size:', err);
+      return true; // Fallback to true if size check fails
+    }
+  };
+
   // Take photo with camera
   const takePhoto = async () => {
     if (evidencePhoto) {
@@ -168,12 +185,16 @@ const ComplaintScreen = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newPhoto = {
-          uri: result.assets[0].uri,
-          type: 'image/jpeg',
-          name: `complaint_${Date.now()}.jpg`,
-        };
-        setEvidencePhoto(newPhoto);
+        const selectedUri = result.assets[0].uri;
+        const isValid = await validateAndSetPhoto(selectedUri);
+        if (isValid) {
+          const newPhoto = {
+            uri: selectedUri,
+            type: 'image/jpeg',
+            name: `complaint_${Date.now()}.jpg`,
+          };
+          setEvidencePhoto(newPhoto);
+        }
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -197,12 +218,16 @@ const ComplaintScreen = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newPhoto = {
-          uri: result.assets[0].uri,
-          type: 'image/jpeg',
-          name: `complaint_${Date.now()}.jpg`,
-        };
-        setEvidencePhoto(newPhoto);
+        const selectedUri = result.assets[0].uri;
+        const isValid = await validateAndSetPhoto(selectedUri);
+        if (isValid) {
+          const newPhoto = {
+            uri: selectedUri,
+            type: 'image/jpeg',
+            name: `complaint_${Date.now()}.jpg`,
+          };
+          setEvidencePhoto(newPhoto);
+        }
       }
     } catch (error) {
       console.error('Error picking photo:', error);
@@ -266,6 +291,23 @@ const ComplaintScreen = () => {
       // Get stallholder data from fullUserData
       const stallholderData = fullUserData?.stallholder || fullUserData?.user || userData;
       
+      // Convert evidence photo to base64 if present
+      let base64Evidence = null;
+      if (evidencePhoto) {
+        try {
+          const base64Data = await DocumentUploadHelper.convertToBase64(evidencePhoto.uri);
+          const extension = evidencePhoto.name?.split('.').pop()?.toLowerCase() || 'jpeg';
+          const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+          base64Evidence = `data:${mimeType};base64,${base64Data}`;
+        } catch (err) {
+          console.error('Error converting image to base64:', err);
+          showAlert('error', 'Error', 'Failed to process photo evidence.');
+          setIsSubmitting(false);
+          stopLoading();
+          return;
+        }
+      }
+
       // Only send fields that the backend expects
       const complaintData = {
         complaint_type: selectedComplaintType.type,
@@ -273,12 +315,15 @@ const ComplaintScreen = () => {
         description: description.trim(),
         stall_id: stallholderData?.stall_id || null,
         branch_id: stallholderData?.branch_id || null,
-        evidence: evidencePhoto ? 'Photo attached' : null
+        evidence: base64Evidence
       };
 
-      console.log('📤 Submitting complaint:', complaintData);
+      console.log('📤 Submitting complaint (with base64 evidence):', {
+        ...complaintData,
+        evidence: base64Evidence ? `${base64Evidence.substring(0, 50)}... [length: ${base64Evidence.length}]` : null
+      });
       
-      const response = await ApiService.submitComplaint(complaintData, evidencePhoto);
+      const response = await ApiService.submitComplaint(complaintData);
       
       setIsSubmitting(false);
       stopLoading();
