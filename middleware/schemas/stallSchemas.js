@@ -4,13 +4,13 @@ import { id, shortText, mediumText, longText, positiveNumber, base64Image } from
 
 // POST /api/stalls (addStallWithImages - accepts multipart or JSON with base64)
 export const createStallSchema = Joi.object({
-  stall_number: Joi.string().max(50).trim().required(),
+  stall_number: Joi.string().max(50).trim().allow('', null),
   stall_name: Joi.string().max(200).trim().allow('', null),
   stall_type: Joi.string().max(50).trim().allow('', null),
   stall_size: Joi.string().max(50).trim().allow('', null),
   monthly_rent: Joi.number().positive().allow(0, null),
   daily_rate: Joi.number().positive().allow(0, null),
-  branch_id: id.required(),
+  branch_id: id.allow(null),
   floor_id: id.allow(null),
   section_id: id.allow(null),
   area: mediumText.allow('', null),
