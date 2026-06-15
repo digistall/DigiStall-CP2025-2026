@@ -691,14 +691,15 @@ export default {
         this.isUpdatingStall = true
         
         // Check if updated data is complete (has essential fields)
-        const hasCompleteData = updatedStallData.stall_no && 
+        const hasCompleteData = (updatedStallData.stall_no || updatedStallData.stall_number) && 
                                (updatedStallData.rental_price !== undefined) && 
                                updatedStallData.section_name
         
         if (!hasCompleteData) {
           console.warn('⚠️ Incomplete stall data received, refetching all stalls...')
           // Refetch all stalls to get complete data
-          await this.fetchStalls()
+          dataCacheService.invalidatePattern('stalls')
+          await this.fetchStalls(true)
           return
         }
         

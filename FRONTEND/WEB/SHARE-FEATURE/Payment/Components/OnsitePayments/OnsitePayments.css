@@ -388,7 +388,7 @@
 
 .payments-table th {
   padding: 16px 12px;
-  text-align: left;
+  text-align: center;
   font-size: 14px;
   font-weight: 600;
   color: white;
@@ -417,7 +417,7 @@
   padding: 16px 12px;
   font-size: 14px;
   color: #374151;
-  text-align: left;
+  text-align: center;
   vertical-align: middle;
 }
 
@@ -464,12 +464,12 @@
 .name-header {
   justify-content: flex-start !important;
   text-align: left !important;
-  padding-left: 0 !important;
+  padding-left: 24px !important;
 }
 
 .name-data {
   text-align: left !important;
-  padding-left: 16px !important;
+  padding-left: 24px !important;
 }
 
 .avatar {

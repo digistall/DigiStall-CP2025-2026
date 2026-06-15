@@ -183,7 +183,7 @@ export default {
             payment_date: item.payment_date ? this.formatDate(item.payment_date) : null,
             payment_reference: item.payment_reference || null,
             paid_amount: item.paid_amount || 0,
-            collected_by: item.collected_by || null,
+            collected_by: item.collected_by || 'Management Office',
             // Additional violation details
             ordinance_no: item.ordinance_no || null,
             violation_details: item.violation_details || null,

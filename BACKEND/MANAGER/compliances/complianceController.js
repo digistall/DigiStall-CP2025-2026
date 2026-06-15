@@ -54,10 +54,13 @@ export const getAllComplianceRecords = async (req, res) => {
         vr.penalty_amount,
         vr.payment_status,
         vr.paid_date,
-        vr.paid_date as payment_date,
+        COALESCE(vr.paid_date, pp.payment_date) as payment_date,
         vr.remarks,
         vr.status,
         vr.created_at,
+        pp.reference_number as receipt_number,
+        pp.reference_number as payment_reference,
+        pp.amount as paid_amount,
         v.violation_type,
         v.violation_type as type,
         v.description as violation_description,
@@ -87,6 +90,7 @@ export const getAllComplianceRecords = async (req, res) => {
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
       LEFT JOIN inspector i ON vr.reported_by = i.inspector_id
+      LEFT JOIN penalty_payments pp ON vr.report_id = pp.report_id
       WHERE 1=1
     `;
 
@@ -207,10 +211,13 @@ export const getComplianceRecordById = async (req, res) => {
         vr.penalty_amount,
         vr.payment_status,
         vr.paid_date,
-        vr.paid_date as payment_date,
+        COALESCE(vr.paid_date, pp.payment_date) as payment_date,
         vr.remarks,
         vr.status,
         vr.created_at,
+        pp.reference_number as receipt_number,
+        pp.reference_number as payment_reference,
+        pp.amount as paid_amount,
         vr.evidence,
         v.violation_type,
         v.violation_type as type,
@@ -241,6 +248,7 @@ export const getComplianceRecordById = async (req, res) => {
       LEFT JOIN stall s ON sh.stall_id = s.stall_id
       LEFT JOIN branch b ON sh.branch_id = b.branch_id
       LEFT JOIN inspector i ON vr.reported_by = i.inspector_id
+      LEFT JOIN penalty_payments pp ON vr.report_id = pp.report_id
       WHERE vr.report_id = ?
     `, [id]);
 

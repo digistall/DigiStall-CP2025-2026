@@ -32,11 +32,11 @@
                   :hint="newStall.priceType === 'Fixed Price'
                       ? 'Monthly rent (auto-calculated from Base Rate × 1.5)'
                       : newStall.priceType === 'Raffle'
-                        ? 'Entry fee for raffle participation'
+                        ? 'Monthly rent (auto-calculated from Base Rate × 1.5)'
                         : 'Starting bid amount for auction'
                     " 
-                  :readonly="newStall.priceType === 'Fixed Price'"
-                  :filled="newStall.priceType === 'Fixed Price'" />
+                  :readonly="newStall.priceType === 'Fixed Price' || newStall.priceType === 'Raffle'"
+                  :filled="newStall.priceType === 'Fixed Price' || newStall.priceType === 'Raffle'" />
               </v-col>
 
               <!-- Floor -->

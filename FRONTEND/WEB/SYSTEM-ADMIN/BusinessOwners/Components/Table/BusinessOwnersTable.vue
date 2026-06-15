@@ -7,7 +7,6 @@
       <v-data-table
         :headers="headers"
         :items="businessOwners"
-        :loading="loading"
         class="professional-table"
         :items-per-page="10"
       >
