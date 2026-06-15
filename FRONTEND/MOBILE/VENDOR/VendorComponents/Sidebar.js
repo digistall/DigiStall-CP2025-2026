@@ -94,7 +94,9 @@ const Sidebar = ({
 
   const menuItems = [
     { id: 'dashboard', title: 'Dashboard', icon: 'grid' },
+    { id: 'payments', title: 'My Payments', icon: 'receipt' },
     { id: 'myqrcode', title: 'My QR Code', icon: 'qr-code' },
+    { id: 'documents', title: 'My Documents', icon: 'document-text' },
     { id: 'profile', title: 'My Profile', icon: 'person' },
     { id: 'business', title: 'Business Info', icon: 'briefcase' },
     { id: 'settings', title: 'Settings', icon: 'settings' },

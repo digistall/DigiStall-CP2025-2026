@@ -39,6 +39,7 @@ const CollectorHome = ({ navigation }) => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [autoOpenQR, setAutoOpenQR] = useState(false);
+  const [preSelectedVendor, setPreSelectedVendor] = useState(null);
 
   // Activity tracking for auto-logout and heartbeat
   const lastActivityRef = useRef(Date.now());
@@ -262,10 +263,19 @@ const CollectorHome = ({ navigation }) => {
       // Navigate to payment screen with QR scanner auto-open
       setCurrentScreen("payment");
       setAutoOpenQR(true);
+      setPreSelectedVendor(null);
     } else {
       setCurrentScreen(screen);
       setAutoOpenQR(false);
+      setPreSelectedVendor(null);
     }
+  };
+
+  // Handle tap-to-pay from vendor list
+  const handlePayVendor = (vendor) => {
+    setPreSelectedVendor(vendor);
+    setAutoOpenQR(false);
+    setCurrentScreen("payment");
   };
 
   // Get page title for header
@@ -315,10 +325,12 @@ const CollectorHome = ({ navigation }) => {
           <PaymentScreen
             autoOpenQR={autoOpenQR}
             onQROpened={() => setAutoOpenQR(false)}
+            preSelectedVendor={preSelectedVendor}
+            onPreSelectedVendorUsed={() => setPreSelectedVendor(null)}
           />
         );
       case "vendor":
-        return <VendorScreen />;
+        return <VendorScreen onPayVendor={handlePayVendor} />;
       case "notifications":
         return <NotificationsScreen />;
       case "settings":

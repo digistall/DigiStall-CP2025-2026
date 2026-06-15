@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Choice Modal -->
-    <v-dialog v-model="showModal" max-width="800px" width="95vw" persistent>
+    <v-dialog v-model="showModal" max-width="1000px" width="95vw" persistent>
       <v-card class="choice-modal-card">
         <v-card-title class="choice-modal-header">
           <span>How would you like to add vendors?</span>
@@ -13,7 +13,7 @@
         <v-card-text class="pa-8">
           <v-row dense justify="center">
             <!-- Add Individual Vendor Card -->
-            <v-col cols="12" sm="6" md="6">
+            <v-col cols="12" sm="6" md="4">
               <v-card
                 class="choice-card vendor-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -60,7 +60,7 @@
             </v-col>
 
             <!-- Import Excel Card -->
-            <v-col cols="12" sm="6" md="6">
+            <v-col cols="12" sm="6" md="4">
               <v-card
                 class="choice-card excel-card"
                 :class="{ 'choice-card-hover': !loading }"
@@ -101,6 +101,52 @@
                   <v-btn color="success" class="choice-btn" :loading="loading" :disabled="loading">
                     <v-icon left>mdi-microsoft-excel</v-icon>
                     Import Excel
+                  </v-btn>
+                </div>
+              </v-card>
+            </v-col>
+
+            <!-- Manage Assigned Locations Card -->
+            <v-col cols="12" sm="6" md="4">
+              <v-card
+                class="choice-card location-card"
+                :class="{ 'choice-card-hover': !loading }"
+                @click="!loading && selectManageLocations()"
+                :disabled="loading"
+                elevation="4"
+                role="button"
+                :aria-label="'Manage assigned locations'"
+                tabindex="0"
+                @keydown.enter="!loading && selectManageLocations()"
+                @keydown.space="!loading && selectManageLocations()"
+              >
+                <div class="choice-card-content">
+                  <div class="choice-icon-container location-icon">
+                    <v-icon size="36" color="white">mdi-map-marker-plus</v-icon>
+                  </div>
+                  <h3 class="choice-title">Assigned Locations</h3>
+                  <p class="choice-description">
+                    Manage vendor assigned locations. Add, edit, or remove location entries for vendor assignment.
+                  </p>
+                  <div class="choice-features">
+                    <div class="feature-item">
+                      <v-icon size="16" color="rgb(230, 126, 34)">mdi-check-circle</v-icon>
+                      <span>Add Locations</span>
+                    </div>
+                    <div class="feature-item">
+                      <v-icon size="16" color="rgb(230, 126, 34)">mdi-check-circle</v-icon>
+                      <span>Edit &amp; Remove</span>
+                    </div>
+                    <div class="feature-item">
+                      <v-icon size="16" color="rgb(230, 126, 34)">mdi-check-circle</v-icon>
+                      <span>Search &amp; Filter</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="choice-card-overlay">
+                  <v-btn class="choice-btn location-btn" :loading="loading" :disabled="loading">
+                    <v-icon left>mdi-map-marker-plus</v-icon>
+                    Manage Locations
                   </v-btn>
                 </div>
               </v-card>

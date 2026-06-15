@@ -24,6 +24,8 @@ import ProfileScreen from './VendorScreens/Profile/ProfileScreen';
 import BusinessScreen from './VendorScreens/Business/BusinessScreen';
 import SettingsScreen from './VendorScreens/Settings/SettingsScreen';
 import MyQRCodeScreen from './VendorScreens/MyQRCode/MyQRCodeScreen';
+import VendorDocumentsScreen from './VendorScreens/Documents/VendorDocumentsScreen';
+import PaymentHistoryScreen from './VendorScreens/Payments/PaymentHistoryScreen';
 
 const { width, height } = Dimensions.get('window');
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
@@ -196,6 +198,8 @@ const VendorHome = ({ navigation }) => {
       profile: 'My Profile',
       business: 'Business Info',
       myqrcode: 'My QR Code',
+      documents: 'My Documents',
+      payments: 'My Payments',
       settings: 'Settings',
     };
     return titles[currentScreen] || 'Vendor Portal';
@@ -212,7 +216,7 @@ const VendorHome = ({ navigation }) => {
   };
 
   // Screens that have their own scrollable components
-  const screensWithOwnScrolling = ['dashboard', 'profile', 'business', 'myqrcode'];
+  const screensWithOwnScrolling = ['dashboard', 'profile', 'business', 'myqrcode', 'documents', 'payments'];
   const needsScrollView = !screensWithOwnScrolling.includes(currentScreen);
 
   // Render current screen
@@ -226,6 +230,10 @@ const VendorHome = ({ navigation }) => {
         return <BusinessScreen />;
       case 'myqrcode':
         return <MyQRCodeScreen />;
+      case 'documents':
+        return <VendorDocumentsScreen />;
+      case 'payments':
+        return <PaymentHistoryScreen />;
       case 'settings':
         return <SettingsScreen />;
       default:

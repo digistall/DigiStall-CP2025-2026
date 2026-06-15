@@ -42,7 +42,7 @@ const getInitials = (name) => {
 };
 
 // ── Component ───────────────────────────────────────────────────────────────
-const VendorScreen = () => {
+const VendorScreen = ({ onPayVendor }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,7 +130,19 @@ const VendorScreen = () => {
   const renderVendorCard = ({ item }) => {
     const status = getStatusStyle(item.paymentStatus);
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => {
+          if (onPayVendor && item.paymentStatus !== "Paid") {
+            onPayVendor({
+              vendor_id: item.id,
+              vendor_name: item.vendorName,
+              vendor_identifier: item.vendorIdentifier,
+            });
+          }
+        }}
+      >
         <View style={styles.cardHeader}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
@@ -162,14 +174,22 @@ const VendorScreen = () => {
             )}
           </View>
 
-          {/* Status badge */}
-          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-            <Text style={[styles.statusText, { color: status.text }]}>
-              {item.paymentStatus}
-            </Text>
+          {/* Status badge + pay indicator */}
+          <View style={styles.cardActions}>
+            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+              <Text style={[styles.statusText, { color: status.text }]}>
+                {item.paymentStatus}
+              </Text>
+            </View>
+            {item.paymentStatus !== "Paid" && onPayVendor && (
+              <View style={styles.payHint}>
+                <Ionicons name="cash-outline" size={14} color="#059669" />
+                <Text style={styles.payHintText}>Tap to pay</Text>
+              </View>
+            )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -534,14 +554,28 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
     fontWeight: "500",
   },
+  cardActions: {
+    alignItems: "flex-end",
+    marginLeft: 8,
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
-    marginLeft: 8,
   },
   statusText: {
     fontSize: 12,
+    fontWeight: "600",
+  },
+  payHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  payHintText: {
+    fontSize: 11,
+    color: "#059669",
     fontWeight: "600",
   },
 

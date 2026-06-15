@@ -25,7 +25,7 @@
   border-radius: 12px !important;
   position: relative !important;
   overflow: hidden !important;
-  height: 400px !important;
+  height: 370px !important;
   cursor: pointer !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   background: white !important;
@@ -187,6 +187,29 @@
 
 .excel-card .choice-btn {
   background: linear-gradient(135deg, rgb(16, 124, 65) 0%, rgb(33, 150, 83) 100%) !important;
+  color: white !important;
+}
+
+/* Location Card Specific Styling */
+.location-card {
+  border: 2px solid transparent !important;
+}
+
+.location-card:hover {
+  border-color: rgb(230, 126, 34) !important;
+  box-shadow: 0 8px 24px rgba(230, 126, 34, 0.2) !important;
+}
+
+.location-card:hover .choice-title {
+  color: rgb(230, 126, 34) !important;
+}
+
+.location-icon {
+  background: linear-gradient(135deg, rgb(230, 126, 34) 0%, rgb(243, 156, 18) 100%) !important;
+}
+
+.location-btn {
+  background: linear-gradient(135deg, rgb(230, 126, 34) 0%, rgb(243, 156, 18) 100%) !important;
   color: white !important;
 }
 

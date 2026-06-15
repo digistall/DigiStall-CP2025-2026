@@ -2731,6 +2731,279 @@ class ApiService {
       return null;
     }
   }
+
+  // =============================================
+  // VENDOR DOCUMENT METHODS
+  // =============================================
+
+  /**
+   * Get vendor document requirements (based on branch)
+   * @param {number} vendorId - Vendor ID
+   * @returns {Promise} - Requirements with upload status
+   */
+  static async getVendorDocumentRequirements(vendorId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(
+        `${server}/api/mobile/vendor/documents/requirements/${vendorId}`,
+        { method: 'GET', headers }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch document requirements');
+      }
+
+      return { success: true, data: data.data, message: data.message };
+    } catch (error) {
+      console.error('❌ Get Vendor Document Requirements API Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  /**
+   * Upload vendor document as BLOB (multipart FormData)
+   * @param {object} documentData - { vendor_id, document_type_id, uri, mime_type, file_name }
+   * @param {string} authToken - Optional auth token
+   * @returns {Promise} - Upload response
+   */
+  static async uploadVendorDocumentBlob(documentData, authToken = null) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+
+      let token = authToken;
+      if (!token) {
+        token = await UserStorageService.getAuthToken();
+      }
+
+      console.log('📤 Uploading vendor document BLOB...');
+      console.log('📋 Payload:', {
+        vendor_id: documentData.vendor_id,
+        document_type_id: documentData.document_type_id,
+        file_name: documentData.file_name,
+        mime_type: documentData.mime_type,
+      });
+
+      // Build FormData
+      const formData = new FormData();
+      formData.append('vendor_id', String(documentData.vendor_id));
+      formData.append('document_type_id', String(documentData.document_type_id));
+      formData.append('mime_type', documentData.mime_type);
+      formData.append('file_name', documentData.file_name);
+      formData.append('file', {
+        uri: documentData.uri,
+        type: documentData.mime_type,
+        name: documentData.file_name,
+      });
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${server}/api/mobile/vendor/documents/blob/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload document');
+      }
+
+      console.log('✅ Vendor document BLOB uploaded successfully');
+      return { success: true, data: data.data, message: data.message };
+    } catch (error) {
+      console.error('❌ Upload Vendor Document BLOB API Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  /**
+   * Get vendor document as base64 JSON (for preview)
+   * @param {number} documentId - Document ID
+   * @returns {Promise} - { success, data (base64 URI), mimeType, fileName }
+   */
+  static async getVendorDocumentBlobBase64(documentId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(
+        `${server}/api/mobile/vendor/documents/blob/base64/${documentId}`,
+        { method: 'GET', headers }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch document');
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        mimeType: data.mimeType,
+        fileName: data.fileName,
+      };
+    } catch (error) {
+      console.error('❌ Get Vendor Document Base64 API Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  /**
+   * Get all uploaded vendor documents (metadata)
+   * @param {number} vendorId - Vendor ID
+   * @param {boolean} includeData - Include base64 data
+   * @returns {Promise}
+   */
+  static async getVendorDocuments(vendorId, includeData = false) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = `${server}/api/mobile/vendor/documents/${vendorId}${includeData ? '?include_data=true' : ''}`;
+      const response = await fetch(url, { method: 'GET', headers });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch vendor documents');
+      }
+
+      return { success: true, data: data.data, total: data.total };
+    } catch (error) {
+      console.error('❌ Get Vendor Documents API Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  /**
+   * Delete a vendor document
+   * @param {number} documentId - Document ID
+   * @returns {Promise}
+   */
+  static async deleteVendorDocument(documentId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(
+        `${server}/api/mobile/vendor/documents/blob/${documentId}`,
+        { method: 'DELETE', headers }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete document');
+      }
+
+      return { success: true, message: data.message };
+    } catch (error) {
+      console.error('❌ Delete Vendor Document API Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  // =============================================
+  // VENDOR PAYMENT METHODS (Vendor Mobile App)
+  // =============================================
+
+  /**
+   * Get payment history for a vendor (paginated)
+   * @param {number} vendorId - Vendor ID
+   * @param {number} page - Page number (default: 1)
+   * @param {number} limit - Records per page (default: 20)
+   * @returns {Promise}
+   */
+  static async getVendorPayments(vendorId, page = 1, limit = 20) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = `${server}/api/mobile/vendor/payments/${vendorId}?page=${page}&limit=${limit}`;
+      const response = await fetch(url, { method: 'GET', headers });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment history');
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        pagination: data.pagination,
+      };
+    } catch (error) {
+      console.error('❌ Get Vendor Payments Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
+
+  /**
+   * Get payment summary for a vendor (today, this month, all time)
+   * @param {number} vendorId - Vendor ID
+   * @returns {Promise}
+   */
+  static async getVendorPaymentSummary(vendorId) {
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const token = await UserStorageService.getAuthToken();
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = `${server}/api/mobile/vendor/payments/summary/${vendorId}`;
+      const response = await fetch(url, { method: 'GET', headers });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch payment summary');
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error('❌ Get Vendor Payment Summary Error:', error);
+      return { success: false, message: error.message || 'Network error occurred' };
+    }
+  }
 }
 
 export default ApiService;

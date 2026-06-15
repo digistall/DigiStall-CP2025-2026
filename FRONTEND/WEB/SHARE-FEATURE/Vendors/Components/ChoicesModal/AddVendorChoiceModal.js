@@ -38,6 +38,12 @@ export default {
       this.showExcelImportModal = true
     },
 
+    // Handle selection of Manage Locations
+    selectManageLocations() {
+      this.closeModal()
+      this.$router.push('/app/assigned-locations')
+    },
+
     // Close Add Vendor Modal
     closeAddVendorModal() {
       this.showAddVendorModal = false

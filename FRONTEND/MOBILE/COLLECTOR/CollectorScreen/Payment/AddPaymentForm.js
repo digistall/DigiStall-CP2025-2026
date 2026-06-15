@@ -32,7 +32,7 @@ const getPaymentStatus = (amount, isMissing) => {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
-const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName, autoOpenScanner = false }) => {
+const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName, autoOpenScanner = false, preSelectedVendor = null }) => {
   // Form state
   const [vendorSearch, setVendorSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -68,6 +68,12 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName, autoOpenSca
       if (autoOpenScanner && !hasAutoOpened.current) {
         hasAutoOpened.current = true;
         setTimeout(() => setShowQRScanner(true), 300);
+      }
+      // Pre-select vendor if provided (tap-to-pay from vendor list)
+      if (preSelectedVendor && !hasAutoOpened.current) {
+        setSelectedVendor(preSelectedVendor);
+        setVendorSearch(preSelectedVendor.vendor_name);
+        setDropdownOpen(false);
       }
     } else {
       hasAutoOpened.current = false;
