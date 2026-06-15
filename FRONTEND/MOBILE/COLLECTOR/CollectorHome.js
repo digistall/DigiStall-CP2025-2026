@@ -9,6 +9,7 @@ import {
   PanResponder,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../components/ThemeComponents/ThemeContext";
 import ApiService from "../services/ApiService";
 import UserStorageService from "../services/UserStorageService";
 import LogoutLoadingScreen from "../components/Common/LogoutLoadingScreen";
@@ -29,27 +30,15 @@ const { width, height } = Dimensions.get("window");
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
 const HEARTBEAT_INTERVAL = 60 * 1000; // 1 minute
 
-// Default theme (can be replaced with theme context later)
-const defaultTheme = {
-  colors: {
-    background: "#f8fafc",
-    surface: "#ffffff",
-    text: "#1f2937",
-    textSecondary: "#6b7280",
-    border: "#e5e7eb",
-    primary: "#3b82f6",
-  },
-};
-
 const CollectorHome = ({ navigation }) => {
-  // Theme (can be connected to theme context later)
-  const theme = defaultTheme;
-  const isDarkMode = false;
+  // Get theme from context (matching Vendor/Inspector pattern)
+  const { theme, isDarkMode } = useTheme();
 
   // Single source of truth for current screen
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [autoOpenQR, setAutoOpenQR] = useState(false);
 
   // Activity tracking for auto-logout and heartbeat
   const lastActivityRef = useRef(Date.now());
@@ -144,6 +133,8 @@ const CollectorHome = ({ navigation }) => {
       }, HEARTBEAT_INTERVAL);
     };
 
+    startHeartbeatInterval();
+
     // Handle app state changes
     const appStateSubscription = AppState.addEventListener(
       "change",
@@ -159,7 +150,6 @@ const CollectorHome = ({ navigation }) => {
           } else {
             recordActivity();
             sendHeartbeat();
-            // Restart heartbeat interval
             startHeartbeatInterval();
           }
         } else if (
@@ -171,7 +161,7 @@ const CollectorHome = ({ navigation }) => {
             clearInterval(heartbeatIntervalRef.current);
             heartbeatIntervalRef.current = null;
           }
-          // Fire-and-forget auto-logout API (don't await - OS may suspend JS thread)
+          // Fire-and-forget auto-logout API
           try {
             const userData = await UserStorageService.getUserData();
             const token = await UserStorageService.getAuthToken();
@@ -201,11 +191,10 @@ const CollectorHome = ({ navigation }) => {
   const handleLogout = async () => {
     // Prevent multiple clicks
     if (isLoggingOut) {
-      console.log("Logout already in progress, ignoring...");
       return;
     }
 
-    // CRITICAL: Clear heartbeat interval FIRST to prevent last_login updates after logout
+    // CRITICAL: Clear heartbeat interval FIRST
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
@@ -227,7 +216,6 @@ const CollectorHome = ({ navigation }) => {
       // Call staff logout API to update last_logout in database
       if (token && staffId) {
         await ApiService.staffLogout(token, staffId, staffType);
-        console.log("Γ£à Staff logout API called - last_logout updated");
       }
 
       // Add small delay to show the animation (1.5 seconds)
@@ -259,8 +247,6 @@ const CollectorHome = ({ navigation }) => {
 
   // Handle navigation from sidebar
   const handleMenuItemPress = (itemId) => {
-    console.log(`Navigating to: ${itemId}`);
-
     if (itemId === "logout") {
       handleLogout();
       return;
@@ -272,8 +258,14 @@ const CollectorHome = ({ navigation }) => {
 
   // Handle navigation from bottom navbar
   const handleNavigation = (screen) => {
-    console.log(`Bottom nav - Navigating to: ${screen}`);
-    setCurrentScreen(screen);
+    if (screen === "scanQR") {
+      // Navigate to payment screen with QR scanner auto-open
+      setCurrentScreen("payment");
+      setAutoOpenQR(true);
+    } else {
+      setCurrentScreen(screen);
+      setAutoOpenQR(false);
+    }
   };
 
   // Get page title for header
@@ -281,7 +273,7 @@ const CollectorHome = ({ navigation }) => {
     const titles = {
       dashboard: "Dashboard",
       payment: "Payment",
-      vendor: "Vendor Management",
+      vendor: "Vendors",
       notifications: "Notifications",
       settings: "Settings",
     };
@@ -290,16 +282,9 @@ const CollectorHome = ({ navigation }) => {
 
   // Determine which tab should be active in navbar
   const getActiveNavTab = () => {
-    // Only show active state for screens that are actually in the navbar
-    if (currentScreen === "dashboard") {
-      return "Dashboard";
-    }
-    if (currentScreen === "payment") {
-      return "Payment";
-    }
-    if (currentScreen === "vendor") {
-      return "Vendor";
-    }
+    if (currentScreen === "dashboard") return "Dashboard";
+    if (currentScreen === "payment") return "Payment";
+    if (currentScreen === "vendor") return "Vendor";
     return null;
   };
 
@@ -318,9 +303,20 @@ const CollectorHome = ({ navigation }) => {
   const renderCurrentScreen = () => {
     switch (currentScreen) {
       case "dashboard":
-        return <DashboardScreen onNavigate={handleNavigation} />;
+        return (
+          <DashboardScreen
+            onNavigate={handleNavigation}
+            theme={theme}
+            isDarkMode={isDarkMode}
+          />
+        );
       case "payment":
-        return <PaymentScreen />;
+        return (
+          <PaymentScreen
+            autoOpenQR={autoOpenQR}
+            onQROpened={() => setAutoOpenQR(false)}
+          />
+        );
       case "vendor":
         return <VendorScreen />;
       case "notifications":
@@ -328,7 +324,13 @@ const CollectorHome = ({ navigation }) => {
       case "settings":
         return <SettingsScreen />;
       default:
-        return <DashboardScreen onNavigate={handleNavigation} />;
+        return (
+          <DashboardScreen
+            onNavigate={handleNavigation}
+            theme={theme}
+            isDarkMode={isDarkMode}
+          />
+        );
     }
   };
 

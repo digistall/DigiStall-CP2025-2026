@@ -149,6 +149,36 @@ router.get(
 // ============================================================================
 
 /**
+ * @route GET /api/payments/daily/stats
+ * @description Get daily payment statistics/summary
+ */
+router.get(
+  "/daily/stats",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getDailyPaymentStats
+);
+
+/**
+ * @route GET /api/payments/daily/vendor-list
+ * @description Get all vendors with payment summary for main table
+ */
+router.get(
+  "/daily/vendor-list",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getVendorList
+);
+
+/**
+ * @route GET /api/payments/daily/vendor/:vendorId
+ * @description Get payment history for a specific vendor
+ */
+router.get(
+  "/daily/vendor/:vendorId",
+  authMiddleware.authenticateToken,
+  DailyPaymentController.getVendorPaymentHistory
+);
+
+/**
  * @route GET /api/payments/daily/vendors
  * @description Get all active vendors for dropdown
  */

@@ -38,6 +38,7 @@ export default {
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment', group: 'Operations' },
         { id: 13, icon: 'mdi-credit-card-outline', name: 'My Subscription', route: '/app/subscription', group: 'Operations' },
         { id: 14, icon: 'mdi-domain', name: 'Branch', route: '/app/branch', group: 'Operations' },
+        { id: 15, icon: 'mdi-map-marker', name: 'Assigned Locations', route: '/app/assigned-locations', group: 'Operations' },
       ],
       businessManagerMenuItems: [
         { id: 1, icon: 'mdi-view-dashboard', name: 'Dashboard', route: '/app/dashboard', group: 'Activity' },
@@ -50,6 +51,7 @@ export default {
         { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints', group: 'Operations' },
         { id: 5, icon: 'mdi-shield-check', name: 'Compliances', route: '/app/compliances', group: 'Operations' },
         { id: 2, icon: 'mdi-credit-card', name: 'Payment', route: '/app/payment', group: 'Operations' },
+        { id: 15, icon: 'mdi-map-marker', name: 'Assigned Locations', route: '/app/assigned-locations', group: 'Operations' },
       ],
       // Business Employee menu items based on permissions
       businessEmployeeMenuItems: {
@@ -65,6 +67,7 @@ export default {
           group: 'Users'
         },
         vendors: { id: 6, icon: 'mdi-account-multiple', name: 'Vendors', route: '/app/vendors', group: 'Users' },
+        assignedLocations: { id: 15, icon: 'mdi-map-marker', name: 'Assigned Locations', route: '/app/assigned-locations', group: 'Operations' },
         complaints: { id: 4, icon: 'mdi-chart-line', name: 'Complaints', route: '/app/complaints', group: 'Operations' },
         compliances: {
           id: 5,
@@ -89,6 +92,7 @@ export default {
         10: '/app/stall-tracker', // Stall Tracker
         12: '/app/compliances', // Compliances (for Business Owner in More)
         13: '/app/subscription', // My Subscription (for Business Owner in More)
+        15: '/app/assigned-locations', // Assigned Locations
       },
     }
   },
@@ -197,6 +201,7 @@ export default {
         }
         if (hasPermission('vendors')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.vendors, id: menuId++ })
+          this.menuItems.push({ ...this.businessEmployeeMenuItems.assignedLocations, id: menuId++ })
         }
         if (hasPermission('stallholders')) {
           this.menuItems.push({ ...this.businessEmployeeMenuItems.stallholders, id: menuId++ })

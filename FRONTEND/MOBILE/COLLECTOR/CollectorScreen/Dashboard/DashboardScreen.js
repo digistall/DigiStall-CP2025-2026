@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,74 +11,23 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import UserStorageService from "../../../services/UserStorageService";
+import { API_CONFIG, NetworkUtils } from "../../../config/shared/networkConfig";
 
 const { width } = Dimensions.get("window");
-
-// Default theme colors for fallback
-const defaultTheme = {
-  colors: {
-    background: "#f8fafc",
-    surface: "#ffffff",
-    card: "#ffffff",
-    text: "#1f2937",
-    textSecondary: "#6b7280",
-    border: "#e5e7eb",
-    primary: "#3b82f6",
-  },
-};
-
-// ── Sample data (replace with real API data later) ──────────────────────────
-const sampleTransactions = [
-  {
-    id: "1",
-    reference: "REF-20260305-001",
-    collector: "Alice Johnson",
-    vendor: "Sunrise Fruits",
-    status: "Paid",
-    date: "2026-03-05 09:34",
-  },
-  {
-    id: "2",
-    reference: "REF-20260305-002",
-    collector: "Bob Smith",
-    vendor: "GreenGrocer Ltd",
-    status: "Pending",
-    date: "2026-03-05 10:12",
-  },
-  {
-    id: "3",
-    reference: "REF-20260304-123",
-    collector: "Clara Lee",
-    vendor: "Baker's Corner",
-    status: "Failed",
-    date: "2026-03-04 16:45",
-  },
-  {
-    id: "4",
-    reference: "REF-20260304-099",
-    collector: "Alice Johnson",
-    vendor: "Fresh Fish Market",
-    status: "Paid",
-    date: "2026-03-04 08:20",
-  },
-  {
-    id: "5",
-    reference: "REF-20260303-055",
-    collector: "Bob Smith",
-    vendor: "Naga Spice Stall",
-    status: "Paid",
-    date: "2026-03-03 14:10",
-  },
-];
 
 // ── Status badge helper ─────────────────────────────────────────────────────
 const getStatusStyle = (status) => {
   switch (status) {
     case "Paid":
+    case "completed":
       return { bg: "#d1fae5", text: "#059669", icon: "checkmark-circle" };
     case "Pending":
+    case "pending":
       return { bg: "#fef3c7", text: "#d97706", icon: "time" };
     case "Failed":
+    case "failed":
+    case "cancelled":
       return { bg: "#fee2e2", text: "#dc2626", icon: "close-circle" };
     default:
       return { bg: "#f3f4f6", text: "#6b7280", icon: "help-circle" };
@@ -86,32 +35,119 @@ const getStatusStyle = (status) => {
 };
 
 // ── Dashboard Screen ────────────────────────────────────────────────────────
-const DashboardScreen = ({ onNavigate }) => {
-  const theme = defaultTheme;
+const DashboardScreen = ({ onNavigate, theme, isDarkMode }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  // Sample stats — wire to real API later
-  const [stats] = useState({
-    paymentsCollected: 128,
-    missingPayments: 7,
-    vendorPaid: 45,
-    unpaidVendors: 12,
+  const [loading, setLoading] = useState(true);
+  const [collectorName, setCollectorName] = useState("Collector");
+  const [stats, setStats] = useState({
+    paymentsCollected: 0,
+    missingPayments: 0,
+    vendorPaid: 0,
+    unpaidVendors: 0,
   });
+  const [transactions, setTransactions] = useState([]);
 
-  const [transactions] = useState(sampleTransactions);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([loadCollectorName(), fetchDashboardData()]);
+    setLoading(false);
+  };
+
+  const loadCollectorName = async () => {
+    try {
+      const userData = await UserStorageService.getUserData();
+      const staff = userData?.staff;
+      if (staff) {
+        const name =
+          staff.fullname ||
+          staff.name ||
+          `${staff.first_name || ""} ${staff.last_name || ""}`.trim();
+        if (name) setCollectorName(name);
+      }
+    } catch (error) {
+      console.error("Error loading collector name:", error);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const server = await NetworkUtils.getActiveServer();
+
+      const headers = { ...API_CONFIG.HEADERS };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      // Fetch recent payments for dashboard
+      const response = await fetch(
+        `${server}/api/collector/daily-payments?page=1&limit=5`,
+        { method: "GET", headers }
+      );
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setTransactions(data.data);
+
+        // Calculate stats from all payments
+        const totalCount = data.pagination?.totalRecords || data.data.length;
+        const paidCount = data.data.filter(
+          (p) => p.status?.toLowerCase() === "completed"
+        ).length;
+        const pendingCount = data.data.filter(
+          (p) => p.status?.toLowerCase() === "pending"
+        ).length;
+
+        setStats({
+          paymentsCollected: totalCount,
+          missingPayments: pendingCount,
+          vendorPaid: paidCount,
+          unpaidVendors: data.data.length - paidCount,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // TODO: fetch real data here
-    setTimeout(() => setRefreshing(false), 1000);
+    loadData().finally(() => setRefreshing(false));
   }, []);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const getFirstName = () => {
+    return collectorName.split(" ")[0];
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-PH", {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
   // ── Stats card definitions ──────────────────────────────────────────────
   const statsData = [
     {
       id: "payments_collected",
-      title: "Payments Collected",
+      title: "Collections",
       value: stats.paymentsCollected.toString(),
       icon: "cash",
       color: "#10b981",
@@ -119,7 +155,7 @@ const DashboardScreen = ({ onNavigate }) => {
     },
     {
       id: "missing_payments",
-      title: "Missing Payments",
+      title: "Pending",
       value: stats.missingPayments.toString(),
       icon: "alert-circle",
       color: "#ef4444",
@@ -135,7 +171,7 @@ const DashboardScreen = ({ onNavigate }) => {
     },
     {
       id: "unpaid_vendors",
-      title: "Unpaid Vendors",
+      title: "Unpaid",
       value: stats.unpaidVendors.toString(),
       icon: "warning",
       color: "#f59e0b",
@@ -146,34 +182,27 @@ const DashboardScreen = ({ onNavigate }) => {
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={styles.container}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={["#3b82f6"]}
-          tintColor="#3b82f6"
+          colors={["#10b981"]}
+          tintColor="#10b981"
         />
       }
     >
       {/* ── Welcome Card ─────────────────────────────────────────────── */}
       <LinearGradient
-        colors={["#3b82f6", "#1d4ed8"]}
+        colors={["#10b981", "#059669"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.welcomeCard}
       >
         <View style={styles.welcomeContent}>
-          <Text style={styles.welcomeGreeting}>
-            {new Date().getHours() < 12
-              ? "Good Morning"
-              : new Date().getHours() < 18
-                ? "Good Afternoon"
-                : "Good Evening"}
-            ,
-          </Text>
-          <Text style={styles.welcomeName}>Collector! 💰</Text>
+          <Text style={styles.welcomeGreeting}>{getGreeting()},</Text>
+          <Text style={styles.welcomeName}>{getFirstName()}! 💰</Text>
           <Text style={styles.welcomeSubtext}>
             Here's a summary of today's payment activity.
           </Text>
@@ -185,15 +214,10 @@ const DashboardScreen = ({ onNavigate }) => {
 
       {/* ── Stats Cards ──────────────────────────────────────────────── */}
       <View style={styles.sectionContainer}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Overview
-        </Text>
+        <Text style={styles.sectionTitle}>Overview</Text>
         <View style={styles.statsGrid}>
           {statsData.map((stat) => (
-            <View
-              key={stat.id}
-              style={[styles.statCard, { backgroundColor: theme.colors.card }]}
-            >
+            <View key={stat.id} style={styles.statCard}>
               <View
                 style={[
                   styles.statIconContainer,
@@ -202,17 +226,10 @@ const DashboardScreen = ({ onNavigate }) => {
               >
                 <Ionicons name={stat.icon} size={24} color={stat.color} />
               </View>
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              <Text style={styles.statValue}>
                 {loading ? "..." : stat.value}
               </Text>
-              <Text
-                style={[
-                  styles.statTitle,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                {stat.title}
-              </Text>
+              <Text style={styles.statTitle}>{stat.title}</Text>
             </View>
           ))}
         </View>
@@ -220,9 +237,38 @@ const DashboardScreen = ({ onNavigate }) => {
 
       {/* ── Quick Tools ──────────────────────────────────────────────── */}
       <View style={styles.sectionContainer}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Quick Tools
-        </Text>
+        <Text style={styles.sectionTitle}>Quick Tools</Text>
+
+        {/* Scan QR Code Button */}
+        <TouchableOpacity
+          style={[styles.quickToolButton, { marginBottom: 12 }]}
+          activeOpacity={0.85}
+          onPress={() => onNavigate && onNavigate("scanQR")}
+        >
+          <LinearGradient
+            colors={["#10b981", "#059669"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.quickToolGradient}
+          >
+            <View style={styles.quickToolIconWrap}>
+              <Ionicons name="qr-code" size={28} color="#ffffff" />
+            </View>
+            <View style={styles.quickToolTextWrap}>
+              <Text style={styles.quickToolTitle}>Scan QR Code</Text>
+              <Text style={styles.quickToolSubtitle}>
+                Scan vendor QR for quick payment
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={22}
+              color="rgba(255,255,255,0.7)"
+            />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Add Daily Payment Button */}
         <TouchableOpacity
           style={styles.quickToolButton}
           activeOpacity={0.85}
@@ -254,42 +300,30 @@ const DashboardScreen = ({ onNavigate }) => {
 
       {/* ── Recent Transactions ──────────────────────────────────────── */}
       <View style={[styles.sectionContainer, styles.lastSection]}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Recent Transactions
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <TouchableOpacity
+            onPress={() => onNavigate && onNavigate("payment")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading ? (
-          <View
-            style={[
-              styles.loadingContainer,
-              { backgroundColor: theme.colors.card },
-            ]}
-          >
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text
-              style={[
-                styles.loadingText,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              Loading transactions...
-            </Text>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#10b981" />
+            <Text style={styles.loadingText}>Loading transactions...</Text>
           </View>
         ) : transactions.length > 0 ? (
           transactions.map((txn) => {
             const statusStyle = getStatusStyle(txn.status);
             return (
-              <View
-                key={txn.id}
-                style={[styles.txnCard, { backgroundColor: theme.colors.card }]}
-              >
+              <View key={txn.receipt_id} style={styles.txnCard}>
                 {/* Row 1 – Reference & Status */}
                 <View style={styles.txnRow}>
-                  <Text
-                    style={[styles.txnReference, { color: theme.colors.text }]}
-                    numberOfLines={1}
-                  >
-                    {txn.reference}
+                  <Text style={styles.txnReference} numberOfLines={1}>
+                    {txn.reference_no}
                   </Text>
                   <View
                     style={[
@@ -310,84 +344,34 @@ const DashboardScreen = ({ onNavigate }) => {
                   </View>
                 </View>
 
-                {/* Row 2 – Collector & Vendor */}
+                {/* Row 2 – Vendor & Amount */}
                 <View style={styles.txnMetaRow}>
                   <View style={styles.txnMeta}>
-                    <Ionicons
-                      name="person"
-                      size={14}
-                      color={theme.colors.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.txnMetaText,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {txn.collector}
+                    <Ionicons name="storefront" size={14} color="#6b7280" />
+                    <Text style={styles.txnMetaText} numberOfLines={1}>
+                      {txn.vendor_name}
                     </Text>
                   </View>
-                  <View style={styles.txnMeta}>
-                    <Ionicons
-                      name="storefront"
-                      size={14}
-                      color={theme.colors.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.txnMetaText,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {txn.vendor}
-                    </Text>
-                  </View>
+                  <Text style={styles.txnAmount}>
+                    ₱{parseFloat(txn.amount).toFixed(2)}
+                  </Text>
                 </View>
 
                 {/* Row 3 – Date */}
                 <View style={styles.txnFooter}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={13}
-                    color={theme.colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.txnDate,
-                      { color: theme.colors.textSecondary },
-                    ]}
-                  >
-                    {txn.date}
+                  <Ionicons name="calendar-outline" size={13} color="#9ca3af" />
+                  <Text style={styles.txnDate}>
+                    {formatDate(txn.time_date)}
                   </Text>
                 </View>
               </View>
             );
           })
         ) : (
-          <View
-            style={[
-              styles.emptyContainer,
-              { backgroundColor: theme.colors.card },
-            ]}
-          >
-            <Ionicons
-              name="receipt-outline"
-              size={48}
-              color={theme.colors.textSecondary}
-            />
-            <Text
-              style={[styles.emptyText, { color: theme.colors.textSecondary }]}
-            >
-              No recent transactions
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtext,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={48} color="#d1d5db" />
+            <Text style={styles.emptyText}>No recent transactions</Text>
+            <Text style={styles.emptySubtext}>
               Payment records will appear here
             </Text>
           </View>
@@ -403,6 +387,7 @@ const CARD_WIDTH = (width - width * 0.12) / 2;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f8fafc",
   },
 
   /* Welcome */
@@ -451,9 +436,22 @@ const styles = StyleSheet.create({
   lastSection: {
     marginBottom: 32,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 16,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#10b981",
     marginBottom: 16,
   },
 
@@ -465,6 +463,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: CARD_WIDTH,
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -485,10 +484,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: "700",
+    color: "#1f2937",
   },
   statTitle: {
     fontSize: 12,
     marginTop: 4,
+    color: "#6b7280",
   },
 
   /* Quick Tools */
@@ -532,6 +533,7 @@ const styles = StyleSheet.create({
 
   /* Transaction Cards */
   txnCard: {
+    backgroundColor: "#ffffff",
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
@@ -550,6 +552,7 @@ const styles = StyleSheet.create({
   txnReference: {
     fontSize: 14,
     fontWeight: "700",
+    color: "#1f2937",
     flexShrink: 1,
     marginRight: 8,
   },
@@ -568,6 +571,7 @@ const styles = StyleSheet.create({
   txnMetaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   txnMeta: {
@@ -578,7 +582,13 @@ const styles = StyleSheet.create({
   },
   txnMetaText: {
     fontSize: 13,
+    color: "#6b7280",
     flexShrink: 1,
+  },
+  txnAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#059669",
   },
   txnFooter: {
     flexDirection: "row",
@@ -590,10 +600,12 @@ const styles = StyleSheet.create({
   },
   txnDate: {
     fontSize: 12,
+    color: "#9ca3af",
   },
 
   /* Loading / Empty */
   loadingContainer: {
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 32,
     alignItems: "center",
@@ -602,8 +614,10 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     marginTop: 12,
+    color: "#6b7280",
   },
   emptyContainer: {
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 32,
     alignItems: "center",
@@ -612,10 +626,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: "600",
+    color: "#6b7280",
     marginTop: 12,
   },
   emptySubtext: {
     fontSize: 14,
+    color: "#9ca3af",
     marginTop: 4,
     textAlign: "center",
   },

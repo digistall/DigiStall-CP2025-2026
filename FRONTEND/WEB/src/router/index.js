@@ -25,6 +25,7 @@ import Vendors from '@shared-features/Vendors/Vendors.vue'
 import Stallholders from '@shared-features/Stallholders/Stallholders.vue'
 import Stalls from '@shared-features/Stalls/Stalls.vue'
 import StallTracker from '@shared-features/StallTracker/StallTracker.vue'
+import AssignedLocations from '@shared-features/AssignedLocation/AssignedLocationManager.vue'
 import Profile from '@shared-features/Profile/Profile.vue'
 
 // BUSINESS-MANAGER module - Manager-exclusive features
@@ -471,6 +472,13 @@ const router = createRouter({
           component: Vendors,
           meta: { title: 'Vendors', hasTable: true },
           beforeEnter: requiresPermission('vendors'),
+        },
+        {
+          path: 'assigned-locations',
+          name: 'AssignedLocations',
+          component: AssignedLocations,
+          meta: { title: 'Assigned Locations' },
+          beforeEnter: requiresPermission('vendors'), // shares the vendors permission
         },
         {
           path: 'stallholders',
