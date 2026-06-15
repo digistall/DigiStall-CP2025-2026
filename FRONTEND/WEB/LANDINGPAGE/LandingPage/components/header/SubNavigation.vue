@@ -418,18 +418,17 @@ export default {
 
     setupWindowScrollListener() {
       this.windowScrollListener = () => {
-        // Only auto-close if stalls container is open AND modal is NOT open
-        // AND application form is NOT open AND stallsLoading is false (to prevent closing while loading)
+        // Disabled auto-close on scroll so users can scroll the stalls list
+        /*
         if (this.showStallsContainer && this.selectedBranch && !this.modalOpen && !this.applicationFormOpen && !this.stallsLoading) {
           const currentScrollY = window.scrollY;
           const scrollDifference = currentScrollY - this.lastScrollY;
           
-          // Check if user has scrolled down more than the threshold
           if (scrollDifference > this.scrollThreshold) {
-            console.log('🔻 Auto-closing stalls container due to scroll');
             this.closeStallsContainer();
           }
         }
+        */
       };
       
       window.addEventListener('scroll', this.windowScrollListener, { passive: true });

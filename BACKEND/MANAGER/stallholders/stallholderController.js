@@ -2074,7 +2074,7 @@ const StallholderController = {
           vr.report_date         AS date_reported,
           vr.offense_count       AS offense_no,
           vr.penalty_amount,
-          NULL                   AS receipt_number,
+          pp.reference_number    AS receipt_number,
           vr.status,
           vr.remarks,
           e.first_name           AS inspector_first_name,
@@ -2087,6 +2087,7 @@ const StallholderController = {
         LEFT JOIN inspector e        ON vr.reported_by = e.inspector_id
         LEFT JOIN stallholder sh     ON vr.stallholder_id = sh.stallholder_id
         LEFT JOIN branch b           ON sh.branch_id = b.branch_id
+        LEFT JOIN penalty_payments pp ON vr.report_id = pp.report_id
         WHERE vr.stallholder_id = ?
         ORDER BY vr.report_date DESC
       `, [parseInt(id)]);

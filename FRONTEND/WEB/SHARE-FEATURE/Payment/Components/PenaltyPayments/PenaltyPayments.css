@@ -142,21 +142,21 @@
 }
 
 .name-header {
-  justify-content: center !important;
-  text-align: center !important;
-  padding-left: 0 !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: 24px !important;
 }
 
 .name-data {
   text-align: left !important;
-  padding-left: 16px !important;
+  padding-left: 24px !important;
 }
 
 .name-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  text-align: center;
+  text-align: left;
 }
 
 .avatar {

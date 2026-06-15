@@ -1,4 +1,5 @@
 import { createConnection } from "../../../../../../config/database.js";
+import { decryptData } from "../../../../../../services/encryptionService.js";
 
 // Get filtered stalls (supports both area and branch parameters)
 export const getFilteredStalls = async (req, res) => {
@@ -34,11 +35,14 @@ export const getFilteredStalls = async (req, res) => {
         s.is_available as isAvailable,
         sec.section_name as section,
         f.floor_name as floor,
-        b.branch_name as branch
+        b.branch_name as branch,
+        bm.first_name as manager_first_name,
+        bm.last_name as manager_last_name
       FROM stall s
       LEFT JOIN section sec ON s.section_id = sec.section_id
       LEFT JOIN floor f ON s.floor_id = f.floor_id
       LEFT JOIN branch b ON f.branch_id = b.branch_id
+      LEFT JOIN business_manager bm ON b.business_manager_id = bm.business_manager_id
       LEFT JOIN stall_images si ON s.stall_id = si.stall_id AND si.is_primary = 1
       WHERE s.status = 'Available' AND s.is_available = 1
     `;
@@ -153,6 +157,7 @@ export const getFilteredStalls = async (req, res) => {
         isAvailable: Boolean(stall.isAvailable),
         description: stall.description || "Perfect for business",
         imageUrl: stall.imageId ? `/api/stalls/images/blob/id/${stall.imageId}` : null,
+        managerName: stall.manager_first_name ? `${decryptData(stall.manager_first_name)} ${decryptData(stall.manager_last_name)}` : 'Unknown',
       };
     });
 
