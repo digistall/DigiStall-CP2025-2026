@@ -4,8 +4,8 @@ import { useAvatar } from '@utils/avatarHelper.js'
 export default {
   name: 'DailyPayments',
   setup() {
-    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar();
-    return { getAvatarUrl, handleAvatarError, getInitials };
+    const { getAvatarUrl, handleAvatarError, getInitials } = useAvatar()
+    return { getAvatarUrl, handleAvatarError, getInitials }
   },
   emits: ['loading', 'count-updated'],
   components: {
@@ -14,29 +14,33 @@ export default {
   data() {
     return {
       searchQuery: '',
-      payments: [],
+      // Main vendor list (one row per vendor)
+      vendorList: [],
+      loading: false,
+
+      // Filter panel
+      showFilterPanel: false,
+      filters: {
+        status: null, // 'active' (has recent payments) or 'inactive'
+      },
+
+      // Dropdowns for add/edit forms
       collectors: [],
       vendors: [],
       loadingCollectors: false,
       loadingVendors: false,
+
+      // Payment History Modal (opened when clicking a vendor)
+      showTrackerModal: false,
+      selectedVendor: null,
+      vendorPayments: [],
+      vendorSummary: null,
+      trackerLoading: false,
+
+      // Add Payment Modal
       showAddModal: false,
-      showViewModal: false,
-      showDeleteConfirm: false,
-      selectedPayment: null,
       formValid: false,
       submitting: false,
-      deleting: false,
-      // Stallholder details modal
-      showStallholderModal: false,
-      loadingStallholderDetails: false,
-      stallholderDetails: null,
-      avatarBuster: Date.now(),
-      // Zoom Lightbox states
-      showZoomModal: false,
-      zoomScale: 1.0,
-      panX: 0,
-      panY: 0,
-      isDragging: false,
       form: {
         collectorId: null,
         vendorId: null,
@@ -44,6 +48,26 @@ export default {
         referenceNo: '',
         status: 'completed',
       },
+
+      // Edit Payment Modal
+      showEditModal: false,
+      editFormValid: false,
+      editing: false,
+      selectedPayment: null,
+      editForm: {
+        collectorId: null,
+        vendorId: null,
+        amount: '',
+        referenceNo: '',
+        status: '',
+      },
+
+      // Delete confirmation
+      showDeleteConfirm: false,
+      deleting: false,
+      paymentToDelete: null,
+
+      // Toast
       toast: {
         show: false,
         message: '',
@@ -52,41 +76,57 @@ export default {
     }
   },
   computed: {
-    filteredPayments() {
-      if (!this.searchQuery) {
-        return this.payments
+    filteredVendors() {
+      let results = [...this.vendorList]
+
+      // Search filter
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase()
+        results = results.filter(
+          (v) => (v.vendor_name || '').toLowerCase().includes(q)
+        )
       }
 
-      const query = this.searchQuery.toLowerCase()
-      return this.payments.filter((payment) => {
-        return (
-          payment.receipt_id.toString().includes(query) ||
-          (payment.collector_name || '').toLowerCase().includes(query) ||
-          (payment.vendor_name || '').toLowerCase().includes(query) ||
-          (payment.reference_no || '').toLowerCase().includes(query) ||
-          (payment.status || '').toLowerCase().includes(query)
-        )
-      })
+      // Status filter
+      if (this.filters.status === 'active') {
+        results = results.filter((v) => v.total_payments > 0)
+      } else if (this.filters.status === 'inactive') {
+        results = results.filter((v) => v.total_payments === 0)
+      }
+
+      return results
+    },
+
+    statusFilterOptions() {
+      return [
+        { title: 'With Payments', value: 'active' },
+        { title: 'No Payments', value: 'inactive' },
+      ]
     },
   },
   mounted() {
-    this.fetchPayments()
+    this.fetchVendorList()
     this.fetchCollectors()
     this.fetchVendors()
+    document.addEventListener('click', this.handleOutsideClick)
+    document.addEventListener('keydown', this.handleKeyDown)
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleOutsideClick)
+    document.removeEventListener('keydown', this.handleKeyDown)
   },
   methods: {
-    async fetchPayments() {
+    // =========================================================
+    // VENDOR LIST (main table - one row per vendor)
+    // =========================================================
+    async fetchVendorList() {
       try {
+        this.loading = true
         this.$emit('loading', true)
         const token = sessionStorage.getItem('authToken')
+        if (!token) return
 
-        if (!token) {
-          console.log('🔐 No auth token found')
-          return
-        }
-
-        console.log('🔍 Fetching daily payments from API')
-        const response = await fetch('/api/payments/daily', {
+        const response = await fetch('/api/payments/daily/vendor-list', {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -95,41 +135,77 @@ export default {
 
         if (response.ok) {
           const result = await response.json()
-
           if (result.success && result.data) {
-            this.payments = result.data.map((payment) => ({
-              receipt_id: payment.receipt_id,
-              collector_id: payment.collector_id,
-              collector_name: payment.collector_name || 'N/A',
-              vendor_id: payment.vendor_id,
-              vendor_name: payment.vendor_name || 'N/A',
-              amount: parseFloat(payment.amount || 0),
-              reference_no: payment.reference_no || '',
-              status: payment.status || 'completed',
-              statusColor: this.getStatusColor(payment.status),
-              time_date: payment.time_date,
-            }))
-
-            this.$emit('count-updated', this.payments.length)
-            console.log('📊 Daily payments loaded:', this.payments.length)
+            this.vendorList = result.data
+            this.$emit('count-updated', this.vendorList.length)
           }
         } else {
-          console.error('Failed to fetch daily payments:', response.statusText)
-          this.showToast('Failed to load daily payments', 'error')
+          this.showToast('Failed to load vendor list', 'error')
         }
       } catch (error) {
-        console.error('Error fetching daily payments:', error)
-        this.showToast('An error occurred while loading payments', 'error')
+        console.error('Error fetching vendor list:', error)
+        this.showToast('Error loading vendor list', 'error')
       } finally {
+        this.loading = false
         this.$emit('loading', false)
       }
     },
 
+    // =========================================================
+    // VENDOR PAYMENT HISTORY MODAL
+    // =========================================================
+    async viewVendorTracker(vendor) {
+      this.selectedVendor = vendor
+      this.vendorPayments = []
+      this.vendorSummary = null
+      this.showTrackerModal = true
+      await this.fetchVendorPaymentHistory(vendor.vendor_id)
+    },
+
+    async fetchVendorPaymentHistory(vendorId) {
+      try {
+        this.trackerLoading = true
+        const token = sessionStorage.getItem('authToken')
+        if (!token) return
+
+        const response = await fetch(`/api/payments/daily/vendor/${vendorId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            this.vendorPayments = result.data.payments
+            this.vendorSummary = result.data.summary
+            // Update vendor name from server if available
+            if (result.data.vendor) {
+              this.selectedVendor = {
+                ...this.selectedVendor,
+                vendor_name: result.data.vendor.vendor_name,
+              }
+            }
+          }
+        } else {
+          this.showToast('Failed to load payment history', 'error')
+        }
+      } catch (error) {
+        console.error('Error fetching vendor payment history:', error)
+        this.showToast('Error loading payment history', 'error')
+      } finally {
+        this.trackerLoading = false
+      }
+    },
+
+    // =========================================================
+    // DROPDOWN DATA
+    // =========================================================
     async fetchCollectors() {
       try {
         this.loadingCollectors = true
         const token = sessionStorage.getItem('authToken')
-
         if (!token) return
 
         const response = await fetch('/api/payments/daily/collectors', {
@@ -143,8 +219,6 @@ export default {
           const result = await response.json()
           if (result.success && result.data) {
             this.collectors = result.data
-            console.log('📊 Collectors loaded:', this.collectors.length)
-            console.log('👥 Collector data:', this.collectors)
           }
         }
       } catch (error) {
@@ -158,7 +232,6 @@ export default {
       try {
         this.loadingVendors = true
         const token = sessionStorage.getItem('authToken')
-
         if (!token) return
 
         const response = await fetch('/api/payments/daily/vendors', {
@@ -172,8 +245,6 @@ export default {
           const result = await response.json()
           if (result.success && result.data) {
             this.vendors = result.data
-            console.log('📊 Vendors loaded:', this.vendors.length)
-            console.log('🏪 Vendor data:', this.vendors)
           }
         }
       } catch (error) {
@@ -183,18 +254,43 @@ export default {
       }
     },
 
-    getStatusColor(status) {
-      const statusMap = {
-        completed: 'success',
-        pending: 'warning',
-        failed: 'error',
-        cancelled: 'grey',
-      }
-      return statusMap[status?.toLowerCase()] || 'grey'
+    // =========================================================
+    // FILTER MANAGEMENT
+    // =========================================================
+    toggleFilter() {
+      this.showFilterPanel = !this.showFilterPanel
     },
 
+    clearFilters() {
+      this.filters.status = null
+      this.searchQuery = ''
+    },
+
+    applyFilters() {
+      this.showFilterPanel = false
+    },
+
+    handleOutsideClick(event) {
+      if (this.$refs.filterContainer && !this.$refs.filterContainer.contains(event.target)) {
+        this.showFilterPanel = false
+      }
+    },
+
+    handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        if (this.showFilterPanel) this.showFilterPanel = false
+      }
+    },
+
+    // =========================================================
+    // ADD PAYMENT MODAL
+    // =========================================================
     openAddModal() {
       this.resetForm()
+      // If opened from a vendor's tracker, pre-select that vendor
+      if (this.selectedVendor) {
+        this.form.vendorId = this.selectedVendor.vendor_id
+      }
       this.showAddModal = true
     },
 
@@ -217,14 +313,12 @@ export default {
     },
 
     async submitPayment() {
-      if (!this.$refs.addForm.validate()) {
-        return
-      }
+      const { valid } = await this.$refs.addForm.validate()
+      if (!valid) return
 
       try {
         this.submitting = true
         const token = sessionStorage.getItem('authToken')
-
         if (!token) {
           this.showToast('Please login to continue', 'error')
           return
@@ -238,8 +332,6 @@ export default {
           status: this.form.status,
         }
 
-        console.log('➕ Adding daily payment:', paymentData)
-
         const response = await fetch('/api/payments/daily', {
           method: 'POST',
           headers: {
@@ -251,11 +343,15 @@ export default {
 
         if (response.ok) {
           const result = await response.json()
-
           if (result.success) {
             this.showToast('Payment added successfully', 'success')
             this.closeAddModal()
-            await this.fetchPayments()
+            // Refresh data
+            await this.fetchVendorList()
+            // Refresh tracker modal if open
+            if (this.showTrackerModal && this.selectedVendor) {
+              await this.fetchVendorPaymentHistory(this.selectedVendor.vendor_id)
+            }
           } else {
             this.showToast(result.message || 'Failed to add payment', 'error')
           }
@@ -271,35 +367,100 @@ export default {
       }
     },
 
-    viewPayment(payment) {
+    // =========================================================
+    // EDIT PAYMENT MODAL
+    // =========================================================
+    openEditModal(payment) {
       this.selectedPayment = payment
-      this.showViewModal = true
+      this.editForm = {
+        collectorId: payment.collector_id,
+        vendorId: this.selectedVendor?.vendor_id || null,
+        amount: payment.amount.toString(),
+        referenceNo: payment.reference_no || '',
+        status: payment.status,
+      }
+      this.showEditModal = true
     },
 
-    closeViewModal() {
-      this.showViewModal = false
+    closeEditModal() {
+      this.showEditModal = false
       this.selectedPayment = null
     },
 
-    confirmDelete() {
-      this.showDeleteConfirm = true
-    },
-
-    async deletePayment() {
-      if (!this.selectedPayment) return
+    async submitEdit() {
+      const { valid } = await this.$refs.editForm.validate()
+      if (!valid) return
 
       try {
-        this.deleting = true
+        this.editing = true
         const token = sessionStorage.getItem('authToken')
-
         if (!token) {
           this.showToast('Please login to continue', 'error')
           return
         }
 
-        console.log('🗑️ Deleting daily payment:', this.selectedPayment.receipt_id)
+        const paymentData = {
+          collectorId: this.editForm.collectorId,
+          vendorId: this.editForm.vendorId,
+          amount: parseFloat(this.editForm.amount),
+          referenceNo: this.editForm.referenceNo || null,
+          status: this.editForm.status,
+        }
 
         const response = await fetch(`/api/payments/daily/${this.selectedPayment.receipt_id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(paymentData),
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success) {
+            this.showToast('Payment updated successfully', 'success')
+            this.closeEditModal()
+            // Refresh tracker
+            if (this.selectedVendor) {
+              await this.fetchVendorPaymentHistory(this.selectedVendor.vendor_id)
+            }
+            await this.fetchVendorList()
+          } else {
+            this.showToast(result.message || 'Failed to update payment', 'error')
+          }
+        } else {
+          const errorData = await response.json()
+          this.showToast(errorData.message || 'Failed to update payment', 'error')
+        }
+      } catch (error) {
+        console.error('Error updating payment:', error)
+        this.showToast('An error occurred while updating payment', 'error')
+      } finally {
+        this.editing = false
+      }
+    },
+
+    // =========================================================
+    // DELETE PAYMENT
+    // =========================================================
+    confirmDelete(payment) {
+      this.paymentToDelete = payment
+      this.showDeleteConfirm = true
+    },
+
+    async deletePayment() {
+      if (!this.paymentToDelete) return
+
+      try {
+        this.deleting = true
+        const token = sessionStorage.getItem('authToken')
+        if (!token) {
+          this.showToast('Please login to continue', 'error')
+          return
+        }
+
+        const response = await fetch(`/api/payments/daily/${this.paymentToDelete.receipt_id}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -309,12 +470,15 @@ export default {
 
         if (response.ok) {
           const result = await response.json()
-
           if (result.success) {
             this.showToast('Payment deleted successfully', 'success')
             this.showDeleteConfirm = false
-            this.closeViewModal()
-            await this.fetchPayments()
+            this.paymentToDelete = null
+            // Refresh tracker
+            if (this.selectedVendor) {
+              await this.fetchVendorPaymentHistory(this.selectedVendor.vendor_id)
+            }
+            await this.fetchVendorList()
           } else {
             this.showToast(result.message || 'Failed to delete payment', 'error')
           }
@@ -330,34 +494,65 @@ export default {
       }
     },
 
+    // =========================================================
+    // STATUS HELPERS
+    // =========================================================
+    getStatusColor(status) {
+      const statusMap = {
+        completed: '#10b981',
+        pending: '#f59e0b',
+        failed: '#ef4444',
+        cancelled: '#9ca3af',
+      }
+      return statusMap[status?.toLowerCase()] || '#9ca3af'
+    },
+
+    getLastPaymentStatusLabel(vendor) {
+      if (!vendor.last_payment_status) return { label: 'No Payments', color: '#9ca3af' }
+      const map = {
+        completed: { label: 'Completed', color: '#10b981' },
+        pending: { label: 'Pending', color: '#f59e0b' },
+        failed: { label: 'Failed', color: '#ef4444' },
+        cancelled: { label: 'Cancelled', color: '#9ca3af' },
+      }
+      return map[vendor.last_payment_status.toLowerCase()] || { label: 'Unknown', color: '#9ca3af' }
+    },
+
+    // =========================================================
+    // FORMATTING HELPERS
+    // =========================================================
     formatCurrency(amount) {
-      return `₱${parseFloat(amount).toLocaleString('en-PH', {
+      return `₱${parseFloat(amount || 0).toLocaleString('en-PH', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`
     },
 
     formatDate(dateString) {
-      if (!dateString || dateString === '0000-00-00') return '—';
+      if (!dateString || dateString === '0000-00-00') return '—'
       try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '—';
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-      } catch (err) {
-        return '—';
+        const date = new Date(dateString)
+        if (isNaN(date.getTime())) return '—'
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      } catch {
+        return '—'
       }
     },
 
     formatDateTime(dateString) {
-      if (!dateString) return '—';
+      if (!dateString) return '—'
       try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '—';
-        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-        const timeOptions = { hour: '2-digit', minute: '2-digit' };
-        return `${date.toLocaleDateString('en-US', dateOptions)} ${date.toLocaleTimeString('en-US', timeOptions)}`;
-      } catch (err) {
-        return '—';
+        const date = new Date(dateString)
+        if (isNaN(date.getTime())) return '—'
+        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' }
+        const timeOptions = { hour: '2-digit', minute: '2-digit' }
+        return `${date.toLocaleDateString('en-US', dateOptions)} ${date.toLocaleTimeString('en-US', timeOptions)}`
+      } catch {
+        return '—'
       }
     },
 
@@ -366,86 +561,7 @@ export default {
         show: true,
         message,
         type,
-      };
-    },
-
-    async showStallholderDetails(stallholderId) {
-      if (!stallholderId) return;
-      this.showStallholderModal = true;
-      this.loadingStallholderDetails = true;
-      this.stallholderDetails = null;
-      this.avatarBuster = Date.now();
-      
-      try {
-        const token = sessionStorage.getItem('authToken');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const response = await fetch(`/api/stallholders/${stallholderId}`, { headers });
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            this.stallholderDetails = result.data;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching stallholder details:', error);
-      } finally {
-        this.loadingStallholderDetails = false;
       }
     },
-
-    // Zoom Lightbox handlers
-    openZoomModal() {
-      if (!this.stallholderDetails || !(this.stallholderDetails.stallholder_id || this.stallholderDetails.id)) return;
-      this.zoomScale = 1.0;
-      this.panX = 0;
-      this.panY = 0;
-      this.isDragging = false;
-      this.showZoomModal = true;
-    },
-    closeZoomModal() {
-      this.showZoomModal = false;
-    },
-    zoomIn() {
-      this.zoomScale = Math.min(this.zoomScale + 0.25, 4.0);
-    },
-    zoomOut() {
-      this.zoomScale = Math.max(this.zoomScale - 0.25, 0.5);
-      if (this.zoomScale < 1.0) {
-        this.panX = 0;
-        this.panY = 0;
-      }
-    },
-    resetZoom() {
-      this.zoomScale = 1.0;
-      this.panX = 0;
-      this.panY = 0;
-    },
-    startDrag(e) {
-      if (this.zoomScale <= 1.0) return;
-      this.isDragging = true;
-      this.startX = e.clientX - this.panX;
-      this.startY = e.clientY - this.panY;
-    },
-    onDrag(e) {
-      if (!this.isDragging) return;
-      this.panX = e.clientX - this.startX;
-      this.panY = e.clientY - this.startY;
-    },
-    endDrag() {
-      this.isDragging = false;
-    },
-    onWheel(e) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newScale = Math.min(Math.max(this.zoomScale + delta, 0.5), 4.0);
-      this.zoomScale = newScale;
-      if (newScale <= 1.0) {
-        this.panX = 0;
-        this.panY = 0;
-      }
-    }
   },
 }
-

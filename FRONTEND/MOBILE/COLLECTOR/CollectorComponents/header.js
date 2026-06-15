@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -14,6 +15,7 @@ const defaultTheme = {
     surface: "#ffffff",
     text: "#1f2937",
     textSecondary: "#374151",
+    primary: "#3b82f6",
   },
 };
 
@@ -28,12 +30,19 @@ const Header = ({
   return (
     <View style={[styles.header, { backgroundColor: colors.surface }]}>
       <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
-        <Text style={[styles.menuIcon, { color: colors.textSecondary }]}>
-          ☰
-        </Text>
+        <Ionicons
+          name="menu"
+          size={24}
+          color={colors.textSecondary}
+        />
       </TouchableOpacity>
 
-      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      <View style={styles.titleContainer}>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>Collector</Text>
+        </View>
+      </View>
 
       <View style={styles.placeholder} />
     </View>
@@ -64,15 +73,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  menuIcon: {
-    fontSize: width * 0.06,
-    minHeight: 24,
-    fontWeight: "300",
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   title: {
     fontSize: width * 0.045,
     fontWeight: "600",
     textAlign: "center",
+  },
+  badgeContainer: {
+    backgroundColor: "#10b981",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  badgeText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "600",
   },
   placeholder: {
     width: 44,

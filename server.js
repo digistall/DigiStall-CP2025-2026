@@ -46,7 +46,9 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
 import vendorApplicantRoutes from './routes/vendorApplicantRoutes.js';
+import vendorDocumentRoutes from './routes/vendorDocumentRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
+import assignedLocationRoutes from './routes/assignedLocationRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import dashboardSubscriptionRoutes from './routes/dashboardSubscriptionRoutes.js';
 
@@ -59,6 +61,7 @@ import applicantRoutes from './routes/applicantRoutes.js';
 // EMPLOYEE Mobile routes
 import inspectorRoutes from './routes/inspectorRoutes.js';
 import mobileStaffRoutes from './routes/mobileStaffRoutes.js';
+import collectorRoutes from './routes/collectorRoutes.js';
 
 // Mobile Stalls routes
 import mobileStallRoutes from './routes/mobileStallRoutes.js';
@@ -148,6 +151,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/vendors', enhancedAuthMiddleware.authenticateToken, vendorRoutes);
 app.use('/api/vendor-applicants', vendorApplicantRoutes);
 app.use('/api/branches', enhancedAuthMiddleware.authenticateToken, branchRoutes);
+app.use('/api/assigned-locations', enhancedAuthMiddleware.authenticateToken, assignedLocationRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard-subscription', dashboardSubscriptionRoutes);  // SSE for real-time dashboard updates
 console.log('✅ LGU-NAGA routes loaded');
@@ -156,6 +160,7 @@ console.log('✅ LGU-NAGA routes loaded');
 app.use('/api/inspector', enhancedAuthMiddleware.authenticateToken, inspectorRoutes);
 app.use('/api/mobile/inspector', inspectorRoutes);  // Mobile inspector routes (no auth middleware - uses verifyToken inside)
 app.use('/api/mobile-staff', enhancedAuthMiddleware.authenticateToken, mobileStaffRoutes);
+app.use('/api/collector', enhancedAuthMiddleware.authenticateToken, collectorRoutes);  // Collector mobile QR payment routes
 console.log('✅ EMPLOYEE routes loaded');
 
 // STALL-HOLDER Mobile ROUTES
@@ -173,6 +178,7 @@ app.use('/api/activity-logs', staffActivityLogRoutes);
 console.log('✅ ACTIVITY LOG routes loaded');
 
 // VENDOR ROUTES
+app.use('/api/mobile/vendor', vendorDocumentRoutes);  // Vendor mobile document routes
 console.log('✅ VENDOR routes loaded');
 
 // APPLICANTS ROUTES

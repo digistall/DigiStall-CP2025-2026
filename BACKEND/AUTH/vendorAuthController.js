@@ -27,9 +27,10 @@ export const vendorLogin = async (req, res) => {
     const [rows] = await connection.execute(
       `SELECT
         va.vendor_account_id,
-        v.vendor_id,
+        va.vendor_id,
         va.vendor_email AS email,
         va.vendor_password_hash AS password_hash,
+        va.status AS account_status,
         v.status,
         v.first_name,
         v.middle_name,
@@ -40,13 +41,17 @@ export const vendorLogin = async (req, res) => {
         v.gender,
         v.address,
         v.civil_status,
+        v.vendor_identifier,
+        v.assigned_location_id,
+        al.location_name,
         vb.vendor_business_id,
         vb.business_name,
         vb.business_type,
         vb.business_description,
         vb.products
       FROM vendor_account va
-      JOIN vendor v ON va.vendor_email = v.email
+      JOIN vendor v ON va.vendor_id = v.vendor_id
+      LEFT JOIN assigned_location al ON v.assigned_location_id = al.assigned_location_id
       LEFT JOIN vendor_business vb ON v.vendor_business_id = vb.vendor_business_id
       WHERE LOWER(va.vendor_email) = ?
       LIMIT 1`,
@@ -62,7 +67,7 @@ export const vendorLogin = async (req, res) => {
 
     const account = rows[0]
 
-    if (account.status && account.status.toLowerCase() !== 'active') {
+    if (account.account_status && account.account_status.toLowerCase() !== 'active') {
       return res.status(403).json({
         success: false,
         message: 'This vendor account is inactive.',
@@ -102,6 +107,7 @@ export const vendorLogin = async (req, res) => {
       data: {
         vendor: {
           vendor_id: account.vendor_id,
+          vendor_identifier: account.vendor_identifier || null,
           full_name: fullName,
           first_name: account.first_name,
           middle_name: account.middle_name,
@@ -113,6 +119,7 @@ export const vendorLogin = async (req, res) => {
           gender: account.gender,
           address: account.address,
           civil_status: account.civil_status,
+          location_name: account.location_name || null,
         },
         business: account.vendor_business_id
           ? {

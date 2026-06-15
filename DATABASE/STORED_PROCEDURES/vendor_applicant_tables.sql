@@ -4,19 +4,19 @@
 -- Vendor accounts (created after approval)
 CREATE TABLE IF NOT EXISTS vendor_account (
     vendor_account_id INT NOT NULL AUTO_INCREMENT,
-    vendor_id INT NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    status ENUM('active','inactive') DEFAULT 'active',
+    vendor_id INT DEFAULT NULL,
+    vendor_email VARCHAR(255) NOT NULL,
+    vendor_password_hash VARCHAR(255) NOT NULL,
+    status ENUM('active','inactive') NOT NULL DEFAULT 'active',
     last_login DATETIME DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (vendor_account_id),
-    UNIQUE KEY uq_vendor_account_email (email),
+    UNIQUE KEY uq_vendor_account_email (vendor_email),
     KEY idx_vendor_account_vendor_id (vendor_id),
     CONSTRAINT fk_vendor_account_vendor
       FOREIGN KEY (vendor_id) REFERENCES vendor(vendor_id)
-      ON DELETE CASCADE
+      ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Vendor applicants (submitted from web landing page)

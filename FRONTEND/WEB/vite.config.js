@@ -60,7 +60,6 @@ export default defineConfig({
       'chart.js': fileURLToPath(new URL('./node_modules/chart.js', import.meta.url)),
       'chart.js/auto': fileURLToPath(new URL('./node_modules/chart.js/auto', import.meta.url)),
       'mitt': fileURLToPath(new URL('./node_modules/mitt', import.meta.url)),
-      'xlsx': fileURLToPath(new URL('./node_modules/xlsx', import.meta.url)),
       '@emailjs/browser': fileURLToPath(new URL('./node_modules/@emailjs/browser', import.meta.url)),
     }
   },

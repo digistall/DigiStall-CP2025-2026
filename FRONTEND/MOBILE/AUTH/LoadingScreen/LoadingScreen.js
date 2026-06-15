@@ -120,18 +120,14 @@ const LoadingScreen = ({
           let next = 'StallHome';
           let nextParams = { ...params };
 
-          if (!hasFace) {
-            next = 'FaceScannerScreen';
-            nextParams.forceValidIdUpload = false;
-            nextParams.screen = undefined;
-          } else if (!hasId) {
+          if (!hasId) {
             next = 'IdScannerScreen';
             nextParams.forceValidIdUpload = false;
             nextParams.screen = undefined;
           } else {
             next = 'StallHome';
             nextParams.forceValidIdUpload = false;
-            nextParams.screen = 'dashboard';
+            nextParams.screen = 'stall';
           }
 
           setResolvedNextScreen(next);

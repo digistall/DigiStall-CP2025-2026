@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,54 +12,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { API_CONFIG, NetworkUtils } from "../../../config/shared/networkConfig";
+import UserStorageService from "../../../services/UserStorageService";
 
 const { width } = Dimensions.get("window");
-
-// ── Sample data (replace with real API calls later) ─────────────────────────
-const sampleVendors = [
-  {
-    id: "1",
-    vendorName: "Juan Dela Cruz",
-    businessName: "Juan's Fresh Produce",
-    paymentStatus: "Paid",
-  },
-  {
-    id: "2",
-    vendorName: "Maria Santos",
-    businessName: "Santos Dried Fish",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: "3",
-    vendorName: "Pedro Reyes",
-    businessName: "Reyes Meat Shop",
-    paymentStatus: "Paid",
-  },
-  {
-    id: "4",
-    vendorName: "Ana Garcia",
-    businessName: "Garcia Spice Corner",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: "5",
-    vendorName: "Jose Ramos",
-    businessName: "Ramos Fruit Stall",
-    paymentStatus: "Paid",
-  },
-  {
-    id: "6",
-    vendorName: "Elena Cruz",
-    businessName: "Cruz Vegetable Stand",
-    paymentStatus: "Pending",
-  },
-  {
-    id: "7",
-    vendorName: "Carlos Tan",
-    businessName: "Tan's Snack Hub",
-    paymentStatus: "Paid",
-  },
-];
 
 // ── Status helpers ──────────────────────────────────────────────────────────
 const getStatusStyle = (status) => {
@@ -86,19 +42,66 @@ const getInitials = (name) => {
 };
 
 // ── Component ───────────────────────────────────────────────────────────────
-const VendorScreen = () => {
+const VendorScreen = ({ onPayVendor }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [assignedLocation, setAssignedLocation] = useState("Loading...");
+  const [vendors, setVendors] = useState([]);
 
-  // TODO: fetch from API
-  const [assignedLocation] = useState("Panganiban Avenue");
-  const [vendors] = useState(sampleVendors);
+  useEffect(() => {
+    loadVendors();
+  }, []);
+
+  const loadVendors = async () => {
+    setLoading(true);
+    try {
+      const userData = await UserStorageService.getUserData();
+      const token = userData?.token;
+      const server = await NetworkUtils.getActiveServer();
+
+      const headers = { ...API_CONFIG.HEADERS };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${server}/api/payments/daily/vendors`, {
+        method: "GET",
+        headers,
+      });
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const mapped = data.data.map((v) => ({
+          id: String(v.vendor_id),
+          vendorName: v.vendor_name,
+          businessName: v.business_name || "N/A",
+          vendorIdentifier: v.vendor_identifier || null,
+          paymentStatus: v.payment_status || "Unpaid",
+        }));
+        setVendors(mapped);
+
+        // Try to get assigned location from staff data
+        const staff = userData?.staff;
+        if (staff?.assigned_location || staff?.location_name) {
+          setAssignedLocation(
+            staff.assigned_location || staff.location_name
+          );
+        } else {
+          setAssignedLocation("All Locations");
+        }
+      }
+    } catch (error) {
+      console.error("Error loading vendors:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // TODO: fetch real data
-    setTimeout(() => setRefreshing(false), 1000);
+    loadVendors().finally(() => setRefreshing(false));
   }, []);
 
   // Filter + search
@@ -106,7 +109,10 @@ const VendorScreen = () => {
     const matchesSearch =
       searchQuery.length === 0 ||
       v.vendorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.businessName.toLowerCase().includes(searchQuery.toLowerCase());
+      v.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (v.vendorIdentifier || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
     const matchesFilter =
       activeFilter === "All" || v.paymentStatus === activeFilter;
@@ -118,15 +124,25 @@ const VendorScreen = () => {
 
   // Counts
   const paidCount = vendors.filter((v) => v.paymentStatus === "Paid").length;
-  const unpaidCount = vendors.filter(
-    (v) => v.paymentStatus === "Unpaid",
-  ).length;
+  const unpaidCount = vendors.filter((v) => v.paymentStatus === "Unpaid").length;
 
   // ── Render vendor card ──────────────────────────────────────────────────
   const renderVendorCard = ({ item }) => {
     const status = getStatusStyle(item.paymentStatus);
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => {
+          if (onPayVendor && item.paymentStatus !== "Paid") {
+            onPayVendor({
+              vendor_id: item.id,
+              vendor_name: item.vendorName,
+              vendor_identifier: item.vendorIdentifier,
+            });
+          }
+        }}
+      >
         <View style={styles.cardHeader}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
@@ -148,16 +164,32 @@ const VendorScreen = () => {
                 {item.businessName}
               </Text>
             </View>
+            {item.vendorIdentifier && (
+              <View style={styles.identifierRow}>
+                <Ionicons name="card-outline" size={12} color="#9ca3af" />
+                <Text style={styles.identifierText}>
+                  {item.vendorIdentifier}
+                </Text>
+              </View>
+            )}
           </View>
 
-          {/* Status badge */}
-          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-            <Text style={[styles.statusText, { color: status.text }]}>
-              {item.paymentStatus}
-            </Text>
+          {/* Status badge + pay indicator */}
+          <View style={styles.cardActions}>
+            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+              <Text style={[styles.statusText, { color: status.text }]}>
+                {item.paymentStatus}
+              </Text>
+            </View>
+            {item.paymentStatus !== "Paid" && onPayVendor && (
+              <View style={styles.payHint}>
+                <Ionicons name="cash-outline" size={14} color="#059669" />
+                <Text style={styles.payHintText}>Tap to pay</Text>
+              </View>
+            )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -166,7 +198,7 @@ const VendorScreen = () => {
     <View>
       {/* Assigned Location Banner */}
       <LinearGradient
-        colors={["#3b82f6", "#1d4ed8"]}
+        colors={["#10b981", "#059669"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.locationBanner}
@@ -210,7 +242,7 @@ const VendorScreen = () => {
         <Ionicons name="search" size={18} color="#9ca3af" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search vendor or business..."
+          placeholder="Search vendor, business, or ID..."
           placeholderTextColor="#9ca3af"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -266,6 +298,15 @@ const VendorScreen = () => {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#10b981" />
+        <Text style={styles.loadingText}>Loading vendors...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -282,8 +323,8 @@ const VendorScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#3b82f6"]}
-            tintColor="#3b82f6"
+            colors={["#10b981"]}
+            tintColor="#10b981"
           />
         }
       />
@@ -296,6 +337,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#6b7280",
   },
   listContent: {
     padding: width * 0.04,
@@ -423,8 +473,8 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
   },
   filterChipActive: {
-    backgroundColor: "#3b82f6",
-    borderColor: "#3b82f6",
+    backgroundColor: "#10b981",
+    borderColor: "#10b981",
   },
   filterChipText: {
     fontSize: 13,
@@ -465,7 +515,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#10b981",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -493,14 +543,39 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     flexShrink: 1,
   },
+  identifierRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  identifierText: {
+    fontSize: 11,
+    color: "#9ca3af",
+    fontWeight: "500",
+  },
+  cardActions: {
+    alignItems: "flex-end",
+    marginLeft: 8,
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
-    marginLeft: 8,
   },
   statusText: {
     fontSize: 12,
+    fontWeight: "600",
+  },
+  payHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  payHintText: {
+    fontSize: 11,
+    color: "#059669",
     fontWeight: "600",
   },
 

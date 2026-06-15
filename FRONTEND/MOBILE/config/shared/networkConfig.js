@@ -146,6 +146,10 @@ export const API_CONFIG = {
     GET_PAYMENT_SUMMARY: '/api/mobile/stallholder/payments/summary',
     GET_MONTHLY_PAYMENT_STATUS: '/api/mobile/stallholder/payments/monthly-status',
     
+    // Vendor payment endpoints (vendor mobile app)
+    GET_VENDOR_PAYMENTS: '/api/mobile/vendor/payments',
+    GET_VENDOR_PAYMENT_SUMMARY: '/api/mobile/vendor/payments/summary',
+    
     // Stallholder app access logging
     APP_ACCESS_LOG: '/api/mobile/stallholder/app-access-log',
     

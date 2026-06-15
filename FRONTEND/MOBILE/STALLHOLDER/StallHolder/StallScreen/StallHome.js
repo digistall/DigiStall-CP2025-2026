@@ -11,6 +11,7 @@ import { useTheme } from '../../../components/ThemeComponents/ThemeContext';
 import ApiService from "../../../services/ApiService";
 import UserStorageService from "../../../services/UserStorageService";
 import LogoutLoadingScreen from "../../../components/Common/LogoutLoadingScreen";
+import { useCustomAlert } from "../../../components/Common/CustomAlert";
 
 
 // nav bar and sidebar components
@@ -36,6 +37,7 @@ const { width, height } = Dimensions.get("window");
 const StallHome = ({ route, navigation }) => {
   // Get theme from context
   const { theme, isDarkMode } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const forceValidIdUpload = route?.params?.forceValidIdUpload || route?.params?.userData?.forceValidIdUpload || false;
 
@@ -54,6 +56,33 @@ const StallHome = ({ route, navigation }) => {
       setCurrentScreen(route.params.screen);
     }
   }, [route?.params?.screen, forceValidIdUpload]);
+
+  React.useEffect(() => {
+    // Add face verification reminder
+    const checkFace = async () => {
+      try {
+        const userData = await UserStorageService.getUserData();
+        const stallholderId = userData?.stallholder?.stallholder_id || userData?.stallholder?.id;
+        if (stallholderId) {
+          const faceResult = await ApiService.checkFaceVerification(stallholderId);
+          if (faceResult && !faceResult.hasVerifiedFace) {
+            setTimeout(() => {
+              showAlert('warning', 'Profile Reminder', 
+                'Please set up your Face Verification when you have time to make your account complete. This profile setup is needed for payment verification on the manager side.',
+                [
+                  { text: 'Set Up Now', onPress: () => { if(navigation) navigation.navigate('FaceScannerScreen'); } },
+                  { text: 'Maybe Later', style: 'cancel' }
+                ]
+              );
+            }, 1500);
+          }
+        }
+      } catch (err) {
+        console.log('Face check error:', err);
+      }
+    };
+    checkFace();
+  }, []);
 
   const handleLogout = async () => {
     // Prevent multiple clicks
@@ -276,7 +305,7 @@ const StallHome = ({ route, navigation }) => {
           subMessage="Please wait while we securely log you out"
         />
 
-
+        <AlertComponent />
       </SafeAreaView>
     </SafeAreaProvider>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,70 +11,217 @@ import {
   Platform,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import QRScannerModal from "./QRScannerModal";
+import PaymentReceiptModal from "./PaymentReceiptModal";
+import { API_CONFIG, NetworkUtils } from "../../../config/shared/networkConfig";
+import UserStorageService from "../../../services/UserStorageService";
 
 const { width } = Dimensions.get("window");
 
-// ── Sample vendor list (replace with API data later) ────────────────────────
-const sampleVendors = [
-  { id: "V-001", name: "Juan Dela Cruz" },
-  { id: "V-002", name: "Maria Santos" },
-  { id: "V-003", name: "Pedro Reyes" },
-  { id: "V-004", name: "Ana Garcia" },
-  { id: "V-005", name: "Jose Ramos" },
-  { id: "V-006", name: "Elena Cruz" },
-  { id: "V-007", name: "Carlos Tan" },
-];
-
 // ── Status logic ────────────────────────────────────────────────────────────
-const getPaymentStatus = (amount) => {
+const getPaymentStatus = (amount, isMissing) => {
+  if (isMissing) return { label: "Missing", color: "#ef4444", bg: "#fee2e2" };
   const num = parseFloat(amount) || 0;
-  if (num === 0) return { label: "Missing", color: "#ef4444", bg: "#fee2e2" };
-  if (num !== 25)
+  if (num === 0) return { label: "No Amount", color: "#6b7280", bg: "#f3f4f6" };
+  if (num < 25)
     return { label: "Incomplete", color: "#d97706", bg: "#fef3c7" };
   return { label: "Complete", color: "#059669", bg: "#d1fae5" };
 };
 
-// ── Generate reference number ───────────────────────────────────────────────
-const generateReferenceNo = () => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const rand = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
-  return `REF-${y}${m}${d}-${rand}`;
-};
-
 // ═════════════════════════════════════════════════════════════════════════════
-const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
+const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName, autoOpenScanner = false, preSelectedVendor = null }) => {
   // Form state
   const [vendorSearch, setVendorSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [referenceNo, setReferenceNo] = useState(generateReferenceNo());
+  const [isMissing, setIsMissing] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
 
+  // API integration state
+  const [vendors, setVendors] = useState([]);
+  const [loadingVendors, setLoadingVendors] = useState(false);
+  const [lookingUpVendor, setLookingUpVendor] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const [showReceipt, setShowReceipt] = useState(false);
+
   const amountInputRef = useRef(null);
+  const hasAutoOpened = useRef(false);
 
   // Derived
-  const status = getPaymentStatus(amount);
-  const filteredVendors = sampleVendors.filter(
+  const status = getPaymentStatus(amount, isMissing);
+  const filteredVendors = vendors.filter(
     (v) =>
-      v.name.toLowerCase().includes(vendorSearch.toLowerCase()) ||
-      v.id.toLowerCase().includes(vendorSearch.toLowerCase()),
+      v.vendor_name.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+      (v.vendor_identifier || "").toLowerCase().includes(vendorSearch.toLowerCase())
   );
 
+  // Load vendors list when form opens
+  useEffect(() => {
+    if (visible) {
+      fetchVendors();
+      // Auto-open QR scanner if triggered from dashboard quick action
+      if (autoOpenScanner && !hasAutoOpened.current) {
+        hasAutoOpened.current = true;
+        setTimeout(() => setShowQRScanner(true), 300);
+      }
+      // Pre-select vendor if provided (tap-to-pay from vendor list)
+      if (preSelectedVendor && !hasAutoOpened.current) {
+        setSelectedVendor(preSelectedVendor);
+        setVendorSearch(preSelectedVendor.vendor_name);
+        setDropdownOpen(false);
+      }
+    } else {
+      hasAutoOpened.current = false;
+    }
+  }, [visible]);
+
+  // ── API Calls ─────────────────────────────────────────────────────────────
+
+  const getAuthHeaders = async () => {
+    const userData = await UserStorageService.getUserData();
+    const token = userData?.token;
+    const headers = { ...API_CONFIG.HEADERS };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
+  const fetchVendors = async () => {
+    setLoadingVendors(true);
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${server}/api/payments/daily/vendors`, {
+        method: "GET",
+        headers,
+      });
+      const data = await response.json();
+      if (data.success && data.data) {
+        // Map to consistent format
+        setVendors(
+          data.data.map((v) => ({
+            vendor_id: v.vendor_id,
+            vendor_name: v.vendor_name,
+            vendor_identifier: v.vendor_identifier || null,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+    } finally {
+      setLoadingVendors(false);
+    }
+  };
+
+  const lookupVendorByIdentifier = async (vendorIdentifier) => {
+    setLookingUpVendor(true);
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `${server}/api/collector/vendors/qr/${encodeURIComponent(vendorIdentifier)}`,
+        { method: "GET", headers }
+      );
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const vendor = data.data;
+        const vendorObj = {
+          vendor_id: vendor.vendor_id,
+          vendor_name: vendor.vendor_name,
+          vendor_identifier: vendor.vendor_identifier,
+          location_name: vendor.assigned_location?.location_name || "N/A",
+        };
+        setSelectedVendor(vendorObj);
+        setVendorSearch(vendor.vendor_name);
+        setDropdownOpen(false);
+        return vendorObj;
+      } else {
+        Alert.alert(
+          "Vendor Not Found",
+          data.message || "No vendor found for this QR code."
+        );
+        return null;
+      }
+    } catch (error) {
+      console.error("Error looking up vendor:", error);
+      Alert.alert("Network Error", "Could not connect to server. Please try again.");
+      return null;
+    } finally {
+      setLookingUpVendor(false);
+    }
+  };
+
+  const submitPayment = async () => {
+    if (!selectedVendor || submitting) return;
+
+    const parsedAmount = parseFloat(amount) || 0;
+    if (!isMissing && parsedAmount <= 0) {
+      Alert.alert("Invalid Amount", "Please enter a valid payment amount or mark as missing.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const server = await NetworkUtils.getActiveServer();
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${server}/api/collector/daily-payments`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          vendorId: selectedVendor.vendor_id,
+          amount: isMissing ? 0 : parsedAmount,
+          status: isMissing ? "missing" : "completed",
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // Show receipt
+        setReceiptData(data.data);
+        setShowReceipt(true);
+
+        // Notify parent of successful payment
+        if (onSubmit) {
+          onSubmit({
+            vendorId: data.data.vendor_id,
+            vendorName: data.data.vendor_name,
+            collectorName: data.data.collector_name,
+            amount: data.data.amount,
+            referenceNo: data.data.reference_no,
+            status: isMissing ? "Missing" : "Complete",
+            date: data.data.time_date,
+          });
+        }
+      } else {
+        Alert.alert(
+          "Payment Failed",
+          data.message || "Could not process payment. Please try again."
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting payment:", error);
+      Alert.alert("Network Error", "Could not connect to server. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Handlers ────────────────────────────────────────────────────────────
+
   const handleSelectVendor = (vendor) => {
     setSelectedVendor(vendor);
-    setVendorSearch(vendor.name);
+    setVendorSearch(vendor.vendor_name);
     setDropdownOpen(false);
   };
 
-  const handleQRScanned = ({ vendorId, stallId, error }) => {
+  const handleQRScanned = async ({ vendorIdentifier, vendorId, error }) => {
     setShowQRScanner(false);
 
     if (error) {
@@ -82,32 +229,14 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
       return;
     }
 
-    if (!vendorId) {
-      Alert.alert("Invalid QR Code", "No vendor ID found in the QR code.");
+    const identifier = vendorIdentifier || vendorId;
+    if (!identifier) {
+      Alert.alert("Invalid QR Code", "No vendor identifier found in the QR code.");
       return;
     }
 
-    // Try to find the vendor in the local list
-    const matchedVendor = sampleVendors.find(
-      (v) => v.id.toLowerCase() === vendorId.toLowerCase()
-    );
-
-    if (matchedVendor) {
-      setSelectedVendor(matchedVendor);
-      setVendorSearch(matchedVendor.name);
-      setDropdownOpen(false);
-    } else {
-      // Vendor not in local list — still set it with the scanned ID
-      // In production, this would call the backend to fetch vendor details
-      const scannedVendor = { id: vendorId, name: `Vendor ${vendorId}` };
-      setSelectedVendor(scannedVendor);
-      setVendorSearch(scannedVendor.name);
-      setDropdownOpen(false);
-      Alert.alert(
-        "Vendor Found",
-        `Scanned vendor ID: ${vendorId}${stallId ? `\nStall: ${stallId}` : ""}`,
-      );
-    }
+    // Call backend to validate and retrieve vendor info
+    await lookupVendorByIdentifier(identifier);
   };
 
   const handleQuickAmount = (val) => {
@@ -119,7 +248,7 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
     setSelectedVendor(null);
     setDropdownOpen(false);
     setAmount("");
-    setReferenceNo(generateReferenceNo());
+    setIsMissing(false);
   };
 
   const handleCancel = () => {
@@ -127,26 +256,18 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
     onClose();
   };
 
-  const handleAdd = () => {
-    if (!selectedVendor) return;
-    const numAmount = parseFloat(amount) || 0;
-
-    const payment = {
-      vendorId: selectedVendor.id,
-      vendorName: selectedVendor.name,
-      collectorName: collectorName || "Collector",
-      amount: numAmount,
-      referenceNo,
-      status: status.label,
-      date: new Date().toISOString(),
-    };
-
-    onSubmit && onSubmit(payment);
+  const handleReceiptClose = () => {
+    setShowReceipt(false);
+    setReceiptData(null);
     handleReset();
     onClose();
   };
 
-  const isValid = selectedVendor !== null;
+  const handleAdd = () => {
+    submitPayment();
+  };
+
+  const isValid = selectedVendor !== null && (isMissing || parseFloat(amount) > 0);
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
@@ -190,9 +311,16 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
             <TouchableOpacity
               style={styles.qrScanButton}
               onPress={() => setShowQRScanner(true)}
+              disabled={lookingUpVendor}
             >
-              <Ionicons name="qr-code-outline" size={22} color="#2563eb" />
-              <Text style={styles.qrScanButtonText}>Scan QR Code</Text>
+              {lookingUpVendor ? (
+                <ActivityIndicator size="small" color="#2563eb" />
+              ) : (
+                <Ionicons name="qr-code-outline" size={22} color="#2563eb" />
+              )}
+              <Text style={styles.qrScanButtonText}>
+                {lookingUpVendor ? "Looking up vendor..." : "Scan QR Code"}
+              </Text>
               <Ionicons name="camera-outline" size={18} color="#6b7280" />
             </TouchableOpacity>
 
@@ -213,15 +341,19 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
                   }}
                   onFocus={() => setDropdownOpen(true)}
                 />
-                <TouchableOpacity
-                  onPress={() => setDropdownOpen(!dropdownOpen)}
-                >
-                  <Ionicons
-                    name={dropdownOpen ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#9ca3af"
-                  />
-                </TouchableOpacity>
+                {loadingVendors ? (
+                  <ActivityIndicator size="small" color="#9ca3af" />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setDropdownOpen(!dropdownOpen)}
+                  >
+                    <Ionicons
+                      name={dropdownOpen ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#9ca3af"
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Dropdown list */}
@@ -235,48 +367,101 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
                     {filteredVendors.length > 0 ? (
                       filteredVendors.map((item) => (
                         <TouchableOpacity
-                          key={item.id}
+                          key={item.vendor_id}
                           style={[
                             styles.dropdownItem,
-                            selectedVendor?.id === item.id &&
+                            selectedVendor?.vendor_id === item.vendor_id &&
                               styles.dropdownItemActive,
                           ]}
                           onPress={() => handleSelectVendor(item)}
                         >
                           <Text style={styles.dropdownItemName}>
-                            {item.name}
+                            {item.vendor_name}
                           </Text>
-                          <Text style={styles.dropdownItemId}>{item.id}</Text>
+                          <Text style={styles.dropdownItemId}>
+                            {item.vendor_identifier || `#${item.vendor_id}`}
+                          </Text>
                         </TouchableOpacity>
                       ))
                     ) : (
-                      <Text style={styles.dropdownEmpty}>No vendors found</Text>
+                      <Text style={styles.dropdownEmpty}>
+                        {loadingVendors ? "Loading vendors..." : "No vendors found"}
+                      </Text>
                     )}
                   </ScrollView>
                 </View>
               )}
             </View>
+
             {selectedVendor && (
               <View style={styles.selectedChip}>
                 <Ionicons name="checkmark-circle" size={16} color="#059669" />
                 <Text style={styles.selectedChipText}>
-                  {selectedVendor.name} ({selectedVendor.id})
+                  {selectedVendor.vendor_name}
+                  {selectedVendor.vendor_identifier
+                    ? ` (${selectedVendor.vendor_identifier})`
+                    : ` (#${selectedVendor.vendor_id})`}
                 </Text>
               </View>
             )}
 
+            {/* Show location if available from QR lookup */}
+            {selectedVendor?.location_name &&
+              selectedVendor.location_name !== "N/A" && (
+                <View style={styles.locationInfo}>
+                  <Ionicons name="location-outline" size={14} color="#6b7280" />
+                  <Text style={styles.locationText}>
+                    {selectedVendor.location_name}
+                  </Text>
+                </View>
+              )}
+
+            {/* ── Mark as Missing Toggle ─────────────────────────────── */}
+            <TouchableOpacity
+              style={[
+                styles.missingToggle,
+                isMissing && styles.missingToggleActive,
+              ]}
+              onPress={() => {
+                setIsMissing(!isMissing);
+                if (!isMissing) setAmount("0");
+                else setAmount("");
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isMissing ? "checkbox" : "square-outline"}
+                size={22}
+                color={isMissing ? "#ef4444" : "#9ca3af"}
+              />
+              <View style={styles.missingToggleContent}>
+                <Text
+                  style={[
+                    styles.missingToggleText,
+                    isMissing && styles.missingToggleTextActive,
+                  ]}
+                >
+                  Mark as Missing
+                </Text>
+                <Text style={styles.missingToggleHint}>
+                  Vendor cannot pay today
+                </Text>
+              </View>
+            </TouchableOpacity>
+
             {/* ── Amount ───────────────────────────────────────────────── */}
             <Text style={styles.label}>Amount</Text>
-            <View style={styles.inputRow}>
+            <View style={[styles.inputRow, isMissing && styles.inputDisabled]}>
               <Text style={styles.currencySymbol}>₱</Text>
               <TextInput
                 ref={amountInputRef}
                 style={styles.input}
-                placeholder="0.00"
+                placeholder={isMissing ? "0.00 (Missing)" : "0.00"}
                 placeholderTextColor="#9ca3af"
                 keyboardType="decimal-pad"
-                value={amount}
+                value={isMissing ? "0" : amount}
                 onChangeText={setAmount}
+                editable={!isMissing}
               />
             </View>
 
@@ -317,23 +502,6 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
               </TouchableOpacity>
             </View>
 
-            {/* ── Reference Number ─────────────────────────────────────── */}
-            <Text style={styles.label}>Reference Number</Text>
-            <View style={styles.inputRow}>
-              <Ionicons
-                name="document-text-outline"
-                size={18}
-                color="#9ca3af"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="REF-XXXXXXXX-XXX"
-                placeholderTextColor="#9ca3af"
-                value={referenceNo}
-                onChangeText={setReferenceNo}
-              />
-            </View>
-
             {/* ── Status (auto-calculated) ─────────────────────────────── */}
             <Text style={styles.label}>Status</Text>
             <View
@@ -355,10 +523,12 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
               </Text>
               <Text style={styles.statusHint}>
                 {status.label === "Missing"
-                  ? "Amount is ₱0.00"
-                  : status.label === "Incomplete"
-                    ? `₱${(parseFloat(amount) || 0).toFixed(2)} of ₱25.00`
-                    : "Full payment received"}
+                  ? "Vendor cannot pay today"
+                  : status.label === "No Amount"
+                    ? "Enter an amount"
+                    : status.label === "Incomplete"
+                      ? `₱${(parseFloat(amount) || 0).toFixed(2)} of ₱25.00`
+                      : "Full payment received"}
               </Text>
             </View>
 
@@ -374,10 +544,24 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
             <TouchableOpacity
               style={[styles.addBtn, !isValid && styles.addBtnDisabled]}
               onPress={handleAdd}
-              disabled={!isValid}
+              disabled={!isValid || submitting}
             >
-              <Ionicons name="add-circle" size={20} color="#ffffff" />
-              <Text style={styles.addBtnText}>Add Payment</Text>
+              {submitting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Ionicons
+                  name={isMissing ? "alert-circle" : "add-circle"}
+                  size={20}
+                  color="#ffffff"
+                />
+              )}
+              <Text style={styles.addBtnText}>
+                {submitting
+                  ? "Processing..."
+                  : isMissing
+                    ? "Record Missing"
+                    : "Add Payment"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -388,6 +572,13 @@ const AddPaymentForm = ({ visible, onClose, onSubmit, collectorName }) => {
         visible={showQRScanner}
         onClose={() => setShowQRScanner(false)}
         onScanned={handleQRScanned}
+      />
+
+      {/* Receipt Confirmation Modal */}
+      <PaymentReceiptModal
+        visible={showReceipt}
+        onClose={handleReceiptClose}
+        receipt={receiptData}
       />
     </Modal>
   );
@@ -579,6 +770,60 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#059669",
+  },
+
+  /* Location info */
+  locationInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  locationText: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+
+  /* Missing toggle */
+  missingToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#ffffff",
+  },
+  missingToggleActive: {
+    borderColor: "#fca5a5",
+    backgroundColor: "#fef2f2",
+  },
+  missingToggleContent: {
+    flex: 1,
+  },
+  missingToggleText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  missingToggleTextActive: {
+    color: "#dc2626",
+  },
+  missingToggleHint: {
+    fontSize: 12,
+    color: "#9ca3af",
+    marginTop: 2,
+  },
+
+  /* Disabled input */
+  inputDisabled: {
+    backgroundColor: "#f3f4f6",
+    opacity: 0.6,
   },
 
   /* Quick amount */

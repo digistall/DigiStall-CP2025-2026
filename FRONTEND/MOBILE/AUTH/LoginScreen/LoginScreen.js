@@ -263,16 +263,8 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.formContainer}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <View style={{ alignItems: 'center', marginBottom: 10 }}>
                 <Text style={styles.formTitle}>Sign In</Text>
-                <TouchableOpacity 
-                  onPress={() => setIsStaffLogin(!isStaffLogin)}
-                  style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: isStaffLogin ? '#4472C4' : '#f0f0f0', borderRadius: 5 }}
-                >
-                  <Text style={{ color: isStaffLogin ? 'white' : '#333', fontSize: 12, fontWeight: '600' }}>
-                    {isStaffLogin ? '👮 Staff' : '👤 User'}
-                  </Text>
-                </TouchableOpacity>
               </View>
 
               <View style={styles.inputContainer}>
