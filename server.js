@@ -46,6 +46,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import vendorRoutes from './routes/vendorRoutes.js';
 import vendorApplicantRoutes from './routes/vendorApplicantRoutes.js';
+import vendorDocumentRoutes from './routes/vendorDocumentRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import assignedLocationRoutes from './routes/assignedLocationRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
@@ -177,6 +178,7 @@ app.use('/api/activity-logs', staffActivityLogRoutes);
 console.log('✅ ACTIVITY LOG routes loaded');
 
 // VENDOR ROUTES
+app.use('/api/mobile/vendor', vendorDocumentRoutes);  // Vendor mobile document routes
 console.log('✅ VENDOR routes loaded');
 
 // APPLICANTS ROUTES

@@ -13,7 +13,7 @@ import AddPaymentForm from "./AddPaymentForm";
 import { API_CONFIG, NetworkUtils } from "../../../config/shared/networkConfig";
 import UserStorageService from "../../../services/UserStorageService";
 
-const PaymentScreen = ({ autoOpenQR = false, onQROpened }) => {
+const PaymentScreen = ({ autoOpenQR = false, onQROpened, preSelectedVendor = null, onPreSelectedVendorUsed }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,14 @@ const PaymentScreen = ({ autoOpenQR = false, onQROpened }) => {
       if (onQROpened) onQROpened();
     }
   }, [autoOpenQR]);
+
+  // Auto-open payment form when vendor is pre-selected from vendor list
+  useEffect(() => {
+    if (preSelectedVendor) {
+      setShowAddForm(true);
+      if (onPreSelectedVendorUsed) onPreSelectedVendorUsed();
+    }
+  }, [preSelectedVendor]);
 
   const loadCollectorName = async () => {
     try {
@@ -261,6 +269,7 @@ const PaymentScreen = ({ autoOpenQR = false, onQROpened }) => {
         onSubmit={handleAddPayment}
         collectorName={collectorName}
         autoOpenScanner={autoOpenQR}
+        preSelectedVendor={preSelectedVendor}
       />
     </View>
   );

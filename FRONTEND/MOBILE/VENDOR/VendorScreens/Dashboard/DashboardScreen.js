@@ -7,11 +7,13 @@ import {
   Dimensions,
   RefreshControl,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../components/ThemeComponents/ThemeContext';
 import UserStorageService from '../../../services/UserStorageService';
+import ApiService from '../../../services/ApiService';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +21,8 @@ const DashboardScreen = ({ onNavigate }) => {
   const { theme, isDark } = useTheme();
   const [userData, setUserData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [paymentSummary, setPaymentSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   useEffect(() => {
     loadUserData();
@@ -28,10 +32,25 @@ const DashboardScreen = ({ onNavigate }) => {
     try {
       const data = await UserStorageService.getUserData();
       setUserData(data);
+      if (data?.vendor?.vendor_id) {
+        await loadPaymentSummary(data.vendor.vendor_id);
+      }
     } catch (error) {
       console.error('Error loading vendor data:', error);
     } finally {
       setRefreshing(false);
+      setSummaryLoading(false);
+    }
+  };
+
+  const loadPaymentSummary = async (vendorId) => {
+    try {
+      const response = await ApiService.getVendorPaymentSummary(vendorId);
+      if (response.success) {
+        setPaymentSummary(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading payment summary:', error);
     }
   };
 
@@ -59,6 +78,13 @@ const DashboardScreen = ({ onNavigate }) => {
 
   const quickActions = [
     {
+      id: 'payments',
+      title: 'My Payments',
+      subtitle: 'View payment history',
+      icon: 'receipt',
+      color: ['#10b981', '#059669'],
+    },
+    {
       id: 'myqrcode',
       title: 'My QR Code',
       subtitle: 'Show for payment',
@@ -73,23 +99,13 @@ const DashboardScreen = ({ onNavigate }) => {
       color: ['#3b82f6', '#1d4ed8'],
     },
     {
-      id: 'business',
-      title: 'Business Info',
-      subtitle: 'Manage your business',
-      icon: 'briefcase',
-      color: ['#10b981', '#059669'],
-    },
-    {
-      id: 'settings',
-      title: 'Settings',
-      subtitle: 'App preferences',
-      icon: 'settings',
+      id: 'documents',
+      title: 'Documents',
+      subtitle: 'Upload & manage',
+      icon: 'document-text',
       color: ['#8b5cf6', '#7c3aed'],
     },
   ];
-
-  const vendor = userData?.vendor;
-  const business = userData?.business;
 
   return (
     <ScrollView
@@ -123,55 +139,87 @@ const DashboardScreen = ({ onNavigate }) => {
         </View>
       </LinearGradient>
 
-      {/* Business Summary Card */}
+      {/* Payment Status Card */}
       <View style={styles.sectionContainer}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Business Summary</Text>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.card }]}>
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryIconContainer, { backgroundColor: '#dbeafe' }]}>
-              <Ionicons name="briefcase" size={24} color="#1d4ed8" />
-            </View>
-            <View style={styles.summaryInfo}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
-                Business Name
-              </Text>
-              <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
-                {business?.business_name || 'Not set'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryIconContainer, { backgroundColor: '#d1fae5' }]}>
-              <Ionicons name="pricetag" size={24} color="#059669" />
-            </View>
-            <View style={styles.summaryInfo}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
-                Business Type
-              </Text>
-              <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
-                {business?.business_type || 'Not set'}
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Payment Status</Text>
+        <TouchableOpacity
+          style={[styles.summaryCard, { backgroundColor: theme.colors.card }]}
+          onPress={() => onNavigate && onNavigate('payments')}
+          activeOpacity={0.8}
+        >
+          {summaryLoading ? (
+            <View style={styles.summaryLoading}>
+              <ActivityIndicator size="small" color="#1d4ed8" />
+              <Text style={[styles.summaryLoadingText, { color: theme.colors.textSecondary }]}>
+                Loading payment data...
               </Text>
             </View>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryIconContainer, { backgroundColor: '#fef3c7' }]}>
-              <Ionicons name="cube" size={24} color="#d97706" />
-            </View>
-            <View style={styles.summaryInfo}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
-                Products
-              </Text>
-              <Text
-                style={[styles.summaryValue, { color: theme.colors.text }]}
-                numberOfLines={2}
-              >
-                {business?.products || 'Not set'}
-              </Text>
-            </View>
-          </View>
-        </View>
+          ) : (
+            <>
+              {/* Today's status */}
+              <View style={styles.summaryRow}>
+                <View style={[styles.summaryIconContainer, {
+                  backgroundColor: paymentSummary?.today?.hasPaid ? '#d1fae5' : '#fef3c7'
+                }]}>
+                  <Ionicons
+                    name={paymentSummary?.today?.hasPaid ? 'checkmark-circle' : 'time'}
+                    size={24}
+                    color={paymentSummary?.today?.hasPaid ? '#059669' : '#d97706'}
+                  />
+                </View>
+                <View style={styles.summaryInfo}>
+                  <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+                    Today
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
+                    {paymentSummary?.today?.hasPaid
+                      ? `₱${paymentSummary.today.amount.toFixed(2)} — Paid`
+                      : paymentSummary?.today?.status === 'missing'
+                        ? 'Marked Missing'
+                        : 'Not yet collected'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.summaryDivider} />
+              {/* This month */}
+              <View style={styles.summaryRow}>
+                <View style={[styles.summaryIconContainer, { backgroundColor: '#dbeafe' }]}>
+                  <Ionicons name="calendar" size={24} color="#1d4ed8" />
+                </View>
+                <View style={styles.summaryInfo}>
+                  <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+                    This Month
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
+                    {paymentSummary?.thisMonth?.completedCount || 0} payments • ₱{(paymentSummary?.thisMonth?.totalAmount || 0).toFixed(0)}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.summaryDivider} />
+              {/* All time */}
+              <View style={styles.summaryRow}>
+                <View style={[styles.summaryIconContainer, { backgroundColor: '#ede9fe' }]}>
+                  <Ionicons name="stats-chart" size={24} color="#7c3aed" />
+                </View>
+                <View style={styles.summaryInfo}>
+                  <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+                    Total Collected
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
+                    ₱{(paymentSummary?.allTime?.totalAmount || 0).toFixed(0)} ({paymentSummary?.allTime?.completedCount || 0} payments)
+                  </Text>
+                </View>
+              </View>
+              {/* Tap hint */}
+              <View style={styles.tapHintRow}>
+                <Text style={[styles.tapHint, { color: theme.colors.textSecondary }]}>
+                  Tap to view full history
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textSecondary} />
+              </View>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Quick Actions */}
@@ -293,6 +341,27 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f1f5f9',
     marginLeft: 60,
+  },
+  summaryLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 10,
+  },
+  summaryLoadingText: {
+    fontSize: 13,
+  },
+  tapHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 12,
+    gap: 4,
+  },
+  tapHint: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   actionsGrid: {
     flexDirection: 'row',
